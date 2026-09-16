@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "content-engine-kit": { "source": { "source": "directory", "path": "./" } }
+  },
+  "enabledPlugins": {
+    "editorial@content-engine-kit": true
+  },
+  "permissions": {
+    "allow": ["Bash(pnpm content:*)"]
+  }
+}

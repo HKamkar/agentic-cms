@@ -1,0 +1,8 @@
+{
+  "name": "editorial",
+  "version": "0.1.0",
+  "description": "The agent's side of a content engine: skills and agents that add, write, review, retire and report on the content of a site built from files, with the site's own voice rules read from the repo, never from the plugin",
+  "author": { "name": "H. Kamkar" },
+  "license": "MIT",
+  "keywords": ["content", "cms", "editorial", "blog", "voice", "seo"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "content-engine-kit",
+  "owner": { "name": "H. Kamkar" },
+  "description": "Plugins of the content engine: a site whose content is files, validated at build time, with an agent as its editor",
+  "plugins": [
+    {
+      "name": "editorial",
+      "source": "./plugin",
+      "description": "Add, write, review, retire and report on the content of a site built on the engine, with the site's own voice rules"
+    }
+  ]
+}
