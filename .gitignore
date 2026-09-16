@@ -1,0 +1,60 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# OpenNext / Cloudflare
+.open-next/
+.wrangler/
+.dev.vars*
+!.dev.vars
+
+# scripts/parity.sh captures
+.parity/
+
+# Claude Code personal settings, machine notes and agent worktrees
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/worktrees/
+
+# the marketing workshop (strategy, research, briefs, the plugin source) stays outside the repo
+/marketing.zip
+/marketing/
