@@ -1,0 +1,58 @@
+/*
+ * The site's element defaults, applied after Tailwind's preflight (both in
+ * the `base` layer). Preflight has already zeroed margins, paddings, borders
+ * and list markers; what is left is the page ground, the type and the two
+ * things a reader needs without a class: a heading that looks like one and a
+ * link that looks clickable.
+ *
+ * The theme is one attribute on :root, so a light and a dark page share every
+ * rule below: the `light-dark()` colours in globals.css read `color-scheme`.
+ * Without the attribute the reader's own system setting decides.
+ */
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* The two steps of the scale. They live on :root, not in the @theme block, so
+   the utilities generated from the same tokens (text-h1, py-section, ...) and
+   the element rules below read one source at every width. */
+@media (width < 992px) {
+  :root {
+    --spacing-section: 2.5rem;
+  }
+}
+@media (width < 768px) {
+  :root {
+    --text-h1: 2rem;
+    --text-h2: 1.5rem;
+    --text-h3: 1.25rem;
+  }
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+h1 { font-size: var(--text-h1); line-height: var(--text-h1--line-height); }
+h2 { font-size: var(--text-h2); line-height: var(--text-h2--line-height); }
+h3 { font-size: var(--text-h3); line-height: var(--text-h3--line-height); }
+h4 { font-size: var(--text-h4); line-height: var(--text-h4--line-height); }
+h5 { font-size: var(--text-h5); line-height: var(--text-h5--line-height); }
+h6 { font-size: var(--text-h6); line-height: var(--text-h6--line-height); }
+
+/* The wireframe has one accent and it is the underline: a link is a link. */
+a { color: inherit; text-decoration: underline; }
+strong { font-weight: 600; }
+
+/* Preflight sizes images by their intrinsic ratio (height: auto); this site
+   sizes several through the height attribute alone, which that would ignore.
+   Revert to the attribute; components set explicit sizes where they matter. */
+img, video { height: revert-layer; }

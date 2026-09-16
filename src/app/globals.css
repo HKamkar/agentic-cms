@@ -1,0 +1,82 @@
+/*
+ * Styling layers, lowest to highest:
+ *   theme      Tailwind's token variables (the @theme block below)
+ *   base       Tailwind's preflight, then base.css (the site's element defaults)
+ *   utilities  Tailwind utilities
+ * and, outside the layers on purpose, motion.css: the start states of the
+ * scroll reveals, which must beat any utility on the same element.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "../styles/base.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "../styles/motion.css";
+
+/*
+ * The wireframe's tokens. `static` because CSS modules read the variables
+ * directly. There is no brand here on purpose: a fork replaces these values
+ * and every page follows, because nothing below is repeated in a component.
+ *
+ * The palette is four semantic colours, each a light and a dark value through
+ * `light-dark()`; `color-scheme` on :root (base.css) picks the side, so the
+ * theme toggle changes one attribute and never a class on an element.
+ *
+ * A token name becomes utilities (`--color-paper` → `bg-paper`,
+ * `--container-page` → `max-w-page`, `--spacing-section` → `py-section`).
+ */
+@theme static {
+  --breakpoint-*: initial;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1440px;
+  --breakpoint-3xl: 1920px;
+
+  /* No webfont: the wireframe uses what the reader already has. The four
+     names stay because base.css and the label utilities read them. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-label: var(--font-mono);
+
+  /* Tailwind's palette is removed: only these four exist, so a wireframe
+     page cannot quietly acquire a colour. paper = page ground, ink = text
+     and every hairline, fill = a filled block, muted = secondary text. */
+  --color-*: initial;
+  --color-paper: light-dark(#ffffff, #121212);
+  --color-ink: light-dark(#000000, #f2f2f2);
+  --color-fill: light-dark(#e5e5e5, #2a2a2a);
+  --color-muted: light-dark(#666666, #9a9a9a);
+
+  /* Type scale: h1–h3 shrink below 768 through :root in base.css. */
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-h1: 2.5rem;
+  --text-h1--line-height: 1.15;
+  --text-h2: 1.875rem;
+  --text-h2--line-height: 1.25;
+  --text-h3: 1.375rem;
+  --text-h3--line-height: 1.3;
+  --text-h4: 1.125rem;
+  --text-h4--line-height: 1.35;
+  --text-h5: 1rem;
+  --text-h5--line-height: 1.4;
+  --text-h6: 0.875rem;
+  --text-h6--line-height: 1.4;
+
+  /* The vertical rhythm of a section (halved below 992 in base.css) and the
+     one page column width. */
+  --spacing-section: 4rem;
+  --container-page: 72rem;
+
+  /* A wireframe has no corner radius, no shadow, no blur and no motion
+     curve, so the utilities that would say so do not exist. */
+  --radius-*: initial;
+  --shadow-*: initial;
+  --blur-*: initial;
+  --animate-*: initial;
+  --ease-*: initial;
+}

@@ -1,0 +1,35 @@
+/*
+ * Start states for the reveal library in src/components/ix/. One class per
+ * `Fx` preset, and an `ix-main-init--` twin inside the desktop media query for
+ * the presets a fork limits to `mq="main"` (below 992 the element simply
+ * shows). The animation code replaces these values on its first frame.
+ *
+ * The wireframe animates nothing and uses none of this; the library is kept
+ * whole so a fork that wants the reveals only has to render <Fx>.
+ *
+ * Loaded outside the cascade layers on purpose: a start state must beat any
+ * utility class on the same element.
+ */
+.ix-init--slideInBottom { opacity: 0; transform: translate3d(0, 100px, 0); }
+.ix-init--slideInTop { opacity: 0; transform: translate3d(0, -100px, 0); }
+.ix-init--slideInLeft { opacity: 0; transform: translate3d(-100px, 0, 0); }
+.ix-init--slideInRight { opacity: 0; transform: translate3d(100px, 0, 0); }
+.ix-init--slideInTopLeft { opacity: 0; transform: translate3d(-100px, -100px, 0); }
+.ix-init--slideInTopRight { opacity: 0; transform: translate3d(100px, -100px, 0); }
+.ix-init--slideInBottomLeft { opacity: 0; transform: translate3d(-100px, 100px, 0); }
+.ix-init--slideInBottomRight { opacity: 0; transform: translate3d(100px, 100px, 0); }
+.ix-init--growIn { opacity: 0; transform: scale(0.75); }
+.ix-init--fadeIn { opacity: 0; }
+
+@media (min-width: 992px) {
+  .ix-main-init--slideInBottom { opacity: 0; transform: translate3d(0, 100px, 0); }
+  .ix-main-init--slideInTop { opacity: 0; transform: translate3d(0, -100px, 0); }
+  .ix-main-init--slideInLeft { opacity: 0; transform: translate3d(-100px, 0, 0); }
+  .ix-main-init--slideInRight { opacity: 0; transform: translate3d(100px, 0, 0); }
+  .ix-main-init--slideInTopLeft { opacity: 0; transform: translate3d(-100px, -100px, 0); }
+  .ix-main-init--slideInTopRight { opacity: 0; transform: translate3d(100px, -100px, 0); }
+  .ix-main-init--slideInBottomLeft { opacity: 0; transform: translate3d(-100px, 100px, 0); }
+  .ix-main-init--slideInBottomRight { opacity: 0; transform: translate3d(100px, 100px, 0); }
+  .ix-main-init--growIn { opacity: 0; transform: scale(0.75); }
+  .ix-main-init--fadeIn { opacity: 0; }
+}
