@@ -1,0 +1,13 @@
+# The client reviews on the home page slider ("Our clients review"), in
+# slide order. This entry is an obvious slot: replace the name, the role,
+# the quote and the portrait with a real one before the site goes live, or
+# take the reviews section out of content/pages/home.yaml. Every entry:
+# name, role, quote (with its own quotation marks), photo (under
+# public/images/home/), and optionally photoAlt once a portrait is not
+# decorative. Checked at build time (reviewSchema in
+# src/lib/content/collections.ts); template in content/_templates/review.yaml.
+- name: A. Customer
+  role: Their role, their company
+  quote: '"The customer''s words, in their own quotation marks, go here."'
+  photo: /images/home/review-1.webp
+  photoAlt: A grey placeholder portrait

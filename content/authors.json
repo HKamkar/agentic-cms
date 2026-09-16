@@ -1,0 +1,9 @@
+{
+  "acme-editorial": {
+    "name": "Acme Editorial",
+    "title": "The editorial team",
+    "bio": "Writes the pages and posts of this example site, and keeps them inside the rules the build enforces.",
+    "image": "/images/authors/acme-editorial.webp",
+    "imageAlt": "A grey placeholder portrait for the editorial team"
+  }
+}

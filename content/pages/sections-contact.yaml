@@ -1,0 +1,64 @@
+# A demo page (/sections/contact): the contact section types, with copy that
+# names each slot. The form is src/config/forms.ts, not this file. Every
+# field is checked at build time (pageSchema in
+# src/lib/content/collections.ts; the section types and their fields are
+# tabled in src/lib/content/README.md); template in content/_templates/page.yaml.
+seo:
+  path: /sections/contact
+  title: Contact section types, rendered | Acme
+  description: A demo page showing the contact section types, the form defined in src/config/forms.ts, three detail cards and the FAQ accordion under them.
+  ogImage: /images/sections-contact-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Sections, contact
+  changeFrequency: yearly
+  priority: 0.5
+jsonld:
+  type: ContactPage
+  office:
+    streetAddress: 1 Example Street
+    locality: Example City
+    postalCode: 0000 XX
+    country: Exampleland
+  contacts:
+    - type: customer service
+      email: hello@acme.example
+sections:
+  - type: contact-hero
+    eyebrow: Section gallery
+    heading: What the contact hero section shows.
+    text: An eyebrow, this heading, this paragraph and one button, which is the current
+      page and renders in its current state.
+    cta: Get in touch
+  - type: contact-form
+    form: contact
+  - type: contact-details
+    eyebrow: Reach us
+    heading: What the contact-details section shows.
+    cards:
+      - icon: /images/ui/icon.svg
+        title: The first card
+        text:
+          - One paragraph per line of the card's text, with a line break between them.
+        highlight:
+          kind: text
+          value: The highlighted line under the rule
+      - icon: /images/ui/icon.svg
+        title: The second card
+        text:
+          - One paragraph per line of the card's text.
+          - A second line, to show the break.
+        highlight:
+          kind: email
+          value: hello@acme.example
+      - icon: /images/ui/icon.svg
+        title: The third card
+        text:
+          - One paragraph per line of the card's text, as long or as short as the copy needs.
+        highlight:
+          kind: text
+          value: A second highlighted line, in plain text
+  - type: faq
+    set: general
+    eyebrow: Our FAQ
+    heading: Frequently asked questions
+    variant: contact

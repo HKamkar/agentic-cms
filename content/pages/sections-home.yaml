@@ -1,0 +1,67 @@
+# A demo page (/sections/home): the home section types the landing page does
+# not use, with copy that names each slot. Every field is checked at build
+# time (pageSchema in src/lib/content/collections.ts; the section types and
+# their fields are tabled in src/lib/content/README.md); template in
+# content/_templates/page.yaml.
+seo:
+  path: /sections/home
+  title: Home section types, rendered | Acme
+  description: A demo page showing the home section types the landing page leaves out, with slot copy that says what every heading, card and image on them is for.
+  ogImage: /images/sections-home-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Sections, home
+  changeFrequency: yearly
+  priority: 0.5
+jsonld:
+  type: WebPage
+  application:
+    name: Acme
+    description: A content engine and site kit whose pages are YAML files made of section types, each with its own copy schema.
+    operatingSystem: Any (static site)
+    offer: Open source under the MIT license; there is nothing to buy
+    featureList:
+      - A registry of section types
+      - Copy in the page file, presentation in the component
+      - Card counts fixed by the schema
+  organization: publisher
+sections:
+  - type: home-hero
+    eyebrow: Section gallery
+    heading: What the home hero section shows.
+    text: An eyebrow, this heading, this paragraph and one button. The rest of the page
+      renders the other home section types, each with copy that names its slot.
+    cta: Get in touch
+  - type: home-automation
+    eyebrow: Two cards
+    heading: What the two-card section shows.
+    cta: Get in touch
+    cards:
+      - icon: /images/ui/icon.svg
+        title: The first card title.
+        text: One or two sentences under the card title.
+      - icon: /images/ui/icon.svg
+        title: The second card title.
+        text: One or two sentences under the card title, the same length as the first.
+  - type: home-choose-us
+    eyebrow: Why us
+    heading: What the why-us section shows.
+    items:
+      - icon: /images/ui/icon.svg
+        title: The first point
+        text: One or two sentences under the point's title.
+      - icon: /images/ui/icon.svg
+        title: The second point
+        text: One or two sentences under the point's title.
+      - icon: /images/ui/icon.svg
+        title: The third point
+        text: One or two sentences under the point's title.
+    demo:
+      title: The demo card title
+      image: /images/sections-home/choose-us-demo.webp
+      imageAlt: A wide grey placeholder standing in for the demo screenshot
+    stats:
+      image: /images/sections-home/choose-us-stats.webp
+      imageAlt: A grey placeholder standing in for the stack of stat cards
+  - type: home-integration
+    eyebrow: How it fits
+    heading: What the integration section shows.

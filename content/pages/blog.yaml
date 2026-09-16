@@ -1,0 +1,23 @@
+# The blog index (/blog): its SEO block, its structured data (a Blog
+# listing every published post, nothing to declare) and its one section.
+# The posts themselves are content/blog/*.md. Every field is checked at
+# build time (pageSchema in src/lib/content/collections.ts); template in
+# content/_templates/page.yaml.
+seo:
+  path: /blog
+  title: Notes on the content engine | Acme
+  description: Posts from the Acme team on how this kit is put together, one file at a time, from the anatomy of a post to the voice file the lint reads.
+  ogImage: /images/blog-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Blog
+  changeFrequency: weekly
+  priority: 0.8
+jsonld:
+  type: Blog
+sections:
+  - type: blog-index
+    label: From the team
+    heading: Notes on building a site out of files.
+    listEyebrow: Latest posts
+    listHeading: Every post, newest first
+    cta: Read the posts

@@ -1,0 +1,92 @@
+# A demo page (/sections/use-cases): the use-case section types and both
+# group wrappers, with copy that names each slot. Every field is checked at
+# build time (pageSchema in src/lib/content/collections.ts; the section types
+# and their fields are tabled in src/lib/content/README.md); template in
+# content/_templates/page.yaml.
+seo:
+  path: /sections/use-cases
+  title: Use-case section types, rendered | Acme
+  description: A demo page showing the use-case section types, both group wrappers, and the cards that also feed this page's ItemList structured data.
+  ogImage: /images/sections-use-cases-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Sections, use cases
+  changeFrequency: yearly
+  priority: 0.5
+jsonld:
+  type: WebPage
+  application:
+    name: Acme
+    description: A content engine and site kit whose section types are validated copy schemas, rendered by components the page file never mentions.
+    operatingSystem: Any (static site)
+    offer: Open source under the MIT license; there is nothing to buy
+    featureList:
+      - Group wrappers around several sections
+      - Cards read from content/use-cases.yaml
+      - ItemList structured data from the same list
+  itemList:
+    name: The use-case cards
+    description: The cards of content/use-cases.yaml, in file order
+  organization: publisher
+sections:
+  - type: use-cases-hero
+    eyebrow: Section gallery
+    heading: What the use-cases hero section shows.
+    text: An eyebrow, this heading, this paragraph and one button. The two group wrappers
+      below carry the glows that hang behind several sections at once.
+    cta: Get in touch
+  - type: group
+    variant: use-cases-upper
+    sections:
+      - type: use-cases-vision
+        eyebrow: The technology
+        statement: What the use-cases-vision section shows. The statement is set in heading
+          type, and the four cards under it each hold one figure and one line.
+        cards:
+          - stat: 100%
+            text: The line under the first figure
+          - stat: "1"
+            text: The line under the second figure
+          - stat: "4"
+            text: The line under the third figure
+          - stat: 90%
+            text: The line under the fourth figure
+      - type: use-cases-choose-us
+        eyebrow: Why us
+        heading: What the use-cases-choose-us section shows.
+        points:
+          - title: The first point.
+            text: One or two sentences under the point's title, beside the screenshot the
+              design owns.
+          - title: The second point.
+            text: One or two sentences under the point's title, the same length as the first.
+          - title: The third point.
+            text: One or two sentences under the point's title, the same length as the first.
+  - type: group
+    variant: use-cases-lower
+    sections:
+      - type: use-case-cards
+        eyebrow: Use cases
+        heading: What the use-case cards section shows.
+      - type: use-cases-benefits
+        eyebrow: Why it works
+        heading: What the use-cases-benefits section shows.
+        left:
+          - icon: /images/ui/icon.svg
+            text: The first line, left of the dashboard.
+          - icon: /images/ui/icon.svg
+            text: The second line, left of the dashboard.
+        right:
+          - icon: /images/ui/icon.svg
+            text: The first line, right of the dashboard.
+          - icon: /images/ui/icon.svg
+            text: The second line, right of the dashboard.
+  - type: use-cases-strategy
+    eyebrow: What you keep
+    heading: What the use-cases-strategy section shows.
+    cards:
+      - title: The first card title.
+        text: Two or three sentences under the card title, beside the stack of analytics
+          cards the design owns.
+      - title: The second card title.
+        text: Two or three sentences under the card title, the same length as the first.
+    cta: Get in touch

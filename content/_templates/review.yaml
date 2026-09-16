@@ -1,0 +1,8 @@
+# One entry of content/reviews.yaml (the home page slider). Copy the block
+# below to the end of that file; slides show in file order. The reviewSchema
+# fields (src/lib/content/README.md, "reviews"):
+- name: Full name                                     # required, shown under the quote
+  role: Their role                                    # required, shown in brackets after the name
+  quote: '"The quote, in its own quotation marks."'   # required, exactly as it should read on the slide
+  photo: /images/home/review-2.webp                    # required, a portrait under public/images/home/ (about 80×80)
+  # photoAlt: What the portrait shows                 # only once the portrait is not decorative (today's are)

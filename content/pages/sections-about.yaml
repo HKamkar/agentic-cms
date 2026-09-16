@@ -1,0 +1,97 @@
+# A demo page (/sections/about): every about section type, with copy that
+# names each slot. Every field is checked at build time (pageSchema in
+# src/lib/content/collections.ts; the section types and their fields are
+# tabled in src/lib/content/README.md); template in content/_templates/page.yaml.
+seo:
+  path: /sections/about
+  title: About section types, rendered | Acme
+  description: A demo page showing every about section type, with slot copy that says what each statement, statistic, belief and card on the page is there to hold.
+  ogImage: /images/sections-about-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Sections, about
+  changeFrequency: yearly
+  priority: 0.5
+jsonld:
+  type: AboutPage
+  organization:
+    description: A placeholder organization for an open-source content engine, an editorial plugin and the example site they produce
+    foundingDate: "2026-09-15"
+    foundingLocation:
+      locality: Example City
+      country: Exampleland
+    slogan: Content as files, checked on every build
+    knowsAbout:
+      - Content engines
+      - Static site generation
+      - Structured data
+sections:
+  - type: about-hero
+    eyebrow: Section gallery
+    heading: What the about hero section shows.
+    text: An eyebrow, this heading and this paragraph, over three cards the design owns.
+      The rest of the page renders the other about section types, each with copy that
+      names its slot.
+  - type: about-story
+    eyebrow: Our story
+    statement: What the about-story section shows. The statement is set in heading type and
+      runs two or three sentences. The five cards beside it hold two captions, two
+      statistics and one figure with its own heading.
+    founded: The caption of the first card
+    sovereignty:
+      title: The first statistic
+      value: 100%
+      text: The line under the figure
+    compliance:
+      title: The second statistic
+      value: Two words
+      text: The line under the figure
+    partners: The caption of the second card
+    modalities:
+      heading: The heading of the figure card
+      stat: "5"
+      text: The line beside the figure
+  - type: about-strategy
+    eyebrow: How we build
+    heading: What the about-strategy section shows.
+    text: A heading, this paragraph, a short list with ticks and one button, beside the
+      board the design draws. The list holds exactly four lines.
+    beliefsHeading: The heading over the list
+    beliefs:
+      - The first line of the list
+      - The second line of the list
+      - The third line of the list
+      - The fourth line of the list
+    cta: Get in touch
+  - type: about-benefits
+    eyebrow: What you get
+    heading: What the about-benefits section shows.
+    cards:
+      - icon: /images/ui/icon.svg
+        title: The first card title.
+        text: One or two sentences under the card title.
+      - icon: /images/ui/icon.svg
+        title: The second card title.
+        text: One or two sentences under the card title.
+      - icon: /images/ui/icon.svg
+        title: The third card title.
+        text: One or two sentences under the card title.
+  - type: about-choose-us
+    eyebrow: Own it
+    heading: What the about-choose-us section shows.
+    text: A heading, this paragraph, two cards and one button on the left, with the
+      analytics card the design owns on the right.
+    cards:
+      - icon: /images/ui/icon.svg
+        title: The first card title.
+        text: Two or three sentences under the card title. These cards are the widest on the
+          page, so their copy runs longer than the benefit cards above them.
+      - icon: /images/ui/icon.svg
+        title: The second card title.
+        text: Two or three sentences under the card title, the same length as the first, so
+          the two cards sit level at every width.
+    cta: Get in touch
+  - type: faq
+    set: general
+    eyebrow: Our FAQ
+    heading: Frequently asked questions
+    variant: about

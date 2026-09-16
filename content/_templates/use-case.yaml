@@ -1,0 +1,9 @@
+# One card of content/use-cases.yaml (the "Use cases" section and the
+# page's ItemList structured data). Copy the block below to the end of that
+# file; cards show in file order, and a fourth card takes the last card's
+# reveal delay and icon width. The useCaseSchema fields
+# (src/lib/content/README.md, "useCases"):
+- sector: Sector name                                 # required, the tag above the title
+  title: A short claim, with a full stop.             # required, the card title
+  text: One or two sentences under the rule.          # required
+  icon: /images/use-cases/icon.svg                   # required, an illustration under public/images/use-cases/

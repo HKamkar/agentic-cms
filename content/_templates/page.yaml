@@ -1,0 +1,38 @@
+# A page: copy this file to content/pages/<slug>.yaml. The file name is only
+# the key (getPage("<slug>")); `seo.path` is the route, indexed once
+# published and never changed without a redirect. Every field is checked at
+# build time (pageSchema in src/lib/content/collections.ts); the section
+# types and their fields are tabled in src/lib/content/README.md, and the
+# six existing pages are worked examples. A page made of existing section
+# types needs no code; add it to nav / links / footer.quickLinks in
+# src/config/site.ts if it belongs there, and its 1200×630 OG image.
+seo:
+  path: /new-page                                    # "/" for the home page, else /lowercase-words
+  title: Topic first, brand last | Acme              # the exact <title>, 60 characters or fewer, unique
+  description: One sentence, 70–160 characters, saying what the reader gets on this page.
+  ogImage: /images/new-page-og.jpg                   # a 1200×630 JPEG under public/images/
+  updated: "2026-09-15"                              # bump with the copy, not on refactors
+  breadcrumb: New page
+  changeFrequency: yearly                            # optional sitemap hint
+  priority: 0.5                                      # optional sitemap hint, 0–1
+jsonld:                                              # the page type and the copy of its structured data
+  type: WebPage                                      # WebPage | AboutPage | ContactPage | Blog — each with its own fields, see the tables
+  application:
+    name: Acme
+    description: One sentence on what the application is.
+    operatingSystem: Any (static site)
+    offer: The offer, in words (no price).
+    featureList:
+      - A feature, one short line
+  organization: provider                             # provider | publisher
+sections:                                            # in order; `type` picks the section, the rest is its copy
+  - type: contact-hero
+    eyebrow: THE EYEBROW
+    heading: The H1 of the page.
+    text: The paragraph under it.
+    cta: Get in touch
+  - type: faq                                        # a section that shows a collection names it by key
+    set: general
+    eyebrow: Our FAQ
+    heading: Frequently asked questions
+    variant: about

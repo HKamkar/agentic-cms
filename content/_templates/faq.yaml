@@ -1,0 +1,10 @@
+# A FAQ set: copy this file to content/faqs/<key>.yaml; the file name is
+# the key a page reads it by (getFaq("<key>")). Items show in order; an
+# answer is one paragraph (a long one may wrap over several lines, the line
+# breaks read as spaces). The faqSchema fields (src/lib/content/README.md, "faqs"):
+items:
+  - question: The question, as the reader would ask it?
+    answer: The answer, one paragraph.
+  - question: Another question?
+    answer: Its answer, which may run long and wrap over
+      several lines like this.

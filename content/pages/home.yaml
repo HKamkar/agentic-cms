@@ -1,0 +1,139 @@
+# The landing page (/): its SEO block, its structured data and its sections
+# in order. Every field is checked at build time (pageSchema in
+# src/lib/content/collections.ts; the section types and their fields are
+# tabled in src/lib/content/README.md); template in content/_templates/page.yaml.
+seo:
+  path: /
+  title: "Acme: content as files, checked on every build"
+  description: Acme is a content engine whose pages, posts and copy are files. Every file is validated at build time, prerendered, and served with no request-time reads.
+  ogImage: /images/home-og.jpg
+  updated: "2026-09-15"
+  breadcrumb: Home
+  changeFrequency: monthly
+  priority: 1
+jsonld:
+  type: WebPage
+  application:
+    name: Acme
+    description: A content engine and site kit whose pages, posts and copy are files validated at build time, prerendered, and served static.
+    operatingSystem: Any (static site)
+    offer: Open source under the MIT license; there is nothing to buy
+    featureList:
+      - Pages as YAML files, one per route
+      - Posts as markdown with validated frontmatter
+      - A voice lint over every string on the site
+      - An SEO audit on every prerendered page
+      - An editorial plugin for Claude Code
+  itemList:
+    name: What this kit is used for
+    description: The shapes of site the content engine already fits
+  organization: provider
+sections:
+  - type: home-hero
+    eyebrow: Content as files
+    heading: Every page, post and line of copy is a file.
+    text: Acme is the content engine behind this site. Pages are YAML, posts are markdown,
+      and the build validates all of it before the first route is rendered. Nothing is
+      read at request time.
+    cta: Get in touch
+  - type: home-service
+    eyebrow: The editorial plugin
+    heading: The content jobs, written down as procedures.
+    text: The plugin in plugin/ turns each content job into a skill an agent follows. Draft
+      a post, write one end to end, add a page, update one, retire one, review the voice,
+      report what is live. It
+      reads the brand from the repository, so a fork inherits it without edits.
+    feature:
+      title: Two reviewers that never watched the draft being written
+      text: The voice-reviewer reads a file against content/VOICE.md. The critic fact-checks it
+        and cuts what does not earn its place. Both run in isolation from the writer.
+    cta: Get in touch
+    dashboard:
+      title: Seven skills, two agents
+      text: Each one ends by naming what to run before the job is called done.
+      image: /images/home/service-dashboard.webp
+      imageAlt: A grey placeholder card standing in for a screenshot of the editorial plugin
+  - type: home-feature
+    eyebrow: Built in
+    heading: What the build does before a page ships.
+    text: The build parses every file against its schema, lints the copy and audits the SEO of every page. Each one names the file,
+      the field and the problem, so a wrong value stops the build instead of reaching a
+      reader.
+    cards:
+      - icon: /images/ui/icon.svg
+        title: Content as files
+        text: Pages, posts, authors, reviews and FAQ sets live under content/. A copy change is a diff.
+      - icon: /images/ui/icon.svg
+        title: Validated at build time
+        text: Every file is parsed against a zod schema. An unknown key is an error, not a silent no-op.
+      - icon: /images/ui/icon.svg
+        title: The voice lint
+        text: content/VOICE.md carries the rules. The lint applies them to every string on the site.
+      - icon: /images/ui/icon.svg
+        title: The SEO contract
+        text: Title, description, canonical, structured data and sitemap entry are audited per page.
+      - icon: /images/ui/icon.svg
+        title: The editorial plugin
+        text: Seven skills and two review agents, so a content job runs the same way twice.
+    monitoring:
+      image: /images/home/feature-monitoring.webp
+      imageAlt: A tall grey placeholder panel standing in for a screenshot of the build output
+  - type: home-about
+    eyebrow: What Acme is
+    statement: Acme is a content engine, an editorial plugin and an example site in one
+      repository. The engine turns those files into the routes, the structured data and the sitemap. The
+      plugin is how an agent writes and edits that content. This site is what the two produce,
+      under a placeholder brand. When copy has to change without a deploy, or the people who
+      write it will never open a pull request, a CMS with a request-time database is the
+      better tool.
+    cards:
+      - title: Collections
+        stat: "7"
+        text: Posts, authors, categories, reviews, FAQ sets, use cases and pages.
+      - title: Section types
+        stat: "25"
+        text: The types a page file may list, each with its own copy schema.
+      - title: Request-time reads
+        stat: "0"
+        text: Everything is prerendered and served static from a Cloudflare Worker.
+  - type: use-case-cards
+    eyebrow: Use cases
+    heading: The shapes this kit already fits.
+  - type: reviews
+    eyebrow: Reviews
+    heading: One review slide, waiting for a real one.
+  - type: faq
+    set: general
+    eyebrow: Our FAQ
+    heading: Frequently asked questions
+    variant: contact
+  - type: contact-form
+    form: contact
+  - type: contact-details
+    eyebrow: Reach us
+    heading: How to reach Acme.
+    cards:
+      - icon: /images/ui/icon.svg
+        title: Office
+        text:
+          - Acme is a placeholder brand for an open-source kit, so the address below is an
+            example and so is the city.
+        highlight:
+          kind: text
+          value: 1 Example Street, Example City
+      - icon: /images/ui/icon.svg
+        title: E-mail
+        text:
+          - Mail reaches the people who wrote the engine.
+          - Replies come from the person who reads that mailbox, not a support desk.
+        highlight:
+          kind: email
+          value: hello@acme.example
+      - icon: /images/ui/icon.svg
+        title: The blog
+        text:
+          - Posts cover how the kit is put together.
+          - Each one is a single markdown file under content/blog/.
+        highlight:
+          kind: text
+          value: acme.example/blog

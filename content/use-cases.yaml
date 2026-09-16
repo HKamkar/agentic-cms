@@ -1,0 +1,21 @@
+# The cards of the "Use cases" section, in order; the same list is the
+# ItemList structured data of any page that shows the section. Each card:
+# sector (the tag), title, text, icon (under public/images/use-cases/). The
+# reveal delays and icon widths are the design's, keyed by position in the
+# component. Checked at build time (useCaseSchema in
+# src/lib/content/collections.ts); template in content/_templates/use-case.yaml.
+- sector: Marketing site
+  title: A marketing site with a blog.
+  text: The pages, the posts, the reviews and the FAQ sets are files under content/.
+    A copy change is a diff a reviewer can read before it ships.
+  icon: /images/use-cases/icon.svg
+- sector: Documentation blog
+  title: A changelog or a documentation blog.
+  text: Posts are markdown with validated frontmatter. The FAQ accordion, the pull
+    quote and the inline image come from the body conventions, not from a component.
+  icon: /images/use-cases/icon.svg
+- sector: Launch page
+  title: A single launch page that has to be right.
+  text: One page file lists its sections in order and declares its structured data.
+    The build audits the title, the description, the canonical and the sitemap entry.
+  icon: /images/use-cases/icon.svg

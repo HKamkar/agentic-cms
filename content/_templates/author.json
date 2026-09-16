@@ -1,0 +1,9 @@
+{
+  "author-slug": {
+    "name": "Full name",
+    "title": "Role, Acme",
+    "bio": "One or two sentences for the author card.",
+    "image": "/images/authors/full-name.webp",
+    "imageAlt": "Full name headshot"
+  }
+}

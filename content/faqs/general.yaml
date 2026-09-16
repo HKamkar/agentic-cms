@@ -1,0 +1,30 @@
+# The FAQ set shown on the landing page and on the demo pages, in order.
+# Each item is a question and its answer; the answer is one paragraph (a
+# long one wraps over several lines, and the line breaks read as spaces).
+# Checked at build time (faqSchema in src/lib/content/collections.ts);
+# template in content/_templates/faq.yaml.
+items:
+  - question: Where does the content live?
+    answer: Under content/, as files. Posts are markdown in content/blog/, where the
+      filename is the URL. Pages are YAML in content/pages/, one file per route. The
+      authors, the categories, the reviews, the FAQ sets and the use-case cards are
+      their own small files beside them. Nothing is read at request time, because every
+      page is prerendered and the Worker that serves the site has no filesystem.
+  - question: How do I add a page?
+    answer: Copy content/_templates/page.yaml to content/pages/<slug>.yaml, give it a
+      seo block whose path is the route, a jsonld block for its page type, and a list
+      of sections in order. Each section is a type and its copy. A page made of section
+      types that already exist needs no code, and the sitemap picks it up from the file.
+  - question: What does the lint check?
+    answer: The rules a schema cannot carry. It reads the fenced block at the end of
+      content/VOICE.md and applies it to every string on the site, which covers the
+      banned words and patterns, the brand spelling and the em dash. It also checks the
+      SEO limits at the source, the alt text pairs, the structure of a post body, the
+      images on disk and the dates. It runs first in pnpm build and takes about a second
+      on its own.
+  - question: Can I change the design?
+    answer: Yes. The section components under src/components/sections/ are the design,
+      and the schema beside them says what copy each section takes. Restyling a section,
+      or adding a new type with a schema, a component and a registry entry, leaves every
+      content file alone. The reverse also holds, so rewriting the copy in a page file
+      changes no code.
