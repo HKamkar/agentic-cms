@@ -87,7 +87,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   illustration is a `ui/Placeholder` crossed box; content images are `<img>`
   with `width`, `height`, `alt` and `block h-auto w-full border border-ink`.
 - No motion in the wireframe: no `Fx` or `OnView` in a section, no `data-ix`
-  attributes, no transitions. The `src/components/ix/` library and
+  attributes, no transitions. The `content-engine-kit/ix` library and
   `src/styles/motion.css` stay for a fork that adds reveals — and then the
   old rules apply again: `data-ix` targets addressed through `ix(name)`,
   start states in `motion.css`, `useReducedMotionPref()` honoured, and no
@@ -103,7 +103,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   the one exception). One colour utility per property per element (two
   resolve by stylesheet order).
 - Images stay `<img>` with `width`/`height`; above the fold in a server
-  component `EagerImage` (`@/lib/components`), everything else `loading="lazy"`. `base.css`
+  component `EagerImage` (`content-engine-kit/components`), everything else `loading="lazy"`. `base.css`
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
   `node scripts/placeholder.mjs <out> <width> <height>`.
@@ -241,7 +241,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - One implementation per shared UI element. The catalogue is
   `src/components/README.md` — read it before writing markup, build pages from
   it, and add every new shared component to it in the same commit. Shared
-  pieces live in `src/components/ui/`, animations in `src/components/ix/`
+  pieces live in `src/components/ui/`, animations in `content-engine-kit/ix`
   (start states in `src/styles/motion.css`). Never paste header, footer,
   button, container or title block markup into a page. Extract repeated
   markup into a component before its second use, driven by props or

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { kit } from "@/kit";
-import { formatDate, type PostMeta } from "@/lib/blog";
+import { formatDate, type PostMeta } from "content-engine-kit/blog";
 
 /** A post card: thumbnail, category, date and title, plus the excerpt on the index. */
 export function BlogCard({ post, excerpt = false }: { post: PostMeta; excerpt?: boolean }) {

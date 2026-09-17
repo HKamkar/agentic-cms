@@ -18,8 +18,7 @@ const README = "src/lib/content/README.md";
 const START = "<!-- content-docs:start -->";
 const END = "<!-- content-docs:end -->";
 
-const { lookup } = await import("../src/lib/content/define.ts");
-const { sourceOf } = await import("../src/lib/content/read.ts");
+const { lookup, sourceOf } = await import("content-engine-kit/content");
 const { kit } = await import("@/kit");
 const { collections } = kit;
 

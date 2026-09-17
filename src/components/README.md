@@ -80,7 +80,7 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 
 ## The engine's React pieces (`src/lib/components/`)
 
-Three components that carry no design, imported from `@/lib/components`;
+Three components that carry no design, imported from `content-engine-kit/components`;
 the site styles around them.
 
 | Component | Props | Notes |
@@ -155,7 +155,7 @@ FaqEntry[]` (`{ question, answer }`).
 The section around it is `sections/FaqSection`, which reads the FAQ set the
 page names (`kit.content.getFaq(section.set)`) and prints the design variant the page
 asked for. The post body's accordion is a different component
-(`FaqAccordion` from `@/lib/components`), because a post's questions are
+(`FaqAccordion` from `content-engine-kit/components`), because a post's questions are
 markdown.
 
 ## Forms (`src/components/ui/form/`)
@@ -182,7 +182,7 @@ the definition schema, adding a form, a field type or a backend — is
 <Form definition={forms.contact} />
 ```
 
-## The reveal library (`src/components/ix/`) — available, unused
+## The reveal library (`content-engine-kit/ix`) — available, unused
 
 Nothing in the wireframe animates, and nothing imports these. They are kept
 whole, with their start states in `src/styles/motion.css`, so a fork that

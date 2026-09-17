@@ -174,7 +174,7 @@ its own YAML type, so the page and the page file read side by side.
 Illustrations are crossed placeholder boxes; content images come from
 `node scripts/placeholder.mjs <out> <width> <height>` until real ones exist.
 `STANDARD.md` is the design system; `src/components/README.md` the catalogue.
-The `src/components/ix/` reveal library stays in the tree for a fork that
+The `content-engine-kit/ix` reveal library stays in the package for a fork that
 wants motion.
 
 ## Start your own site

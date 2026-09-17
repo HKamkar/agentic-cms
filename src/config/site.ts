@@ -6,7 +6,7 @@
 // src/lib/seo/README.md): its seo block is the sitemap entry, the breadcrumb
 // name and what the build-time SEO audit expects to exist.
 
-import type { SiteConfig } from "@/lib";
+import type { SiteConfig } from "content-engine-kit";
 
 export const site = {
   name: "Acme",

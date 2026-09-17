@@ -16,10 +16,10 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 
 1. **Build time only.** `read.ts` uses `node:fs`; every consumer is
    prerendered and the Cloudflare Worker has no filesystem. Never import
-   `@/kit` or `@/lib/content` from a `"use client"` module (Turbopack's
+   `@/kit` or `content-engine-kit/content` from a `"use client"` module (Turbopack's
    client build fails on `node:fs`); a client component gets its entries as
    props from the server component or page that read them, and imports only
-   types (`import type { Author } from "@/lib/content"`).
+   types (`import type { Author } from "content-engine-kit/content"`).
 2. **A problem is a `ContentError`**, never a warning and never a silent
    default: it names the file, the field path and the problem, one line per
    issue. A consumer never catches it.
@@ -52,7 +52,7 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 | `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()` |
 | `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the seven definitions around the site's section union; `SectionLike`, the least the engine knows about a section |
 | `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
-| `index.ts` | The public surface, `@/lib/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
+| `index.ts` | The public surface, `content-engine-kit/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
 | `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
 | `scripts/content-check.mjs` | `pnpm content:check [--root <dir>]`: reads every collection and reports like the SEO audit (the schema-only loop) |
@@ -582,7 +582,7 @@ under `content/`, an annotated template in `content/_templates/`, a row
 in `content/README.md`. Run `node scripts/content-docs.mjs` (the tables
 below) and `pnpm test`, `pnpm content:check`, `pnpm build`. A client
 component gets the entries as props from the page or server component that
-read them (a value import of `@/lib/content` in a client module fails the
+read them (a value import of `content-engine-kit/content` in a client module fails the
 build: "Failed to write app endpoint … does not support external modules
 (request: node:fs)").
 

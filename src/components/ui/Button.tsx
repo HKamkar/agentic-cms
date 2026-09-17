@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cx } from "@/lib/cx";
+import { cx } from "content-engine-kit/cx";
 
 export type ButtonVariant = "solid" | "outline";
 

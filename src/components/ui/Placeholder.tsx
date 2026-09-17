@@ -1,4 +1,4 @@
-import { cx } from "@/lib/cx";
+import { cx } from "content-engine-kit/cx";
 
 /**
  * The stand-in for a picture: a crossed box at the ratio the real image will

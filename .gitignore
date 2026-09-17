@@ -50,6 +50,9 @@ next-env.d.ts
 # scripts/parity.sh captures
 .parity/
 
+# the package, compiled by tsc (pnpm build:pkg; prepare)
+dist/
+
 # Claude Code personal settings, machine notes and agent worktrees
 .claude/settings.local.json
 CLAUDE.local.md

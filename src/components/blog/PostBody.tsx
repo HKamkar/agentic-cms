@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import type { PostBlockClasses } from "@/lib/blog";
-import { cx } from "@/lib/cx";
-import { FaqAccordion } from "@/lib/components";
+import type { PostBlockClasses } from "content-engine-kit/blog";
+import { cx } from "content-engine-kit/cx";
+import { FaqAccordion } from "content-engine-kit/components";
 import styles from "./PostBody.module.css";
 
 /**

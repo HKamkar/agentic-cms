@@ -6,8 +6,8 @@ import { PostBody, postBlocks } from "@/components/blog/PostBody";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
 import { kit } from "@/kit";
-import { renderPostBody } from "@/lib/blog";
-import { EagerImage, JsonLd } from "@/lib/components";
+import { renderPostBody } from "content-engine-kit/blog";
+import { EagerImage, JsonLd } from "content-engine-kit/components";
 
 type Props = { params: Promise<{ slug: string }> };
 

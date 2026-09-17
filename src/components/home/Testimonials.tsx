@@ -1,6 +1,6 @@
 import type { SectionProps } from "@/components/sections/schemas";
 import { Section } from "@/components/ui/Section";
-import type { Review } from "@/lib/content";
+import type { Review } from "content-engine-kit/content";
 
 const card = "flex flex-col gap-2 border border-ink p-4";
 

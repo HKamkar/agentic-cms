@@ -26,7 +26,7 @@ const ROOT = process.cwd();
 const DAY = 24 * 60 * 60 * 1000;
 const today = new Date().toISOString().slice(0, 10);
 
-const { readCollection } = await import("../src/lib/content/index.ts");
+const { readCollection } = await import("content-engine-kit/content");
 const { readWorkshop } = await import("./lib/content-lint.mjs");
 const { kit } = await import("@/kit");
 const { collections } = kit;

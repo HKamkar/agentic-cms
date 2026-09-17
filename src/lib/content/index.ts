@@ -9,9 +9,9 @@ import type { Author, Category, Collections, Faq, Page, Review, SectionLike, Use
 import type { Entry } from "./define.ts";
 import { readCollection, readEntry } from "./read.ts";
 
-export { ContentError, type ContentIssue } from "./errors.ts";
-export { defineCollection, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
-export { readCollection, readEntry } from "./read.ts";
+export { ContentError, formatPath, type ContentIssue } from "./errors.ts";
+export { defineCollection, lookup, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
+export { readCollection, readEntry, slugsOf, sourceOf } from "./read.ts";
 export { text, optional, dateOnly, isoTimestamp, ref } from "./schema.ts";
 export {
   createCollections,

@@ -1,4 +1,4 @@
-import type { CheckboxGroupField } from "@/lib/forms/types";
+import type { CheckboxGroupField } from "content-engine-kit/forms";
 
 /** A titled group of checkboxes, flowing onto as many rows as the width needs. */
 export function CheckboxGroup({ id, field }: { id: string; field: CheckboxGroupField }) {

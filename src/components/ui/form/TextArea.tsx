@@ -1,5 +1,5 @@
-import type { TextAreaField } from "@/lib/forms/types";
-import { cx } from "@/lib/cx";
+import type { TextAreaField } from "content-engine-kit/forms";
+import { cx } from "content-engine-kit/cx";
 import { control } from "./field";
 import { FieldWrap } from "./FieldWrap";
 

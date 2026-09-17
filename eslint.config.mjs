@@ -23,6 +23,8 @@ const eslintConfig = defineConfig([
     ".wrangler/**",
     // Agent worktrees checked out inside the repo (gitignored):
     ".claude/worktrees/**",
+    // The compiled package:
+    "dist/**",
   ]),
 ]);
 

@@ -15,15 +15,14 @@
 // a description outside 70–160, a future date, a stale draft, an orphan, a
 // stray file) WARN — the CLI's --strict promotes those too.
 //
-// Loaded through scripts/lib/load-ts.mjs (the engine is TypeScript): the
-// tests via `node --import`, the CLI via a dynamic import after the hook.
+// Loaded through scripts/lib/load-ts.mjs: the tests via `node --import`, the
+// CLI via a dynamic import after the hook (in the kit's own checkout the
+// engine is the TypeScript source; on a site it is the package).
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { ContentError, readCollection } from "../../src/lib/content/index.ts";
-import { sourceOf } from "../../src/lib/content/read.ts";
-import { formatPath } from "../../src/lib/content/errors.ts";
+import { ContentError, formatPath, readCollection, sourceOf } from "content-engine-kit/content";
 
 export const LIMITS = {
   title: { warnMax: 60, failMax: 70 }, // = check-seo

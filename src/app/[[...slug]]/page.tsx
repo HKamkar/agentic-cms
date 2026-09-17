@@ -8,7 +8,7 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { JsonLd } from "@/lib/components";
+import { JsonLd } from "content-engine-kit/components";
 import { renderSections } from "@/components/sections/render";
 import { kit } from "@/kit";
 
