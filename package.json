@@ -1,6 +1,6 @@
 {
   "name": "content-engine-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A file-based CMS for Next.js sites, with an AI editor: the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
   "type": "module",
@@ -40,6 +40,7 @@
       "types": "./dist/cx.d.ts",
       "default": "./dist/cx.js"
     },
+    "./loader": "./scripts/lib/load-ts.mjs",
     "./package.json": "./package.json"
   },
   "bin": {

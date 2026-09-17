@@ -217,8 +217,11 @@ Then, in either case:
 
    and `package.json` names the commands: `"content:lint": "content-engine-kit
    lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
-   "content-engine-kit"`, and `"build": "content-engine-kit lint &&
-   content-engine-kit docs --check && next build && content-engine-kit seo"`.
+   "content-engine-kit"`, `"build": "content-engine-kit lint &&
+   content-engine-kit docs --check && next build && content-engine-kit seo"`,
+   and for the site's own tests on its real content `"test": "node --import
+   content-engine-kit/loader --test \"src/**/*.test.ts\""` (the loader that
+   lets Node run the site's TypeScript against the package).
    The example's `src/app/`, `src/components/`, `src/config/`, `src/styles/`
    and `content/` are the files a site owns; copy them as a start.
 2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,

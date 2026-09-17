@@ -262,11 +262,14 @@ and Node. A git dependency builds on install only where the consumer's
 tarball; it found the site-side `mdx/types` import a consumer could not
 resolve, which the blog barrel now re-exports.
 
-**Proven.** Every commit markup-identical to `main` (`parity`, JSON-LD,
-sitemap, feed) and the eight interaction states identical; the example's
-pixels in both schemes identical at the end; `pnpm lint`, `pnpm test`,
-`pnpm content:lint` (0/0), `pnpm build` (0/0), `pnpm test:pack` (the
-scratch site's markup byte-identical to `main`'s), `pnpm preview`.
+**Proven.** Every code commit markup-identical to `main` (`parity`:
+HTML, JSON-LD, sitemap, feed) and the eight interaction states identical;
+the example's pixels in both schemes identical at the end but for the two
+posts a content commit edited (one line each, `updatedAt` set) and the
+FAQ-open state of one of them, which moved with that line; `pnpm lint`,
+`pnpm test` (71), `pnpm content:lint` (0/0), `pnpm build` (0/0), `pnpm
+test:pack` (the scratch site built from the tarball, its markup
+byte-identical to `main`'s), `pnpm preview`. Released as `0.2.0`.
 
 ## Verification recipe
 

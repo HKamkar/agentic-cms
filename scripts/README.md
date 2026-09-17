@@ -81,8 +81,9 @@ current directory: its registry and config through `src/kit.ts`, its
   (between the `content-docs` markers); `--check` exits 1 when the file is
   stale, and `pnpm build` runs it, so a schema change is followed by running
   the command and committing the README.
-- `lib/load-ts.mjs` — `node --import ./scripts/lib/load-ts.mjs …` lets plain
-  Node run the TypeScript under the site's `src/` (types stripped by Node;
+- `lib/load-ts.mjs` — `node --import ./scripts/lib/load-ts.mjs …` here,
+  `node --import content-engine-kit/loader …` on a site (the package exports
+  it as `./loader`), lets plain Node run the TypeScript under the site's `src/` (types stripped by Node;
   the aliases of the site's `tsconfig.json` — `@/*`, and in this checkout
   the package's own name to its source — and extensionless imports resolved
   by the hook, which never touches `node_modules`, where a package ships
