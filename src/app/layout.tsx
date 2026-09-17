@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Footer } from "@/components/ui/Footer";
 import { Navbar } from "@/components/ui/Navbar";
 import { site } from "@/config/site";
-import { getPage } from "@/lib/content";
+import { kit } from "@/kit";
 import "./globals.css";
 
 // The stored theme has to be on <html> before the first paint, or a reader who
@@ -10,7 +10,7 @@ import "./globals.css";
 // runs before hydration — hence suppressHydrationWarning on <html>.
 const THEME_SCRIPT = "try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}";
 
-const home = () => getPage("home");
+const home = () => kit.content.getPage("home");
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

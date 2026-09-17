@@ -1,13 +1,14 @@
-// The site's content contract: every collection under content/, with the
-// schema each entry must satisfy. This is configuration in the sense of
-// frontmatter.ts before it — the rules a file has to meet — not engine code;
-// the engine (read.ts, schema.ts) knows nothing about posts or authors.
-// Descriptions are the documentation: content/README.md's field tables are
-// generated from them, so say what a field is and where it shows, and state
-// a constraint or a derived default as a fact.
+// The standard content contract: the seven collections a site keeps under
+// content/, with the schema each entry must satisfy. This is configuration
+// in the sense of frontmatter.ts before it — the rules a file has to meet —
+// not engine code; the engine (read.ts, schema.ts) knows nothing about posts
+// or authors. The one thing a site brings is its section union, the copy
+// schemas of its page sections: createCollections({ sections }) builds the
+// `pages` collection around it. Descriptions are the documentation: the
+// field tables are generated from them, so say what a field is and where it
+// shows, and state a constraint or a derived default as a fact.
 
-import { z } from "zod";
-import { sectionSchema } from "@/components/sections/schemas";
+import { z, type ZodType } from "zod";
 import { defineCollection } from "./define.ts";
 import { dateOnly, isoTimestamp, optional, ref, text } from "./schema.ts";
 
@@ -167,13 +168,39 @@ export const jsonldSchema = z
   )
   .describe("The page's structured data: the copy of its JSON-LD block by page type");
 
-export const pageSchema = z
-  .strictObject({
-    seo: pageSeoSchema,
-    jsonld: jsonldSchema,
-    sections: z.array(sectionSchema, { error: "must be a list of sections" }).min(1, { error: "must have at least one section" }).describe("The sections in order, each a `type` and its copy"),
-  })
-  .describe("A page: content/pages/<slug>.yaml — its SEO block, its structured data, and its sections in order (seo.path is the route; the file name is only the key)");
+/**
+ * The least a page section is to the engine: its `type`, and whatever copy
+ * the site's schema gives it. The engine looks inside for the sections it
+ * knows the role of — a `faq` (its `set` names the FAQ set), the
+ * `use-case-cards`, a `group` (its `sections` nest) — and leaves the rest
+ * to the site's components.
+ */
+export type SectionLike = { type: string } & Record<string, unknown>;
+
+/** A page file: its SEO block, its structured data, and its sections in order, validated by the site's section union. */
+export function pageSchema<S extends ZodType<SectionLike>>(sections: S) {
+  return z
+    .strictObject({
+      seo: pageSeoSchema,
+      jsonld: jsonldSchema,
+      sections: z.array(sections, { error: "must be a list of sections" }).min(1, { error: "must have at least one section" }).describe("The sections in order, each a `type` and its copy"),
+    })
+    .describe("A page: content/pages/<slug>.yaml — its SEO block, its structured data, and its sections in order (seo.path is the route; the file name is only the key)");
+}
+
+/** The seven collections, in the order the scripts read and document them; `pages` is validated by the site's section union. */
+export function createCollections<S extends ZodType<SectionLike>>({ sections }: { sections: S }) {
+  const authors = defineCollection({ name: "authors", kind: "map", file: "authors.json", schema: authorSchema });
+  const categories = defineCollection({ name: "categories", kind: "map", file: "categories.json", schema: categorySchema });
+  const posts = defineCollection({ name: "posts", kind: "folder", dir: "blog", format: "markdown", schema: postSchema });
+  const reviews = defineCollection({ name: "reviews", kind: "list", file: "reviews.yaml", schema: reviewSchema });
+  const faqs = defineCollection({ name: "faqs", kind: "folder", dir: "faqs", format: "yaml", schema: faqSchema });
+  const useCases = defineCollection({ name: "useCases", kind: "list", file: "use-cases.yaml", schema: useCaseSchema });
+  const pages = defineCollection({ name: "pages", kind: "folder", dir: "pages", format: "yaml", schema: pageSchema(sections) });
+  return { authors, categories, posts, reviews, faqs, useCases, pages };
+}
+
+export type Collections<S extends ZodType<SectionLike> = ZodType<SectionLike>> = ReturnType<typeof createCollections<S>>;
 
 export type Author = z.output<typeof authorSchema>;
 export type Category = z.output<typeof categorySchema>;
@@ -184,15 +211,4 @@ export type UseCase = z.output<typeof useCaseSchema>;
 export type PageSeo = z.output<typeof pageSeoSchema>;
 export type ChangeFrequency = (typeof CHANGE_FREQUENCIES)[number];
 export type PageJsonLd = z.output<typeof jsonldSchema>;
-export type Page = z.output<typeof pageSchema>;
-
-export const authors = defineCollection({ name: "authors", kind: "map", file: "authors.json", schema: authorSchema });
-export const categories = defineCollection({ name: "categories", kind: "map", file: "categories.json", schema: categorySchema });
-export const posts = defineCollection({ name: "posts", kind: "folder", dir: "blog", format: "markdown", schema: postSchema });
-export const reviews = defineCollection({ name: "reviews", kind: "list", file: "reviews.yaml", schema: reviewSchema });
-export const faqs = defineCollection({ name: "faqs", kind: "folder", dir: "faqs", format: "yaml", schema: faqSchema });
-export const useCases = defineCollection({ name: "useCases", kind: "list", file: "use-cases.yaml", schema: useCaseSchema });
-export const pages = defineCollection({ name: "pages", kind: "folder", dir: "pages", format: "yaml", schema: pageSchema });
-
-/** Every collection, in the order scripts read and document them. */
-export const collections = { authors, categories, posts, reviews, faqs, useCases, pages };
+export type Page<S extends ZodType<SectionLike> = ZodType<SectionLike>> = z.output<ReturnType<typeof pageSchema<S>>>;

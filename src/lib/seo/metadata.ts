@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { postUrl } from "@/config/site";
-import type { Post } from "@/lib/blog/posts";
+import type { Post } from "../blog/posts.ts";
+import type { Urls } from "../site.ts";
 import type { PageSeo } from "./types.ts";
 
 /**
- * The complete head of a page from its site block: exact title, description,
- * canonical, Open Graph with the 1200×630 image, Twitter card. A page exports
- * `metadata = pageMetadata(site.<page>)` and nothing else.
+ * The complete head of a page from its seo block: exact title, description,
+ * canonical, Open Graph with the 1200×630 image, Twitter card. The route
+ * returns `pageMetadata(page.seo)` from generateMetadata and nothing else;
+ * the layout's metadataBase makes the paths absolute.
  */
 export function pageMetadata(seo: PageSeo): Metadata {
   return {
@@ -24,33 +25,37 @@ export function pageMetadata(seo: PageSeo): Metadata {
   };
 }
 
-/**
- * The head of a post from its frontmatter: the SEO title (or `title | brand`
- * through the layout template), description, canonical, Open Graph article
- * with its dates, author, section and tags, Twitter card.
- */
-export function postMetadata(post: Post): Metadata {
-  const description = post.seoDescription ?? post.excerpt;
-  const url = postUrl(post.slug);
-  const title = post.seoTitle ?? post.title;
-  return {
-    title: post.seoTitle ? { absolute: post.seoTitle } : post.title,
-    description,
-    keywords: post.keywords,
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title,
+/** The head builders that need the site's URLs. */
+export function createMetadata({ postUrl }: Urls) {
+  /**
+   * The head of a post from its frontmatter: the SEO title (or `title | brand`
+   * through the layout template), description, canonical, Open Graph article
+   * with its dates, author, section and tags, Twitter card.
+   */
+  function postMetadata(post: Post): Metadata {
+    const description = post.seoDescription ?? post.excerpt;
+    const url = postUrl(post.slug);
+    const title = post.seoTitle ?? post.title;
+    return {
+      title: post.seoTitle ? { absolute: post.seoTitle } : post.title,
       description,
-      url,
-      images: post.ogImage ? [{ url: post.ogImage }] : undefined,
-      publishedTime: post.publishedAt ?? post.date,
-      modifiedTime: post.updatedAt ?? post.publishedAt ?? post.date,
-      authors: [post.author.name],
-      section: post.category.name,
-      tags: post.keywords,
-    },
-    twitter: { card: "summary_large_image", title, description, images: post.ogImage ? [post.ogImage] : undefined },
-  };
-}
+      keywords: post.keywords,
+      alternates: { canonical: url },
+      openGraph: {
+        type: "article",
+        title,
+        description,
+        url,
+        images: post.ogImage ? [{ url: post.ogImage }] : undefined,
+        publishedTime: post.publishedAt ?? post.date,
+        modifiedTime: post.updatedAt ?? post.publishedAt ?? post.date,
+        authors: [post.author.name],
+        section: post.category.name,
+        tags: post.keywords,
+      },
+      twitter: { card: "summary_large_image", title, description, images: post.ogImage ? [post.ogImage] : undefined },
+    };
+  }
 
+  return { pageMetadata, postMetadata };
+}

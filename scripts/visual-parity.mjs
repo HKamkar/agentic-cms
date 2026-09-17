@@ -72,8 +72,9 @@ import zlib from "node:zlib";
 import { chromium } from "playwright-core";
 import sharp from "sharp";
 
-const { site } = await import("../src/config/site.ts");
-const ROOT = path.resolve(import.meta.dirname, "..");
+const { kit } = await import("@/kit");
+const { site } = kit;
+const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".parity/visual");
 const DEFAULT_WIDTHS = [1920, 1440, 1280, 1100, 992, 800, 767, 390];
 const MENU_WIDTHS = [767, 390];

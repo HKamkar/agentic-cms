@@ -5,7 +5,9 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { ContentError } from "@/lib/content";
 import { postTree, VALID_POST, withContent } from "@/lib/content/test-helpers";
-import { formatDate, getAllCategories, getAllPosts, getAuthor, getPostBySlug, getRelatedPosts } from "./posts";
+import { kit } from "@/kit";
+
+const { formatDate, getAllCategories, getAllPosts, getAuthor, getPostBySlug, getRelatedPosts } = kit.blog;
 
 // The real tree is asserted on its invariants, never on its size: a new post
 // or category must not fail the suite (the content skills run it).

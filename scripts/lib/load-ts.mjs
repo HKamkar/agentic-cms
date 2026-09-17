@@ -1,7 +1,7 @@
 // Lets plain Node run the TypeScript under src/ the way Turbopack does:
 //
 //   node --import ./scripts/lib/load-ts.mjs --test "src/**/*.test.ts"
-//   import "./lib/load-ts.mjs"; const m = await import("../src/lib/content/index.ts");
+//   import "./lib/load-ts.mjs"; const { kit } = await import("@/kit");
 //
 // Node strips the types itself (22.18+); what it cannot do is resolve the
 // `@/` alias from tsconfig.json or an extensionless relative import, so a
@@ -15,12 +15,13 @@
 // has no JSX, and nothing that runs here needs it.
 import { existsSync } from "node:fs";
 import { registerHooks } from "node:module";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-// The repo's src/, from this file's own location, so a script that changes
-// directory (content-check --root, the content lint) or a test that runs
-// from elsewhere still resolves `@/` to this checkout.
-const SRC = new URL("../../src/", import.meta.url).href;
+// The site's src/: the directory the process started in, read once here, so
+// a script that changes directory afterwards (content-check --root, the
+// content lint) still resolves `@/` to the site it was run from.
+const SRC = pathToFileURL(path.join(process.cwd(), "src") + path.sep).href;
 const CANDIDATES = [".ts", "/index.ts"];
 
 const isRelative = (specifier) => specifier.startsWith("./") || specifier.startsWith("../");

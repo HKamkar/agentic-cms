@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BlogCard } from "@/components/blog/BlogCard";
-import { PostBody } from "@/components/blog/PostBody";
-import { EagerImage, JsonLd } from "@/lib/components";
+import { mdxComponents } from "@/components/blog/mdx";
+import { PostBody, postBlocks } from "@/components/blog/PostBody";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
-import { absoluteUrl, postUrl, site } from "@/config/site";
-import { extractFaq } from "@/lib/blog/faq";
-import { renderPostBody } from "@/lib/blog/markdown";
-import { formatDate, getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog/posts";
-import { postBreadcrumb } from "@/lib/seo/jsonld";
-import { postMetadata } from "@/lib/seo/metadata";
+import { kit } from "@/kit";
+import { extractFaq, renderPostBody } from "@/lib/blog";
+import { EagerImage, JsonLd } from "@/lib/components";
 
 type Props = { params: Promise<{ slug: string }> };
+
+const { site, urls, blog, seo } = kit;
+const { absoluteUrl, postUrl } = urls;
+const { formatDate, getAllPosts, getPostBySlug, getRelatedPosts } = blog;
 
 // Every post is rendered to static HTML at build time; unknown slugs 404.
 export const dynamicParams = false;
@@ -24,7 +25,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  return post ? postMetadata(post) : {};
+  return post ? seo.postMetadata(post) : {};
 }
 
 export default async function PostPage({ params }: Props) {
@@ -32,7 +33,7 @@ export default async function PostPage({ params }: Props) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
-  const body = await renderPostBody(post);
+  const body = await renderPostBody(post, { components: mdxComponents, blocks: postBlocks });
   const related = getRelatedPosts(post);
   const faq = extractFaq(post.body);
 
@@ -74,7 +75,7 @@ export default async function PostPage({ params }: Props) {
   return (
     <>
       <JsonLd data={articleLd} />
-      <JsonLd data={postBreadcrumb(post)} />
+      <JsonLd data={seo.postBreadcrumb(post)} />
       {faqLd && <JsonLd data={faqLd} />}
 
       <article>

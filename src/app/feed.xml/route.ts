@@ -1,6 +1,7 @@
-import { absoluteUrl, postUrl, site } from "@/config/site";
-import { getAllPosts } from "@/lib/blog/posts";
-import { getPage } from "@/lib/content";
+import { kit } from "@/kit";
+
+const { site, content, blog } = kit;
+const { absoluteUrl, postUrl } = kit.urls;
 
 // Rendered once at build time and served as a static asset.
 export const dynamic = "force-static";
@@ -9,7 +10,7 @@ const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export function GET() {
-  const posts = getAllPosts();
+  const posts = blog.getAllPosts();
   const items = posts
     .map(
       (p) => `    <item>
@@ -26,7 +27,7 @@ export function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${escape(getPage("blog").seo.title)}</title>
+    <title>${escape(content.getPage("blog").seo.title)}</title>
     <link>${absoluteUrl(site.links.blog)}</link>
     <description>${escape(site.description)}</description>
     <language>${site.locale}</language>

@@ -4,7 +4,10 @@ Turns the files under `content/` into typed, validated data at build time:
 a **collection** is a definition (name, where its entries live, how they are
 laid out, the zod schema every entry must satisfy), `readCollection()` reads
 it, and a wrong file fails the build with a message that names the file, the
-field and the problem. This document is the contract; read it before
+field and the problem. A site builds its registry once, in `src/kit.ts`
+(`createKit({ site, sections })`, which calls `createCollections()` and
+`createContent()` here), and reads it as `kit.collections` and
+`kit.content`; nothing in this directory imports the site. This document is the contract; read it before
 changing anything in `src/lib/content/` or adding a collection. The blog
 engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 `posts` collection to `Post` objects and owns every derived field.
@@ -13,10 +16,10 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 
 1. **Build time only.** `read.ts` uses `node:fs`; every consumer is
    prerendered and the Cloudflare Worker has no filesystem. Never import
-   `@/lib/content` from a `"use client"` module (Turbopack's client build
-   fails on `node:fs`); a client component gets its entries as props from
-   the server component or page that read them, and imports only types
-   (`import type { Author } from "@/lib/content"`).
+   `@/kit` or `@/lib/content` from a `"use client"` module (Turbopack's
+   client build fails on `node:fs`); a client component gets its entries as
+   props from the server component or page that read them, and imports only
+   types (`import type { Author } from "@/lib/content"`).
 2. **A problem is a `ContentError`**, never a warning and never a silent
    default: it names the file, the field path and the problem, one line per
    issue. A consumer never catches it.
@@ -47,9 +50,10 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 | `schema.ts` | The field vocabulary: `text()`, `optional()`, `dateOnly()`, `isoTimestamp()`, `ref()` — each with its own error wording |
 | `read.ts` | `readCollection()`, `readEntry()`, `slugsOf()`, `sourceOf()`: listing, parsing (gray-matter + yaml, yaml, JSON), validation, the production-only cache |
 | `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()` |
-| `collections.ts` | The site's registry: the schemas and definitions of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema`); `collections` |
-| `src/components/sections/schemas.ts` | The section types a page file may list: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union |
-| `index.ts` | The public surface, `@/lib/content`: the above plus `getAuthors()`, `getCategories()` |
+| `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the seven definitions around the site's section union; `SectionLike`, the least the engine knows about a section |
+| `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
+| `index.ts` | The public surface, `@/lib/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
+| `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
 | `scripts/content-check.mjs` | `pnpm content:check [--root <dir>]`: reads every collection and reports like the SEO audit (the schema-only loop) |
 | `scripts/content-lint.mjs`, `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`, first in `pnpm build`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
@@ -566,10 +570,14 @@ A wrapper around several sections, for a design that decorates a run of them tog
 
 ## Recipes
 
-**Add a collection.** In `collections.ts`: the schema (`z.strictObject` of
-the helpers, `.describe()` on every field and on the object), then
-`defineCollection({ name, kind, dir|file, format?, schema })`, and add it
-to `collections`. In `index.ts`: a typed accessor (`getX()`). Put the files
+**Add a collection.** A site's own collection is declared in its
+`src/kit.ts`: the schema (`z.strictObject` of the helpers, `.describe()` on
+every field and on the object), then `defineCollection({ name, kind,
+dir|file, format?, schema })`, returned from the `collections` option
+(`createKit({ site, sections, collections: (standard) => ({ ...standard,
+glossary }) })`), so the lint, the docs and the status see it; read it with
+`readCollection(kit.collections.glossary)`. A collection every site should
+have goes into `collections.ts` and `createContent()` instead. Put the files
 under `content/`, an annotated template in `content/_templates/`, a row
 in `content/README.md`. Run `node scripts/content-docs.mjs` (the tables
 below) and `pnpm test`, `pnpm content:check`, `pnpm build`. A client
@@ -589,7 +597,7 @@ list of them. A `ref()` to a name nobody defined, or to a `list`
 collection, is a programmer error and throws a plain `Error`.
 
 **Write a negative test.** `withContent({ "blog/x.md": "---\n…\n---\n" }, () =>
-expectContentError(() => readCollection(collections.posts), "content/blog/x.md: title is required"))`
+expectContentError(() => readCollection(kit.collections.posts), "content/blog/x.md: title is required"))`
 — the fixture lives in a temp directory the process changes into, and the
 working directory is restored afterwards; `postTree()` supplies the two registries a post needs.
 

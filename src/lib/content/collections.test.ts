@@ -3,10 +3,12 @@
 
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { collections } from "./collections";
+import { kit } from "@/kit";
 import { readCollection } from "./read";
 import { expectContentError, postTree, VALID_POST, withContent } from "./test-helpers";
 
+// The example site's registry: its section union is what the pages test asserts on.
+const { collections } = kit;
 const posts = () => readCollection(collections.posts);
 const fails = (frontmatter: string, ...fragments: string[]) => withContent(postTree(frontmatter), () => expectContentError(posts, ...fragments));
 const passes = (frontmatter: string) => withContent(postTree(frontmatter), () => posts()[0].data);

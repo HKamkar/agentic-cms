@@ -28,9 +28,10 @@ const strict = args.includes("--strict");
 const report = args.includes("--report");
 
 const { format, lint } = await import("./lib/content-lint.mjs");
+const { kit } = await import("@/kit");
 
 console.log(`content-lint: root ${path.join(root, "content")}`);
-const result = lint({ root });
+const result = lint({ root, collections: kit.collections, site: kit.site });
 for (const row of result.collections) console.log(`${row.name}: ${row.entries} entries (${row.source})`);
 const findings = result.findings.map((finding) => (strict && finding.level === "WARN" ? { ...finding, level: "FAIL" } : finding));
 const lines = findings.map(format);

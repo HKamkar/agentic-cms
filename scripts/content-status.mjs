@@ -11,8 +11,9 @@
 //   node scripts/content-status.mjs --since 90.days    the git window (default 30.days)
 //
 // The engine is TypeScript under src/, loaded through scripts/lib/load-ts.mjs
-// after the hook is registered, hence the dynamic imports. NODE_ENV is unset
-// here, so drafts are listed like any other post.
+// after the hook is registered, hence the dynamic imports; the site's
+// registry and posts come from its src/kit.ts. NODE_ENV is unset here, so
+// drafts are listed like any other post.
 import "./lib/load-ts.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -21,13 +22,15 @@ import path from "node:path";
 const args = process.argv.slice(2);
 const sinceIndex = args.indexOf("--since");
 const since = sinceIndex === -1 ? "30.days" : args[sinceIndex + 1];
-const ROOT = path.resolve(import.meta.dirname, "..");
+const ROOT = process.cwd();
 const DAY = 24 * 60 * 60 * 1000;
 const today = new Date().toISOString().slice(0, 10);
 
-const { getAllPosts } = await import("../src/lib/blog/posts.ts");
-const { collections, readCollection } = await import("../src/lib/content/index.ts");
+const { readCollection } = await import("../src/lib/content/index.ts");
 const { readWorkshop } = await import("./lib/content-lint.mjs");
+const { kit } = await import("@/kit");
+const { collections } = kit;
+const { getAllPosts } = kit.blog;
 
 /** Left-aligned columns; a heading line, the rows, a blank line. */
 function table(title, header, rows) {

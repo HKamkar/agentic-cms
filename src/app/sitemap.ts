@@ -1,13 +1,14 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl, postUrl, site } from "@/config/site";
-import { getAllPosts } from "@/lib/blog/posts";
-import { getPages } from "@/lib/content";
+import { kit } from "@/kit";
+
+const { site, content, blog } = kit;
+const { absoluteUrl, postUrl } = kit.urls;
 
 /** Every page file (its `updated` is the lastmod) and every published post. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const posts = getAllPosts();
+  const posts = blog.getAllPosts();
   const latestPost = posts[0] ? new Date(posts[0].updatedAt ?? posts[0].date) : undefined;
-  const seo = getPages().map((entry) => entry.data.seo);
+  const seo = content.getPages().map((entry) => entry.data.seo);
   return [
     ...seo.map((page) => ({
       url: absoluteUrl(page.path),

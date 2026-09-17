@@ -10,24 +10,21 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/lib/components";
 import { renderSections } from "@/components/sections/render";
-import { getPages } from "@/lib/content";
-import { pageBreadcrumb } from "@/lib/seo/jsonld";
-import { pageMetadata } from "@/lib/seo/metadata";
-import { pageJsonLd } from "@/lib/seo/pageJsonLd";
+import { kit } from "@/kit";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return getPages().map((entry) => ({ slug: entry.data.seo.path === "/" ? [] : entry.data.seo.path.slice(1).split("/") }));
+  return kit.content.getPages().map((entry) => ({ slug: entry.data.seo.path === "/" ? [] : entry.data.seo.path.slice(1).split("/") }));
 }
 
-const pageAt = (slug: string[] | undefined) => getPages().find((entry) => entry.data.seo.path === `/${(slug ?? []).join("/")}`)?.data;
+const pageAt = (slug: string[] | undefined) => kit.content.getPages().find((entry) => entry.data.seo.path === `/${(slug ?? []).join("/")}`)?.data;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = pageAt((await params).slug);
-  return page ? pageMetadata(page.seo) : {};
+  return page ? kit.seo.pageMetadata(page.seo) : {};
 }
 
 export default async function ContentPage({ params }: Props) {
@@ -35,8 +32,8 @@ export default async function ContentPage({ params }: Props) {
   if (!page) notFound();
   return (
     <>
-      <JsonLd data={pageJsonLd(page)} />
-      {page.seo.path !== "/" && <JsonLd data={pageBreadcrumb(page.seo)} />}
+      <JsonLd data={kit.seo.pageJsonLd(page)} />
+      {page.seo.path !== "/" && <JsonLd data={kit.seo.pageBreadcrumb(page.seo)} />}
       {renderSections(page.sections)}
     </>
   );

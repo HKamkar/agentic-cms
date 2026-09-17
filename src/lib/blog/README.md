@@ -42,8 +42,9 @@ complete contract; read it before changing anything in `src/lib/blog/`,
 | `content/authors.json`, `content/categories.json` | Registries (the `authors` / `categories` collections). Frontmatter `author` / `category` must be keys here. |
 | `public/images/blog/<slug>/` | A post's images, self-hosted. |
 | `src/lib/content/collections.ts` | `postSchema`, `authorSchema`, `categorySchema` and the three collection definitions — the contract and its validation (the engine: `src/lib/content/README.md`). |
-| `src/lib/blog/posts.ts` | The post pipeline: reads the collections through `readCollection` / `readEntry`, derives fields, sorts. Exports `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate`, and the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
-| `src/lib/blog/markdown.tsx` | `renderPostBody(post)`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the classes from `PostBody`) and `rehypePostImages`. |
+| `src/lib/blog/posts.ts` | The post pipeline: `createBlog(collections)` reads the site's registry through `readCollection` / `readEntry`, derives fields, sorts, and returns `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate` — what a site reads as `kit.blog`; the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
+| `src/lib/blog/markdown.tsx` | `renderPostBody(post, { components, blocks })`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the site's block classes) and `rehypePostImages`; the site passes its `mdxComponents` and `postBlocks`. |
+| `src/lib/blog/index.ts` | The public surface, `@/lib/blog`: the above plus `extractFaq` and the two rehype plugins. |
 | `src/lib/blog/rehype-post-blocks.ts` | Reshapes the rendered body into the post template's blocks (see "Body pipeline"); the class names come in as options. |
 | `src/lib/blog/rehype-post-images.ts` | Every `<img>` in a body loads lazily, raw HTML ones included (they all sit below the hero; eager, they would also be preloaded by pages that merely prefetch the post), and gets its `width`/`height` from the file under `public/`, so the page reserves the space. |
 | `src/lib/blog/faq.ts` | `extractFaq(markdown)`: the Q/A pairs for FAQPage JSON-LD, using the same heading convention. |
@@ -87,9 +88,10 @@ Sort order: `date` desc, then `publishedAt` desc, then title.
 
 ## Body pipeline
 
-`renderPostBody(post)` → `compileMDX` → rehype tree → `rehypePostBlocks`
-groups the top-level nodes into the blocks of the post template, with the
-classes `postBlocks` (in `PostBody.tsx`) gives each:
+`renderPostBody(post, { components, blocks })` → `compileMDX` → rehype tree →
+`rehypePostBlocks` groups the top-level nodes into the blocks of the post
+template, with the classes `postBlocks` (in `PostBody.tsx`, passed in as
+`blocks`) gives each:
 
 | Markdown | Block emitted |
 |---|---|

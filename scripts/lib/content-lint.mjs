@@ -1,8 +1,8 @@
 // The content lint: the rules on top of the content engine that a schema
 // cannot carry — the voice and claim rules of content/VOICE.md, the SEO
 // limits at the source, the post body's structure, the images on disk, the
-// dates that parse but are not days. `lint({ root })` reads every collection
-// exactly as a build would (an engine error is reported first, verbatim, and
+// dates that parse but are not days. `lint({ root, collections, site })`
+// reads every collection of the site's registry exactly as a build would (an engine error is reported first, verbatim, and
 // that collection is skipped), then walks every validated entry and returns
 // findings; `scripts/content-lint.mjs` prints them, `scripts/content-lint.test.mjs`
 // asserts them on scratch trees. A finding is `{ level, file, rule, path,
@@ -21,10 +21,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { ContentError, collections, readCollection } from "../../src/lib/content/index.ts";
+import { ContentError, readCollection } from "../../src/lib/content/index.ts";
 import { sourceOf } from "../../src/lib/content/read.ts";
 import { formatPath } from "../../src/lib/content/errors.ts";
-import { site } from "../../src/config/site.ts";
 
 export const LIMITS = {
   title: { warnMax: 60, failMax: 70 }, // = check-seo
@@ -37,7 +36,7 @@ export const LIMITS = {
 };
 
 /** The layout's title template is `%s | <site.name>`: a post without seoTitle renders this much longer. */
-const TITLE_SUFFIX = ` | ${site.name}`;
+const titleSuffix = (site) => ` | ${site.name}`;
 const VOICE_FILE = "content/VOICE.md";
 const VOICE_START = "<!-- voice-rules:start -->";
 const VOICE_END = "<!-- voice-rules:end -->";
@@ -201,17 +200,19 @@ const isProse = (key, value) => !SKIP_KEYS.has(key) && !IMAGE_KEYS.has(key) && !
 const isCalendarDay = (day) => new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 const words = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 
-export function lint({ root = process.cwd(), voice, now = new Date() } = {}) {
+/** `collections` is the site's registry (kit.collections), `site` its config (kit.site): the lint reads the site it is given, never a module of its own. */
+export function lint({ root = process.cwd(), collections, site, voice, now = new Date() }) {
+  if (!collections || !site) throw new Error("lint(): collections and site are required");
   const previous = process.cwd();
   process.chdir(root);
   try {
-    return lintTree(root, voice, now);
+    return lintTree({ root, collections, site, given: voice, now });
   } finally {
     process.chdir(previous);
   }
 }
 
-function lintTree(root, given, now) {
+function lintTree({ root, collections, site, given, now }) {
   const findings = [];
   const rows = [];
   const add = (level, file, rule, path, problem) => findings.push({ level, file, rule, path, problem });
@@ -246,7 +247,7 @@ function lintTree(root, given, now) {
       }
       if (def.name === "posts") {
         posts.push(entry);
-        findings.push(...postRules(root, entry, now, matchers, images, retired));
+        findings.push(...postRules(root, entry, now, matchers, images, retired, titleSuffix(site)));
       }
       if (def.name === "pages") findings.push(...pageRules(entry, now));
       if (def.name === "authors" || def.name === "reviews") findings.push(...altRules(entry, base));
@@ -254,7 +255,7 @@ function lintTree(root, given, now) {
   }
   findings.push(...imageRules(root, images));
   findings.push(...orphanRules(root, posts, images));
-  findings.push(...strayRules(root));
+  findings.push(...strayRules(root, collections));
   findings.push(...workshopRules(root));
   return { findings, collections: rows };
 }
@@ -318,7 +319,7 @@ function retiredSlugs(root) {
   return new Set(rows.filter((cells) => cells.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(cells[1]) && cells[3] === "retired").map((cells) => cells[2]));
 }
 
-function postRules(root, entry, now, matchers, images, retired) {
+function postRules(root, entry, now, matchers, images, retired, suffix) {
   const { file, data } = entry;
   const out = [];
   out.push(...altRules(entry, []));
@@ -326,7 +327,7 @@ function postRules(root, entry, now, matchers, images, retired) {
   else if (data.keywords.length < LIMITS.keywords.min || data.keywords.length > LIMITS.keywords.max) out.push({ level: "FAIL", file, rule: "keywords-count", path: "keywords", problem: `has ${data.keywords.length} entries; ${LIMITS.keywords.min}–${LIMITS.keywords.max}` });
   if (data.seoTitle) out.push(lengthRule(file, "seoTitle", data.seoTitle, LIMITS.title));
   else {
-    const rendered = data.title + TITLE_SUFFIX;
+    const rendered = data.title + suffix;
     const hit = lengthRule(file, "title", rendered, LIMITS.title);
     if (hit) out.push({ ...hit, problem: `renders as ${q(rendered)}, ${rendered.length} characters; set a seoTitle of ${LIMITS.title.warnMax} or fewer` });
   }
@@ -474,7 +475,7 @@ function orphanRules(root, posts, images) {
 const EXTENSIONS = { markdown: [".md", ".mdx"], yaml: [".yaml", ".yml"], json: [".json"] };
 
 /** Files the loader silently ignores: a wrong extension or a folder inside a collection, an unknown file next to the collections. */
-function strayRules(root) {
+function strayRules(root, collections) {
   const out = [];
   const content = path.join(root, "content");
   if (!fs.existsSync(content)) return out;

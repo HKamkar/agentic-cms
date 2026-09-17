@@ -153,7 +153,7 @@ FaqEntry[]` (`{ question, answer }`).
 ```
 
 The section around it is `sections/FaqSection`, which reads the FAQ set the
-page names (`getFaq(section.set)`) and prints the design variant the page
+page names (`kit.content.getFaq(section.set)`) and prints the design variant the page
 asked for. The post body's accordion is a different component
 (`FaqAccordion` from `@/lib/components`), because a post's questions are
 markdown.
@@ -236,8 +236,9 @@ cards are its own design — so a section renders them from a data array at
 the top of its file (`CARDS.map(...)`), as a `<ul>` when they are a list.
 When the cards are content someone edits, the array is a collection the
 registry resolves for the section through `withData()` (`UseCaseCards` →
-`getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
-`getFaq()`), and the section keeps its presentation by position.
+`kit.content.getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
+`getFaq()`; `BlogIndex` → `kit.blog.getAllPosts()`), and the section keeps
+its presentation by position.
 
 ## Not built yet
 

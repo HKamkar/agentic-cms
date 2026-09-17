@@ -17,16 +17,21 @@ on a structural problem.
    named. Its `jsonld` block declares the copy of its structured data; its
    `sections` list is what it shows (`src/components/sections/`).
 2. **`src/app/[[...slug]]/page.tsx` renders every page file** — the head
-   from `pageMetadata(page.seo)`, nothing hand-written: that is the exact
-   title, the description, the canonical, Open Graph with the 1200×630
-   image, the Twitter card. Posts get `postMetadata(post)` from the post
-   page; never build these by hand.
-3. **Structured data**: the same route emits `pageBreadcrumb(page.seo)` for
-   every inner page (posts `postBreadcrumb(post)`) and the page-type block
-   from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`, `Blog`;
-   posts `BlogPosting`, `FAQPage`) through `<JsonLd>`. Organisation blocks
-   come from `organizationLd()`; the FAQPage and ItemList parts come from
-   the page's own `faq` / `use-case-cards` sections and their collections.
+   from `kit.seo.pageMetadata(page.seo)`, nothing hand-written: that is
+   the exact title, the description, the canonical, Open Graph with the
+   1200×630 image, the Twitter card. Posts get `kit.seo.postMetadata(post)`
+   from the post page; never build these by hand. `kit.seo` is
+   `createSeo({ site, urls, content, blog })`, composed once by
+   `createKit()` in the site's `src/kit.ts`; nothing here imports the site.
+3. **Structured data**: the same route emits `kit.seo.pageBreadcrumb(page.seo)`
+   for every inner page (posts `postBreadcrumb(post)`) and the page-type
+   block from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`,
+   `Blog`; posts `BlogPosting`, `FAQPage`) through `<JsonLd>`. Organisation
+   blocks come from `organizationLd()`; the FAQPage and ItemList parts come
+   from the page's own `faq` / `use-case-cards` sections and their
+   collections (the engine reads a `faq` section's `set`, a `group`'s
+   `sections`, and looks for `use-case-cards` by type; every other section
+   is the site's).
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
@@ -88,10 +93,12 @@ on a structural problem.
 
 | File | Role |
 |---|---|
+| `src/lib/seo/index.ts` | `createSeo({ site, urls, content, blog })`: everything below, composed for one site (`kit.seo`) |
 | `src/lib/seo/types.ts` | `PageSeo` (the `seo` block's type, from the schema) |
-| `src/lib/seo/metadata.ts` | `pageMetadata()`, `postMetadata()` |
-| `src/lib/seo/jsonld.ts` | `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
-| `src/lib/seo/pageJsonLd.ts` | `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
+| `src/lib/seo/metadata.ts` | `pageMetadata()` (needs no site), `createMetadata(urls)` → `postMetadata()` |
+| `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
+| `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
+| `src/lib/site.ts` | `SiteConfig`, what the engine reads of `src/config/site.ts`; `createUrls(site)` → `postUrl()`, `absoluteUrl()` (`kit.urls`) |
 | `content/pages/*.yaml` | the pages: `seo`, `jsonld`, `sections` (`content/README.md`, template `content/_templates/page.yaml`) |
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |
 | `src/app/sitemap.ts`, `src/app/robots.ts` | built from the page files and the posts |

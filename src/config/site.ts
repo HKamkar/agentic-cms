@@ -6,6 +6,8 @@
 // src/lib/seo/README.md): its seo block is the sitemap entry, the breadcrumb
 // name and what the build-time SEO audit expects to exist.
 
+import type { SiteConfig } from "@/lib";
+
 export const site = {
   name: "Acme",
   shortName: "Acme",
@@ -55,7 +57,4 @@ export const site = {
       { label: "GitHub", href: "https://github.example/acme" },
     ],
   },
-} as const;
-
-export const postUrl = (slug: string) => `${site.postPrefix}/${slug}`;
-export const absoluteUrl = (path: string) => new URL(path, site.url).toString();
+} as const satisfies SiteConfig;

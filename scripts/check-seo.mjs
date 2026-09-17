@@ -11,16 +11,18 @@
 // .parity/seo-report.txt. Reads .next/server/app/**/*.html, the built
 // sitemap.xml and robots.txt bodies, and the image files under public/.
 // The contract it checks is src/lib/seo/README.md; the site's origin is
-// src/config/site.ts, loaded through scripts/lib/load-ts.mjs (the hook
-// must be registered before the TypeScript is imported, hence the dynamic
-// import).
+// its config, read from src/kit.ts through scripts/lib/load-ts.mjs (the
+// hook must be registered before the TypeScript is imported, hence the
+// dynamic import). Everything is read under the directory the audit runs
+// in: the site's .next and public/.
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 
-const { site } = await import("../src/config/site.ts");
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const { kit } = await import("@/kit");
+const { site } = kit;
+const ROOT = process.cwd();
 const APP = path.join(ROOT, ".next/server/app");
 const PUBLIC = path.join(ROOT, "public");
 const SITE_URL = site.url;

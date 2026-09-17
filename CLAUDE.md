@@ -44,8 +44,8 @@
   Presentation (sizes, ratios, class strings) stays in the components, keyed
   by position.
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
-  file's `seo` block feeds `pageMetadata()` / `pageBreadcrumb()`, its
-  `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
+  file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
+  its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
   (`scripts/check-seo.mjs`) and fails on a missing or wrong field. Never
   hand-write head tags.
 - Verify with `pnpm test` (the content engine, the post pipeline and the

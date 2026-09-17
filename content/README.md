@@ -85,7 +85,7 @@ public/images/home/<file>`. Verify (below).
 **Change a FAQ.** Edit the set a page names, `faqs/general.yaml`: reorder,
 reword, add or remove items (at least one must remain). A new page that
 shows a FAQ gets its own `faqs/<key>.yaml` from `_templates/faq.yaml` and a
-component reading `getFaq("<key>")`. Verify.
+section naming it (`set: <key>`). Verify.
 
 **Add a use case.** Append a block from `_templates/use-case.yaml` to
 `use-cases.yaml`; the icon goes under `public/images/use-cases/` — a
@@ -125,9 +125,9 @@ so a hero stays first and the sections that carry the first `<h2>` stay
 above the ones that start with `<h3>`; the build says so if not. Verify.
 
 **Add a collection** (a new kind of content): `src/lib/content/README.md`
-› Recipes — a schema and a definition in `src/lib/content/collections.ts`,
-an accessor, a template here, and `node scripts/content-docs.mjs` to
-regenerate the field tables.
+› Recipes — a schema and a definition returned from `createKit`'s
+`collections` option in `src/kit.ts`, a template here, and
+`node scripts/content-docs.mjs` to regenerate the field tables.
 
 ## Verify
 

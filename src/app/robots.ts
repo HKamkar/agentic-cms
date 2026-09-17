@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl } from "@/config/site";
+import { kit } from "@/kit";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/" },
-    sitemap: absoluteUrl("/sitemap.xml"),
+    sitemap: kit.urls.absoluteUrl("/sitemap.xml"),
   };
 }
