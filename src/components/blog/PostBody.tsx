@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { PostBlockClasses } from "@/lib/blog/rehype-post-blocks";
 import { cx } from "@/lib/cx";
-import { FaqAccordion } from "./FaqAccordion";
+import { FaqAccordion } from "@/lib/components";
 import styles from "./PostBody.module.css";
 
 /**

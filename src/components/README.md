@@ -71,12 +71,25 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 | `Footer` | The site footer | — | `<footer>` with one bordered box: the brand, `site.tagline`, the `<address>`, the e-mail, and the `Quick links` and `Follow us` columns from `site.footer`. The year is computed. |
 | `Button` | The site's button, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. `solid` is `bg-ink text-paper`, `outline` is `bg-paper text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
 | `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`. |
-| `EagerImage` | An eager `<img>` for a server component | any `<img>` props | `"use client"`. A plain eager `<img>` in a server component becomes a preload hint in the page's RSC payload, which every other page executes when it prefetches a link here. Below-the-fold images stay plain `<img loading="lazy">`. |
 
 ```tsx
 <Button href={site.links.contact} label={cta} />
 <Button href={site.links.blog} label={cta} current />
 <Button href={site.cta.href} label={site.cta.label} variant="outline" />
+```
+
+## The engine's React pieces (`src/lib/components/`)
+
+Three components that carry no design, imported from `@/lib/components`;
+the site styles around them.
+
+| Component | Props | Notes |
+|---|---|---|
+| `JsonLd` | `data` | Structured data with `<` escaped. |
+| `EagerImage` | any `<img>` props | `"use client"`. A plain eager `<img>` in a server component becomes a preload hint in the page's RSC payload, which every other page executes when it prefetches a link here. Below-the-fold images stay plain `<img loading="lazy">`. |
+| `FaqAccordion` | `children` | `"use client"`. Every `h3` inside a `[data-faq]` block toggles the paragraphs after it (`aria-expanded` on the question, `data-open` on the answers); the site's post body styles draw both. Not the site's `ui/Faq`. |
+
+```tsx
 <EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-ink" />
 ```
 
@@ -142,7 +155,8 @@ FaqEntry[]` (`{ question, answer }`).
 The section around it is `sections/FaqSection`, which reads the FAQ set the
 page names (`getFaq(section.set)`) and prints the design variant the page
 asked for. The post body's accordion is a different component
-(`blog/FaqAccordion`), because a post's questions are markdown.
+(`FaqAccordion` from `@/lib/components`), because a post's questions are
+markdown.
 
 ## Forms (`src/components/ui/form/`)
 
@@ -183,7 +197,7 @@ wants reveals only has to render `<Fx>` (`STANDARD.md` §7).
 | `useMainBreakpoint()` | ≥ 992 px | `null` until mounted, then boolean. |
 | `useReducedMotionPref()` | `prefers-reduced-motion` | Boolean. Every animated component must check it. |
 
-## Content (`src/components/blog/`, `src/components/`)
+## Content (`src/components/blog/`)
 
 These belong to the blog engine; its contract (frontmatter, body
 conventions, pipeline) is **`src/lib/blog/README.md`**.
@@ -194,9 +208,7 @@ conventions, pipeline) is **`src/lib/blog/README.md`**.
 | `BlogCard` | `post: PostMeta`, `excerpt?` | The post card — a whole-card `next/link` (`no-underline`) holding the 820×696 thumbnail, the category chip, the date, the title as `<h3 class="text-h4">`, and the excerpt on the index. |
 | `BlogIndex` | the `blog-index` section's copy plus `posts: PostMeta[]` | The hero (`blog-index`) and the card grid (`blog-index-list`), newest first; its button is the current page. |
 | `PostBody` | `children` | Wraps a rendered body and wires the FAQ accordion. Exports `postBlocks`, the class names `rehype-post-blocks` puts on the blocks it builds (the prose run, the quote box, the inline image, the FAQ block). |
-| `FaqAccordion` | `children` | `"use client"`. Every `h3` inside a `[data-faq]` block toggles the paragraphs after it (`aria-expanded` on the question, `data-open` on the answers); `PostBody.module.css` draws both. Not the site's `ui/Faq`. |
 | `mdxComponents` | — | Element overrides for post bodies: `<fx>` (the wrapper `rehype-post-blocks` emits) renders as the element it names and drops the delay, internal links go through `next/link`, external ones get `target="_blank" rel="noopener noreferrer"`. |
-| `JsonLd` (`src/components/JsonLd.tsx`) | `data` | Structured data with `<` escaped. |
 
 ## Page sections
 

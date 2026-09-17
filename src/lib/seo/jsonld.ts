@@ -1,7 +1,7 @@
 import { absoluteUrl, postUrl, site } from "@/config/site";
 import type { PostMeta } from "@/lib/blog/posts";
 import { getPage } from "@/lib/content";
-import type { PageSeo } from "./types";
+import type { PageSeo } from "./types.ts";
 
 export type Crumb = { name: string; path: string };
 

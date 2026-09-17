@@ -2,14 +2,14 @@
 // (server code only — readCollection uses node:fs, which a client component
 // cannot bundle; pass entries down as props). The contract is README.md.
 
-import { collections, type Author, type Category, type Faq, type Page, type Review, type UseCase } from "./collections";
-import type { Entry } from "./define";
-import { readCollection, readEntry } from "./read";
+import { collections, type Author, type Category, type Faq, type Page, type Review, type UseCase } from "./collections.ts";
+import type { Entry } from "./define.ts";
+import { readCollection, readEntry } from "./read.ts";
 
-export { ContentError, type ContentIssue } from "./errors";
-export { defineCollection, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define";
-export { readCollection, readEntry } from "./read";
-export { text, optional, dateOnly, isoTimestamp, ref } from "./schema";
+export { ContentError, type ContentIssue } from "./errors.ts";
+export { defineCollection, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
+export { readCollection, readEntry } from "./read.ts";
+export { text, optional, dateOnly, isoTimestamp, ref } from "./schema.ts";
 export {
   collections,
   authorSchema,
@@ -31,7 +31,7 @@ export {
   type PostFrontmatter,
   type Review,
   type UseCase,
-} from "./collections";
+} from "./collections.ts";
 
 /** Every author, slug = key of content/authors.json. */
 export const getAuthors = (): Entry<Author>[] => readCollection(collections.authors);

@@ -5,9 +5,9 @@ import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import { mdxComponents } from "@/components/blog/mdx";
 import { postBlocks } from "@/components/blog/PostBody";
-import rehypePostImages from "./rehype-post-images";
-import rehypePostBlocks from "./rehype-post-blocks";
-import type { Post } from "./posts";
+import rehypePostImages from "./rehype-post-images.ts";
+import rehypePostBlocks from "./rehype-post-blocks.ts";
+import type { Post } from "./posts.ts";
 
 /**
  * Renders a post body to React in the post template's block structure.

@@ -151,7 +151,7 @@ it wants (`list-disc pl-5`).
 - **Decorative elements** are real elements with `aria-hidden="true"` (the
   section's type tag, the group's label, the placeholder's cross, the FAQ's `+`
   / `−`), never pseudo-elements; a decorative image carries `alt=""`. The one
-  exception is the post body's accordion (`blog/FaqAccordion`), built by script
+  exception is the post body's accordion (`FaqAccordion`), built by script
   over markdown headings, whose marker is a `::after` in `PostBody.module.css`.
 - **Focus.** Interactive things are real `<button>`s and links, and the
   browser's own `:focus-visible` ring stays: never `outline-none` on anything a
@@ -181,7 +181,8 @@ Two kinds of picture, and they are not interchangeable.
   carries `h-auto` with it — the content-image string is
   `block h-auto w-full border border-ink`.
 
-Above the fold in a **server** component, use `ui/EagerImage`: a plain eager
+Above the fold in a **server** component, use `EagerImage` (from
+`@/lib/components`): a plain eager
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
@@ -220,14 +221,14 @@ shared component goes into it in the same commit. In short:
 | Kind | Components | Rule |
 |---|---|---|
 | Layout | `ui/Container`, `ui/Section` | every section renders inside `Section`; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`), `ui/EagerImage` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup |
+| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`) | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup |
 | Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` | `Section` renders both from its props; `eyebrowText` is the same label as a class string |
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
 | Motion | `ix/Fx`, `ix/OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` | present, used by nothing — §7 |
-| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/FaqAccordion`, `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
-| Data | `JsonLd` | structured data, `<` escaped |
+| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
+| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`@/lib/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
 Cards are **not** a shared component: every section's cards are its own design,
 so a section renders them from a data array at the top of its file or from the

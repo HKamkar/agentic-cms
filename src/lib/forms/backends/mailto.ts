@@ -1,5 +1,5 @@
-import type { FormBackend, SubmitResult } from "../backend";
-import { fieldsOf, type FormDefinition, type FormValues } from "../types";
+import type { FormBackend, SubmitResult } from "../backend.ts";
+import { fieldsOf, type FormDefinition, type FormValues } from "../types.ts";
 
 /**
  * Zero-infrastructure fallback: opens the visitor's mail client with the

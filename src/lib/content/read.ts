@@ -13,8 +13,8 @@ import path from "node:path";
 import matter from "gray-matter";
 import { parse as parseYaml } from "yaml";
 import { ZodObject, type ZodError, type ZodType } from "zod";
-import { contentRoot, type CollectionDef, type EntryOf, type FileCollection, type FolderCollection, type Format } from "./define";
-import { ContentError, formatPath, type ContentIssue } from "./errors";
+import { contentRoot, type CollectionDef, type EntryOf, type FileCollection, type FolderCollection, type Format } from "./define.ts";
+import { ContentError, formatPath, type ContentIssue } from "./errors.ts";
 
 type Loaded = { slug: string; file: string; data: unknown; body?: string; format?: "md" | "mdx" };
 /** A parsed entry before validation; `base` prefixes its issue paths ([2] in a list, the key in a map). */

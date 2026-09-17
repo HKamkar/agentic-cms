@@ -103,7 +103,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   the one exception). One colour utility per property per element (two
   resolve by stylesheet order).
 - Images stay `<img>` with `width`/`height`; above the fold in a server
-  component `ui/EagerImage`, everything else `loading="lazy"`. `base.css`
+  component `EagerImage` (`@/lib/components`), everything else `loading="lazy"`. `base.css`
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
   `node scripts/placeholder.mjs <out> <width> <height>`.
@@ -161,7 +161,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - An eager `<img>` in a **server** component becomes a preload hint in the
   page's RSC payload, and every other page executes it when it prefetches a
   link there (a blog index can end up downloading every post's hero).
-  Above-the-fold images in server components use `ui/EagerImage`; everything
+  Above-the-fold images in server components use `EagerImage`; everything
   below the fold is `loading="lazy"` (post bodies get it, and their
   `width`/`height`, from `rehype-post-images`).
 - A new page is `content/pages/<slug>.yaml` (from

@@ -8,7 +8,7 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { JsonLd } from "@/components/JsonLd";
+import { JsonLd } from "@/lib/components";
 import { renderSections } from "@/components/sections/render";
 import { getPages } from "@/lib/content";
 import { pageBreadcrumb } from "@/lib/seo/jsonld";

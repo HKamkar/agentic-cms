@@ -6,7 +6,7 @@ import { useEffect, useRef, type ReactNode } from "react";
  * The site's FAQ accordion behaviour, unchanged: every h3 in a `[data-faq]`
  * block toggles the paragraphs that follow it; all answers start collapsed.
  * The open state is `aria-expanded` on the question and `data-open` on its
- * answers; PostBody.module.css draws both.
+ * answers; the site's post body styles draw both.
  */
 export function FaqAccordion({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);

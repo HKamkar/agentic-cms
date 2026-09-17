@@ -10,8 +10,8 @@
 // starts a new schema without the description (.refine() and .check() keep it).
 
 import { z } from "zod";
-import { lookup } from "./define";
-import { slugsOf, sourceOf } from "./read";
+import { lookup } from "./define.ts";
+import { slugsOf, sourceOf } from "./read.ts";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 

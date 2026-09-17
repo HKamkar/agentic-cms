@@ -8,7 +8,7 @@
 import { absoluteUrl, postUrl, site } from "@/config/site";
 import { getFaq, getUseCases, type Page, type PageJsonLd } from "@/lib/content";
 import { getAllPosts } from "@/lib/blog/posts";
-import { organizationLd } from "./jsonld";
+import { organizationLd } from "./jsonld.ts";
 
 type Section = Page["sections"][number];
 

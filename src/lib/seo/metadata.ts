@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { postUrl } from "@/config/site";
 import type { Post } from "@/lib/blog/posts";
-import type { PageSeo } from "./types";
+import type { PageSeo } from "./types.ts";
 
 /**
  * The complete head of a page from its site block: exact title, description,

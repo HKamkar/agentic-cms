@@ -8,8 +8,8 @@
 
 import { z } from "zod";
 import { sectionSchema } from "@/components/sections/schemas";
-import { defineCollection } from "./define";
-import { dateOnly, isoTimestamp, optional, ref, text } from "./schema";
+import { defineCollection } from "./define.ts";
+import { dateOnly, isoTimestamp, optional, ref, text } from "./schema.ts";
 
 export const authorSchema = z
   .strictObject({
