@@ -177,14 +177,29 @@ Illustrations are crossed placeholder boxes; content images come from
 The `content-engine-kit/ix` reveal library stays in the package for a fork that
 wants motion.
 
+## Built on the kit
+
+<img src="docs/readme/deeplit-landing.png" alt="deeplit's landing page at desktop width and at phone width: a private-AI hero over an isometric circuit board, pill buttons with a brand gradient, a coral eyebrow — a full design where the wireframe above has boxes" width="960">
+
+[deeplit®](https://deeplit.ai), private AI infrastructure from Delft, is
+the first site on the package. Its design — the sections, the chrome, the
+CSS modules, the images, the reveals and sequences on
+`content-engine-kit/ix` — its content and its config live in its own repo;
+the engines, the reveal library and the command line come from here by tag
+(`github:HKamkar/content-engine-kit#v0.2.0`), composed once in its
+`src/kit.ts`. Same page files, same post pipeline, same lint and audit as
+the wireframe above; the design is the part a site brings.
+
+<img src="docs/readme/deeplit-post.png" alt="A deeplit post page: the blog-post eyebrow, the title, the hero image and the first paragraphs of the body, rendered by the same post pipeline as the kit's own posts" width="820">
+
 ## Start your own site
 
 Two ways. **Fork** this repo when you want the example around you — the
 wireframe, the section galleries, the posts that describe the kit — and
 replace it piece by piece. **Install** the package when your site is its own
-repo: the engines, the reveal library and the command line come from
-`content-engine-kit`; your repo holds the design, the content, the config
-and the docs, nothing of the engine.
+repo, as deeplit's above is: the engines, the reveal library and the
+command line come from `content-engine-kit`; your repo holds the design,
+the content, the config and the docs, nothing of the engine.
 
 ```bash
 pnpm add content-engine-kit@github:HKamkar/content-engine-kit#v0.2.0 next react react-dom zod motion
