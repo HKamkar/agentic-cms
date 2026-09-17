@@ -36,7 +36,8 @@ the user named, and `content/editorial/workshop.yaml` if it exists (its
    `publishedAt` yet.
 3. **The images.** The three files the template names under
    `public/images/blog/<slug>/`, at the sizes its comments give, then the
-   optimise command from `scripts/README.md`; `image` / `imageAlt`,
+   optimise command from the kit's `scripts/README.md` (`pnpm kit
+   optimize-webp`); `image` / `imageAlt`,
    `thumbnail` / `thumbnailAlt` (a sentence saying what each shows) and
    `ogImage` = the hero. Without images yet, leave the fields out (they are
    optional) and say so; the lint's `body-image` rule wants the figure's
