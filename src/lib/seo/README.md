@@ -98,6 +98,8 @@ on a structural problem.
 | `src/lib/seo/metadata.ts` | `pageMetadata()` (needs no site), `createMetadata(urls)` → `postMetadata()` |
 | `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
 | `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
+| `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |
+| `src/lib/seo/routes.ts` | `createRoutes(…)` → `sitemap()`, `feed()` (a Response), `robots()`: what `src/app/sitemap.ts`, `src/app/feed.xml/route.ts` and `src/app/robots.ts` return |
 | `src/lib/site.ts` | `SiteConfig`, what the engine reads of `src/config/site.ts`; `createUrls(site)` → `postUrl()`, `absoluteUrl()` (`kit.urls`) |
 | `content/pages/*.yaml` | the pages: `seo`, `jsonld`, `sections` (`content/README.md`, template `content/_templates/page.yaml`) |
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |

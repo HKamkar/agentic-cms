@@ -54,9 +54,9 @@ complete contract; read it before changing anything in `src/lib/blog/`,
 | `src/components/blog/BlogHero.tsx` | The index's hero, also the 404 page's frame. |
 | `src/lib/components/FaqAccordion.tsx` | The blog template's custom FAQ behaviour (click an `h3` in a `[data-faq]` block to toggle its paragraphs; `aria-expanded` / `data-open` carry the state). |
 | `content/pages/blog.yaml`, `src/components/blog/BlogIndex.tsx` | The index is a page file with one `blog-index` section (its copy, its `Blog` JSON-LD); the section component takes every published post, newest first, from the registry's `withData()`. There is no `src/app/blog/` route. |
-| `src/app/blog-post/[slug]/page.tsx` | Post page: `generateStaticParams` + `dynamicParams = false`, metadata from frontmatter (Open Graph `article` with published/modified time, author, section and tags), BlogPosting + BreadcrumbList + FAQPage JSON-LD, body, "Read next". |
-| `src/app/feed.xml/route.ts` | RSS 2.0, `force-static`. |
-| `src/app/sitemap.ts` | Adds every post with `lastModified` from `updatedAt ?? publishedAt ?? date`. |
+| `src/app/blog-post/[slug]/page.tsx` | Post page: `generateStaticParams` + `dynamicParams = false`, metadata from frontmatter (`kit.seo.postMetadata`: Open Graph `article` with published/modified time, author, section and tags), BlogPosting + BreadcrumbList + FAQPage JSON-LD (`kit.seo.postJsonLd`, `postBreadcrumb`, `postFaqJsonLd`), body, "Read next". |
+| `src/app/feed.xml/route.ts` | RSS 2.0, `force-static`: `kit.seo.feed()`. |
+| `src/app/sitemap.ts` | `kit.seo.sitemap()`: every page file and every post, the post's `lastModified` from `updatedAt ?? publishedAt ?? date`. |
 
 ## Frontmatter contract
 
