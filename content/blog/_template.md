@@ -10,8 +10,8 @@ date: '2026-01-31'                                              # required, YYYY
 category: guides                                                # required — a key of content/categories.json
 author: acme-editorial                                          # required — a key of content/authors.json
 # A picture that does not exist yet starts as a wireframe placeholder:
-# node scripts/placeholder.mjs <path> <width> <height>
-image: /images/blog/<slug>/<slug>-hero.webp                     # hero image, a WebP of 1600x900; run scripts/optimize-webp.mjs on the folder
+# pnpm kit placeholder <path> <width> <height>
+image: /images/blog/<slug>/<slug>-hero.webp                     # hero image, a WebP of 1600x900; run pnpm kit optimize-webp on the folder
 imageAlt: What the hero image shows, in a sentence
 thumbnail: /images/blog/<slug>/<slug>-card.webp                 # card image (820x696); defaults to image
 thumbnailAlt: What the card image shows, in a sentence

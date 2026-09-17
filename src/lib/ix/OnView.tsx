@@ -2,7 +2,7 @@
 
 import { useAnimate, useInView, type AnimationSequence } from "motion/react";
 import { createElement, useEffect, type CSSProperties, type ElementType, type ReactNode } from "react";
-import { useMainBreakpoint, useReducedMotionPref } from "./useMainBreakpoint";
+import { useMainBreakpoint, useReducedMotionPref } from "./useMainBreakpoint.ts";
 
 /**
  * Runs a Motion animation sequence scoped to this element every time it

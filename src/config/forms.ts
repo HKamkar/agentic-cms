@@ -1,4 +1,4 @@
-import type { FormDefinition } from "@/lib/forms/types";
+import type { FormDefinition } from "content-engine-kit/forms";
 import { site } from "./site";
 
 // Every form on the site, as data. Render one with <Form definition={forms.x} />

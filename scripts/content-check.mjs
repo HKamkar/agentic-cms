@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Reads every collection the content engine declares and reports what it
-// found, the way pnpm build would fail on it — in a fraction of a second:
+// Reads every collection of the site's registry (src/kit.ts) and reports
+// what it found, the way pnpm build would fail on it — in a fraction of a second:
 //
 //   node scripts/content-check.mjs                 (pnpm content:check)
 //   node scripts/content-check.mjs --root <dir>    another tree: <dir>/content is read instead of ./content
@@ -16,8 +16,9 @@ const args = process.argv.slice(2);
 const rootIndex = args.indexOf("--root");
 if (rootIndex !== -1) process.chdir(args[rootIndex + 1]);
 
-const { ContentError, collections, contentRoot, readCollection } = await import("../src/lib/content/index.ts");
-const { sourceOf } = await import("../src/lib/content/read.ts");
+const { ContentError, contentRoot, readCollection, sourceOf } = await import("content-engine-kit/content");
+const { kit } = await import("@/kit");
+const { collections } = kit;
 
 console.log(`content-check: root ${contentRoot()}`);
 let entries = 0;

@@ -17,16 +17,16 @@ cannot find; the plugin has no defaults for any of them.
 
 | File | What the plugin reads there |
 |---|---|
-| `content/README.md` | the door: what exists, how to change it, how to prove it |
+| `content/README.md` | the door: what exists, how to change it, how to prove it; its "Fields" section is the generated field table of every collection and every section type (`pnpm content:docs`) |
 | `content/VOICE.md` | who reads the site, how the brand is spelled (`brand.name`, `brand.mark` in the fenced block), what is never said, the calls to action; the block the lint enforces |
 | `content/blog/_template.md`, `content/_templates/*` | every field annotated; the image names and sizes; the closing paragraph of a post |
 | `content/authors.json`, `content/categories.json` | the keys a post's `author` and `category` name |
 | `content/editorial/calendar.md`, `backlog.md` | the dated plan (`date \| slug \| status \| owner \| note`; a `retired` row silences the stale-draft rule) and the ideas |
 | `content/editorial/workshop.yaml` | optional: where the marketing workshop lives outside the repo and what may be read there, by role (below) |
-| `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` | the field tables and section types, the post body conventions, the head and structured-data contract |
+| the engine's docs — `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` in a checkout of the kit, or under `node_modules/content-engine-kit/` on a site that installs the package | the content engine's contract, the post body conventions, the head and structured-data contract |
 | `src/config/site.ts` | `name` (the title suffix through the layout template), `postPrefix`, `cta`, `email`, `url`, the nav and footer lists |
-| `package.json` scripts | `content:lint`, `content:status`, `content:check`, `lint`, `test`, `build`, `preview`, `dev` |
-| `scripts/README.md` | the image tools the site uses (stand-ins, optimisers) and the parity proofs |
+| `package.json` scripts | `content:lint`, `content:status`, `content:check`, `content:docs`, `kit` (the `content-engine-kit` command line: `placeholder`, `optimize-webp`, `parity`, `visual-parity`, …), `lint`, `test`, `build`, `preview`, `dev` |
+| `scripts/README.md` (the kit's, next to the engine's docs) | the image tools (stand-ins, optimisers) and the parity proofs, as `pnpm kit` commands |
 
 ## Skills
 

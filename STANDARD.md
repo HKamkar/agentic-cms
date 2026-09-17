@@ -151,7 +151,7 @@ it wants (`list-disc pl-5`).
 - **Decorative elements** are real elements with `aria-hidden="true"` (the
   section's type tag, the group's label, the placeholder's cross, the FAQ's `+`
   / `−`), never pseudo-elements; a decorative image carries `alt=""`. The one
-  exception is the post body's accordion (`blog/FaqAccordion`), built by script
+  exception is the post body's accordion (`FaqAccordion`), built by script
   over markdown headings, whose marker is a `::after` in `PostBody.module.css`.
 - **Focus.** Interactive things are real `<button>`s and links, and the
   browser's own `:focus-visible` ring stays: never `outline-none` on anything a
@@ -181,13 +181,14 @@ Two kinds of picture, and they are not interchangeable.
   carries `h-auto` with it — the content-image string is
   `block h-auto w-full border border-ink`.
 
-Above the fold in a **server** component, use `ui/EagerImage`: a plain eager
+Above the fold in a **server** component, use `EagerImage` (from
+`content-engine-kit/components`): a plain eager
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
 `rehype-post-images`).
 
-Placeholder files come from `node scripts/placeholder.mjs <out> <width>
+Placeholder files come from `pnpm kit placeholder <out> <width>
 <height>`: a mid-grey field with a one-pixel border and a corner-to-corner
 cross, no text, so it needs no fonts and reads on a light and a dark page alike.
 The format follows the extension (`.webp` lossless, `.jpg` quality 80, `.png`,
@@ -220,14 +221,14 @@ shared component goes into it in the same commit. In short:
 | Kind | Components | Rule |
 |---|---|---|
 | Layout | `ui/Container`, `ui/Section` | every section renders inside `Section`; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`), `ui/EagerImage` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup |
+| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`) | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup |
 | Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` | `Section` renders both from its props; `eyebrowText` is the same label as a class string |
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `ix/Fx`, `ix/OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` | present, used by nothing — §7 |
-| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/FaqAccordion`, `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
-| Data | `JsonLd` | structured data, `<` escaped |
+| Motion | `Fx`, `OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`content-engine-kit/ix`) | present, used by nothing — §7 |
+| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
+| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`content-engine-kit/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
 Cards are **not** a shared component: every section's cards are its own design,
 so a section renders them from a data array at the top of its file or from the
@@ -313,7 +314,7 @@ state changes are the ones a control owns — the FAQ's `hidden` answer, the
 navbar's mounted menu, the theme attribute — and each is instant.
 
 The reveal library survives for a fork that wants reveals, whole and unused, in
-`src/components/ix/` with its start states in `src/styles/motion.css`:
+`content-engine-kit/ix` (`src/lib/ix/`) with its start states in `src/styles/motion.css`:
 
 | Export | What it is |
 |---|---|
@@ -395,7 +396,7 @@ Public URLs are indexed: never change one without a redirect.
 `title`, `description`, `ogImage`, `updated`, `breadcrumb`, `changeFrequency`,
 `priority`), the `jsonld` block for its page type, and its sections. A page made
 of existing section types needs no code at all. Its OG image is
-`node scripts/placeholder.mjs public/images/<slug>-og.jpg 1200 630` until a real
+`pnpm kit placeholder public/images/<slug>-og.jpg 1200 630` until a real
 one exists. Put it in `links`, `nav` and `footer.quickLinks` in
 `src/config/site.ts` if it belongs there — three separate lists; the sitemap
 entry and the breadcrumb follow from the page file. A **new section type** is
@@ -409,10 +410,10 @@ last) and `pnpm preview`.
 **Changing an existing page.** A refactor moves no pixels and proves it:
 
 ```bash
-node scripts/visual-parity.mjs capture before
-node scripts/visual-parity.mjs capture before-dark --scheme dark
+pnpm kit visual-parity capture before
+pnpm kit visual-parity capture before-dark --scheme dark
 # …make the change, pnpm build…
-node scripts/visual-parity.mjs capture after && node scripts/visual-parity.mjs compare before after
+pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after
 ```
 
 A capture renders every prerendered page of the current build at eight widths
@@ -423,10 +424,10 @@ choice, so the default capture is the light one); `--motion` is for when the
 change; `--pages /,/blog` limits a capture and its compare to the pages a step
 touches. Every `compare` must come back clean, and each proven state is
 committed before the next change starts. A refactor that also leaves the markup
-alone proves that with `scripts/parity.sh` (prerendered HTML plus JSON-LD,
+alone proves that with `content-engine-kit parity` (prerendered HTML plus JSON-LD,
 `diff -r`).
 
-**What the SEO audit checks.** `scripts/check-seo.mjs` runs at the end of
+**What the SEO audit checks.** `content-engine-kit seo` runs at the end of
 `pnpm build` and fails it on a structural problem, so `preview` and `deploy`
 cannot skip it: per prerendered page, exactly one non-empty unique `<title>` (at
 most 70 characters) and one meta description (50–200), one canonical that is
@@ -467,7 +468,7 @@ hand-write head tags.
 - A section that shows a collection keeps its presentation in code, keyed by
   position; the collection carries only copy.
 - The voice and claim rules are `content/VOICE.md`, enforced by
-  `scripts/content-lint.mjs` at the start of `pnpm build`; the procedures for
+  `content-engine-kit lint` at the start of `pnpm build`; the procedures for
   content jobs are the `editorial` plugin in `plugin/`.
 - Everything is read at build time. Nothing reads the filesystem at request
   time — the Worker has none.

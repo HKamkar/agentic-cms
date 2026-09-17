@@ -1,5 +1,5 @@
-import type { TextField as TextFieldDefinition } from "@/lib/forms/types";
-import { cx } from "@/lib/cx";
+import type { TextField as TextFieldDefinition } from "content-engine-kit/forms";
+import { cx } from "content-engine-kit/cx";
 import { control } from "./field";
 import { FieldWrap } from "./FieldWrap";
 

@@ -28,11 +28,11 @@ The post file, `content/VOICE.md`, `src/lib/blog/README.md`, and
    filename. A draft gets no `updatedAt`.
 3. **Images.** New or replaced files go in `public/images/blog/<slug>/`,
    named and optimised as `content/blog/_template.md` and
-   `scripts/README.md` say; delete what the edit left behind (the lint's
-   `image-orphan` rule names it).
+   the kit's `scripts/README.md` say (`pnpm kit optimize-webp`); delete what
+   the edit left behind (the lint's `image-orphan` rule names it).
 4. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; the `WARN`
    lines on this file are the ones to read.
-5. **Verify** (below); `scripts/parity.sh` is not for a content edit (the
+5. **Verify** (below); `pnpm kit parity` is not for a content edit (the
    page is supposed to change), but read `check-seo`'s lines for the route
    in the build log.
 6. **Commit** `Post: <slug>: <what changed>` on the repo's working branch.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactNode } from "react";
-import type { MDXComponents } from "mdx/types";
+import type { MDXComponents } from "content-engine-kit/blog";
 
 type FxProps = { as?: ElementType; delay?: number | string; children?: ReactNode; [attr: string]: unknown };
 

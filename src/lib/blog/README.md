@@ -42,8 +42,9 @@ complete contract; read it before changing anything in `src/lib/blog/`,
 | `content/authors.json`, `content/categories.json` | Registries (the `authors` / `categories` collections). Frontmatter `author` / `category` must be keys here. |
 | `public/images/blog/<slug>/` | A post's images, self-hosted. |
 | `src/lib/content/collections.ts` | `postSchema`, `authorSchema`, `categorySchema` and the three collection definitions — the contract and its validation (the engine: `src/lib/content/README.md`). |
-| `src/lib/blog/posts.ts` | The post pipeline: reads the collections through `readCollection` / `readEntry`, derives fields, sorts. Exports `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate`, and the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
-| `src/lib/blog/markdown.tsx` | `renderPostBody(post)`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the classes from `PostBody`) and `rehypePostImages`. |
+| `src/lib/blog/posts.ts` | The post pipeline: `createBlog(collections)` reads the site's registry through `readCollection` / `readEntry`, derives fields, sorts, and returns `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate` — what a site reads as `kit.blog`; the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
+| `src/lib/blog/markdown.tsx` | `renderPostBody(post, { components, blocks })`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the site's block classes) and `rehypePostImages`; the site passes its `mdxComponents` and `postBlocks`. |
+| `src/lib/blog/index.ts` | The public surface, `content-engine-kit/blog`: the above plus `extractFaq` and the two rehype plugins. |
 | `src/lib/blog/rehype-post-blocks.ts` | Reshapes the rendered body into the post template's blocks (see "Body pipeline"); the class names come in as options. |
 | `src/lib/blog/rehype-post-images.ts` | Every `<img>` in a body loads lazily, raw HTML ones included (they all sit below the hero; eager, they would also be preloaded by pages that merely prefetch the post), and gets its `width`/`height` from the file under `public/`, so the page reserves the space. |
 | `src/lib/blog/faq.ts` | `extractFaq(markdown)`: the Q/A pairs for FAQPage JSON-LD, using the same heading convention. |
@@ -51,11 +52,11 @@ complete contract; read it before changing anything in `src/lib/blog/`,
 | `src/components/blog/PostBody.tsx`, `PostBody.module.css` | `postBlocks`: the classes of the four block kinds; the module holds a body's element rules (paragraph, heading and list margins, the bullet, the full-width figure) and the FAQ accordion's styles. `<PostBody>` wraps a rendered body. |
 | `src/components/blog/BlogCard.tsx` | The post card; index (with excerpt) and "Read next". |
 | `src/components/blog/BlogHero.tsx` | The index's hero, also the 404 page's frame. |
-| `src/components/blog/FaqAccordion.tsx` | The blog template's custom FAQ behaviour (click an `h3` in a `[data-faq]` block to toggle its paragraphs; `aria-expanded` / `data-open` carry the state). |
+| `src/lib/components/FaqAccordion.tsx` | The blog template's custom FAQ behaviour (click an `h3` in a `[data-faq]` block to toggle its paragraphs; `aria-expanded` / `data-open` carry the state). |
 | `content/pages/blog.yaml`, `src/components/blog/BlogIndex.tsx` | The index is a page file with one `blog-index` section (its copy, its `Blog` JSON-LD); the section component takes every published post, newest first, from the registry's `withData()`. There is no `src/app/blog/` route. |
-| `src/app/blog-post/[slug]/page.tsx` | Post page: `generateStaticParams` + `dynamicParams = false`, metadata from frontmatter (Open Graph `article` with published/modified time, author, section and tags), BlogPosting + BreadcrumbList + FAQPage JSON-LD, body, "Read next". |
-| `src/app/feed.xml/route.ts` | RSS 2.0, `force-static`. |
-| `src/app/sitemap.ts` | Adds every post with `lastModified` from `updatedAt ?? publishedAt ?? date`. |
+| `src/app/blog-post/[slug]/page.tsx` | Post page: `generateStaticParams` + `dynamicParams = false`, metadata from frontmatter (`kit.seo.postMetadata`: Open Graph `article` with published/modified time, author, section and tags), BlogPosting + BreadcrumbList + FAQPage JSON-LD (`kit.seo.postJsonLd`, `postBreadcrumb`, `postFaqJsonLd`), body, "Read next". |
+| `src/app/feed.xml/route.ts` | RSS 2.0, `force-static`: `kit.seo.feed()`. |
+| `src/app/sitemap.ts` | `kit.seo.sitemap()`: every page file and every post, the post's `lastModified` from `updatedAt ?? publishedAt ?? date`. |
 
 ## Frontmatter contract
 
@@ -87,9 +88,10 @@ Sort order: `date` desc, then `publishedAt` desc, then title.
 
 ## Body pipeline
 
-`renderPostBody(post)` → `compileMDX` → rehype tree → `rehypePostBlocks`
-groups the top-level nodes into the blocks of the post template, with the
-classes `postBlocks` (in `PostBody.tsx`) gives each:
+`renderPostBody(post, { components, blocks })` → `compileMDX` → rehype tree →
+`rehypePostBlocks` groups the top-level nodes into the blocks of the post
+template, with the classes `postBlocks` (in `PostBody.tsx`, passed in as
+`blocks`) gives each:
 
 | Markdown | Block emitted |
 |---|---|
@@ -100,14 +102,14 @@ classes `postBlocks` (in `PostBody.tsx`) gives each:
 
 Every block is emitted inside an `<fx>` element carrying the template's
 staggered delays; `mdxComponents` renders it as the element it names, so the
-wireframe has no reveals and a fork that wants them maps `fx` to `ix/Fx`
+wireframe has no reveals and a fork that wants them maps `fx` to `Fx` (`content-engine-kit/ix`)
 instead. `FaqAccordion` (client) attaches the toggle behaviour to the
 `[data-faq]` block after hydration; `extractFaq` produces the same Q/A pairs
 for the FAQPage JSON-LD from the raw markdown.
 
 ### Body rules the lint enforces
 
-`scripts/content-lint.mjs` (first in `pnpm build`; `pnpm content:lint`)
+`content-engine-kit lint` (first in `pnpm build`; `pnpm content:lint`)
 reads every post's body and fails the build when: a heading is `#` (the
 title is the H1) or jumps a level (`##` to `####`); the FAQ `##` has no
 `###` question under it, holds a heading that is not `###`, or has a `###`
@@ -129,8 +131,8 @@ draft older than 30 days.
 
 **Add a post.** Copy `content/blog/_template.md` to `content/blog/<slug>.md`,
 fill the frontmatter, put images in `public/images/blog/<slug>/` — wireframe
-stand-ins from `node scripts/placeholder.mjs <out> <width> <height>` (hero and
-mid 1600×900, card 820×696), real ones through `node scripts/optimize-webp.mjs
+stand-ins from `pnpm kit placeholder <out> <width> <height>` (hero and
+mid 1600×900, card 820×696), real ones through `pnpm kit optimize-webp
 public/images/blog/<slug>` (lossy WebP at quality 80; design exports are
 usually lossless and 3-5x larger) — and write the body with the conventions
 above. `pnpm build` validates it; `pnpm dev` shows drafts too.
@@ -152,5 +154,5 @@ and document the markdown convention here and in `_template.md`.
 **Change how posts render.** `src/app/blog-post/[slug]/page.tsx` for the page
 frame, `mdxComponents` for element overrides, `rehype-post-blocks.ts` for
 block structure, `PostBody` for the styling. Prove existing posts are
-unchanged with `scripts/parity.sh` (markup) or `scripts/visual-parity.mjs`
+unchanged with `content-engine-kit parity` (markup) or `content-engine-kit visual-parity`
 (pixels, when the styling changes).

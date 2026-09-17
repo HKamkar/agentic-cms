@@ -1,8 +1,8 @@
 # How the content engine was built
 
-The record of the program, condensed. Seven phases turned a site whose copy
-lived inside components into a content engine, an editorial plugin and this
-kit. Everything below is in the past tense and is a fact about the code as
+The record of the program, condensed. Eight phases turned a site whose copy
+lived inside components into a content engine, an editorial plugin, this
+kit, and the package a site installs. Everything below is in the past tense and is a fact about the code as
 it stands; where this file and a contract document differ, the contract is
 right:
 
@@ -218,6 +218,58 @@ for a fork that brings real assets.
 `pnpm build` (the content lint, the generated docs check, the prerender and
 the SEO audit) and `pnpm preview` at every commit, with visual captures in
 both schemes across the phase's design changes.
+
+## Phase 8 — the package
+
+**Built.** The kit is a package a site installs, and still the template it
+was. `src/lib/` is the package's source — `content/`, `blog/`, `seo/`,
+`forms/`, `ix/` (the reveal library, moved from `src/components/ix/`),
+`components/` (`JsonLd`, `EagerImage`, `FaqAccordion`, moved next to the
+engines), `cx.ts`, `site.ts` and `index.ts` — compiled by `tsc` to `dist/`
+(ESM and `.d.ts`, ES2022, `"use client"` kept) on `prepare`, published by
+`exports` as `content-engine-kit`, `./content`, `./blog`, `./seo`,
+`./forms`, `./ix`, `./components`, `./cx`; `next`, `react`, `react-dom`,
+`zod` and `motion` are peers. Nothing in `src/lib` imports the site any
+more: `createCollections({ sections })` builds the seven standard
+collections around the site's section union, `createContent()`,
+`createBlog()` and `createSeo()` take what they need, and `createKit({ site,
+sections, collections? })` composes them once in the site's `src/kit.ts`,
+the one file the app, the scripts and the tests read (`kit.collections`,
+`kit.content`, `kit.blog`, `kit.seo`, `kit.urls`, `kit.site`).
+`renderPostBody(post, { components, blocks })` takes the site's element
+overrides and block classes; the sitemap, the feed, robots and a post's
+BlogPosting and FAQPage are `kit.seo` functions, so a route file is one
+line. The scripts are a command line, `content-engine-kit` (`bin/`), one
+command per script, each run against the site in the current directory:
+`lint`, `check`, `status`, `docs` (the field tables, now generated into the
+site's `content/README.md`), `seo`, `placeholder`, `optimize-webp`,
+`optimize-svg-rasters`, `parity` (the shell script ported) and
+`visual-parity` (its state pages from the page files); the lint takes the
+registry and the site it is given. The plugin's contract names the door's
+"Fields" section and the engine's docs under `node_modules/` on a site.
+
+**Decisions.** The repo stays flat: the example around the package imports it
+by name through a tsconfig `paths` self-alias, and the Node loader reads the
+site's tsconfig paths the same way, so a checkout never needs `dist/` and
+`git clone && pnpm install && pnpm dev` still holds. The package ships
+compiled JavaScript because Node refuses to strip types under
+`node_modules`, and its relative imports name their `.ts` files
+(`rewriteRelativeImportExtensions`) so one source serves tsc, Turbopack
+and Node. A git dependency builds on install only where the consumer's
+`pnpm-workspace.yaml` allows it (`allowBuilds`); not published to npm.
+`tools/pack-smoke.mjs` (`pnpm test:pack`) is the one proof that exercises
+`dist/` and `exports`: it packs the kit and builds a scratch site from the
+tarball; it found the site-side `mdx/types` import a consumer could not
+resolve, which the blog barrel now re-exports.
+
+**Proven.** Every code commit markup-identical to `main` (`parity`:
+HTML, JSON-LD, sitemap, feed) and the eight interaction states identical;
+the example's pixels in both schemes identical at the end but for the two
+posts a content commit edited (one line each, `updatedAt` set) and the
+FAQ-open state of one of them, which moved with that line; `pnpm lint`,
+`pnpm test` (71), `pnpm content:lint` (0/0), `pnpm build` (0/0), `pnpm
+test:pack` (the scratch site built from the tarball, its markup
+byte-identical to `main`'s), `pnpm preview`. Released as `0.2.0`.
 
 ## Verification recipe
 

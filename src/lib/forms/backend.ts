@@ -1,5 +1,5 @@
-import { MailtoBackend } from "./backends/mailto";
-import type { FormBackendConfig, FormDefinition, FormValues } from "./types";
+import { MailtoBackend } from "./backends/mailto.ts";
+import type { FormBackendConfig, FormDefinition, FormValues } from "./types.ts";
 
 export type SubmitResult = { ok: true } | { ok: false; error: string };
 

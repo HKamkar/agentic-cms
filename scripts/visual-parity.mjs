@@ -54,14 +54,15 @@
 // A third mode photographs interaction states the other two never reach:
 //   node scripts/visual-parity.mjs capture before --states
 // hovers the CTA, a nav link, a footer link and a blog card, focuses a form
-// field, checks a checkbox and opens the first FAQ on the landing page and on
-// the build's first post, then shoots the element's box (with a margin) after
-// a short wait. In the wireframe only the checked box and the two open FAQs
+// field, checks a checkbox and opens the first FAQ — on the first page file
+// that carries a contact-form section, the first that carries a faq section,
+// and the build's first post — then shoots the element's box (with a margin)
+// after a short wait. In the wireframe only the checked box and the two open FAQs
 // change anything (hover and focus draw nothing); the hover and focus rows stay
 // so a design that adds those states is photographed without a new list.
-// Elements are located by role and text (the three labels come from
-// src/config/site.ts), never by class, so the same list works before and after
-// a markup rewrite. Every capture records its mode and scheme in meta.json;
+// Elements are located by role and text (the three labels and the pages come
+// from the site's config and page files through src/kit.ts), never by class,
+// so the same list works before and after a markup rewrite. Every capture records its mode and scheme in meta.json;
 // compare refuses two captures whose scheme differs.
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
@@ -69,11 +70,18 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import zlib from "node:zlib";
-import { chromium } from "playwright-core";
 import sharp from "sharp";
 
-const { site } = await import("../src/config/site.ts");
-const ROOT = path.resolve(import.meta.dirname, "..");
+// playwright-core is the package's one optional peer: a site installs it (and a Chromium build) when it wants the harness.
+const { chromium } = await import("playwright-core").catch(() => {
+  console.error("visual-parity: install playwright-core (an optional peer of content-engine-kit) and a Chromium build (~/.cache/ms-playwright, or CHROME_PATH)");
+  process.exit(2);
+});
+
+const { kit } = await import("@/kit");
+const { site } = kit;
+const BLOG = site.links.blog;
+const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".parity/visual");
 const DEFAULT_WIDTHS = [1920, 1440, 1280, 1100, 992, 800, 767, 390];
 const MENU_WIDTHS = [767, 390];
@@ -284,6 +292,12 @@ async function captureMotion(page, dir, name) {
 // The first disclosure toggle on the page (FAQ), whatever element carries it.
 const faqToggle = (p) => p.getByRole("main").locator("[aria-expanded]").first();
 
+/** The route of the first page file (folder order) with a section of that type, looking inside group wrappers; undefined when none has one. */
+function pageWith(type) {
+  const holds = (sections) => sections.some((section) => section.type === type || (section.type === "group" && holds(section.sections)));
+  return kit.content.getPages().find((entry) => holds(entry.data.sections))?.data.seo.path;
+}
+
 // The three labels a hover state looks for, read from the site's own config: the
 // CTA, a nav entry that is a page of its own rather than an anchor, and the
 // second footer quick link.
@@ -294,15 +308,16 @@ const FOOTER_LABEL = site.footer.quickLinks[1].label;
 // Interaction states. `act` performs the interaction and returns the element
 // whose box is photographed; the page is prepared like a static capture
 // (motion frozen), so the box shows the settled end state of the transition.
-// `post` is the build's first post route; a build without posts drops its rows.
-const STATES = (post) => [
+// `post` is the build's first post route, `form` and `faq` the first pages that
+// show a form and a FAQ; a build without one of them drops those rows.
+const STATES = ({ post, form, faq }) => [
   { page: "/", width: 1440, name: "cta-hover", act: async (p) => { const l = p.getByRole("link", { name: CTA_LABEL }).first(); await l.hover(); return l; } },
   { page: "/", width: 1440, name: "nav-link-hover", act: async (p) => { const l = p.getByRole("navigation").getByRole("link", { name: NAV_LABEL }).first(); await l.hover(); return l; } },
   { page: "/", width: 1440, name: "footer-link-hover", act: async (p) => { const l = p.getByRole("contentinfo").getByRole("link", { name: FOOTER_LABEL }); await l.hover(); return l; } },
-  { page: "/blog", width: 1440, name: "card-hover", act: async (p) => { const l = p.getByRole("main").locator("a:has(img[alt]:not([alt='']))").first(); await l.hover(); return l; } },
-  { page: "/", width: 1440, name: "field-focus", act: async (p) => { const l = p.getByRole("textbox").first(); await l.focus(); return l; } },
-  { page: "/", width: 1440, name: "checkbox-checked", act: async (p) => { const l = p.locator("label:has(input[type=checkbox])").first(); await l.click(); return l; } },
-  { page: "/", width: 1440, name: "faq-open", act: async (p) => { const b = faqToggle(p); await b.click(); return b.locator("xpath=ancestor::section[1]"); } },
+  { page: BLOG, width: 1440, name: "card-hover", act: async (p) => { const l = p.getByRole("main").locator("a:has(img[alt]:not([alt='']))").first(); await l.hover(); return l; } },
+  { page: form, width: 1440, name: "field-focus", act: async (p) => { const l = p.getByRole("textbox").first(); await l.focus(); return l; } },
+  { page: form, width: 1440, name: "checkbox-checked", act: async (p) => { const l = p.locator("label:has(input[type=checkbox])").first(); await l.click(); return l; } },
+  { page: faq, width: 1440, name: "faq-open", act: async (p) => { const b = faqToggle(p); await b.click(); return b.locator("xpath=ancestor::section[1]"); } },
   { page: post, width: 1440, name: "post-faq-open", act: async (p) => { const b = faqToggle(p); await b.scrollIntoViewIfNeeded(); await b.click(); return b.locator("xpath=ancestor::div[1]"); } },
 ].filter((state) => state.page);
 
@@ -320,7 +335,7 @@ async function withPage(context, width, url, shoot) {
 
 async function captureStates(context, baseUrl, dir) {
   let count = 0;
-  for (const state of STATES(firstPost())) {
+  for (const state of STATES({ post: firstPost(), form: pageWith("contact-form"), faq: pageWith("faq") })) {
     const name = `${state.page === "/" ? "home" : state.page.slice(1).replace(/\//g, "__")}@${state.width}--state-${state.name}`;
     await onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });

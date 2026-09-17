@@ -15,9 +15,11 @@ needs no code.
 ## Read first
 
 `content/README.md` "Add a page", `content/_templates/page.yaml`,
-`src/lib/content/README.md` § pages (every section type and its fields),
+`content/README.md` § Fields › `pages` (every section type and its fields),
 one existing file in `content/pages/` as a worked example,
-`src/lib/seo/README.md` (the head, the structured data, the OG image),
+`src/lib/seo/README.md` (the head, the structured data, the OG image; the
+engine's docs, under `node_modules/content-engine-kit/` on a site that
+installs the package),
 `content/VOICE.md`, `src/config/site.ts`.
 
 ## Steps
@@ -33,20 +35,20 @@ one existing file in `content/pages/` as a worked example,
    as it spells it; eyebrows as the existing pages carry them). Card
    counts are part of the design where the build says "must have exactly
    N".
-3. **The images.** The OG image as `src/lib/seo/README.md` specifies it
+3. **The images.** The OG image as the engine's `src/lib/seo/README.md` specifies it
    (`public/images/<slug>-og.jpg`, 1200×630); section images and icons
-   under `public/images/<slug>/`, optimised (`scripts/README.md`), each
+   under `public/images/<slug>/`, optimised (`pnpm kit optimize-webp`; the
+   kit's `scripts/README.md`), each
    with an alt that says what it shows.
 4. **The chrome.** Only if the page belongs there: add it to `links`, `nav`
    and `footer.quickLinks` in `src/config/site.ts` (three separate lists).
 5. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; read the
    `WARN` lines on the new file.
-6. **Verify** (below), then look at the page at every width: `node
-   scripts/visual-parity.mjs capture <slug>-new --pages /<slug>` and open
-   the eight shots in `.parity/visual/<slug>-new/` (a new page has no
-   baseline; this is inspection). If `site.ts` changed, `scripts/parity.sh`
-   before and after must differ only in the nav and footer of the other
-   pages.
+6. **Verify** (below), then look at the page at every width: `pnpm kit
+   visual-parity capture <slug>-new --pages /<slug>` and open the eight
+   shots in `.parity/visual/<slug>-new/` (a new page has no baseline; this
+   is inspection). If `site.ts` changed, `pnpm kit parity` before and after
+   must differ only in the nav and footer of the other pages.
 7. **Commit** `Page: /<slug>` on the repo's working branch.
 
 ## Verify

@@ -33,8 +33,7 @@ import { Hero as UseCasesHero } from "@/components/use-cases/Hero";
 import { Strategy as UseCasesStrategy } from "@/components/use-cases/Strategy";
 import { UseCaseCards } from "@/components/use-cases/UseCaseCards";
 import { Vision as UseCasesVision } from "@/components/use-cases/Vision";
-import { getAllPosts } from "@/lib/blog/posts";
-import { getFaq, getReviews, getUseCases } from "@/lib/content";
+import { kit } from "@/kit";
 
 type Rendered = Exclude<SectionType, "group">;
 type AnyProps = Record<string, unknown>;
@@ -59,23 +58,23 @@ const registry: Registry = {
   "home-feature": plain(HomeFeature),
   "home-choose-us": plain(HomeChooseUs),
   "home-integration": plain(HomeIntegration),
-  reviews: withData(Testimonials, () => ({ reviews: getReviews() })),
+  reviews: withData(Testimonials, () => ({ reviews: kit.content.getReviews() })),
   "about-hero": plain(AboutHero),
   "about-story": plain(AboutStory),
   "about-strategy": plain(AboutStrategy),
   "about-benefits": plain(AboutBenefits),
   "about-choose-us": plain(AboutChooseUs),
-  faq: withData(FaqSection, (section) => ({ items: getFaq(section.set).items })),
+  faq: withData(FaqSection, (section) => ({ items: kit.content.getFaq(section.set).items })),
   "use-cases-hero": plain(UseCasesHero),
   "use-cases-vision": plain(UseCasesVision),
   "use-cases-choose-us": plain(UseCasesChooseUs),
-  "use-case-cards": withData(UseCaseCards, () => ({ cards: getUseCases() })),
+  "use-case-cards": withData(UseCaseCards, () => ({ cards: kit.content.getUseCases() })),
   "use-cases-benefits": plain(UseCasesBenefits),
   "use-cases-strategy": plain(UseCasesStrategy),
   "contact-hero": plain(ContactHero),
   "contact-form": plain(ContactForm),
   "contact-details": plain(ContactDetails),
-  "blog-index": withData(BlogIndex, () => ({ posts: getAllPosts() })),
+  "blog-index": withData(BlogIndex, () => ({ posts: kit.blog.getAllPosts() })),
 };
 
 /** The sections of a page, in order, each rendered by its registered component. */

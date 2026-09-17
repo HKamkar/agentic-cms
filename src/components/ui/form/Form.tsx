@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { createFormBackend } from "@/lib/forms/backend";
-import { cx } from "@/lib/cx";
-import { fieldId, fieldsOf, isRow, type FieldDefinition, type FormDefinition, type FormValues } from "@/lib/forms/types";
+import { cx } from "content-engine-kit/cx";
+import { createFormBackend, fieldId, fieldsOf, isRow, type FieldDefinition, type FormDefinition, type FormValues } from "content-engine-kit/forms";
 import { CheckboxGroup } from "./CheckboxGroup";
 import { FieldRow } from "./FieldRow";
 import { FormShell, type FormState } from "./FormShell";

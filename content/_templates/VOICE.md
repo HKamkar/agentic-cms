@@ -2,7 +2,7 @@
 
 <!-- Copy this file to content/VOICE.md and write the site's rules in it. The
 prose is what a writer reads; the fenced block at the end is what
-scripts/content-lint.mjs enforces on every build (pnpm content:lint runs it
+`content-engine-kit lint` enforces on every build (pnpm content:lint runs it
 in a second), and the two must say the same thing. Keep the headings: the
 editorial plugin's skills read them by name. Delete these comments. -->
 
@@ -59,7 +59,7 @@ critic reads a draft as this person.
 
 ## What the build checks, and what it cannot
 
-`scripts/content-lint.mjs` reads the block below and every content file:
+`content-engine-kit lint` reads the block below and every content file:
 banned words and patterns fail, as do a model name, the brand without its
 mark or miscased, an em dash, a missing or slot-naming alt, a keyword
 count or excerpt length outside its range, a heading that breaks the post

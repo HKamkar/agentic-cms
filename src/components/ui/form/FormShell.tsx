@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cx } from "@/lib/cx";
+import { cx } from "content-engine-kit/cx";
 
 export type FormState = "idle" | "submitting" | "done" | "fail";
 

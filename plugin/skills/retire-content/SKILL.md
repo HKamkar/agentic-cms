@@ -37,7 +37,7 @@ Only once a redirect for its route exists (stop and say so otherwise):
 delete `content/pages/<slug>.yaml`, its entries in `links`, `nav` and
 `footer.quickLinks` in `src/config/site.ts`, every internal link to it
 (`check-seo`'s links rule catches the rest), `public/images/<slug>/` and
-its OG image. `scripts/parity.sh` before and after must differ only in
+its OG image. `pnpm kit parity` before and after must differ only in
 that page and the chrome of the others. Verify, commit `Retire: /<slug>`.
 
 ## Verify

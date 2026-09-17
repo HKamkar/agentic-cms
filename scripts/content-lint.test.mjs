@@ -9,8 +9,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, test } from "node:test";
 import { postTree, withContent } from "../src/lib/content/test-helpers.ts";
-import { site } from "../src/config/site.ts";
-import { format, lint, readVoice } from "./lib/content-lint.mjs";
+import { kit } from "../src/kit.ts";
+import { format, lint as lintTree, readVoice } from "./lib/content-lint.mjs";
+
+/** The lint on the example site's registry and config; the trees under test are the scratch ones each case writes. */
+const { site } = kit;
+const lint = (options) => lintTree({ collections: kit.collections, site, ...options });
 
 const REPO = path.resolve(import.meta.dirname, "..");
 const NOW = new Date("2026-09-15T12:00:00Z");

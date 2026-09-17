@@ -3,7 +3,7 @@
 Every page and post ships with a complete, correct search and social surface,
 and the build proves it. This document is the contract; the enforcement is
 the types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`, and
-`scripts/check-seo.mjs`, which `pnpm build` runs after `next build` and
+`content-engine-kit seo`, which `pnpm build` runs after `next build` and
 which fails the build (and therefore `pnpm preview` and `pnpm run deploy`)
 on a structural problem.
 
@@ -17,16 +17,21 @@ on a structural problem.
    named. Its `jsonld` block declares the copy of its structured data; its
    `sections` list is what it shows (`src/components/sections/`).
 2. **`src/app/[[...slug]]/page.tsx` renders every page file** — the head
-   from `pageMetadata(page.seo)`, nothing hand-written: that is the exact
-   title, the description, the canonical, Open Graph with the 1200×630
-   image, the Twitter card. Posts get `postMetadata(post)` from the post
-   page; never build these by hand.
-3. **Structured data**: the same route emits `pageBreadcrumb(page.seo)` for
-   every inner page (posts `postBreadcrumb(post)`) and the page-type block
-   from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`, `Blog`;
-   posts `BlogPosting`, `FAQPage`) through `<JsonLd>`. Organisation blocks
-   come from `organizationLd()`; the FAQPage and ItemList parts come from
-   the page's own `faq` / `use-case-cards` sections and their collections.
+   from `kit.seo.pageMetadata(page.seo)`, nothing hand-written: that is
+   the exact title, the description, the canonical, Open Graph with the
+   1200×630 image, the Twitter card. Posts get `kit.seo.postMetadata(post)`
+   from the post page; never build these by hand. `kit.seo` is
+   `createSeo({ site, urls, content, blog })`, composed once by
+   `createKit()` in the site's `src/kit.ts`; nothing here imports the site.
+3. **Structured data**: the same route emits `kit.seo.pageBreadcrumb(page.seo)`
+   for every inner page (posts `postBreadcrumb(post)`) and the page-type
+   block from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`,
+   `Blog`; posts `BlogPosting`, `FAQPage`) through `<JsonLd>`. Organisation
+   blocks come from `organizationLd()`; the FAQPage and ItemList parts come
+   from the page's own `faq` / `use-case-cards` sections and their
+   collections (the engine reads a `faq` section's `set`, a `group`'s
+   `sections`, and looks for `use-case-cards` by type; every other section
+   is the site's).
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
@@ -56,7 +61,7 @@ on a structural problem.
 | sitemap | an indexable route missing, listed twice, or a URL with no built page; `lastmod` invalid or in the future; `robots.txt` without the sitemap | |
 | links | an internal `href` that matches no page and no file in `public/` | |
 
-`node scripts/check-seo.mjs --strict` turns warnings into failures;
+`pnpm kit seo --strict` turns warnings into failures;
 `--report` also writes `.parity/seo-report.txt`.
 
 ## Writing the fields
@@ -76,7 +81,7 @@ on a structural problem.
   file name, never "image of".
 - **Open Graph image**: `public/images/<path-with-hyphens>-og.jpg`
   (`/sections/about` → `sections-about-og.jpg`), 1200×630 JPEG, carrying the
-  brand mark and the page's message; `node scripts/placeholder.mjs
+  brand mark and the page's message; `pnpm kit placeholder
   public/images/<name>-og.jpg 1200 630` writes a wireframe stand-in. A post's
   defaults to its hero (1600×900).
 - **Internal links**: descriptive link text (what the reader will find),
@@ -88,15 +93,19 @@ on a structural problem.
 
 | File | Role |
 |---|---|
+| `src/lib/seo/index.ts` | `createSeo({ site, urls, content, blog })`: everything below, composed for one site (`kit.seo`) |
 | `src/lib/seo/types.ts` | `PageSeo` (the `seo` block's type, from the schema) |
-| `src/lib/seo/metadata.ts` | `pageMetadata()`, `postMetadata()` |
-| `src/lib/seo/jsonld.ts` | `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
-| `src/lib/seo/pageJsonLd.ts` | `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
+| `src/lib/seo/metadata.ts` | `pageMetadata()` (needs no site), `createMetadata(urls)` → `postMetadata()` |
+| `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
+| `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
+| `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |
+| `src/lib/seo/routes.ts` | `createRoutes(…)` → `sitemap()`, `feed()` (a Response), `robots()`: what `src/app/sitemap.ts`, `src/app/feed.xml/route.ts` and `src/app/robots.ts` return |
+| `src/lib/site.ts` | `SiteConfig`, what the engine reads of `src/config/site.ts`; `createUrls(site)` → `postUrl()`, `absoluteUrl()` (`kit.urls`) |
 | `content/pages/*.yaml` | the pages: `seo`, `jsonld`, `sections` (`content/README.md`, template `content/_templates/page.yaml`) |
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |
 | `src/app/sitemap.ts`, `src/app/robots.ts` | built from the page files and the posts |
 | `src/lib/blog/rehype-post-images.ts` | post images get `width`/`height` and `loading="lazy"` |
-| `scripts/check-seo.mjs` | the audit, run by `pnpm build` |
+| `content-engine-kit seo` | the audit, run by `pnpm build` |
 
 ## Recipes
 

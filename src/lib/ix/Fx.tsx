@@ -3,8 +3,8 @@
 import { useAnimate, useInView } from "motion/react";
 import Link from "next/link";
 import { createElement, useEffect, type CSSProperties, type ElementType, type ReactNode } from "react";
-import { ease } from "./easing";
-import { useMainBreakpoint, useReducedMotionPref } from "./useMainBreakpoint";
+import { ease } from "./easing.ts";
+import { useMainBreakpoint, useReducedMotionPref } from "./useMainBreakpoint.ts";
 
 /**
  * The classic "scroll into view" reveals (slide in / grow in / fade in),

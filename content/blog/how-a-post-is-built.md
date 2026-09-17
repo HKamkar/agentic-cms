@@ -16,6 +16,7 @@ seoDescription: What a post on this kit is made of, in order. The frontmatter an
 keywords: [content engine, blog post, frontmatter, markdown, static site]
 related: [pages-are-files, the-voice-file-and-the-lint]
 publishedAt: '2026-09-03T09:00:00.000Z'
+updatedAt: '2026-09-17T10:00:00.000Z'
 ---
 
 A post is one markdown file in `content/blog/`, served at the route its name
@@ -66,7 +67,7 @@ Each one carries alt text that says what the picture shows. The lint fails an al
 that names the slot rather than the picture, fails an image that sits outside the
 post's folder, and warns about a file in that folder no post references, so the
 folder never fills up with leftovers. Placeholders come from
-`node scripts/placeholder.mjs <path> <width> <height>` while the real pictures are
+`pnpm kit placeholder <path> <width> <height>` while the real pictures are
 still being made.
 
 ## The conventions inside the body
