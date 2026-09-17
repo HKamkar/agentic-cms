@@ -10,7 +10,9 @@
   mode, a system font stack, bordered boxes and hairlines, no radius, no
   shadow, no gradient and no motion. That is the design, not an unfinished
   one — a fork replaces the tokens and the section components, not the
-  engine. A change that must not move a pixel proves it with
+  engine, and a site of its own installs the engine as the package
+  `content-engine-kit` (`src/lib/` is its source; the README says how). A
+  change that must not move a pixel proves it with
   `content-engine-kit visual-parity`; a design change is its own commit and says so
   — nothing is restyled in passing.
 - Content is files under `content/`, validated at build time by the content
@@ -175,14 +177,36 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   and ends with the SEO audit) + `pnpm preview`, with `pnpm test` (the
   `node:test` suites, about a second) and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
-  schema-only loop). `pnpm lint` ignores `.claude/worktrees/`, where agent
+  schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
+  or the scripts changed. `pnpm lint` ignores `.claude/worktrees/`, where agent
   worktrees are checked out. No Prettier and no CI; match the existing style
   (double quotes, semicolons, trailing commas).
 - Scripts and `node --test` load TypeScript under `src/` through
-  `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves `@/`
-  and extensionless imports). Code that must stay loadable that way —
-  `src/lib/content/` and `src/components/sections/schemas.ts` — uses
-  `import type`, no `enum`, no parameter properties, and nothing from React.
+  `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
+  aliases of the site's `tsconfig.json` — `@/`, and here the package's own
+  name to `src/lib` — and extensionless imports, never inside
+  `node_modules`, where Node refuses to strip types and the package ships
+  JavaScript). Code that must stay loadable that way — everything
+  `createKit()` reaches (`src/lib/content/`, `blog/posts.ts`, `seo/`,
+  `site.ts`), `src/kit.ts` and `src/components/sections/schemas.ts` — uses
+  `import type`, no `enum`, no parameter properties, no `.tsx` and nothing
+  from React; `src/lib/index.ts` imports `blog/posts.ts`, not the blog
+  barrel, for that reason.
+- The package is `src/lib/` (`content/`, `blog/`, `seo/`, `forms/`, `ix/`,
+  `components/`, `cx.ts`, `site.ts`, `index.ts` with `createKit`), compiled
+  by `tsc -p tsconfig.build.json` to the gitignored `dist/` (ESM, `.d.ts`,
+  ES2022; `prepare` runs it on install, so a git dependency builds itself
+  where `pnpm-workspace.yaml` allows it). Its relative imports name their
+  `.ts`/`.tsx` files (`rewriteRelativeImportExtensions` emits `.js`), it
+  imports nothing from the site (the site's config, section union, block
+  classes and element overrides come in through `createKit()` and
+  `renderPostBody()`), and `next`, `react`, `react-dom`, `zod` and `motion`
+  are peers so a site has one copy of each. The example imports it by name
+  (`content-engine-kit/content`, …) through the `paths` self-alias in
+  `tsconfig.json`, so nothing in this checkout needs `dist/`; the scripts
+  do the same. `pnpm test:pack` packs it and builds a scratch site from the
+  tarball, which is the only build here that exercises `dist/` and
+  `exports`: run it before a release. `dist/` is ignored by git and ESLint.
 
 ## Parity harness
 

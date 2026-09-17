@@ -3,6 +3,8 @@ paths:
   - "src/app/**"
   - "src/config/site.ts"
   - "src/lib/seo/**"
+  - "src/kit.ts"
+  - "scripts/check-seo.mjs"
   - "content/blog/**"
   - "content/pages/**"
 ---

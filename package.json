@@ -58,6 +58,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
+    "test:pack": "node tools/pack-smoke.mjs",
     "content:check": "node bin/content-engine-kit.mjs check",
     "content:lint": "node bin/content-engine-kit.mjs lint",
     "content:status": "node bin/content-engine-kit.mjs status",

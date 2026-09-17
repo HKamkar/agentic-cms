@@ -179,10 +179,50 @@ wants motion.
 
 ## Start your own site
 
-1. Fork; rename the package, the Worker (`wrangler.jsonc`) and the plugin
-   marketplace to your own name.
+Two ways. **Fork** this repo when you want the example around you — the
+wireframe, the section galleries, the posts that describe the kit — and
+replace it piece by piece. **Install** the package when your site is its own
+repo: the engines, the reveal library and the command line come from
+`content-engine-kit`; your repo holds the design, the content, the config
+and the docs, nothing of the engine.
+
+```bash
+pnpm add content-engine-kit@github:HKamkar/content-engine-kit#v0.2.0 next react react-dom zod motion
+pnpm add -D playwright-core          # only for the screenshot harness
+```
+
+A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
+only when `pnpm-workspace.yaml` allows it:
+
+```yaml
+allowBuilds:
+  "content-engine-kit@github:HKamkar/content-engine-kit": true
+```
+
+Then, in either case:
+
+1. Forking: rename the package, the Worker (`wrangler.jsonc`) and the plugin
+   marketplace to your own name. Installing: `src/kit.ts` is where your site
+   composes the engine, the one file the app and the command line read
+   (server code only):
+
+   ```ts
+   import { createKit } from "content-engine-kit";
+   import { sectionSchema } from "@/components/sections/schemas";
+   import { site } from "@/config/site";
+   export const kit = createKit({ site, sections: sectionSchema });
+   // kit.collections · kit.content (getPages, getPage, getFaq, …) · kit.blog (getAllPosts, getRelatedPosts, …)
+   // kit.seo (pageMetadata, pageJsonLd, postMetadata, sitemap, feed, robots, …) · kit.urls (postUrl, absoluteUrl) · kit.site
+   ```
+
+   and `package.json` names the commands: `"content:lint": "content-engine-kit
+   lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
+   "content-engine-kit"`, and `"build": "content-engine-kit lint &&
+   content-engine-kit docs --check && next build && content-engine-kit seo"`.
+   The example's `src/app/`, `src/components/`, `src/config/`, `src/styles/`
+   and `content/` are the files a site owns; copy them as a start.
 2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
-   the footer, the calls to action.
+   the footer, the calls to action (data only, `satisfies SiteConfig`).
 3. `src/app/globals.css`: the four colours and the type scale. Both themes
    follow from the `light-dark()` pairs.
 4. Copy `content/_templates/VOICE.md` to `content/VOICE.md` and write your
@@ -195,8 +235,11 @@ wants motion.
    `pnpm run deploy`.
 
 A new kind of section is a copy schema, a component and a registry entry
-(`src/components/sections/`). A new collection is a schema and an accessor
+(`src/components/sections/`). A collection of your own is a schema and a
+definition returned from `createKit`'s `collections` option
 (`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`.
+Upgrading is bumping the tag and running the verify below; a kit release
+says what changed for a site.
 
 ## Commands
 
@@ -206,8 +249,11 @@ pnpm build           # content lint → docs check → next build → SEO audit;
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
 pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
+pnpm test:pack       # packs the kit and builds a scratch site from the tarball, the way a site that installs it does
 pnpm content:lint    # the content rules, about a second
 pnpm content:status  # what is live, in draft and planned, from the files
+pnpm content:docs    # the field tables into content/README.md
+pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 ```
 
 - Node 22.18+ (`.nvmrc` says 26) and pnpm. The build fetches nothing: no
@@ -242,12 +288,12 @@ content/authors.json         content/categories.json   content/reviews.yaml   co
 content/VOICE.md             the voice and claim rules; _templates/VOICE.md is the blank
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
-src/lib/content/             the content engine     src/lib/blog/   the post pipeline
-src/lib/seo/                 head and structured data   src/lib/forms/   forms as config
+src/lib/                     the package (content-engine-kit): content/, blog/, seo/, forms/, ix/, components/, cx, createKit
+src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
-scripts/                     content-lint, content-status, content-docs, check-seo, placeholder, the optimisers, visual-parity
+bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
 STANDARD.md                  the design system     CLAUDE.md   the rules for anyone (or any agent) working on the code
 PLAN.md                      how the engine was built, condensed
 ```

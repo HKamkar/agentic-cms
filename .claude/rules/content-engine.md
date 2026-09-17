@@ -2,6 +2,10 @@
 paths:
   - "content/**"
   - "src/lib/content/**"
+  - "src/lib/index.ts"
+  - "src/lib/site.ts"
+  - "src/kit.ts"
+  - "bin/**"
   - "scripts/content-*.mjs"
   - "scripts/lib/load-ts.mjs"
   - "scripts/lib/content-lint.mjs"
