@@ -16,11 +16,12 @@ seoDescription: One file holds the rules this site's copy follows and one script
 keywords: [voice guide, content lint, editorial review, style rules, build checks]
 related: [how-a-post-is-built, pages-are-files]
 publishedAt: '2026-09-14T09:00:00.000Z'
+updatedAt: '2026-09-17T10:00:00.000Z'
 ---
 
 `content/VOICE.md` is prose with a machine-readable block bolted to the end of
 it. The prose is what a writer reads. The block between the two `voice-rules`
-markers is what `scripts/content-lint.mjs` reads, and the two are edited
+markers is what `pnpm content:lint` reads, and the two are edited
 together, because a rule that only exists in the prose is a rule nobody enforces.
 
 ## What the block carries
