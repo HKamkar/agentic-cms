@@ -190,8 +190,6 @@ the engines, the reveal library and the command line come from here by tag
 `src/kit.ts`. Same page files, same post pipeline, same lint and audit as
 the wireframe above; the design is the part a site brings.
 
-<img src="docs/readme/deeplit-post.png" alt="A deeplit post page: the blog-post eyebrow, the title, the hero image and the first paragraphs of the body, rendered by the same post pipeline as the kit's own posts" width="820">
-
 ## Start your own site
 
 Two ways. **Fork** this repo when you want the example around you — the
