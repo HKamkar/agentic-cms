@@ -11,14 +11,14 @@
   shadow, no gradient and no motion. That is the design, not an unfinished
   one — a fork replaces the tokens and the section components, not the
   engine. A change that must not move a pixel proves it with
-  `scripts/visual-parity.mjs`; a design change is its own commit and says so
+  `content-engine-kit visual-parity`; a design change is its own commit and says so
   — nothing is restyled in passing.
 - Content is files under `content/`, validated at build time by the content
   engine: posts in `content/blog/` (the filename is the slug), the author and
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
   the pages in `content/pages/`; the door for editing is `content/README.md`,
   the templates are `content/_templates/`. The voice and claim rules are
-  `content/VOICE.md`; `scripts/content-lint.mjs` enforces its fenced block
+  `content/VOICE.md`; `content-engine-kit lint` enforces its fenced block
   first in `pnpm build` (a FAIL stops the build, a WARN is read, `--strict`
   promotes them). Never read `content/` at request time: pages are
   prerendered, the Worker has no filesystem.
@@ -46,7 +46,7 @@
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
-  (`scripts/check-seo.mjs`) and fails on a missing or wrong field. Never
+  (`content-engine-kit seo`) and fails on a missing or wrong field. Never
   hand-write head tags.
 - Verify with `pnpm test` (the content engine, the post pipeline and the
   lint), `pnpm content:lint` (the content rules, in a second), `pnpm build`
@@ -106,12 +106,12 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   component `EagerImage` (`content-engine-kit/components`), everything else `loading="lazy"`. `base.css`
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
-  `node scripts/placeholder.mjs <out> <width> <height>`.
+  `pnpm kit placeholder <out> <width> <height>`.
 - Proof: a refactor that must not move a pixel captures before and after with
-  `node scripts/visual-parity.mjs capture <label>` and `compare` clean, in
+  `pnpm kit visual-parity capture <label>` and `compare` clean, in
   both schemes (`--scheme dark`), with `--states` when hover / focus /
   checked / open change and `--motion` only when there is motion to check.
-  Markup-only refactors: `scripts/parity.sh`.
+  Markup-only refactors: `content-engine-kit parity`.
 
 ## Gotchas
 
@@ -147,7 +147,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   answers. `content/VOICE.md`'s prose and its fenced block are edited
   together: the block is what the lint reads.
 - Image assets are wireframe placeholders written by
-  `node scripts/placeholder.mjs <out> <width> <height>` (OG 1200×630 JPEG,
+  `pnpm kit placeholder <out> <width> <height>` (OG 1200×630 JPEG,
   post hero and mid 1600×900 WebP, card 820×696, author 256, review 160,
   icons 64×64 SVG). They live under `public/images/<page>/` (one page's) or
   `public/images/ui/` (shared); the brand logo is `site.logo`. The three
@@ -186,7 +186,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 
 ## Parity harness
 
-- `node scripts/visual-parity.mjs capture <label>` renders every prerendered
+- `pnpm kit visual-parity capture <label>` renders every prerendered
   page of the current build at eight widths and `compare <before> <after>`
   diffs them; `--scheme dark` renders the dark mode (a fresh browser context
   has no stored choice, so the default capture is light), `--states`
@@ -258,8 +258,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   loads their invariants when those paths are edited; keep the READMEs,
   `STANDARD.md`, `VOICE.md`, the rules and the code in step.
 - Refactors of existing pages change no pixels and prove it with
-  `scripts/visual-parity.mjs` (see Styling and the harness section); one that
-  also leaves the markup alone proves that with `scripts/parity.sh`
+  `content-engine-kit visual-parity` (see Styling and the harness section); one that
+  also leaves the markup alone proves that with `content-engine-kit parity`
   (before/after capture + `diff -r`).
 - Single responsibility: one job per module, component and function. Keep
   functions under ~30 lines; split rather than nest.

@@ -129,7 +129,7 @@ texts and that every image exists on disk and weighs under 250 KB.
 `content/VOICE.md` says how the site writes and what it never claims. Its
 fenced block is machine-readable: banned words and patterns, the brand's
 spelling and mark, the words that count as claims near a regulation, model
-and cloud names, the SEO ranges. `scripts/content-lint.mjs` reads it on every
+and cloud names, the SEO ranges. `content-engine-kit lint` reads it on every
 build. Exact rules fail; heuristics warn. What the lint cannot judge (rhythm,
 an unsupported number, a misattributed date) is what the two review agents
 are for.
@@ -172,7 +172,7 @@ a system font stack; no radius, shadow or motion; a theme switch that follows
 the system until a reader picks. Every section renders in a box that prints
 its own YAML type, so the page and the page file read side by side.
 Illustrations are crossed placeholder boxes; content images come from
-`node scripts/placeholder.mjs <out> <width> <height>` until real ones exist.
+`pnpm kit placeholder <out> <width> <height>` until real ones exist.
 `STANDARD.md` is the design system; `src/components/README.md` the catalogue.
 The `content-engine-kit/ix` reveal library stays in the package for a fork that
 wants motion.
@@ -219,7 +219,7 @@ pnpm content:status  # what is live, in draft and planned, from the files
   `wrangler dev` straight after `next build` returns 500s. The ~40 "Failed to
   copy node_modules/…" lines during the OpenNext build are an OpenNext bug and
   harmless.
-- `scripts/visual-parity.mjs` screenshots every page at eight widths, in
+- `content-engine-kit visual-parity` screenshots every page at eight widths, in
   either colour scheme, and diffs two captures pixel by pixel: the proof for
   a refactor that must not move anything.
 

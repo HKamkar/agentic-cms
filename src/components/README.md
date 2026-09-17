@@ -12,7 +12,7 @@ are in `STANDARD.md`):
   visibility and hover/focus. The only CSS module in the tree is
   `blog/PostBody.module.css`; a second one is justified only by something
   utilities cannot say. Every change that must not move a pixel is proven
-  with `scripts/visual-parity.mjs`.
+  with `content-engine-kit visual-parity`.
 - Four colours, each a `light-dark()` pair: `paper`, `ink`, `fill`,
   `muted`. No radius, shadow, blur, gradient, transition or animation
   utility exists. The type scale is `text-h1`…`text-h6` and `text-body`.
@@ -259,7 +259,7 @@ its presentation by position.
    inside `ui/Section` from the primitives above, and a registry entry in
    `render.tsx` (`plain()`, or `withData()` when it shows a collection).
 3. Illustrations are `Placeholder`; real pictures start as
-   `node scripts/placeholder.mjs <out> <w> <h>` under
+   `pnpm kit placeholder <out> <w> <h>` under
    `public/images/<page>/`.
 4. The OG image is a 1200×630 JPEG named for the route with hyphens:
    `public/images/<slug>-og.jpg`.
@@ -269,7 +269,7 @@ its presentation by position.
    block (`src/lib/seo/README.md`).
 6. Verify: `pnpm lint`, `pnpm test`, `pnpm content:lint`, `pnpm build`,
    `pnpm preview`. Before touching an existing page, capture it with
-   `node scripts/visual-parity.mjs capture before` (and
+   `pnpm kit visual-parity capture before` (and
    `--scheme dark`, plus `--states` when hover / focus / checked / open
    change) and compare after. Add every new shared component to this file
    in the same commit.

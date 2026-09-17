@@ -109,7 +109,7 @@ for the FAQPage JSON-LD from the raw markdown.
 
 ### Body rules the lint enforces
 
-`scripts/content-lint.mjs` (first in `pnpm build`; `pnpm content:lint`)
+`content-engine-kit lint` (first in `pnpm build`; `pnpm content:lint`)
 reads every post's body and fails the build when: a heading is `#` (the
 title is the H1) or jumps a level (`##` to `####`); the FAQ `##` has no
 `###` question under it, holds a heading that is not `###`, or has a `###`
@@ -131,8 +131,8 @@ draft older than 30 days.
 
 **Add a post.** Copy `content/blog/_template.md` to `content/blog/<slug>.md`,
 fill the frontmatter, put images in `public/images/blog/<slug>/` — wireframe
-stand-ins from `node scripts/placeholder.mjs <out> <width> <height>` (hero and
-mid 1600×900, card 820×696), real ones through `node scripts/optimize-webp.mjs
+stand-ins from `pnpm kit placeholder <out> <width> <height>` (hero and
+mid 1600×900, card 820×696), real ones through `pnpm kit optimize-webp
 public/images/blog/<slug>` (lossy WebP at quality 80; design exports are
 usually lossless and 3-5x larger) — and write the body with the conventions
 above. `pnpm build` validates it; `pnpm dev` shows drafts too.
@@ -154,5 +154,5 @@ and document the markdown convention here and in `_template.md`.
 **Change how posts render.** `src/app/blog-post/[slug]/page.tsx` for the page
 frame, `mdxComponents` for element overrides, `rehype-post-blocks.ts` for
 block structure, `PostBody` for the styling. Prove existing posts are
-unchanged with `scripts/parity.sh` (markup) or `scripts/visual-parity.mjs`
+unchanged with `content-engine-kit parity` (markup) or `content-engine-kit visual-parity`
 (pixels, when the styling changes).

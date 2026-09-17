@@ -3,7 +3,7 @@
 Every page and post ships with a complete, correct search and social surface,
 and the build proves it. This document is the contract; the enforcement is
 the types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`, and
-`scripts/check-seo.mjs`, which `pnpm build` runs after `next build` and
+`content-engine-kit seo`, which `pnpm build` runs after `next build` and
 which fails the build (and therefore `pnpm preview` and `pnpm run deploy`)
 on a structural problem.
 
@@ -61,7 +61,7 @@ on a structural problem.
 | sitemap | an indexable route missing, listed twice, or a URL with no built page; `lastmod` invalid or in the future; `robots.txt` without the sitemap | |
 | links | an internal `href` that matches no page and no file in `public/` | |
 
-`node scripts/check-seo.mjs --strict` turns warnings into failures;
+`pnpm kit seo --strict` turns warnings into failures;
 `--report` also writes `.parity/seo-report.txt`.
 
 ## Writing the fields
@@ -81,7 +81,7 @@ on a structural problem.
   file name, never "image of".
 - **Open Graph image**: `public/images/<path-with-hyphens>-og.jpg`
   (`/sections/about` → `sections-about-og.jpg`), 1200×630 JPEG, carrying the
-  brand mark and the page's message; `node scripts/placeholder.mjs
+  brand mark and the page's message; `pnpm kit placeholder
   public/images/<name>-og.jpg 1200 630` writes a wireframe stand-in. A post's
   defaults to its hero (1600×900).
 - **Internal links**: descriptive link text (what the reader will find),
@@ -105,7 +105,7 @@ on a structural problem.
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |
 | `src/app/sitemap.ts`, `src/app/robots.ts` | built from the page files and the posts |
 | `src/lib/blog/rehype-post-images.ts` | post images get `width`/`height` and `loading="lazy"` |
-| `scripts/check-seo.mjs` | the audit, run by `pnpm build` |
+| `content-engine-kit seo` | the audit, run by `pnpm build` |
 
 ## Recipes
 

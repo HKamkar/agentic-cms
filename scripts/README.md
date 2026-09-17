@@ -1,41 +1,50 @@
-# scripts
+# scripts — the kit's command line
 
-- `optimize-svg-rasters.mjs` — `node scripts/optimize-svg-rasters.mjs [--lossy]
+Every script here is a command of `content-engine-kit`, the package's `bin`
+(`bin/content-engine-kit.mjs` dispatches to them): `pnpm kit <command>` in
+this checkout, `content-engine-kit <command>` on a site that installs the
+package (its `package.json` names them: `content:lint`, `content:check`,
+`content:status`, `content:docs`, and `build` runs `lint`, `docs --check`,
+`next build` and `seo` in that order). Each runs against the site in the
+current directory: its registry and config through `src/kit.ts`, its
+`content/`, `public/`, `.next` and `.parity`.
+
+- `optimize-svg-rasters` — `pnpm kit optimize-svg-rasters [--lossy]
   [--dry-run] [file.svg ...]` re-encodes the PNGs that design-tool SVG
   exports embed as base64 into WebP, in place (lossless by default, so the
   rendering is identical; `--lossy` only for files whose bitmap is an alpha
   mask). Without files it walks `public/images`. Run it on every SVG a design
   tool exports: such a file is often a megabyte of wrapper around one bitmap.
-- `optimize-webp.mjs` — `node scripts/optimize-webp.mjs [--quality 80]
+- `optimize-webp` — `pnpm kit optimize-webp [--quality 80]
   [--max-width N] [--dry-run] <files-or-dirs>` re-encodes WebP files as lossy
   WebP in place when that saves 30% or more (design exports are usually
   lossless, 3-5x larger). Run it on the images of a new blog post.
-- `placeholder.mjs` — `node scripts/placeholder.mjs <out> <width> <height>`
+- `placeholder` — `pnpm kit placeholder <out> <width> <height>`
   writes one wireframe placeholder image: a mid-grey field with a one-pixel
   border and a corner-to-corner cross, no text (it needs no fonts and reads
   on a light and a dark page alike); the format follows the extension
   (`.webp` lossless, `.jpg` quality 80, `.png`, `.svg`). The placeholders
   committed under `public/images` are its output; a new post's images, a
   new page's 1200×630 OG image and any illustration slot start as one.
-- `svgo.config.mjs` — settings for `pnpm dlx svgo@3` on the pure-vector
+- `svgo.config.mjs` — settings for `pnpm dlx svgo@3 --config
+  <path>/scripts/svgo.config.mjs` on the pure-vector
   illustrations, where it routinely halves a file; the comment in the file
   has the command and the one plugin that must stay off (the viewBox has to
   survive, or the image stops scaling).
-- `check-seo.mjs` — `node scripts/check-seo.mjs [--strict] [--report]`
+- `seo` — `pnpm kit seo [--strict] [--report]` (`check-seo.mjs`)
   audits every prerendered page after `next build` (title, description,
   canonical, Open Graph, Twitter card, headings, image alt and size, JSON-LD,
   robots, sitemap, internal links) and exits 1 on a failure; `pnpm build`
   runs it, so `preview` and `deploy` cannot skip it. The contract it enforces
   is `src/lib/seo/README.md`.
-- `content-check.mjs` — `node scripts/content-check.mjs [--root <dir>]` (`pnpm
-  content:check`) reads every collection of the content engine
+- `check` — `pnpm kit check [--root <dir>]` (`pnpm content:check`;
+  `content-check.mjs`) reads every collection of the site's registry
   (`src/lib/content/README.md`) the way `pnpm build` would and prints one
   row per collection and a summary; a bad file prints its `ContentError`
   lines and exits 1. `--root` points it at another content tree. The
   sub-second schema loop; the build runs the lint below instead.
-- `content-lint.mjs` — `node scripts/content-lint.mjs [--root <dir>]
-  [--strict] [--report]` (`pnpm content:lint`; the first step of `pnpm
-  build`) reads every collection like `content-check` (an engine error is
+- `lint` — `pnpm kit lint [--root <dir>] [--strict] [--report]` (`pnpm
+  content:lint`; the first step of `pnpm build`; `content-lint.mjs`) reads every collection like `content-check` (an engine error is
   one `FAIL` line per issue, verbatim), then applies the rules a schema
   cannot carry: the voice and claim block of `content/VOICE.md` (banned
   words and patterns, claim words near a regulation name, model names,
@@ -55,34 +64,41 @@
   subject, a cloud named as what the stack runs on) and the soft ranges
   (a title over 60, a description outside 70–160, a future date, a stale
   draft, an orphan, a stray file) `WARN`. The rule library is `lib/content-lint.mjs`
-  (`lint({ root, voice, now })`), tested by `content-lint.test.mjs`
+  (`lint({ root, collections, site, voice, now })` — the site's registry and
+  config come in, nothing is imported), tested by `content-lint.test.mjs`
   (`pnpm test`).
-- `content-status.mjs` — `node scripts/content-status.mjs [--since <window>]`
-  (`pnpm content:status`) prints what the content is right now, from the
+- `status` — `pnpm kit status [--since <window>]` (`pnpm content:status`;
+  `content-status.mjs`) prints what the content is right now, from the
   files: the posts by date with their drafts, the pages and their
   `updated`, the FAQ sets, reviews and use cases, the calendar's upcoming
   rows, the backlog, the workshop `content/editorial/workshop.yaml` names
   (present in this checkout or not; its briefs and newest research when it
   is), and the commits under `content/` in the window (default 30 days).
   Read-only; the `content-status` skill reports what it printed.
-- `content-docs.mjs` — `node scripts/content-docs.mjs [--check]` writes the
-  field tables of every collection into `src/lib/content/README.md` from
-  the schemas' `.describe()` texts (between the `content-docs` markers);
-  `--check` exits 1 when the file is stale, and `pnpm build` runs it, so a
-  schema change is followed by running the script and committing the README.
+- `docs` — `pnpm kit docs [--check]` (`pnpm content:docs`; `content-docs.mjs`)
+  writes the field tables of every collection of the site's registry into
+  the site's `content/README.md` from the schemas' `.describe()` texts
+  (between the `content-docs` markers); `--check` exits 1 when the file is
+  stale, and `pnpm build` runs it, so a schema change is followed by running
+  the command and committing the README.
 - `lib/load-ts.mjs` — `node --import ./scripts/lib/load-ts.mjs …` lets plain
-  Node run the TypeScript under `src/` (types stripped by Node, `@/` and
-  extensionless imports resolved by the hook); `pnpm test` (`src/**/*.test.ts`
-  and `scripts/**/*.test.mjs`) and the content scripts use it. No `.tsx`.
-- `parity.sh <label>` — builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
-- `visual-parity.mjs` — proves a change altered no pixels: `node
-  scripts/visual-parity.mjs capture <label>` renders every prerendered page of
-  the current build at eight widths with motion frozen
+  Node run the TypeScript under the site's `src/` (types stripped by Node;
+  the aliases of the site's `tsconfig.json` — `@/*`, and in this checkout
+  the package's own name to its source — and extensionless imports resolved
+  by the hook, which never touches `node_modules`, where a package ships
+  JavaScript); every command loads `src/kit.ts` through it, and `pnpm test`
+  (`src/**/*.test.ts` and `scripts/**/*.test.mjs`) uses it. No `.tsx`.
+- `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
+- `visual-parity` — proves a change altered no pixels: `pnpm kit
+  visual-parity capture <label>` (`visual-parity.mjs`) renders every
+  prerendered page of the current build at eight widths with motion frozen
   (`.parity/visual/<label>/`), and `compare <before> <after>` diffs two
   captures pixel by pixel and writes diff images. The page list is derived
   from the build's own output, so a new route is captured without editing the
-  script, and the three interaction labels of `--states` come from
-  `src/config/site.ts` — nothing here hard-codes a slug or a class.
+  script, and the pages and the three interaction labels of `--states` come
+  from the site's page files and config through `src/kit.ts` (the first page
+  with a `contact-form` section, the first with a `faq` section, the blog
+  index, the build's first post) — nothing here hard-codes a slug or a class.
   `capture <label> --motion` plays the animations instead (viewport frames at
   150/500/2000 ms after each scroll step, plus a recorded inventory of every
   animation with its timing and target); `capture <label> --states`
