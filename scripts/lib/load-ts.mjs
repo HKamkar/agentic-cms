@@ -26,7 +26,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = process.cwd();
 const CANDIDATES = [".ts", "/index.ts"];
 
-/** The `paths` of the site's tsconfig.json (plain JSON), as prefix rules: `@/*` → `./src/*`, `content-engine-kit` → `./src/lib/index.ts`. */
+/** The `paths` of the site's tsconfig.json (plain JSON), as prefix rules: `@/*` → `./src/*`, `agentic-cms` → `./src/lib/index.ts`. */
 function aliases(root) {
   const file = path.join(root, "tsconfig.json");
   if (!existsSync(file)) return [];

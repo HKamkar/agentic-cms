@@ -1,8 +1,8 @@
 # scripts — the kit's command line
 
-Every script here is a command of `content-engine-kit`, the package's `bin`
-(`bin/content-engine-kit.mjs` dispatches to them): `pnpm kit <command>` in
-this checkout, `content-engine-kit <command>` on a site that installs the
+Every script here is a command of `agentic-cms`, the package's `bin`
+(`bin/agentic-cms.mjs` dispatches to them): `pnpm kit <command>` in
+this checkout, `agentic-cms <command>` on a site that installs the
 package (its `package.json` names them: `content:lint`, `content:check`,
 `content:status`, `content:docs`, and `build` runs `lint`, `docs --check`,
 `next build` and `seo` in that order). Each runs against the site in the
@@ -82,7 +82,7 @@ current directory: its registry and config through `src/kit.ts`, its
   stale, and `pnpm build` runs it, so a schema change is followed by running
   the command and committing the README.
 - `lib/load-ts.mjs` — `node --import ./scripts/lib/load-ts.mjs …` here,
-  `node --import content-engine-kit/loader …` on a site (the package exports
+  `node --import agentic-cms/loader …` on a site (the package exports
   it as `./loader`), lets plain Node run the TypeScript under the site's `src/` (types stripped by Node;
   the aliases of the site's `tsconfig.json` — `@/*`, and in this checkout
   the package's own name to its source — and extensionless imports resolved

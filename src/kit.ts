@@ -3,6 +3,6 @@
 // reads node:fs); a client component gets what it needs as props.
 import { sectionSchema } from "@/components/sections/schemas";
 import { site } from "@/config/site";
-import { createKit } from "content-engine-kit";
+import { createKit } from "agentic-cms";
 
 export const kit = createKit({ site, sections: sectionSchema });

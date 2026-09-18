@@ -1,4 +1,4 @@
-import type { FormDefinition } from "content-engine-kit/forms";
+import type { FormDefinition } from "agentic-cms/forms";
 import { site } from "./site";
 
 // Every form on the site, as data. Render one with <Form definition={forms.x} />

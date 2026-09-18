@@ -4,7 +4,7 @@ import type { SectionProps } from "@/components/sections/schemas";
 import { Button } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
-import type { PostMeta } from "content-engine-kit/blog";
+import type { PostMeta } from "agentic-cms/blog";
 
 type Props = SectionProps<"blog-index"> & { posts: PostMeta[] };
 

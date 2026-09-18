@@ -1,6 +1,6 @@
 <div align="center">
 
-# content-engine-kit
+# agentic-cms
 
 **A file-based CMS for Next.js sites, with an AI editor.**
 
@@ -36,7 +36,7 @@ editing. Nothing is read at request time.
 ## Sixty seconds
 
 ```bash
-git clone git@github.com:HKamkar/content-engine-kit.git && cd content-engine-kit
+git clone git@github.com:HKamkar/agentic-cms.git && cd agentic-cms
 pnpm install
 pnpm dev          # http://localhost:8000
 ```
@@ -129,7 +129,7 @@ texts and that every image exists on disk and weighs under 250 KB.
 `content/VOICE.md` says how the site writes and what it never claims. Its
 fenced block is machine-readable: banned words and patterns, the brand's
 spelling and mark, the words that count as claims near a regulation, model
-and cloud names, the SEO ranges. `content-engine-kit lint` reads it on every
+and cloud names, the SEO ranges. `agentic-cms lint` reads it on every
 build. Exact rules fail; heuristics warn. What the lint cannot judge (rhythm,
 an unsupported number, a misattributed date) is what the two review agents
 are for.
@@ -155,8 +155,8 @@ the plugin is on through `.claude/settings.json` (the repo is its own
 marketplace). Elsewhere:
 
 ```bash
-claude plugin marketplace add git@github.com:HKamkar/content-engine-kit.git
-claude plugin install editorial@content-engine-kit
+claude plugin marketplace add git@github.com:HKamkar/agentic-cms.git
+claude plugin install editorial@agentic-cms
 ```
 
 `plugin/README.md` is the contract: what a site offers the plugin, what the
@@ -174,7 +174,7 @@ its own YAML type, so the page and the page file read side by side.
 Illustrations are crossed placeholder boxes; content images come from
 `pnpm kit placeholder <out> <width> <height>` until real ones exist.
 `STANDARD.md` is the design system; `src/components/README.md` the catalogue.
-The `content-engine-kit/ix` reveal library stays in the package for a fork that
+The `agentic-cms/ix` reveal library stays in the package for a fork that
 wants motion.
 
 ## Built on the kit
@@ -184,9 +184,9 @@ wants motion.
 [deeplit®](https://deeplit.ai), private AI infrastructure from Delft, is
 the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on
-`content-engine-kit/ix` — its content and its config live in its own repo;
+`agentic-cms/ix` — its content and its config live in its own repo;
 the engines, the reveal library and the command line come from here by tag
-(`github:HKamkar/content-engine-kit#v0.2.0`), composed once in its
+(`github:HKamkar/agentic-cms#v0.2.0`), composed once in its
 `src/kit.ts`. Same page files, same post pipeline, same lint and audit as
 the wireframe above; the design is the part a site brings.
 
@@ -196,11 +196,11 @@ Two ways. **Fork** this repo when you want the example around you — the
 wireframe, the section galleries, the posts that describe the kit — and
 replace it piece by piece. **Install** the package when your site is its own
 repo, as deeplit's above is: the engines, the reveal library and the
-command line come from `content-engine-kit`; your repo holds the design,
+command line come from `agentic-cms`; your repo holds the design,
 the content, the config and the docs, nothing of the engine.
 
 ```bash
-pnpm add content-engine-kit@github:HKamkar/content-engine-kit#v0.2.0 next react react-dom zod motion
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.2.0 next react react-dom zod motion
 pnpm add -D playwright-core          # only for the screenshot harness
 ```
 
@@ -209,7 +209,7 @@ only when `pnpm-workspace.yaml` allows it:
 
 ```yaml
 allowBuilds:
-  "content-engine-kit@github:HKamkar/content-engine-kit": true
+  "agentic-cms@github:HKamkar/agentic-cms": true
 ```
 
 Then, in either case:
@@ -220,7 +220,7 @@ Then, in either case:
    (server code only):
 
    ```ts
-   import { createKit } from "content-engine-kit";
+   import { createKit } from "agentic-cms";
    import { sectionSchema } from "@/components/sections/schemas";
    import { site } from "@/config/site";
    export const kit = createKit({ site, sections: sectionSchema });
@@ -228,12 +228,12 @@ Then, in either case:
    // kit.seo (pageMetadata, pageJsonLd, postMetadata, sitemap, feed, robots, …) · kit.urls (postUrl, absoluteUrl) · kit.site
    ```
 
-   and `package.json` names the commands: `"content:lint": "content-engine-kit
+   and `package.json` names the commands: `"content:lint": "agentic-cms
    lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
-   "content-engine-kit"`, `"build": "content-engine-kit lint &&
-   content-engine-kit docs --check && next build && content-engine-kit seo"`,
+   "agentic-cms"`, `"build": "agentic-cms lint &&
+   agentic-cms docs --check && next build && agentic-cms seo"`,
    and for the site's own tests on its real content `"test": "node --import
-   content-engine-kit/loader --test \"src/**/*.test.ts\""` (the loader that
+   agentic-cms/loader --test \"src/**/*.test.ts\""` (the loader that
    lets Node run the site's TypeScript against the package).
    The example's `src/app/`, `src/components/`, `src/config/`, `src/styles/`
    and `content/` are the files a site owns; copy them as a start.
@@ -281,7 +281,7 @@ pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-sv
   `wrangler dev` straight after `next build` returns 500s. The ~40 "Failed to
   copy node_modules/…" lines during the OpenNext build are an OpenNext bug and
   harmless.
-- `content-engine-kit visual-parity` screenshots every page at eight widths, in
+- `agentic-cms visual-parity` screenshots every page at eight widths, in
   either colour scheme, and diffs two captures pixel by pixel: the proof for
   a refactor that must not move anything.
 
@@ -304,7 +304,7 @@ content/authors.json         content/categories.json   content/reviews.yaml   co
 content/VOICE.md             the voice and claim rules; _templates/VOICE.md is the blank
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
-src/lib/                     the package (content-engine-kit): content/, blog/, seo/, forms/, ix/, components/, cx, createKit
+src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/, ix/, components/, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives

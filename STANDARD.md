@@ -182,7 +182,7 @@ Two kinds of picture, and they are not interchangeable.
   `block h-auto w-full border border-ink`.
 
 Above the fold in a **server** component, use `EagerImage` (from
-`content-engine-kit/components`): a plain eager
+`agentic-cms/components`): a plain eager
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
@@ -226,9 +226,9 @@ shared component goes into it in the same commit. In short:
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `Fx`, `OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`content-engine-kit/ix`) | present, used by nothing — §7 |
+| Motion | `Fx`, `OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
-| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`content-engine-kit/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
+| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
 Cards are **not** a shared component: every section's cards are its own design,
 so a section renders them from a data array at the top of its file or from the
@@ -314,7 +314,7 @@ state changes are the ones a control owns — the FAQ's `hidden` answer, the
 navbar's mounted menu, the theme attribute — and each is instant.
 
 The reveal library survives for a fork that wants reveals, whole and unused, in
-`content-engine-kit/ix` (`src/lib/ix/`) with its start states in `src/styles/motion.css`:
+`agentic-cms/ix` (`src/lib/ix/`) with its start states in `src/styles/motion.css`:
 
 | Export | What it is |
 |---|---|
@@ -424,10 +424,10 @@ choice, so the default capture is the light one); `--motion` is for when the
 change; `--pages /,/blog` limits a capture and its compare to the pages a step
 touches. Every `compare` must come back clean, and each proven state is
 committed before the next change starts. A refactor that also leaves the markup
-alone proves that with `content-engine-kit parity` (prerendered HTML plus JSON-LD,
+alone proves that with `agentic-cms parity` (prerendered HTML plus JSON-LD,
 `diff -r`).
 
-**What the SEO audit checks.** `content-engine-kit seo` runs at the end of
+**What the SEO audit checks.** `agentic-cms seo` runs at the end of
 `pnpm build` and fails it on a structural problem, so `preview` and `deploy`
 cannot skip it: per prerendered page, exactly one non-empty unique `<title>` (at
 most 70 characters) and one meta description (50–200), one canonical that is
@@ -468,7 +468,7 @@ hand-write head tags.
 - A section that shows a collection keeps its presentation in code, keyed by
   position; the collection carries only copy.
 - The voice and claim rules are `content/VOICE.md`, enforced by
-  `content-engine-kit lint` at the start of `pnpm build`; the procedures for
+  `agentic-cms lint` at the start of `pnpm build`; the procedures for
   content jobs are the `editorial` plugin in `plugin/`.
 - Everything is read at build time. Nothing reads the filesystem at request
   time — the Worker has none.

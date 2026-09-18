@@ -44,7 +44,7 @@ complete contract; read it before changing anything in `src/lib/blog/`,
 | `src/lib/content/collections.ts` | `postSchema`, `authorSchema`, `categorySchema` and the three collection definitions — the contract and its validation (the engine: `src/lib/content/README.md`). |
 | `src/lib/blog/posts.ts` | The post pipeline: `createBlog(collections)` reads the site's registry through `readCollection` / `readEntry`, derives fields, sorts, and returns `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate` — what a site reads as `kit.blog`; the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
 | `src/lib/blog/markdown.tsx` | `renderPostBody(post, { components, blocks })`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the site's block classes) and `rehypePostImages`; the site passes its `mdxComponents` and `postBlocks`. |
-| `src/lib/blog/index.ts` | The public surface, `content-engine-kit/blog`: the above plus `extractFaq` and the two rehype plugins. |
+| `src/lib/blog/index.ts` | The public surface, `agentic-cms/blog`: the above plus `extractFaq` and the two rehype plugins. |
 | `src/lib/blog/rehype-post-blocks.ts` | Reshapes the rendered body into the post template's blocks (see "Body pipeline"); the class names come in as options. |
 | `src/lib/blog/rehype-post-images.ts` | Every `<img>` in a body loads lazily, raw HTML ones included (they all sit below the hero; eager, they would also be preloaded by pages that merely prefetch the post), and gets its `width`/`height` from the file under `public/`, so the page reserves the space. |
 | `src/lib/blog/faq.ts` | `extractFaq(markdown)`: the Q/A pairs for FAQPage JSON-LD, using the same heading convention. |
@@ -102,14 +102,14 @@ template, with the classes `postBlocks` (in `PostBody.tsx`, passed in as
 
 Every block is emitted inside an `<fx>` element carrying the template's
 staggered delays; `mdxComponents` renders it as the element it names, so the
-wireframe has no reveals and a fork that wants them maps `fx` to `Fx` (`content-engine-kit/ix`)
+wireframe has no reveals and a fork that wants them maps `fx` to `Fx` (`agentic-cms/ix`)
 instead. `FaqAccordion` (client) attaches the toggle behaviour to the
 `[data-faq]` block after hydration; `extractFaq` produces the same Q/A pairs
 for the FAQPage JSON-LD from the raw markdown.
 
 ### Body rules the lint enforces
 
-`content-engine-kit lint` (first in `pnpm build`; `pnpm content:lint`)
+`agentic-cms lint` (first in `pnpm build`; `pnpm content:lint`)
 reads every post's body and fails the build when: a heading is `#` (the
 title is the H1) or jumps a level (`##` to `####`); the FAQ `##` has no
 `###` question under it, holds a heading that is not `###`, or has a `###`
@@ -154,5 +154,5 @@ and document the markdown convention here and in `_template.md`.
 **Change how posts render.** `src/app/blog-post/[slug]/page.tsx` for the page
 frame, `mdxComponents` for element overrides, `rehype-post-blocks.ts` for
 block structure, `PostBody` for the styling. Prove existing posts are
-unchanged with `content-engine-kit parity` (markup) or `content-engine-kit visual-parity`
+unchanged with `agentic-cms parity` (markup) or `agentic-cms visual-parity`
 (pixels, when the styling changes).

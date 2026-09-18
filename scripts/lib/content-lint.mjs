@@ -22,7 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { ContentError, formatPath, readCollection, sourceOf } from "content-engine-kit/content";
+import { ContentError, formatPath, readCollection, sourceOf } from "agentic-cms/content";
 
 export const LIMITS = {
   title: { warnMax: 60, failMax: 70 }, // = check-seo

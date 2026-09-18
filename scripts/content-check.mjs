@@ -16,7 +16,7 @@ const args = process.argv.slice(2);
 const rootIndex = args.indexOf("--root");
 if (rootIndex !== -1) process.chdir(args[rootIndex + 1]);
 
-const { ContentError, contentRoot, readCollection, sourceOf } = await import("content-engine-kit/content");
+const { ContentError, contentRoot, readCollection, sourceOf } = await import("agentic-cms/content");
 const { kit } = await import("@/kit");
 const { collections } = kit;
 

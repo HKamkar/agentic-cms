@@ -74,7 +74,7 @@ import sharp from "sharp";
 
 // playwright-core is the package's one optional peer: a site installs it (and a Chromium build) when it wants the harness.
 const { chromium } = await import("playwright-core").catch(() => {
-  console.error("visual-parity: install playwright-core (an optional peer of content-engine-kit) and a Chromium build (~/.cache/ms-playwright, or CHROME_PATH)");
+  console.error("visual-parity: install playwright-core (an optional peer of agentic-cms) and a Chromium build (~/.cache/ms-playwright, or CHROME_PATH)");
   process.exit(2);
 });
 

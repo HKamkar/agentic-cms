@@ -1,5 +1,5 @@
 {
-  "name": "content-engine-kit",
+  "name": "agentic-cms",
   "version": "0.2.0",
   "description": "A file-based CMS for Next.js sites, with an AI editor: the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
@@ -44,7 +44,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "content-engine-kit": "./bin/content-engine-kit.mjs"
+    "agentic-cms": "./bin/agentic-cms.mjs"
   },
   "files": [
     "bin",
@@ -55,22 +55,22 @@
   ],
   "scripts": {
     "dev": "next dev -p 8000",
-    "build": "node bin/content-engine-kit.mjs lint && node bin/content-engine-kit.mjs docs --check && next build && node bin/content-engine-kit.mjs seo",
+    "build": "node bin/agentic-cms.mjs lint && node bin/agentic-cms.mjs docs --check && next build && node bin/agentic-cms.mjs seo",
     "start": "next start",
     "lint": "eslint",
     "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\"",
     "test:pack": "node tools/pack-smoke.mjs",
-    "content:check": "node bin/content-engine-kit.mjs check",
-    "content:lint": "node bin/content-engine-kit.mjs lint",
-    "content:status": "node bin/content-engine-kit.mjs status",
+    "content:check": "node bin/agentic-cms.mjs check",
+    "content:lint": "node bin/agentic-cms.mjs lint",
+    "content:status": "node bin/agentic-cms.mjs status",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview --ip 0.0.0.0 --port 8000",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "build:pkg": "tsc -p tsconfig.build.json",
     "prepare": "tsc -p tsconfig.build.json",
-    "content:docs": "node bin/content-engine-kit.mjs docs",
-    "kit": "node bin/content-engine-kit.mjs"
+    "content:docs": "node bin/agentic-cms.mjs docs",
+    "kit": "node bin/agentic-cms.mjs"
   },
   "dependencies": {
     "@mdx-js/mdx": "^3.1.1",

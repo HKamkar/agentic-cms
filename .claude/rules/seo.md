@@ -15,4 +15,4 @@ paths:
 - Title ≤ 60 characters, topic first, unique per page; description 70–160 characters, one sentence with the page's promise; exactly one `<h1>`, `<h2>` for sections, `<h3>` inside (never an `<h3>` before the first `<h2>`); every `<img>` has `alt` (empty when decorative), `width` and `height`; OG image 1200×630 JPEG at `public/images/<path-with-hyphens>-og.jpg` (`/sections/about` → `sections-about-og.jpg`; `pnpm kit placeholder` writes a stand-in).
 - Structured data describes what is on the page — no reviews, ratings or offers that are not real, no self-ratings. Organisation blocks come from `organizationLd()`.
 - Sitemap and breadcrumbs follow from the page files; bump `seo.updated` when the content changes; internal links go only to pages that exist, with descriptive text; a public URL never changes without a redirect.
-- `pnpm build` runs `content-engine-kit seo`: fix every FAIL, read every WARN; never loosen a rule to pass.
+- `pnpm build` runs `agentic-cms seo`: fix every FAIL, read every WARN; never loosen a rule to pass.

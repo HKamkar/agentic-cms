@@ -187,7 +187,7 @@ why the project settings allow `Bash(pnpm content:*)`.
 
 ## Phase 7 — the kit
 
-**Built.** This fork: `content-engine-kit` in the package, the Worker and the
+**Built.** This fork: `agentic-cms` in the package, the Worker and the
 marketplace; a fictional brand, Acme, whose site is the kit describing itself;
 and a **wireframe** in place of a design. Four semantic colours, each a
 `light-dark()` pair (`paper`, `ink`, `fill`, `muted`), a system font stack,
@@ -227,7 +227,7 @@ was. `src/lib/` is the package's source — `content/`, `blog/`, `seo/`,
 `components/` (`JsonLd`, `EagerImage`, `FaqAccordion`, moved next to the
 engines), `cx.ts`, `site.ts` and `index.ts` — compiled by `tsc` to `dist/`
 (ESM and `.d.ts`, ES2022, `"use client"` kept) on `prepare`, published by
-`exports` as `content-engine-kit`, `./content`, `./blog`, `./seo`,
+`exports` as `agentic-cms`, `./content`, `./blog`, `./seo`,
 `./forms`, `./ix`, `./components`, `./cx`; `next`, `react`, `react-dom`,
 `zod` and `motion` are peers. Nothing in `src/lib` imports the site any
 more: `createCollections({ sections })` builds the seven standard
@@ -239,7 +239,7 @@ the one file the app, the scripts and the tests read (`kit.collections`,
 `renderPostBody(post, { components, blocks })` takes the site's element
 overrides and block classes; the sitemap, the feed, robots and a post's
 BlogPosting and FAQPage are `kit.seo` functions, so a route file is one
-line. The scripts are a command line, `content-engine-kit` (`bin/`), one
+line. The scripts are a command line, `agentic-cms` (`bin/`), one
 command per script, each run against the site in the current directory:
 `lint`, `check`, `status`, `docs` (the field tables, now generated into the
 site's `content/README.md`), `seo`, `placeholder`, `optimize-webp`,

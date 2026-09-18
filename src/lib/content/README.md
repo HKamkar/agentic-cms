@@ -16,10 +16,10 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 
 1. **Build time only.** `read.ts` uses `node:fs`; every consumer is
    prerendered and the Cloudflare Worker has no filesystem. Never import
-   `@/kit` or `content-engine-kit/content` from a `"use client"` module (Turbopack's
+   `@/kit` or `agentic-cms/content` from a `"use client"` module (Turbopack's
    client build fails on `node:fs`); a client component gets its entries as
    props from the server component or page that read them, and imports only
-   types (`import type { Author } from "content-engine-kit/content"`).
+   types (`import type { Author } from "agentic-cms/content"`).
 2. **A problem is a `ContentError`**, never a warning and never a silent
    default: it names the file, the field path and the problem, one line per
    issue. A consumer never catches it.
@@ -52,13 +52,13 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 | `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()` |
 | `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the seven definitions around the site's section union; `SectionLike`, the least the engine knows about a section |
 | `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
-| `index.ts` | The public surface, `content-engine-kit/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
+| `index.ts` | The public surface, `agentic-cms/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
 | `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
-| `content-engine-kit check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
-| `content-engine-kit lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`, first in `pnpm build`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
+| `agentic-cms check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
+| `agentic-cms lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`, first in `pnpm build`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
 | `content/VOICE.md` | The voice and claim rules, prose plus the fenced block the lint reads |
-| `content-engine-kit docs` (`scripts/content-docs.mjs`) | Generates the field tables of the site's registry into the site's `content/README.md` from the schemas; `--check` (run by `pnpm build`) fails when they are stale |
+| `agentic-cms docs` (`scripts/content-docs.mjs`) | Generates the field tables of the site's registry into the site's `content/README.md` from the schemas; `--check` (run by `pnpm build`) fails when they are stale |
 | `content/README.md`, `content/_templates/` | The door for editing content, and one annotated template per collection |
 | `scripts/lib/load-ts.mjs` | The Node loader every command and `pnpm test` use: the site's `tsconfig.json` aliases, extensionless imports, types stripped |
 
@@ -159,7 +159,7 @@ fails that one.
   static-assets cache); the Worker's file trace still lists the files under
   `content/`, because the content root is spelled statically and Next's
   tracer follows it — that folder and nothing more.
-- `content-engine-kit parity` stores every prerendered HTML file, `_global-error` and
+- `agentic-cms parity` stores every prerendered HTML file, `_global-error` and
   `_not-found` included, while `check-seo` audits the public routes; the two
   counts differ by those internals and both are right.
 
@@ -173,9 +173,9 @@ them: `authors` (`content/authors.json`, a map), `categories`
 validated by the site's section union). Their schemas are `collections.ts`;
 the field tables — every key, its type, whether it is required, and the
 `.describe()` text — are generated from those schemas into the **site's
-`content/README.md`** (its "Fields" section) by `content-engine-kit docs`,
+`content/README.md`** (its "Fields" section) by `agentic-cms docs`,
 one table per collection and one per section type of the site, and
-`content-engine-kit docs --check` fails `pnpm build` when they are stale.
+`agentic-cms docs --check` fails `pnpm build` when they are stale.
 
 ## Recipes
 
@@ -191,7 +191,7 @@ under `content/`, an annotated template in `content/_templates/`, a row
 in `content/README.md`. Run `pnpm content:docs` (the tables in
 `content/README.md`) and `pnpm test`, `pnpm content:check`, `pnpm build`. A client
 component gets the entries as props from the page or server component that
-read them (a value import of `content-engine-kit/content` in a client module fails the
+read them (a value import of `agentic-cms/content` in a client module fails the
 build: "Failed to write app endpoint … does not support external modules
 (request: node:fs)").
 
@@ -217,5 +217,5 @@ every lint rule).
 ## Verify
 
 `pnpm lint && pnpm test && pnpm content:lint && pnpm build`; a change to
-how anything renders is proven with `content-engine-kit parity` (markup) and
-`content-engine-kit visual-parity` (pixels), as `CLAUDE.md` says.
+how anything renders is proven with `agentic-cms parity` (markup) and
+`agentic-cms visual-parity` (pixels), as `CLAUDE.md` says.

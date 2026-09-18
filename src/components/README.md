@@ -12,7 +12,7 @@ are in `STANDARD.md`):
   visibility and hover/focus. The only CSS module in the tree is
   `blog/PostBody.module.css`; a second one is justified only by something
   utilities cannot say. Every change that must not move a pixel is proven
-  with `content-engine-kit visual-parity`.
+  with `agentic-cms visual-parity`.
 - Four colours, each a `light-dark()` pair: `paper`, `ink`, `fill`,
   `muted`. No radius, shadow, blur, gradient, transition or animation
   utility exists. The type scale is `text-h1`…`text-h6` and `text-body`.
@@ -80,7 +80,7 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 
 ## The engine's React pieces (`src/lib/components/`)
 
-Three components that carry no design, imported from `content-engine-kit/components`;
+Three components that carry no design, imported from `agentic-cms/components`;
 the site styles around them.
 
 | Component | Props | Notes |
@@ -155,7 +155,7 @@ FaqEntry[]` (`{ question, answer }`).
 The section around it is `sections/FaqSection`, which reads the FAQ set the
 page names (`kit.content.getFaq(section.set)`) and prints the design variant the page
 asked for. The post body's accordion is a different component
-(`FaqAccordion` from `content-engine-kit/components`), because a post's questions are
+(`FaqAccordion` from `agentic-cms/components`), because a post's questions are
 markdown.
 
 ## Forms (`src/components/ui/form/`)
@@ -182,7 +182,7 @@ the definition schema, adding a form, a field type or a backend — is
 <Form definition={forms.contact} />
 ```
 
-## The reveal library (`content-engine-kit/ix`) — available, unused
+## The reveal library (`agentic-cms/ix`) — available, unused
 
 Nothing in the wireframe animates, and nothing imports these. They are kept
 whole, with their start states in `src/styles/motion.css`, so a fork that
