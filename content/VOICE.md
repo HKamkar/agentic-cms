@@ -7,11 +7,11 @@ must say the same thing. `pnpm content:lint` runs the block in a second.
 
 ## Who reads this site
 
-Someone who is about to build a site on this kit: a developer who will run
+Someone who is about to build a site on this CMS: a developer who will run
 the build and write the section components, or the content owner who will
 live in `content/` afterwards and wants to know what a page file costs them
 to change. They came from a README or a search for a way to keep marketing
-copy under review instead of inside a CMS. They expect documentation
+copy under review instead of inside a database-backed CMS. They expect documentation
 register: signal-dense, declarative, specific about what the build does and
 what it does not. No marketing voice, no thought leadership, never "we are
 excited to announce". The critic reads a draft as this person.
@@ -23,10 +23,15 @@ excited to announce". The critic reads a draft as this person.
   (`acme.example`), URLs and file paths, which are lowercase. Never `ACME`.
   The block below carries the name (`brand.name`) and no `mark`, so the mark
   rule is off and only a miscased spelling is reported.
-- **The category is `a content engine`**, or `a site kit` where the whole
-  thing is meant: the engine, the editorial plugin and the example site
-  together. Not a CMS, not a platform, not a framework.
-- **The offer is the kit itself.** It is open source under the MIT license.
+- **The category is `a CMS`**, said with what makes this one different the
+  first time a page uses it: `a CMS whose editor is an AI agent`. `An
+  agentic CMS` is the short form, the name of the whole thing (`agentic-cms`:
+  the engine, the editorial plugin and the example site together) read as
+  words. `The content engine` names the part under `src/lib/content/` and
+  nothing more. Not a platform, not a framework. The word alone suggests a
+  database and an admin screen; this one has neither, so the copy says
+  files and the agent before it says CMS.
+- **The offer is the CMS itself.** It is open source under the MIT license.
   There is nothing to buy, no tier and no edition, so no copy invents one.
 - **There is no incumbent.** This site does not argue against a named tool.
   Where a comparison helps, describe the shape of the alternative (a
@@ -45,7 +50,7 @@ excited to announce". The critic reads a draft as this person.
 
 ## Claims: what is true, said exactly
 
-- **Compliance language.** No regulation applies to this kit and no
+- **Compliance language.** No regulation applies to this CMS and no
   certification is held, so none is named and none is claimed. The `claims`
   block below carries an empty `regulations` list for that reason: a fork
   that does sell into a regulated market fills it in and the heuristic starts
@@ -60,7 +65,7 @@ excited to announce". The critic reads a draft as this person.
   request-time reads. No benchmark, no adoption figure, no time saved.
 - **No roadmap.** Nothing "coming soon", "in beta" or "on our roadmap"; what
   is in the repository is what the copy describes.
-- **Honest fit.** This kit prerenders everything and reads no files at
+- **Honest fit.** This CMS prerenders everything and reads no files at
   request time. When a site needs content that changes without a deploy, a
   search index over thousands of entries, or non-technical authors who will
   never open a pull request, a CMS with a request-time database is the better

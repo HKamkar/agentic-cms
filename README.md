@@ -99,7 +99,7 @@ landing page leaves out, rendered with copy that says what each slot is for.
 ---
 title: Pages are files
 excerpt: >-
-  A page on this kit is one YAML file with three blocks. An SEO block, a
+  A page on this CMS is one YAML file with three blocks. An SEO block, a
   structured-data block and a list of sections in order. Here is what each block
   holds and what the build does with it.
 date: '2026-09-09'

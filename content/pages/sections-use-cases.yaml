@@ -8,7 +8,7 @@ seo:
   title: Use-case section types, rendered | Acme
   description: A demo page showing the use-case section types, both group wrappers, and the cards that also feed this page's ItemList structured data.
   ogImage: /images/sections-use-cases-og.jpg
-  updated: "2026-09-15"
+  updated: "2026-09-18"
   breadcrumb: Sections, use cases
   changeFrequency: yearly
   priority: 0.5
@@ -16,7 +16,7 @@ jsonld:
   type: WebPage
   application:
     name: Acme
-    description: A content engine and site kit whose section types are validated copy schemas, rendered by components the page file never mentions.
+    description: A CMS whose editor is an AI agent. Its section types are validated copy schemas, rendered by components the page file never mentions.
     operatingSystem: Any (static site)
     offer: Open source under the MIT license; there is nothing to buy
     featureList:

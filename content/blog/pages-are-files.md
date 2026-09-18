@@ -1,7 +1,7 @@
 ---
 title: Pages are files
 excerpt: >-
-  A page on this kit is one YAML file with three blocks. An SEO block, a
+  A page on this CMS is one YAML file with three blocks. An SEO block, a
   structured-data block and a list of sections in order. Here is what each block
   holds and what the build does with it.
 date: '2026-09-09'
@@ -16,6 +16,7 @@ seoDescription: A page here is one YAML file with three blocks. The SEO block, t
 keywords: [page as a file, YAML, section types, structured data, SEO audit]
 related: [how-a-post-is-built, the-voice-file-and-the-lint]
 publishedAt: '2026-09-09T09:00:00.000Z'
+updatedAt: '2026-09-18T12:48:48.000Z'
 ---
 
 A page on this site is `content/pages/<slug>.yaml`. The file name is only a key.
