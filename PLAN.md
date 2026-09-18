@@ -271,6 +271,43 @@ FAQ-open state of one of them, which moved with that line; `pnpm lint`,
 test:pack` (the scratch site built from the tarball, its markup
 byte-identical to `main`'s), `pnpm preview`. Released as `0.2.0`.
 
+## Phase 9 — one plugin for Claude Code and Codex
+
+**Built.** The same `plugin/` installs in both clients. Codex reads
+`plugin/.codex-plugin/plugin.json` (`skills` is the path to the shared
+`skills/`, an `interface` block for its listing, the version with a
+`+codex.<timestamp>` build suffix) and the marketplace at
+`.agents/plugins/marketplace.json`; Claude Code keeps
+`plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`,
+whose entry now carries the version `plugin update` keys on;
+`plugin/plugin.json` is the generic manifest neither reads. The `critic`
+procedure moved from the agent file into `skills/critic/SKILL.md`, so both
+review procedures are skills (eight now) and the two Claude Code agents are
+thin wrappers that run them in isolation; `write-post` and `review-voice`
+say what to do on a client without subagents (the skill in a fresh session,
+or inline with the aggregate saying so). The project rules moved from
+`CLAUDE.md` into `AGENTS.md`, which Codex reads directly and Claude Code
+through the one-line include `CLAUDE.md` became; the Next.js block `next
+dev` writes stays at its top.
+
+**Decisions.** The layout stays `plugin/` rather than the `plugins/<name>/`
+convention: one plugin, and every document points at `plugin/`. No MCP
+server, so none of the auth work (`userConfig`, `env_http_headers`, the
+`$schema` and `.mcp.json` traps) applies; the manifest test asserts the
+absence so adding a server is a deliberate step. `name`, `description` and
+`author` are one string across the manifests; the Codex marketplace uses the
+policy values verified for an MCP plugin, since a plugin without a server
+had nothing to test them against here.
+
+**Proven.** `tools/plugin-manifests.test.mjs` in `pnpm test` (the five
+manifests parse and agree, the versions match with Codex's suffix, no
+`$schema`, no server, every skill's frontmatter names its directory, every
+agent points at a skill that exists, the site's brand appears nowhere under
+`plugin/`), `pnpm plugin:validate` (`claude plugin validate --strict` on the
+plugin and the marketplace), the site's own verify. Not proven on this
+machine: a real `codex plugin add` from a clone, which Codex has in place of
+a validator.
+
 ## Verification recipe
 
 ```bash
