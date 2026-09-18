@@ -26,7 +26,7 @@ cannot find; the plugin has no defaults for any of them.
 | the engine's docs — `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` in a checkout of agentic-cms, or under `node_modules/agentic-cms/` on a site that installs the package | the content engine's contract, the post body conventions, the head and structured-data contract |
 | `src/config/site.ts` | `name` (the title suffix through the layout template), `postPrefix`, `cta`, `email`, `url`, the nav and footer lists |
 | `package.json` scripts | `content:lint`, `content:status`, `content:check`, `content:docs`, `kit` (the `agentic-cms` command line: `placeholder`, `optimize-webp`, `parity`, `visual-parity`, …), `lint`, `test`, `build`, `preview`, `dev` |
-| `scripts/README.md` (the kit's, next to the engine's docs) | the image tools (stand-ins, optimisers) and the parity proofs, as `pnpm kit` commands |
+| `scripts/README.md` (the package's, next to the engine's docs) | the image tools (stand-ins, optimisers) and the parity proofs, as `pnpm kit` commands |
 
 ## Skills
 

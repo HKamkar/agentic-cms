@@ -34,7 +34,7 @@ export const forms = {
         name: "services",
         label: "Select service",
         options: [
-          { value: "A question about the kit", label: "A question about the kit" },
+          { value: "A question about the CMS", label: "A question about the CMS" },
           { value: "Help starting a site", label: "Help starting a site" },
           { value: "Something else", label: "Something else" },
         ],

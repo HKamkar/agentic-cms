@@ -13,7 +13,7 @@ export const site = {
   shortName: "Acme",
   url: "https://acme.example",
   locale: "en",
-  tagline: "A site kit whose pages, posts and copy are files the build checks.",
+  tagline: "A CMS whose editor is an AI agent. Pages, posts and copy are files the build checks.",
   description: "Notes from the Acme team on running a site whose content lives in files: pages as YAML, posts as markdown, and the checks that read them on every build.",
   email: "hello@acme.example",
   logo: "/images/brand/logo.svg",

@@ -1,7 +1,7 @@
 ---
 title: How a post is built
 excerpt: >-
-  Every part of a post on this kit is a file or a convention inside that file.
+  Every part of a post on this CMS is a file or a convention inside that file.
   The two dates, the three images, the pull quote, the FAQ heading and the
   closing line, in the order you meet them.
 date: '2026-09-03'
@@ -12,11 +12,11 @@ imageAlt: A wide grey placeholder standing in for the hero illustration of this 
 thumbnail: /images/blog/how-a-post-is-built/how-a-post-is-built-card.webp
 thumbnailAlt: A grey placeholder standing in for the card image of this post
 seoTitle: How a post is built | Acme
-seoDescription: What a post on this kit is made of, in order. The frontmatter and its two dates, the three images, the pull quote and the FAQ heading.
-keywords: [content engine, blog post, frontmatter, markdown, static site]
+seoDescription: What a post on this CMS is made of, in order. The frontmatter and its two dates, the three images, the pull quote and the FAQ heading.
+keywords: [agentic CMS, blog post, frontmatter, markdown, static site]
 related: [pages-are-files, the-voice-file-and-the-lint]
 publishedAt: '2026-09-03T09:00:00.000Z'
-updatedAt: '2026-09-17T10:00:00.000Z'
+updatedAt: '2026-09-18T12:48:48.000Z'
 ---
 
 A post is one markdown file in `content/blog/`, served at the route its name
