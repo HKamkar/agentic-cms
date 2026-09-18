@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The kit's command line: one command per script under scripts/, run against
+// The agentic-cms command line: one command per script under scripts/, run against
 // the site in the current directory — its src/kit.ts for the registry and the
 // config, its content/, public/, .next and .parity. A site's package.json
 // names them: "content:lint": "agentic-cms lint", and so on.
