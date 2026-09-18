@@ -304,9 +304,11 @@ manifests parse and agree, the versions match with Codex's suffix, no
 `$schema`, no server, every skill's frontmatter names its directory, every
 agent points at a skill that exists, the site's brand appears nowhere under
 `plugin/`), `pnpm plugin:validate` (`claude plugin validate --strict` on the
-plugin and the marketplace), the site's own verify. Not proven on this
-machine: a real `codex plugin add` from a clone, which Codex has in place of
-a validator.
+plugin and the marketplace), the site's own verify; and, since Codex has
+no validator, a real install from a Mac with Codex: `codex plugin marketplace
+add HKamkar/agentic-cms --ref feat/codex-plugin && codex plugin add
+editorial@agentic-cms` resolved the marketplace and installed the plugin at
+`~/.codex/plugins/cache/agentic-cms/editorial/0.1.0+codex.<stamp>`.
 
 ## Verification recipe
 
