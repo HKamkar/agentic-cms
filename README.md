@@ -2,11 +2,11 @@
 
 # agentic-cms
 
-**A file-based CMS for Next.js sites, with an AI editor.**
+**A simple CMS whose editor is an AI agent.**
 
-Pages, posts and every line of copy are files in the repo. The build validates
-them, lints the voice, audits the SEO and prerenders the lot. An agent does the
-editing. Nothing is read at request time.
+Pages, posts and every line of copy are files in a Next.js repo. An agent edits
+them; the build validates them, lints the voice, audits the SEO and prerenders
+the lot. Nothing is read at request time.
 
 ![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers](https://img.shields.io/badge/serves_from-Cloudflare_Workers-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000)
 
@@ -99,7 +99,7 @@ landing page leaves out, rendered with copy that says what each slot is for.
 ---
 title: Pages are files
 excerpt: >-
-  A page on this kit is one YAML file with three blocks. An SEO block, a
+  A page on this CMS is one YAML file with three blocks. An SEO block, a
   structured-data block and a list of sections in order. Here is what each block
   holds and what the build does with it.
 date: '2026-09-09'
@@ -177,7 +177,7 @@ Illustrations are crossed placeholder boxes; content images come from
 The `agentic-cms/ix` reveal library stays in the package for a fork that
 wants motion.
 
-## Built on the kit
+## Built on agentic-cms
 
 <img src="docs/readme/deeplit-landing.png" alt="deeplit's landing page at desktop width and at phone width: a private-AI hero over an isometric circuit board, pill buttons with a brand gradient, a coral eyebrow — a full design where the wireframe above has boxes" width="960">
 
@@ -193,7 +193,7 @@ the wireframe above; the design is the part a site brings.
 ## Start your own site
 
 Two ways. **Fork** this repo when you want the example around you — the
-wireframe, the section galleries, the posts that describe the kit — and
+wireframe, the section galleries, the posts that describe it — and
 replace it piece by piece. **Install** the package when your site is its own
 repo, as deeplit's above is: the engines, the reveal library and the
 command line come from `agentic-cms`; your repo holds the design,
@@ -254,7 +254,7 @@ A new kind of section is a copy schema, a component and a registry entry
 (`src/components/sections/`). A collection of your own is a schema and a
 definition returned from `createKit`'s `collections` option
 (`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`.
-Upgrading is bumping the tag and running the verify below; a kit release
+Upgrading is bumping the tag and running the verify below; a release
 says what changed for a site.
 
 ## Commands
@@ -265,7 +265,7 @@ pnpm build           # content lint → docs check → next build → SEO audit;
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
 pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
-pnpm test:pack       # packs the kit and builds a scratch site from the tarball, the way a site that installs it does
+pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
 pnpm content:lint    # the content rules, about a second
 pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md

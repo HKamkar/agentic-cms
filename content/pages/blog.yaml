@@ -5,10 +5,10 @@
 # content/_templates/page.yaml.
 seo:
   path: /blog
-  title: Notes on the content engine | Acme
-  description: Posts from the Acme team on how this kit is put together, one file at a time, from the anatomy of a post to the voice file the lint reads.
+  title: Notes on an agentic CMS | Acme
+  description: Posts from the Acme team on how this CMS is put together, one file at a time, from the anatomy of a post to the voice file the lint reads.
   ogImage: /images/blog-og.jpg
-  updated: "2026-09-15"
+  updated: "2026-09-18"
   breadcrumb: Blog
   changeFrequency: weekly
   priority: 0.8

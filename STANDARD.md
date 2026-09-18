@@ -1,6 +1,6 @@
 # The wireframe standard
 
-The kit's design system and the way its pages are built on it. Read this before
+The design system of agentic-cms and the way its pages are built on it. Read this before
 writing any markup or CSS; the short version is `CLAUDE.md` (Styling) and
 `.claude/rules/styling.md`, the component catalogue with props and examples is
 `src/components/README.md`.
@@ -9,7 +9,7 @@ The example site is a Next.js 16 App Router app (React 19, TypeScript), styled
 with Tailwind CSS v4 utilities, prerendered in full and served as a static
 Cloudflare Worker (OpenNext). It is drawn as a **wireframe**: ink on paper, one
 border weight, no colour, no radius, no shadow, no motion. That is the point —
-the kit ships a shape a fork redesigns, not a look it has to undo. Every page is
+agentic-cms ships a shape a fork redesigns, not a look it has to undo. Every page is
 a stack of labelled boxes whose tags name the section type that drew them.
 
 ## 1. Tokens
@@ -362,7 +362,7 @@ of every animation with its timing and target, compared exactly.
   setting (no attribute at all), then light, then dark, then back. The attribute
   *is* the state, so the server renders `system`, the first client render agrees
   with it, and the label is never wrong for a frame.
-- **`/sections/*` are in the footer, not the nav.** They are the kit showing its
+- **`/sections/*` are in the footer, not the nav.** They are agentic-cms showing its
   section types to whoever forks it, not pages a visitor is being sent to.
 
 A design change is its own commit and says so in the message; it is never folded

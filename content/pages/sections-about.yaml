@@ -7,14 +7,14 @@ seo:
   title: About section types, rendered | Acme
   description: A demo page showing every about section type, with slot copy that says what each statement, statistic, belief and card on the page is there to hold.
   ogImage: /images/sections-about-og.jpg
-  updated: "2026-09-15"
+  updated: "2026-09-18"
   breadcrumb: Sections, about
   changeFrequency: yearly
   priority: 0.5
 jsonld:
   type: AboutPage
   organization:
-    description: A placeholder organization for an open-source content engine, an editorial plugin and the example site they produce
+    description: A placeholder organization for an open-source CMS whose editor is an AI agent, made of a content engine, an editorial plugin and the example site they produce
     foundingDate: "2026-09-15"
     foundingLocation:
       locality: Example City

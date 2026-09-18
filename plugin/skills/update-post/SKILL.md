@@ -28,7 +28,7 @@ The post file, `content/VOICE.md`, `src/lib/blog/README.md`, and
    filename. A draft gets no `updatedAt`.
 3. **Images.** New or replaced files go in `public/images/blog/<slug>/`,
    named and optimised as `content/blog/_template.md` and
-   the kit's `scripts/README.md` say (`pnpm kit optimize-webp`); delete what
+   the package's `scripts/README.md` say (`pnpm kit optimize-webp`); delete what
    the edit left behind (the lint's `image-orphan` rule names it).
 4. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; the `WARN`
    lines on this file are the ones to read.

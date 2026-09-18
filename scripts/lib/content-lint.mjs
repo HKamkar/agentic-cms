@@ -16,7 +16,7 @@
 // stray file) WARN — the CLI's --strict promotes those too.
 //
 // Loaded through scripts/lib/load-ts.mjs: the tests via `node --import`, the
-// CLI via a dynamic import after the hook (in the kit's own checkout the
+// CLI via a dynamic import after the hook (in the package's own checkout the
 // engine is the TypeScript source; on a site it is the package).
 import fs from "node:fs";
 import path from "node:path";

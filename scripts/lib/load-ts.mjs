@@ -4,7 +4,7 @@
 //   import "./lib/load-ts.mjs"; const { kit } = await import("@/kit");
 //
 // Node strips the types itself (22.18+); what it cannot do is resolve the
-// aliases of tsconfig.json (`@/*`, and in the kit's own checkout the
+// aliases of tsconfig.json (`@/*`, and in the package's own checkout the
 // package's name to its source) or an extensionless relative import, so a
 // resolve hook rewrites exactly those forms and nothing else. Every other
 // specifier (a bare package, a CommonJS `require` inside gray-matter) goes

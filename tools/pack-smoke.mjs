@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Proves the package as a site sees it, which the checkout never does (the
-// example resolves the package's name to the source): packs the kit, builds
+// example resolves the package's name to the source): packs the package, builds
 // a scratch site out of the example's own files with the tarball as its one
 // engine dependency and no path alias, installs it, and runs its build —
 // the content lint, the field-table check, next build and the SEO audit —

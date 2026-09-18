@@ -8,7 +8,7 @@ seo:
   title: Home section types, rendered | Acme
   description: A demo page showing the home section types the landing page leaves out, with slot copy that says what every heading, card and image on them is for.
   ogImage: /images/sections-home-og.jpg
-  updated: "2026-09-15"
+  updated: "2026-09-18"
   breadcrumb: Sections, home
   changeFrequency: yearly
   priority: 0.5
@@ -16,7 +16,7 @@ jsonld:
   type: WebPage
   application:
     name: Acme
-    description: A content engine and site kit whose pages are YAML files made of section types, each with its own copy schema.
+    description: A CMS whose editor is an AI agent. Its pages are YAML files made of section types, each with its own copy schema.
     operatingSystem: Any (static site)
     offer: Open source under the MIT license; there is nothing to buy
     featureList:
