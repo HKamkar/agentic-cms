@@ -49,7 +49,7 @@ sections:
         and cuts what does not earn its place. Both run in isolation from the writer.
     cta: Get in touch
     dashboard:
-      title: Seven skills, two agents
+      title: Eight skills, two agents
       text: Each one ends by naming what to run before the job is called done.
       image: /images/home/service-dashboard.webp
       imageAlt: A grey placeholder card standing in for a screenshot of the editorial plugin
@@ -74,7 +74,7 @@ sections:
         text: Title, description, canonical, structured data and sitemap entry are audited per page.
       - icon: /images/ui/icon.svg
         title: The editorial plugin
-        text: Seven skills and two review agents, so a content job runs the same way twice.
+        text: Eight skills and two review agents, so a content job runs the same way twice.
     monitoring:
       image: /images/home/feature-monitoring.webp
       imageAlt: A tall grey placeholder panel standing in for a screenshot of the build output
