@@ -1,5 +1,5 @@
 {
-  "name": "content-engine-kit",
+  "name": "agentic-cms",
   "owner": { "name": "H. Kamkar" },
   "description": "Plugins of the content engine: a site whose content is files, validated at build time, with an agent as its editor",
   "plugins": [

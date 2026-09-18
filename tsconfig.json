@@ -22,8 +22,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "content-engine-kit": ["./src/lib/index.ts"],
-      "content-engine-kit/*": ["./src/lib/*"]
+      "agentic-cms": ["./src/lib/index.ts"],
+      "agentic-cms/*": ["./src/lib/*"]
     }
   },
   "include": [

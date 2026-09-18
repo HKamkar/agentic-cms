@@ -1,5 +1,5 @@
-import type { TextAreaField } from "content-engine-kit/forms";
-import { cx } from "content-engine-kit/cx";
+import type { TextAreaField } from "agentic-cms/forms";
+import { cx } from "agentic-cms/cx";
 import { control } from "./field";
 import { FieldWrap } from "./FieldWrap";
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import type { PostBlockClasses } from "content-engine-kit/blog";
-import { cx } from "content-engine-kit/cx";
-import { FaqAccordion } from "content-engine-kit/components";
+import type { PostBlockClasses } from "agentic-cms/blog";
+import { cx } from "agentic-cms/cx";
+import { FaqAccordion } from "agentic-cms/components";
 import styles from "./PostBody.module.css";
 
 /**

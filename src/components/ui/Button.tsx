@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cx } from "content-engine-kit/cx";
+import { cx } from "agentic-cms/cx";
 
 export type ButtonVariant = "solid" | "outline";
 

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
-import { cx } from "content-engine-kit/cx";
+import { cx } from "agentic-cms/cx";
 
 /**
  * One section of a page, drawn as a labelled box. `type` is the section type

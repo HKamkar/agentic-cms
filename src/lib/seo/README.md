@@ -3,7 +3,7 @@
 Every page and post ships with a complete, correct search and social surface,
 and the build proves it. This document is the contract; the enforcement is
 the types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`, and
-`content-engine-kit seo`, which `pnpm build` runs after `next build` and
+`agentic-cms seo`, which `pnpm build` runs after `next build` and
 which fails the build (and therefore `pnpm preview` and `pnpm run deploy`)
 on a structural problem.
 
@@ -105,7 +105,7 @@ on a structural problem.
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |
 | `src/app/sitemap.ts`, `src/app/robots.ts` | built from the page files and the posts |
 | `src/lib/blog/rehype-post-images.ts` | post images get `width`/`height` and `loading="lazy"` |
-| `content-engine-kit seo` | the audit, run by `pnpm build` |
+| `agentic-cms seo` | the audit, run by `pnpm build` |
 
 ## Recipes
 

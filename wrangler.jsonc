@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "content-engine-kit",
+  "name": "agentic-cms",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -10,7 +10,7 @@
   },
   "observability": { "enabled": true }
   // Optional, when the app grows beyond a static blog:
-  // "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "content-engine-kit" }],
-  // "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "content-engine-kit-opennext-cache" }],
+  // "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "agentic-cms" }],
+  // "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "agentic-cms-opennext-cache" }],
   // "images": { "binding": "IMAGES" }   // enables next/image optimisation via Cloudflare Images
 }

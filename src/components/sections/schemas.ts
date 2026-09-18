@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 import { forms } from "@/config/forms";
-import { ref, text } from "content-engine-kit/content";
+import { ref, text } from "agentic-cms/content";
 
 const eyebrow = () => text().describe("The small label above the heading, as it should read (it is rendered uppercase)");
 const heading = () => text().describe("The section heading");

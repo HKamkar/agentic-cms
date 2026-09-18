@@ -2,7 +2,7 @@
 
 How Acme writes, on every page and in every post, and what it never claims.
 This file is the site's copy rules; the fenced block at the end is what
-`content-engine-kit lint` enforces on every build, and the prose above it
+`agentic-cms lint` enforces on every build, and the prose above it
 must say the same thing. `pnpm content:lint` runs the block in a second.
 
 ## Who reads this site
@@ -84,7 +84,7 @@ excited to announce". The critic reads a draft as this person.
 
 ## What the build checks, and what it cannot
 
-`content-engine-kit lint` reads the block below and every content file:
+`agentic-cms lint` reads the block below and every content file:
 banned words and patterns fail, as do a model name, the brand without its
 mark or miscased, an em dash, a missing or slot-naming alt, a keyword count
 or excerpt length outside its range, a heading that breaks the post

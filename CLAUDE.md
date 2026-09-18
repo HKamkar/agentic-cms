@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# content-engine-kit: project rules
+# agentic-cms: project rules
 
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
@@ -11,16 +11,16 @@
   shadow, no gradient and no motion. That is the design, not an unfinished
   one — a fork replaces the tokens and the section components, not the
   engine, and a site of its own installs the engine as the package
-  `content-engine-kit` (`src/lib/` is its source; the README says how). A
+  `agentic-cms` (`src/lib/` is its source; the README says how). A
   change that must not move a pixel proves it with
-  `content-engine-kit visual-parity`; a design change is its own commit and says so
+  `agentic-cms visual-parity`; a design change is its own commit and says so
   — nothing is restyled in passing.
 - Content is files under `content/`, validated at build time by the content
   engine: posts in `content/blog/` (the filename is the slug), the author and
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
   the pages in `content/pages/`; the door for editing is `content/README.md`,
   the templates are `content/_templates/`. The voice and claim rules are
-  `content/VOICE.md`; `content-engine-kit lint` enforces its fenced block
+  `content/VOICE.md`; `agentic-cms lint` enforces its fenced block
   first in `pnpm build` (a FAIL stops the build, a WARN is read, `--strict`
   promotes them). Never read `content/` at request time: pages are
   prerendered, the Worker has no filesystem.
@@ -48,7 +48,7 @@
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
-  (`content-engine-kit seo`) and fails on a missing or wrong field. Never
+  (`agentic-cms seo`) and fails on a missing or wrong field. Never
   hand-write head tags.
 - Verify with `pnpm test` (the content engine, the post pipeline and the
   lint), `pnpm content:lint` (the content rules, in a second), `pnpm build`
@@ -89,7 +89,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   illustration is a `ui/Placeholder` crossed box; content images are `<img>`
   with `width`, `height`, `alt` and `block h-auto w-full border border-ink`.
 - No motion in the wireframe: no `Fx` or `OnView` in a section, no `data-ix`
-  attributes, no transitions. The `content-engine-kit/ix` library and
+  attributes, no transitions. The `agentic-cms/ix` library and
   `src/styles/motion.css` stay for a fork that adds reveals — and then the
   old rules apply again: `data-ix` targets addressed through `ix(name)`,
   start states in `motion.css`, `useReducedMotionPref()` honoured, and no
@@ -105,7 +105,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   the one exception). One colour utility per property per element (two
   resolve by stylesheet order).
 - Images stay `<img>` with `width`/`height`; above the fold in a server
-  component `EagerImage` (`content-engine-kit/components`), everything else `loading="lazy"`. `base.css`
+  component `EagerImage` (`agentic-cms/components`), everything else `loading="lazy"`. `base.css`
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
   `pnpm kit placeholder <out> <width> <height>`.
@@ -113,7 +113,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `pnpm kit visual-parity capture <label>` and `compare` clean, in
   both schemes (`--scheme dark`), with `--states` when hover / focus /
   checked / open change and `--motion` only when there is motion to check.
-  Markup-only refactors: `content-engine-kit parity`.
+  Markup-only refactors: `agentic-cms parity`.
 
 ## Gotchas
 
@@ -202,7 +202,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   classes and element overrides come in through `createKit()` and
   `renderPostBody()`), and `next`, `react`, `react-dom`, `zod` and `motion`
   are peers so a site has one copy of each. The example imports it by name
-  (`content-engine-kit/content`, …) through the `paths` self-alias in
+  (`agentic-cms/content`, …) through the `paths` self-alias in
   `tsconfig.json`, so nothing in this checkout needs `dist/`; the scripts
   do the same. `pnpm test:pack` packs it and builds a scratch site from the
   tarball, which is the only build here that exercises `dist/` and
@@ -265,7 +265,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - One implementation per shared UI element. The catalogue is
   `src/components/README.md` — read it before writing markup, build pages from
   it, and add every new shared component to it in the same commit. Shared
-  pieces live in `src/components/ui/`, animations in `content-engine-kit/ix`
+  pieces live in `src/components/ui/`, animations in `agentic-cms/ix`
   (start states in `src/styles/motion.css`). Never paste header, footer,
   button, container or title block markup into a page. Extract repeated
   markup into a component before its second use, driven by props or
@@ -282,8 +282,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   loads their invariants when those paths are edited; keep the READMEs,
   `STANDARD.md`, `VOICE.md`, the rules and the code in step.
 - Refactors of existing pages change no pixels and prove it with
-  `content-engine-kit visual-parity` (see Styling and the harness section); one that
-  also leaves the markup alone proves that with `content-engine-kit parity`
+  `agentic-cms visual-parity` (see Styling and the harness section); one that
+  also leaves the markup alone proves that with `agentic-cms parity`
   (before/after capture + `diff -r`).
 - Single responsibility: one job per module, component and function. Keep
   functions under ~30 lines; split rather than nest.

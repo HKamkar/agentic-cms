@@ -15,7 +15,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const keep = process.argv.includes("--keep");
-const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "content-engine-kit-smoke-"));
+const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
 const site = path.join(scratch, "site");
 const run = (command, args, cwd) => {
   const result = spawnSync(command, args, { cwd, stdio: "inherit", env: { ...process.env, CI: "1" } });
@@ -37,11 +37,11 @@ for (const entry of ["content", "public", "src/app", "src/components", "src/conf
 const kit = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
 const dev = kit.devDependencies;
 const consumer = {
-  name: "content-engine-kit-smoke",
+  name: "agentic-cms-smoke",
   private: true,
   type: "module",
-  scripts: { build: "content-engine-kit lint && content-engine-kit docs --check && next build && content-engine-kit seo" },
-  dependencies: { "content-engine-kit": `file:${tarball}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
+  scripts: { build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo" },
+  dependencies: { "agentic-cms": `file:${tarball}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
   devDependencies: { "@opennextjs/cloudflare": dev["@opennextjs/cloudflare"], "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   pnpm: { onlyBuiltDependencies: ["sharp"] },
 };

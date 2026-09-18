@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cx } from "content-engine-kit/cx";
+import { cx } from "agentic-cms/cx";
 
 export type FormState = "idle" | "submitting" | "done" | "fail";
 

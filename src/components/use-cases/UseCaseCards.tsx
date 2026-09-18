@@ -1,7 +1,7 @@
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
-import type { UseCase } from "content-engine-kit/content";
+import type { UseCase } from "agentic-cms/content";
 
 const card = "flex flex-col gap-2 border border-ink p-4";
 

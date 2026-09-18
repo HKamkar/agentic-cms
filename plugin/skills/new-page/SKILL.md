@@ -18,7 +18,7 @@ needs no code.
 `content/README.md` § Fields › `pages` (every section type and its fields),
 one existing file in `content/pages/` as a worked example,
 `src/lib/seo/README.md` (the head, the structured data, the OG image; the
-engine's docs, under `node_modules/content-engine-kit/` on a site that
+engine's docs, under `node_modules/agentic-cms/` on a site that
 installs the package),
 `content/VOICE.md`, `src/config/site.ts`.
 
