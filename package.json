@@ -1,7 +1,7 @@
 {
   "name": "agentic-cms",
   "version": "0.2.0",
-  "description": "A file-based CMS for Next.js sites, with an AI editor: the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
+  "description": "A simple CMS whose editor is an AI agent: content as files in a Next.js repo, validated at build time; the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
   "type": "module",
   "engines": {

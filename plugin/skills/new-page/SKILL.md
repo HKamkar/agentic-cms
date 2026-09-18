@@ -38,7 +38,7 @@ installs the package),
 3. **The images.** The OG image as the engine's `src/lib/seo/README.md` specifies it
    (`public/images/<slug>-og.jpg`, 1200×630); section images and icons
    under `public/images/<slug>/`, optimised (`pnpm kit optimize-webp`; the
-   kit's `scripts/README.md`), each
+   package's `scripts/README.md`), each
    with an alt that says what it shows.
 4. **The chrome.** Only if the page belongs there: add it to `links`, `nav`
    and `footer.quickLinks` in `src/config/site.ts` (three separate lists).

@@ -1,4 +1,4 @@
-# scripts — the kit's command line
+# scripts — the agentic-cms command line
 
 Every script here is a command of `agentic-cms`, the package's `bin`
 (`bin/agentic-cms.mjs` dispatches to them): `pnpm kit <command>` in

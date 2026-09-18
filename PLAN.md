@@ -1,8 +1,8 @@
-# How the content engine was built
+# How agentic-cms was built
 
 The record of the program, condensed. Eight phases turned a site whose copy
 lived inside components into a content engine, an editorial plugin, this
-kit, and the package a site installs. Everything below is in the past tense and is a fact about the code as
+example site, and the package a site installs: agentic-cms. Everything below is in the past tense and is a fact about the code as
 it stands; where this file and a contract document differ, the contract is
 right:
 
@@ -185,10 +185,10 @@ checkout's path (a fork renames the marketplace), and a headless session needs
 `pnpm` on its PATH and the tools the skills run in its allow-list, which is
 why the project settings allow `Bash(pnpm content:*)`.
 
-## Phase 7 — the kit
+## Phase 7 — the example site
 
 **Built.** This fork: `agentic-cms` in the package, the Worker and the
-marketplace; a fictional brand, Acme, whose site is the kit describing itself;
+marketplace; a fictional brand, Acme, whose site is agentic-cms describing itself;
 and a **wireframe** in place of a design. Four semantic colours, each a
 `light-dark()` pair (`paper`, `ink`, `fill`, `muted`), a system font stack,
 a type scale, one container width and one section rhythm — no radius, shadow,
@@ -221,7 +221,7 @@ both schemes across the phase's design changes.
 
 ## Phase 8 — the package
 
-**Built.** The kit is a package a site installs, and still the template it
+**Built.** agentic-cms is a package a site installs, and still the template it
 was. `src/lib/` is the package's source — `content/`, `blog/`, `seo/`,
 `forms/`, `ix/` (the reveal library, moved from `src/components/ix/`),
 `components/` (`JsonLd`, `EagerImage`, `FaqAccordion`, moved next to the
@@ -258,7 +258,7 @@ compiled JavaScript because Node refuses to strip types under
 and Node. A git dependency builds on install only where the consumer's
 `pnpm-workspace.yaml` allows it (`allowBuilds`); not published to npm.
 `tools/pack-smoke.mjs` (`pnpm test:pack`) is the one proof that exercises
-`dist/` and `exports`: it packs the kit and builds a scratch site from the
+`dist/` and `exports`: it packs the package and builds a scratch site from the
 tarball; it found the site-side `mdx/types` import a consumer could not
 resolve, which the blog barrel now re-exports.
 
