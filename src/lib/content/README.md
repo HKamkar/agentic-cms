@@ -218,4 +218,4 @@ every lint rule).
 
 `pnpm lint && pnpm test && pnpm content:lint && pnpm build`; a change to
 how anything renders is proven with `agentic-cms parity` (markup) and
-`agentic-cms visual-parity` (pixels), as `CLAUDE.md` says.
+`agentic-cms visual-parity` (pixels), as `AGENTS.md` says.

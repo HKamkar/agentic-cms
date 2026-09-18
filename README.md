@@ -310,7 +310,7 @@ src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
-STANDARD.md                  the design system     CLAUDE.md   the rules for anyone (or any agent) working on the code
+STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed
 ```
 
