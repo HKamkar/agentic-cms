@@ -1,7 +1,7 @@
 # The wireframe standard
 
 The design system of agentic-cms and the way its pages are built on it. Read this before
-writing any markup or CSS; the short version is `CLAUDE.md` (Styling) and
+writing any markup or CSS; the short version is `AGENTS.md` (Styling) and
 `.claude/rules/styling.md`, the component catalogue with props and examples is
 `src/components/README.md`.
 

@@ -5,13 +5,7 @@
   "author": {
     "name": "H. Kamkar"
   },
-  "license": "MIT",
-  "keywords": [
-    "content",
-    "cms",
-    "editorial",
-    "blog",
-    "voice",
-    "seo"
-  ]
+  "homepage": "https://github.com/HKamkar/agentic-cms",
+  "repository": "https://github.com/HKamkar/agentic-cms",
+  "license": "MIT"
 }

@@ -26,9 +26,10 @@ the lot. Nothing is read at request time.
   audited for its title, description, canonical, Open Graph, headings, image
   attributes, structured data and sitemap entry. A wrong value stops the
   build with a line that names the file, the field and the problem.
-- **The agent is the editor.** The `editorial` plugin gives Claude Code seven
-  skills and two review agents that write, add, update, retire and report on
-  content, reading the site's rules from the repo. It knows no brand.
+- **The agent is the editor.** The `editorial` plugin gives Claude Code and
+  Codex eight skills that write, add, update, review, retire and report on
+  content, reading the site's rules from the repo, and Claude Code two review
+  agents that run the two review skills in isolation. It knows no brand.
 - **The design is yours.** What ships is a wireframe: four colours in a light
   and a dark mode, a system font, boxes that print their own section type.
   A fork replaces the look; the machinery stays.
@@ -136,27 +137,33 @@ are for.
 
 ## The editor is an agent
 
-`plugin/` is a Claude Code plugin. It reads everything it needs from the repo
-it stands in and carries nothing of any brand.
+`plugin/` is one plugin for Claude Code and Codex. It reads everything it
+needs from the repo it stands in and carries nothing of any brand.
 
 | Skill | Does |
 |---|---|
-| `/editorial:write-post` | a post from a brief in four gated stages: outline, body, the two agents' critique, SEO fields |
+| `/editorial:write-post` | a post from a brief in four gated stages: outline, body, the two reviews in isolation, SEO fields |
 | `/editorial:new-post` | a post from a draft file, with its images and frontmatter, as `draft: true` |
 | `/editorial:update-post` | an edit to a post, the two dates and the URL intact |
 | `/editorial:new-page` | a page from the template, made of existing section types |
 | `/editorial:retire-content` | a post hidden (its URL kept) or a page removed once a redirect exists |
 | `/editorial:review-voice` | a file read against `VOICE.md` for what the lint cannot judge |
+| `/editorial:critic` | a post read hard by an editor who did not watch it being written, every external claim checked against primary sources |
 | `/editorial:content-status` | what is live, in draft, planned and recently changed, read-only |
 
-Two agents, `editorial:voice-reviewer` and `editorial:critic`, review a draft
-in isolation; the critic fact-checks against primary sources. In a checkout
-the plugin is on through `.claude/settings.json` (the repo is its own
-marketplace). Elsewhere:
+The two review skills, `review-voice` and `critic` (the critic fact-checks
+against primary sources), also run as Claude Code agents
+`editorial:voice-reviewer` and `editorial:critic`, in isolation from the
+conversation that wrote the draft. The same directory installs in Claude Code
+and in Codex; the repo is its own marketplace for both, and in a checkout
+Claude Code has the plugin on through `.claude/settings.json`. Elsewhere:
 
 ```bash
-claude plugin marketplace add git@github.com:HKamkar/agentic-cms.git
-claude plugin install editorial@agentic-cms
+claude plugin marketplace add git@github.com:HKamkar/agentic-cms.git && claude plugin install editorial@agentic-cms --scope user
+```
+
+```bash
+codex plugin marketplace add HKamkar/agentic-cms && codex plugin add editorial@agentic-cms
 ```
 
 `plugin/README.md` is the contract: what a site offers the plugin, what the
@@ -310,7 +317,7 @@ src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
-STANDARD.md                  the design system     CLAUDE.md   the rules for anyone (or any agent) working on the code
+STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed
 ```
 

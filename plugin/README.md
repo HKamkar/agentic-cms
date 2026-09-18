@@ -44,20 +44,26 @@ the current directory; commits go on the repo's working branch.
 | `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image | the lint, the build, a capture of the page at eight widths, a commit |
 | `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge, after quoting the lint's own lines | a HIGH / MEDIUM / LOW report with a verdict, then the fixes the user approves |
+| `critic` | read a post as the senior editor and fact-checker who did not watch it being written: the prose cuts, and every external claim checked against primary sources in two passes | one report with a verdict, a confidence and an action per claim, then the cuts the user approves |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |
 
 ## Agents
 
-Both run in isolation from the conversation that produced a draft, so
-they catch what the writer rationalised away. Both are read-only: one
-report each, no edits.
+The two review procedures are skills, `review-voice` and `critic`, so
+every client has them. On Claude Code each also exists as an agent, a
+thin wrapper that runs the skill in isolation from the conversation that
+produced a draft, which is how it catches what the writer rationalised
+away. Both are read-only: one report each, no edits.
 
-| Agent | Does |
+| Agent | Runs |
 |---|---|
-| `voice-reviewer` | the `review-voice` procedure as an independent pass |
-| `critic` | a prose-quality critique as the reader `VOICE.md` describes, and a two-pass fact-check of every externally verifiable claim against primary sources, with a verdict per claim |
+| `voice-reviewer` | `skills/review-voice/SKILL.md`, through its report |
+| `critic` | `skills/critic/SKILL.md`, through its report |
 
-`write-post` runs both in parallel at its critique stage.
+`write-post` runs both in parallel at its critique stage. On a client
+without subagents (Codex reads `skills/` and nothing else), the isolated
+pass is the same skill run in a fresh session; `write-post` asks for the
+two reports and says in its aggregate when it had to run them inline.
 
 ## The workshop
 
@@ -103,16 +109,56 @@ is `draft: false`, `publishedAt` now, a commit, a push.
 
 ## Installing
 
-- In a checkout of a site that ships this plugin, `.claude/settings.json`
-  names the repo's own marketplace (`.claude-plugin/marketplace.json`) and
-  enables `editorial@agentic-cms`: trust the folder and the skills
-  are there. A marketplace name is registered once per user, at the path
-  of the first checkout that declared it: a second clone or worktree of
-  the same repo resolves to the first one's `plugin/`, and a fork that
-  changes the plugin renames the marketplace.
-- From anywhere: `claude plugin marketplace add <path or git URL of the
-  repo>` then `claude plugin install editorial@agentic-cms`.
-- For development: `claude --plugin-dir ./plugin`.
+One directory, two clients. Claude Code reads `plugin/.claude-plugin/plugin.json`
+and the marketplace at `.claude-plugin/marketplace.json`; Codex reads
+`plugin/.codex-plugin/plugin.json` (its `skills` key is the path to the same
+`skills/`) and the marketplace at `.agents/plugins/marketplace.json`.
+`plugin/plugin.json` is the generic manifest neither client reads. The install
+handle is `editorial@agentic-cms` in both (`<plugin>@<marketplace>`).
 
-Skills are invoked as `/editorial:<skill>`; the agents are
-`editorial:voice-reviewer` and `editorial:critic`.
+**Claude Code**
+
+- In a checkout of a site that ships this plugin, `.claude/settings.json`
+  names the repo's own marketplace and enables `editorial@agentic-cms`:
+  trust the folder and the skills are there. A marketplace name is
+  registered once per user, at the path of the first checkout that declared
+  it: a second clone or worktree of the same repo resolves to the first
+  one's `plugin/`, and a fork that changes the plugin renames the marketplace.
+- From anywhere: `claude plugin marketplace add <path or git URL of the
+  repo>` then `claude plugin install editorial@agentic-cms --scope user`.
+- For development: `claude --plugin-dir ./plugin`. After a change to the
+  plugin, `/reload-plugins` or a restart.
+
+**Codex**
+
+- From a checkout: `codex plugin marketplace add ./` then
+  `codex plugin add editorial@agentic-cms`; from GitHub,
+  `codex plugin marketplace add HKamkar/agentic-cms` (pin with `--ref <tag>`).
+  Codex has no per-repo auto-enable, and it loads skills at session start:
+  install before launching `codex`.
+- Update: `codex plugin marketplace upgrade agentic-cms`, then
+  `codex plugin remove editorial@agentic-cms && codex plugin add editorial@agentic-cms`.
+
+**What each client calls things**
+
+| | Claude Code | Codex |
+|---|---|---|
+| Skills | `/editorial:<skill>`, invoked by name | `editorial:<skill>`, chosen by its description |
+| Agents | `editorial:voice-reviewer`, `editorial:critic` | none; the `review-voice` and `critic` skills in a fresh session |
+| Manifest | `plugin/.claude-plugin/plugin.json` | `plugin/.codex-plugin/plugin.json` |
+| Validator | `claude plugin validate ./plugin --strict` (`pnpm plugin:validate`) | none; a real `codex plugin add` from a clone is the test |
+
+## Releasing
+
+1. Bump `version` in `plugin/plugin.json`, `plugin/.claude-plugin/plugin.json`
+   and the entry in `.claude-plugin/marketplace.json`; Claude Code offers
+   `plugin update` only when that string changes.
+2. Set `plugin/.codex-plugin/plugin.json` to the same version plus a fresh
+   build suffix, `<version>+codex.<YYYYMMDDhhmmss>`; the part before `+`
+   must match.
+3. Keep `name`, `description` and `author` identical across the manifests.
+4. `pnpm test` (`tools/plugin-manifests.test.mjs` checks 1–3, the skills'
+   frontmatter, the agents' targets and the brand rule) and
+   `pnpm plugin:validate`.
+5. Tag. Third-party marketplaces do not auto-update in Claude Code unless
+   enabled under `/plugin` > Marketplaces; Codex users run the update above.

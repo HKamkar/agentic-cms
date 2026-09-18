@@ -8,12 +8,13 @@ argument-hint: <post slug | page slug>
 
 The repo is the current directory. Public URLs are indexed; deleting a
 file makes its URL a 404. Redirects live on the host, in whatever list
-the repo's `CLAUDE.md` or `README.md` documents; until one exists,
+the repo's instructions file (`AGENTS.md`) or `README.md` documents;
+until one exists,
 retiring means hiding, not deleting.
 
 ## Read first
 
-The repo's notes on redirects (`CLAUDE.md`, `README.md`), the file being
+The repo's notes on redirects (`AGENTS.md`, `README.md`), the file being
 retired, and `grep -rn "<slug>" content src` for everything that points
 at it.
 
