@@ -65,9 +65,15 @@ chat (the path, the word count); no body in chat. Go on to Stage 3.
 
 ## Stage 3 — the critique (gate)
 
-Run the `editorial:voice-reviewer` and `editorial:critic` agents in
-parallel (one message, two Agent calls), each told the file path. They
-see nothing of this conversation. Aggregate the two reports into one:
+The two reviews run in isolation from this conversation; that is what
+makes them worth having. On a client with subagents (Claude Code), run
+the `editorial:voice-reviewer` and `editorial:critic` agents in parallel
+(one message, two Agent calls), each told the file path. On a client
+without them (Codex), ask the user to run `editorial:review-voice` and
+`editorial:critic` on the file in a fresh session each and paste the two
+reports back; running the two skills in this session is the fallback,
+and the aggregate then says so, because the reviewer saw the draft being
+written. Aggregate the two reports into one:
 the voice findings by severity, the prose cuts, every fact-check verdict
 with its sources. The user chooses; apply the chosen cuts and rewrites in
 the file; a FALSE or UNVERIFIED claim is rewritten or removed, never

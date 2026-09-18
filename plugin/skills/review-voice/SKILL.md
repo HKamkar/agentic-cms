@@ -66,5 +66,7 @@ verbatim; no preamble, no closing summary.
 
 Only with the user's approval, apply the chosen fixes in the file and
 run `pnpm content:lint` again; a post that has `publishedAt` follows
-`update-post` step 2 for its date. The `voice-reviewer` agent runs this
-same procedure read-only and stops at the report.
+`update-post` step 2 for its date. On Claude Code the `voice-reviewer`
+agent runs this same procedure in isolation and stops at the report; on
+a client without subagents, a fresh session running this skill is the
+isolated pass.

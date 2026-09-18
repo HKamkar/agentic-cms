@@ -1,0 +1,25 @@
+{
+  "name": "editorial",
+  "version": "0.1.0+codex.20260918130320",
+  "description": "The agent's side of a CMS whose content is files: skills that add, write, review, retire and report on the content of a site built from files, with the site's own voice rules read from the repo, never from the plugin",
+  "author": {
+    "name": "H. Kamkar"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "editorial",
+    "shortDescription": "Write, review and manage the content of a site whose content is files.",
+    "longDescription": "The editor of a site built on agentic-cms: pages, posts, authors, reviews and FAQ sets are files under content/, validated on every build. The skills add a page or a post, write one from a brief in gated stages, update or retire one without breaking an indexed URL, review a file against the site's own voice and claim rules, fact-check a draft against primary sources, and report what is live, in draft and planned. Everything a brand owns is read from the repo the agent is standing in; the plugin carries none of it.",
+    "developerName": "H. Kamkar",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Report the state of the site's content.",
+      "Review content/blog/<slug>.md against the voice rules.",
+      "Write a post from the next brief in content/editorial/backlog.md."
+    ]
+  }
+}
