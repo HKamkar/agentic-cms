@@ -203,9 +203,11 @@ const STEP_FRAMES = 8;
 const frames = (page, count) => inPage(page, `${count} animation frames`, 10000, (count) => new Promise((resolve) => { let seen = 0; const tick = () => (++seen >= count ? resolve() : requestAnimationFrame(tick)); requestAnimationFrame(tick); }), count);
 
 async function settle(page) {
-  // one pass through the page triggers every scroll reveal and every lazy image; back to the top for the shot
-  const height = await page.evaluate(() => document.documentElement.scrollHeight);
-  for (let y = 0; y <= height; y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await frames(page, STEP_FRAMES); }
+  // one pass through the page triggers every scroll reveal and every lazy image; back to the top for the shot.
+  // The height is read again at every step: lazy images take their box as they load, so a page grows while
+  // it is scrolled through, and a height read once at the start stops the pass short of the footer.
+  const height = () => page.evaluate(() => document.documentElement.scrollHeight);
+  for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await frames(page, STEP_FRAMES); }
   await page.evaluate(() => window.scrollTo(0, 0));
   await frames(page, STEP_FRAMES);
   await sequencesRan(page);
