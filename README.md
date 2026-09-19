@@ -202,7 +202,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on
 `agentic-cms/ix` — its content and its config live in its own repo;
 the engines, the reveal library and the command line come from here by tag
-(`github:HKamkar/agentic-cms#v0.3.1`), composed once in its
+(`github:HKamkar/agentic-cms#v0.3.2`), composed once in its
 `src/kit.ts`. Same page files, same post pipeline, same lint and audit as
 the wireframe above; the design is the part a site brings.
 
@@ -216,7 +216,7 @@ command line come from `agentic-cms`; your repo holds the design,
 the content, the config and the docs, nothing of the engine.
 
 ```bash
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.1 next react react-dom zod motion
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.2 next react react-dom zod motion
 pnpm add -D playwright-core          # only for the screenshot harness
 ```
 
