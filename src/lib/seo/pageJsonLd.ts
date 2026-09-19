@@ -101,7 +101,7 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
         foundingLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: organization.foundingLocation.locality, addressCountry: organization.foundingLocation.country } },
         slogan: organization.slogan,
         logo: { "@type": "ImageObject", url: absoluteUrl(site.logo) },
-        email: site.email,
+        ...(site.email ? { email: site.email } : {}),
         sameAs: site.footer.social.map((s) => s.href),
         url: site.url,
         knowsAbout: organization.knowsAbout,
@@ -122,11 +122,11 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
       about: {
         "@type": "Organization",
         name: site.shortName,
-        email: site.email,
+        ...(site.email ? { email: site.email } : {}),
         address: { "@type": "PostalAddress", streetAddress: office.streetAddress, addressLocality: office.locality, postalCode: office.postalCode, addressCountry: office.country },
         logo: { "@type": "ImageObject", url: absoluteUrl(site.logo) },
         sameAs: site.footer.social.map((s) => s.href),
-        contactPoint: contacts.map((contact) => ({ "@type": "ContactPoint", contactType: contact.type, email: contact.email })),
+        contactPoint: contacts.map((contact) => ({ "@type": "ContactPoint", contactType: contact.type, ...(contact.email ? { email: contact.email } : { url: absoluteUrl(page.seo.path) }) })),
       },
       mainEntity: faqPage(page),
     };

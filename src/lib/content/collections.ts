@@ -157,7 +157,7 @@ export const jsonldSchema = z
             })
             .describe("The postal address"),
           contacts: z
-            .array(z.strictObject({ type: text().describe("The contactType, e.g. customer service"), email: text().describe("The e-mail address") }), { error: "must be a list of contacts" })
+            .array(z.strictObject({ type: text().describe("The contactType, e.g. customer service"), email: optional(text()).describe("The e-mail address; left out, the contact point carries the page's URL instead (an address kept out of the HTML)") }), { error: "must be a list of contacts" })
             .min(1, { error: "must have at least one contact" })
             .describe("The contact points"),
         })
