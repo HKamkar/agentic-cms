@@ -35,6 +35,11 @@ on a structural problem.
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
+   The organisation's `email` is optional: a site that keeps its address
+   out of the HTML (assembled by script, against harvesters) leaves
+   `site.email` out and the blocks carry none; a `ContactPoint` without an
+   `email` carries the contact page's `url` instead. Google needs no e-mail
+   for any rich result.
 4. **The sitemap follows from the page files and the published posts**;
    nothing is added by hand. `updated` is the page's last-modified date —
    bump it when the content changes, not on refactors.

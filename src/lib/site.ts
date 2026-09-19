@@ -18,7 +18,8 @@ export type SiteConfig = {
   readonly tagline: string;
   /** The feed's description. */
   readonly description: string;
-  readonly email: string;
+  /** The public e-mail address, if the site prints one in structured data. A site that keeps its address out of the HTML (assembled by script against harvesters) leaves it out here and the JSON-LD carries none. */
+  readonly email?: string;
   /** The brand mark, a path under public/. */
   readonly logo: string;
   readonly address: readonly string[];

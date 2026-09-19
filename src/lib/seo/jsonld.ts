@@ -16,7 +16,7 @@ export function createJsonLd({ site, urls, content }: { site: SiteConfig; urls: 
       name,
       ...(url ? { url: site.url } : {}),
       logo: { "@type": "ImageObject", url: absoluteUrl(site.logo) },
-      email: site.email,
+      ...(site.email ? { email: site.email } : {}),
       sameAs: site.footer.social.map((s) => s.href),
     };
   }
