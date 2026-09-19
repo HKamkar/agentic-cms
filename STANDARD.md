@@ -318,7 +318,7 @@ The reveal library survives for a fork that wants reveals, whole and unused, in
 
 | Export | What it is |
 |---|---|
-| `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on every entry: `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`. |
+| `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on each entry after the element has left the viewport entirely (never while it is still partly on screen): `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`. |
 | `OnView` | a sequence over several elements when the section enters: `build={(root) => [[ix("card-2"), { y: "0%" }, { duration: 0.5, ease: ease("ease") }], …]}`, Motion's `animate()` format, resolved inside the element. |
 | `ease(name)` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`. |
 | `ix(name)`, `useMainBreakpoint()`, `useReducedMotionPref()` | the selector for a `data-ix` target; the ≥ 992 px query (`null` until mounted); `prefers-reduced-motion`. |

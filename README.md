@@ -1,49 +1,33 @@
 <div align="center">
 
-# agentic-cms
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/banner-dark.svg">
+  <img src="docs/readme/banner-light.svg" alt="agentic-cms: an AI agent edits the content files; pnpm build checks the schema, the voice and the SEO with zero failures; the site ships prerendered with no request-time reads" width="960">
+</picture>
 
-**A simple CMS whose editor is an AI agent.**
+**Pages, posts and every line of copy are files in a Next.js repo.**<br>
+**An agent edits them. The build says no. What ships is static.**
 
-Pages, posts and every line of copy are files in a Next.js repo. An agent edits
-them; the build validates them, lints the voice, audits the SEO and prerenders
-the lot. Nothing is read at request time.
+![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers](https://img.shields.io/badge/serves_from-Cloudflare_Workers-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000) ![Claude Code and Codex](https://img.shields.io/badge/plugin-Claude_Code_%C2%B7_Codex-000)
 
-![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers](https://img.shields.io/badge/serves_from-Cloudflare_Workers-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000)
-
-<img src="docs/readme/landing.png" alt="The example site's landing page, light mode on the left and dark mode on the right: a boxed hero section tagged home-hero, a heading, a button and a crossed placeholder for the hero illustration" width="960">
+[The loop](#the-loop) · [Files, not a database](#files-not-a-database) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
 
 </div>
 
-## The idea
+## The loop
 
-- **The repo is the CMS.** A page is `content/pages/<slug>.yaml`: its SEO
-  block, its structured data, its sections in order with all their copy. A
-  post is `content/blog/<slug>.md`. Authors, categories, reviews, FAQ sets
-  and use cases are files too. Seven collections, one folder, one pull
-  request per change.
-- **The build is the gate.** Every file is parsed against a zod schema; every
-  string is read against the site's voice rules; every prerendered page is
-  audited for its title, description, canonical, Open Graph, headings, image
-  attributes, structured data and sitemap entry. A wrong value stops the
-  build with a line that names the file, the field and the problem.
-- **The agent is the editor.** The `editorial` plugin gives Claude Code and
-  Codex eight skills that write, add, update, review, retire and report on
-  content, reading the site's rules from the repo, and Claude Code two review
-  agents that run the two review skills in isolation. It knows no brand.
-- **The design is yours.** What ships is a wireframe: four colours in a light
-  and a dark mode, a system font, boxes that print their own section type.
-  A fork replaces the look; the machinery stays.
+**1. The agent edits a file.** The landing page is `content/pages/home.yaml`:
+its SEO block, its structured data, its sections in order with all their
+copy. A post is `content/blog/<slug>.md`. The `editorial` plugin gives Claude
+Code and Codex the skills that write, add, update, review, retire and report
+on that content, reading the site's own rules from the repo and stopping at
+every gate for a person.
 
-## Sixty seconds
-
-```bash
-git clone git@github.com:HKamkar/agentic-cms.git && cd agentic-cms
-pnpm install
-pnpm dev          # http://localhost:8000
-```
-
-Change a line in `content/pages/home.yaml` and reload. Then break a few and
-build; this is what the build says, verbatim:
+**2. The build says no.** Every file is parsed against its schema, every
+string is read against the site's voice rules, every prerendered page is
+audited for its title, description, canonical, Open Graph, headings, image
+attributes, structured data and sitemap entry. Break a few things and build;
+this is what it says, verbatim:
 
 ```
 $ pnpm build
@@ -57,6 +41,31 @@ WARN content/blog/pages-are-files.md seo-title: seoTitle is 66 characters; Googl
 
 `pnpm content:lint` gives the same answer in about a second, without the build.
 
+**3. What ships is static.** Every page is prerendered and served from a
+Cloudflare Worker's asset cache. There is no database, no admin screen and
+no request-time read; a copy change is a diff, a review and a deploy.
+
+```bash
+git clone git@github.com:HKamkar/agentic-cms.git && cd agentic-cms
+pnpm install
+pnpm dev          # http://localhost:8000, then change a line in content/pages/home.yaml
+```
+
+<div align="center">
+<img src="docs/readme/landing.png" alt="The example site's landing page, light mode on the left and dark mode on the right: a boxed hero section tagged home-hero, a heading, a button and a crossed placeholder for the hero illustration" width="960">
+</div>
+
+## Files, not a database
+
+| | agentic-cms | A CMS with a database |
+|---|---|---|
+| Where the copy lives | `content/`: seven collections, one folder, one pull request per change | rows behind an admin screen |
+| Who edits it | an AI agent, with a person approving each gate; or anyone with an editor | people in the admin screen |
+| What stops a mistake | the build, with a line that names the file, the field and the problem | a preview, if someone looks |
+| What runs at request time | nothing: prerendered, static, cached at the edge | a query per page |
+| The design | yours: what ships is a wireframe a fork replaces, with the machinery kept | the theme's |
+| When it is the wrong tool | copy that must change without a deploy, a search over thousands of entries, or authors who will never open a pull request | — |
+
 ## A page is a file
 
 ```yaml
@@ -64,9 +73,9 @@ WARN content/blog/pages-are-files.md seo-title: seoTitle is 66 characters; Googl
 seo:
   path: /
   title: "Acme: content as files, checked on every build"
-  description: Acme is a content engine whose pages, posts and copy are files. Every file is validated at build time, prerendered, and served with no request-time reads.
+  description: Acme is a CMS whose editor is an AI agent. Pages, posts and copy are files, validated at build time, prerendered, and served with no request-time reads.
   ogImage: /images/home-og.jpg
-  updated: "2026-09-15"
+  updated: "2026-09-18"
   breadcrumb: Home
 jsonld:
   type: WebPage
@@ -75,7 +84,7 @@ sections:
   - type: home-hero
     eyebrow: Content as files
     heading: Every page, post and line of copy is a file.
-    text: Acme is the content engine behind this site. Pages are YAML, posts are markdown, and the build validates all of it before the first route is rendered.
+    text: Acme is the CMS behind this site, and its editor is an AI agent. Pages are YAML, posts are markdown, and the build validates all of it before the first route is rendered.
     cta: Get in touch
   - type: home-service
     …
@@ -193,7 +202,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on
 `agentic-cms/ix` — its content and its config live in its own repo;
 the engines, the reveal library and the command line come from here by tag
-(`github:HKamkar/agentic-cms#v0.3.0`), composed once in its
+(`github:HKamkar/agentic-cms#v0.3.1`), composed once in its
 `src/kit.ts`. Same page files, same post pipeline, same lint and audit as
 the wireframe above; the design is the part a site brings.
 
@@ -207,7 +216,7 @@ command line come from `agentic-cms`; your repo holds the design,
 the content, the config and the docs, nothing of the engine.
 
 ```bash
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.0 next react react-dom zod motion
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.1 next react react-dom zod motion
 pnpm add -D playwright-core          # only for the screenshot harness
 ```
 
@@ -219,7 +228,8 @@ allowBuilds:
   "agentic-cms@github:HKamkar/agentic-cms": true
 ```
 
-Then, in either case:
+<details>
+<summary><b>Then, in either case: the six steps</b></summary>
 
 1. Forking: rename the package, the Worker (`wrangler.jsonc`) and the plugin
    marketplace to your own name. Installing: `src/kit.ts` is where your site
@@ -256,6 +266,8 @@ Then, in either case:
    delete the `/sections/*` demo pages.
 6. `pnpm content:lint` until clean, `pnpm build`, `pnpm preview`, then
    `pnpm run deploy`.
+
+</details>
 
 A new kind of section is a copy schema, a component and a registry entry
 (`src/components/sections/`). A collection of your own is a schema and a

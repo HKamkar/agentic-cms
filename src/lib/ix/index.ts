@@ -6,3 +6,4 @@ export { OnView } from "./OnView.tsx";
 export { ease, EASE, type EaseName } from "./easing.ts";
 export { ix } from "./target.ts";
 export { useMainBreakpoint, useReducedMotionPref } from "./useMainBreakpoint.ts";
+export { useReveal } from "./useReveal.ts";
