@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture</title>
+<link rel="icon" href="data:,">
+<style>
+  html { color-scheme: light dark; }
+  body { margin: 0; font-family: sans-serif; background: Canvas; color: CanvasText; }
+  section { min-height: 100vh; padding: 2rem; box-sizing: border-box; border-bottom: 1px solid currentColor; }
+  h1, h2 { margin: 0 0 1rem; }
+  .card { width: 200px; height: 120px; border: 2px solid currentColor; }
+  .ix-init--fadeIn { opacity: 0; }
+  .ix-init--slideInBottom { opacity: 0; transform: translate3d(0, 100px, 0); }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+  [data-ix="pulse"] { animation: pulse 400ms ease-in-out 1 forwards; }
+  @media (prefers-reduced-motion: reduce) { [data-ix="pulse"] { animation: none; } }
+</style>
+</head>
+<body>
+<header><nav aria-label="Main"><a href="/">Home</a> <a href="/about">About</a></nav><button type="button" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true')">Menu</button></header>
+<main>
+  <section id="hero" data-section="hero">
+    <h1>A fixture page</h1>
+    <p>Served by the harness's own server for the browser tests.</p>
+    <div class="card ix-init--fadeIn" data-ix="pulse">a card</div>
+  </section>
+  <section id="second" data-section="second" data-settle="2600">
+    <h2>Fits the stack</h2>
+    <ul>
+      <li class="card ix-init--slideInBottom"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 10a2 2 0 0 1 1-1z"/></svg> one</li>
+      <li class="card ix-init--slideInBottom"><img src="/images/mark.svg" width="24" height="24" alt=""> two</li>
+    </ul>
+    <img src="/images/mark.svg" width="64" height="64" alt="" loading="lazy">
+  </section>
+  <section id="third" data-section="third">
+    <h2>The end</h2>
+    <div class="card ix-init--fadeIn">last</div>
+  </section>
+</main>
+<footer><p>footer</p></footer>
+<script>
+  // Stands in for the site's reveal library: under reduced motion every reveal
+  // snaps to its end state at once (what the harness waits for); otherwise each
+  // plays a one-second animation when it enters the viewport, and the section
+  // that declares data-settle runs a longer one.
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reveals = [...document.querySelectorAll('[class*="ix-init--"]')];
+  const end = (el) => { el.style.opacity = "1"; el.style.transform = "none"; };
+  if (reduce) reveals.forEach(end);
+  else {
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const el = entry.target;
+        io.unobserve(el);
+        const long = el.closest("[data-settle]");
+        const duration = long ? Number(long.dataset.settle) - 100 : 1000;
+        el.animate([{ opacity: 0, transform: "translateY(100px)" }, { opacity: 1, transform: "none" }], { duration, easing: "ease-out", fill: "forwards" }).finished.then(() => end(el));
+      }
+    });
+    reveals.forEach((el) => io.observe(el));
+  }
+  document.documentElement.dataset.hydrated = "1";
+</script>
+</body>
+</html>

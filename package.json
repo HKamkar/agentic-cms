@@ -1,6 +1,6 @@
 {
   "name": "agentic-cms",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "A simple CMS whose editor is an AI agent: content as files in a Next.js repo, validated at build time; the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
   "type": "module",
@@ -28,6 +28,10 @@
       "types": "./dist/forms/index.d.ts",
       "default": "./dist/forms/index.js"
     },
+    "./email": {
+      "types": "./dist/email.d.ts",
+      "default": "./dist/email.js"
+    },
     "./ix": {
       "types": "./dist/ix/index.d.ts",
       "default": "./dist/ix/index.js"
@@ -51,16 +55,41 @@
     "dist",
     "scripts",
     "src/lib/**/README.md",
-    "!scripts/*.test.mjs"
+    "content",
+    "public",
+    "src/app",
+    "src/components",
+    "src/config",
+    "src/styles",
+    "src/kit.ts",
+    "postcss.config.mjs",
+    "eslint.config.mjs",
+    ".env.example",
+    ".nvmrc",
+    "STANDARD.md",
+    "tsconfig.json",
+    "templates",
+    ".claude/skills",
+    ".agents/skills",
+    "docs",
+    "!scripts/**/*.test.mjs",
+    "!scripts/browser",
+    "!scripts/fixtures",
+    "!docs/readme",
+    "!src/**/*.test.ts"
   ],
   "scripts": {
     "dev": "next dev -p 8000",
     "build": "node bin/agentic-cms.mjs lint && node bin/agentic-cms.mjs docs --check && next build && node bin/agentic-cms.mjs seo",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/**/*.test.mjs\" \"tools/**/*.test.mjs\"",
+    "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/*.test.mjs\" \"scripts/lib/*.test.mjs\" \"tools/**/*.test.mjs\"",
+    "test:browser": "node --test \"scripts/browser/*.test.mjs\"",
     "plugin:validate": "claude plugin validate ./plugin --strict && claude plugin validate . --strict",
     "test:pack": "node tools/pack-smoke.mjs",
+    "hygiene": "node tools/hygiene.mjs",
+    "docs:commands": "node tools/commands-doc.mjs",
+    "skills:sync": "node tools/skills-sync.mjs",
     "content:check": "node bin/agentic-cms.mjs check",
     "content:lint": "node bin/agentic-cms.mjs lint",
     "content:status": "node bin/agentic-cms.mjs status",

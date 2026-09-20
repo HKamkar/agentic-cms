@@ -187,9 +187,40 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `node:test` suites, about a second) and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
   schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
-  or the scripts changed. `pnpm lint` ignores `.claude/worktrees/`, where agent
-  worktrees are checked out. No Prettier and no CI; match the existing style
-  (double quotes, semicolons, trailing commas).
+  or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
+  under `scripts/browser/`, against the fixture site in `scripts/fixtures/`;
+  it skips, naming the fix, without a Chromium) when `scripts/lib/browser.mjs`
+  or a command that opens a page changed; `pnpm hygiene` before every pull
+  request (`tools/hygiene.mjs`: no one site's name outside the README's
+  showcase, no machine paths or addresses, no captures, pictures or scratch
+  files committed, the two skills trees identical, the changelog and
+  `docs/commands.md` current). `pnpm lint` ignores `.claude/worktrees/`, where
+  agent worktrees are checked out. CI (`.github/workflows/verify.yml`) runs
+  the same on every pull request and push to `develop` and `main`, plus the
+  pack smoke on `main`. No Prettier; match the existing style (double
+  quotes, semicolons, trailing commas).
+- The command line's contract is `scripts/lib/specs.mjs`: one spec per
+  command (its flags, defaults, positionals, exit codes, the JSON it
+  prints); `scripts/lib/args.mjs` parses strictly from it (an unknown flag
+  is an error naming `--help`), `bin/agentic-cms.mjs` prints `--help` from
+  it, and `tools/commands-doc.mjs` writes `docs/commands.md` from it
+  (`pnpm docs:commands`; CI fails when it is stale). A new command is a spec,
+  a script that calls `parseOrExit(SPECS.<name>, process.argv.slice(2))`, a
+  test, its `docs/` page and a changelog line, in one pull request. Exit
+  codes: 0 clean, 1 findings or differences, 2 usage or environment.
+- `docs/` holds the guides (`docs/README.md` is the index): the command
+  line, the screenshot harness, the one-shot page commands, designing, the
+  skills, starting a site, the roadmap. A change to a command or the
+  harness updates its guide in the same pull request; `CHANGELOG.md` gets a
+  line under Unreleased.
+- The design skills are `.claude/skills/<name>/SKILL.md`, copied to
+  `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
+  assert the trees identical); design work on the example starts with the
+  `design` skill like on any site. `templates/site/` is what `agentic-cms
+  init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
+  the config); the kit's own `AGENTS.md` and `.claude/rules/` describe this
+  repo and are not what a site gets. A change to a rule of the kit that a
+  site shares goes to both.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own
@@ -219,6 +250,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 
 ## Parity harness
 
+The contract — modes, file names, how to read a compare, the waits and why —
+is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
+
 - `pnpm kit visual-parity capture <label>` renders every prerendered
   page of the current build at eight widths and `compare <before> <after>`
   diffs them; `--scheme dark` renders the dark mode (a fresh browser context
@@ -235,9 +269,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   or move assets while one runs, and build the exact tree you will commit
   before capturing — an edit after the build, however trivial, means the
   capture is of a different tree.
-- Baselines come from a build of the exact commit you compare against. When
-  a served build stands in for a commit (`capture … --url`), print its
-  `git log -1` first.
+- Baselines come from a build of the exact commit you compare against:
+  `capture <label> --ref <commit>` builds it in a sibling worktree and
+  stamps the sha. When a served build stands in for a commit (`capture …
+  --url`), print its `git log -1` first.
 - Static and settled (2000 ms) frames never jitter — a difference there is
   real. Only mid-flight `--motion` frames can differ by timing jitter, which
   matters again once a fork puts the `ix/` library back to work: re-run such

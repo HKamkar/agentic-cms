@@ -7,7 +7,13 @@ package (its `package.json` names them: `content:lint`, `content:check`,
 `content:status`, `content:docs`, and `build` runs `lint`, `docs --check`,
 `next build` and `seo` in that order). Each runs against the site in the
 current directory: its registry and config through `src/kit.ts`, its
-`content/`, `public/`, `.next` and `.parity`.
+`content/`, `public/`, `.next` and `.parity`. The flags, defaults and exit
+codes of every command are `docs/commands.md`, generated from
+`lib/specs.mjs` — the spec each script parses its arguments from
+(`lib/args.mjs`; an unknown flag is an error, `--help` prints the spec).
+`lib/browser.mjs` is the Chromium, the static server and the waits the
+harness and the page commands share; `browser/` holds their tests, run
+against `fixtures/` by `pnpm test:browser`.
 
 - `optimize-svg-rasters` — `pnpm kit optimize-svg-rasters [--lossy]
   [--dry-run] [file.svg ...]` re-encodes the PNGs that design-tool SVG
@@ -90,6 +96,29 @@ current directory: its registry and config through `src/kit.ts`, its
   JavaScript); every command loads `src/kit.ts` through it, and `pnpm test`
   (`src/**/*.test.ts` and `scripts/**/*.test.mjs`) uses it. No `.tsx`.
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
+- `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
+  --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one
+  screenshot of a page or an element with its box; `pnpm kit probe
+  <route|url> --select <css> | --heading <regex> [--all] [--motion
+  --timeline <ms>]` prints the numbers behind a screenshot claim (box,
+  computed styles, stacking contexts, a timeline, the pending reveals, the
+  console) as JSON; `pnpm kit sheet <spec.yaml>` renders candidates, rows
+  lettered and cells numbered at the real size and background, to one
+  picture. `docs/shot-probe-sheet.md` has the recipes; `lib/page-command.mjs`
+  and `lib/sheet.mjs` are their shared parts.
+- `guard-email` — `pnpm kit guard-email [--domain <host>]… [--json]`
+  scans every served file of the build (pages, RSC payloads, the `.body`
+  routes, the static chunks) for an address at the site's domain (the host
+  of `site.url`) and exits 1 naming each file; the last step of a build on
+  a site that renders its address through `EmailLink` and tokens
+  (`docs/email.md`).
+- `icons` — `pnpm kit icons add|remove <id>…` keeps the site's icon
+  manifest and generates `src/config/icons.ts` from `lucide-static` and
+  `simple-icons` (installed by the site; the kit ships no icon data);
+  `icons family <spec>` renders a family of marks from primitives;
+  `icons audit` inventories every icon on the built pages beside its copy,
+  as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
+  `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen

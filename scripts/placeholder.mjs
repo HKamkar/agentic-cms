@@ -11,15 +11,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
 const FIELD = "#8c8c8c";
 const LINE = "#2b2b2b";
 
-const [out, widthArg, heightArg] = process.argv.slice(2);
+const [out, widthArg, heightArg] = parseOrExit(SPECS.placeholder, process.argv.slice(2)).positionals;
 const width = Number(widthArg);
 const height = Number(heightArg);
-if (!out || !Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
-  console.error("usage: node scripts/placeholder.mjs <out> <width> <height>");
+if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+  console.error(`placeholder: width and height are whole pixels, not ${widthArg} ${heightArg}; run agentic-cms placeholder --help`);
   process.exit(2);
 }
 
@@ -41,7 +43,7 @@ const encoders = {
 
 const encode = encoders[path.extname(out).toLowerCase()];
 if (!encode) {
-  console.error(`unsupported extension: ${path.extname(out)} (use .webp, .jpg, .png or .svg)`);
+  console.error(`placeholder: unsupported extension ${path.extname(out)} (use .webp, .jpg, .png or .svg)`);
   process.exit(2);
 }
 
