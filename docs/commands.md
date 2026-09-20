@@ -188,10 +188,16 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--states` | hover, focus, checked and open states, located by role and text |
 | `--scheme light|dark` | prefers-color-scheme for the capture (default `light`) |
 | `--url <base>` | capture a served site instead of serving .next (print its git log -1 first) |
+| `--build` | run the site's `pnpm build` first (log: .parity/<label>.build.log) |
+| `--ref <git ref>` | capture a baseline: that commit checked out, installed and built in a sibling directory (../<site>-ref-<sha>, reused for the same sha), served and captured |
 | `--widths w,w` | viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion) |
 | `--pages /a,/b` | only these routes (a partial capture; pass the same to compare) |
+| `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
+| `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
-Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page); `2` usage, no build, or no browser (playwright-core and a Chromium).
+Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
+
+`--json` prints `{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha } }`.
 
 #### `visual-parity compare`
 
@@ -209,8 +215,11 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--threshold <n>` | percent of pixels a static or settled frame may differ by (default `0.02`) |
 | `--threshold-mid <n>` | the same for the mid-flight motion frames (150 and 500 ms) (default `20`) |
 | `--pages /a,/b` | judge only the after capture's files (a partial capture) |
+| `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, or captures of two schemes.
+Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, or captures of two schemes.
+
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in }] }`.
 
 ### `shot`
 

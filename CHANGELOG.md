@@ -6,6 +6,24 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `visual-parity compare` on two pages of different heights no longer stops
+  at `SIZE`: it compares row by row from the top and the bottom and reports
+  the first differing row, the intact tail, the band that changed on each
+  side and a verdict — `shift` (one section changed and moved the rest
+  intact), `insert`, `remove`, `reflow`, `width` — with crops of the band in
+  the diff directory; a same-size `CHANGED` line names the rows that
+  changed. `--json` prints the report (always written as `report.json`).
+- `visual-parity capture --build` (the site's build first), `--ref <git
+  ref>` (a baseline: that commit checked out, installed and built in a
+  sibling directory, served and captured, its sha in the capture), `--json`
+  (the summary), and `capture.json` written last as the sign a capture
+  finished. `--url`, `--build` and `--ref` are three sources of one build.
+- The settled motion frame is `--s<nn>-settled.png` (was `-2000.png`) and
+  waits `--settle` ms (2000) or longer when an element in view declares
+  `data-settle="<ms>"`; `<page>.settle.json` records each step's wait and
+  compares like the animation inventory. **Recapture motion baselines.**
+- The harness reads the site's config (`src/kit.ts`) only for `--states`,
+  so a static or motion capture and a compare run on any build.
 - `agentic-cms shot <route|url>`: one screenshot of a page or of an element
   (`--select`, or `--heading` for the section holding a heading), prepared
   like the harness prepares a page, at any width, scale and scheme, cropped

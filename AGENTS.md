@@ -260,9 +260,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   or move assets while one runs, and build the exact tree you will commit
   before capturing — an edit after the build, however trivial, means the
   capture is of a different tree.
-- Baselines come from a build of the exact commit you compare against. When
-  a served build stands in for a commit (`capture … --url`), print its
-  `git log -1` first.
+- Baselines come from a build of the exact commit you compare against:
+  `capture <label> --ref <commit>` builds it in a sibling worktree and
+  stamps the sha. When a served build stands in for a commit (`capture …
+  --url`), print its `git log -1` first.
 - Static and settled (2000 ms) frames never jitter — a difference there is
   real. Only mid-flight `--motion` frames can differ by timing jitter, which
   matters again once a fork puts the `ix/` library back to work: re-run such

@@ -326,7 +326,10 @@ The reveal library survives for a fork that wants reveals, whole and unused, in
 Adding a reveal is five lines: import `Fx`, wrap the element, pick the preset
 and the delay, add `mq="main"` if it is desktop-only, and check that the
 preset's start state exists in `motion.css` (`ix-init--*`, or `ix-main-init--*`
-inside the desktop media query for `mq="main"`). The rules that come with it:
+inside the desktop media query for `mq="main"`). A section whose sequence
+runs longer than two seconds after it enters the viewport says so on its
+element — `data-settle="2600"` — and the harness's settled motion frame waits
+for it (`docs/visual-parity.md`). The rules that come with it:
 targets are `data-ix` attributes addressed through `ix(name)` and never styling
 classes, so restyling cannot break a sequence; every animated component checks
 `useReducedMotionPref()`; and no `translate-*`, `rotate-*` or `scale-*` utility
