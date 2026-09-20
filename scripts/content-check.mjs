@@ -11,10 +11,11 @@
 // loaded through scripts/lib/load-ts.mjs; the hook must be registered before
 // the engine is imported, hence the dynamic import.
 import "./lib/load-ts.mjs";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
-const args = process.argv.slice(2);
-const rootIndex = args.indexOf("--root");
-if (rootIndex !== -1) process.chdir(args[rootIndex + 1]);
+const { flags } = parseOrExit(SPECS.check, process.argv.slice(2));
+if (flags.root) process.chdir(flags.root);
 
 const { ContentError, contentRoot, readCollection, sourceOf } = await import("agentic-cms/content");
 const { kit } = await import("@/kit");

@@ -10,14 +10,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
-const args = process.argv.slice(2);
-const opt = (name, fallback) => { const i = args.indexOf(name); return i === -1 ? fallback : Number(args[i + 1]); };
-const quality = opt("--quality", 80);
-const maxWidth = opt("--max-width", 0);
-const minSaving = opt("--min-saving", 30);
-const dryRun = args.includes("--dry-run");
-const targets = args.filter((a, i) => !a.startsWith("--") && !["--quality", "--max-width", "--min-saving"].includes(args[i - 1]));
+const { positionals: targets, flags } = parseOrExit(SPECS["optimize-webp"], process.argv.slice(2));
+const { quality, "max-width": maxWidth, "min-saving": minSaving, "dry-run": dryRun } = flags;
 
 const kb = (n) => `${(n / 1024).toFixed(0)}KB`;
 const walk = (p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).flatMap((f) => walk(path.join(p, f))) : p.endsWith(".webp") ? [p] : []);

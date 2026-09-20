@@ -13,6 +13,10 @@
 // `type` literal (the page sections) gets one table per member.
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
+
+const { check } = parseOrExit(SPECS.docs, process.argv.slice(2)).flags;
 
 const README = "content/README.md";
 const START = "<!-- content-docs:start -->";
@@ -149,7 +153,7 @@ if (from === -1 || to === -1) {
   process.exit(2);
 }
 const next = current.slice(0, from) + generated + current.slice(to + END.length);
-if (process.argv.includes("--check")) {
+if (check) {
   if (next !== current) {
     console.error(`content-docs: ${README} is out of date — run agentic-cms docs (pnpm content:docs) and commit the result`);
     process.exit(1);

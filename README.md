@@ -284,12 +284,21 @@ pnpm build           # content lint → docs check → next build → SEO audit;
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
 pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
+pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
+pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
 pnpm content:lint    # the content rules, about a second
 pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
+pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```
+
+Every command's flags, defaults and exit codes are in
+[docs/commands.md](docs/commands.md) (generated from the specs the parser
+reads, so it is the contract); the screenshot harness has its own guide,
+[docs/visual-parity.md](docs/visual-parity.md); [docs/](docs/README.md) is
+the index.
 
 - Node 22.18+ (`.nvmrc` says 26) and pnpm. The build fetches nothing: no
   webfont, no external data.
@@ -330,7 +339,8 @@ src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, 
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
-PLAN.md                      how the engine was built, condensed     docs/roadmap.md   what 0.4.0 adds for agents, job by job
+PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
+docs/                        the guides: commands.md (the command line's contract), visual-parity.md (the harness), roadmap.md (0.4.0)
 ```
 
 MIT licensed.

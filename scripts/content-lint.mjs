@@ -20,12 +20,12 @@
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
-const args = process.argv.slice(2);
-const rootIndex = args.indexOf("--root");
-const root = rootIndex === -1 ? process.cwd() : path.resolve(args[rootIndex + 1]);
-const strict = args.includes("--strict");
-const report = args.includes("--report");
+const { flags } = parseOrExit(SPECS.lint, process.argv.slice(2));
+const root = flags.root ? path.resolve(flags.root) : process.cwd();
+const { strict, report } = flags;
 
 const { format, lint } = await import("./lib/content-lint.mjs");
 const { kit } = await import("@/kit");

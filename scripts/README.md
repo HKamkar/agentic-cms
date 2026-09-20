@@ -7,7 +7,13 @@ package (its `package.json` names them: `content:lint`, `content:check`,
 `content:status`, `content:docs`, and `build` runs `lint`, `docs --check`,
 `next build` and `seo` in that order). Each runs against the site in the
 current directory: its registry and config through `src/kit.ts`, its
-`content/`, `public/`, `.next` and `.parity`.
+`content/`, `public/`, `.next` and `.parity`. The flags, defaults and exit
+codes of every command are `docs/commands.md`, generated from
+`lib/specs.mjs` — the spec each script parses its arguments from
+(`lib/args.mjs`; an unknown flag is an error, `--help` prints the spec).
+`lib/browser.mjs` is the Chromium, the static server and the waits the
+harness and the page commands share; `browser/` holds their tests, run
+against `fixtures/` by `pnpm test:browser`.
 
 - `optimize-svg-rasters` — `pnpm kit optimize-svg-rasters [--lossy]
   [--dry-run] [file.svg ...]` re-encodes the PNGs that design-tool SVG

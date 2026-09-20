@@ -321,13 +321,13 @@ the e-mail guard and the icon commands; one pull request per job, one release.
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # the build starts with the content lint and ends with the SEO audit, 0 failures
-scripts/parity.sh <label>-before    # on the previous commit (worktree or before editing) — then, after the change:
-scripts/parity.sh <label>-after && diff -r .parity/<label>-before .parity/<label>-after && echo identical
+pnpm kit parity <label>-before      # on the previous commit (worktree or before editing) — then, after the change:
+pnpm kit parity <label>-after && diff -r .parity/<label>-before .parity/<label>-after && echo identical
 # pixels, when a page renders differently by construction: a worktree of the previous commit, its own
 # pnpm install --frozen-lockfile --prefer-offline && pnpm build, served on another port, then
 git -C ../<worktree> log -1 --oneline        # print what the served baseline is before capturing from it
-node scripts/visual-parity.mjs capture <label>-before --url http://127.0.0.1:<port> --pages <pages>
-node scripts/visual-parity.mjs capture <label>-after --pages <pages>
-node scripts/visual-parity.mjs compare <label>-before <label>-after          # add --scheme dark for the dark mode
+pnpm kit visual-parity capture <label>-before --url http://127.0.0.1:<port> --pages <pages>
+pnpm kit visual-parity capture <label>-after --pages <pages>
+pnpm kit visual-parity compare <label>-before <label>-after          # add --scheme dark for the dark mode
 pnpm preview            # the real Worker on 0.0.0.0:8000 — look at the pages, in both themes; stop it
 ```

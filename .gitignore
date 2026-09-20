@@ -47,7 +47,7 @@ next-env.d.ts
 .dev.vars*
 !.dev.vars
 
-# scripts/parity.sh captures
+# captures of the parity and visual-parity commands, shots and sheets
 .parity/
 
 # the package, compiled by tsc (pnpm build:pkg; prepare)

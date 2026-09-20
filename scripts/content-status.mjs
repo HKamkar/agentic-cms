@@ -18,10 +18,10 @@ import "./lib/load-ts.mjs";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
-const args = process.argv.slice(2);
-const sinceIndex = args.indexOf("--since");
-const since = sinceIndex === -1 ? "30.days" : args[sinceIndex + 1];
+const { since } = parseOrExit(SPECS.status, process.argv.slice(2)).flags;
 const ROOT = process.cwd();
 const DAY = 24 * 60 * 60 * 1000;
 const today = new Date().toISOString().slice(0, 10);
