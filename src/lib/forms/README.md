@@ -86,6 +86,14 @@ route.
 
 **Change copy or fields of the contact form.** Edit `forms.contact` only.
 
+## Recipes
+
+- **The recipient as a token.** A site that keeps its address out of served
+  files (`docs/email.md`) wraps the definition in the server component that
+  renders the form: `<Form definition={withEmailToken(forms.contact)} />`.
+  The mailto backend resolves the token at submit (`resolveRecipient`); a
+  plain address passes through; other backends are untouched.
+
 ## Status
 
 `mailto` is the only backend wired. Its "success" means the mail client was

@@ -181,4 +181,14 @@ export const SPECS = {
     exit: { 0: "written, or every agent file as the kit ships it", 1: "--check found drift", 2: "usage" },
     json: "{ target, version, created, updated, kept } | { version, files: [{ file, status }] }",
   },
+  "guard-email": {
+    command: "guard-email", script: "guard-email", summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
+    usage: "agentic-cms guard-email [--domain <host>]… [--json]",
+    flags: {
+      domain: { type: "string", multiple: true, value: "<host>", help: "a domain whose addresses must not appear; default: the host of site.url from src/kit.ts" },
+      json: { type: "boolean", help: "print { domains, scanned, hits: [{ file, addresses }] }" },
+    },
+    exit: { 0: "no address as text", 1: "an address in a served file (each named)", 2: "usage, or no build under .next" },
+    json: "{ domains, scanned, hits: [{ file, addresses }] }",
+  },
 };

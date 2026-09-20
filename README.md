@@ -298,6 +298,7 @@ pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
+pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```
 
