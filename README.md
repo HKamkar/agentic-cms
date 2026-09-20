@@ -208,16 +208,16 @@ the wireframe above; the design is the part a site brings.
 
 ## Start your own site
 
-Two ways. **Fork** this repo when you want the example around you — the
-wireframe, the section galleries, the posts that describe it — and
-replace it piece by piece. **Install** the package when your site is its own
-repo, as deeplit's above is: the engines, the reveal library and the
-command line come from `agentic-cms`; your repo holds the design,
-the content, the config and the docs, nothing of the engine.
+Two ways, one result. **Fork** this repo when you want the example around
+you — the wireframe, the section galleries, the posts that describe it —
+and replace it piece by piece. **Install** the package when your site is its
+own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.3 next react react-dom zod motion
-pnpm add -D playwright-core          # only for the screenshot harness
+mkdir my-site && cd my-site && pnpm init
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.3.3      # allowBuilds below, first
+pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
+pnpm install && pnpm dev
 ```
 
 A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
@@ -225,16 +225,24 @@ only when `pnpm-workspace.yaml` allows it:
 
 ```yaml
 allowBuilds:
-  "agentic-cms@github:HKamkar/agentic-cms": true
+  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
+  sharp: true
 ```
 
-<details>
-<summary><b>Then, in either case: the six steps</b></summary>
+Either way the site carries, from the first session and with nothing
+installed, what an agent needs to design it: the rules (`AGENTS.md`,
+`.claude/rules/`), the design skills (`.claude/skills/`, `.agents/skills/`
+— `design`, `design-options`, `design-measure`, `design-proof`) and the
+commands they call. [docs/init.md](docs/init.md) is what `init` writes and
+what comes next; [docs/design.md](docs/design.md) is the loop.
 
-1. Forking: rename the package, the Worker (`wrangler.jsonc`) and the plugin
-   marketplace to your own name. Installing: `src/kit.ts` is where your site
-   composes the engine, the one file the app and the command line read
-   (server code only):
+<details>
+<summary><b>Then: the six steps</b></summary>
+
+1. Forking: rename the package and the plugin marketplace to your own name,
+   and drop the Cloudflare files if you host elsewhere. Installing: `init`
+   wrote `src/kit.ts`, where your site composes the engine — the one file
+   the app and the command line read (server code only):
 
    ```ts
    import { createKit } from "agentic-cms";
@@ -247,25 +255,22 @@ allowBuilds:
 
    and `package.json` names the commands: `"content:lint": "agentic-cms
    lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
-   "agentic-cms"`, `"build": "agentic-cms lint &&
-   agentic-cms docs --check && next build && agentic-cms seo"`,
-   and for the site's own tests on its real content `"test": "node --import
-   agentic-cms/loader --test \"src/**/*.test.ts\""` (the loader that
-   lets Node run the site's TypeScript against the package).
-   The example's `src/app/`, `src/components/`, `src/config/`, `src/styles/`
-   and `content/` are the files a site owns; copy them as a start.
+   "agentic-cms"`, `"build": "agentic-cms lint && agentic-cms docs --check
+   && next build && agentic-cms seo"`, and for the site's own tests
+   `"test": "node --import agentic-cms/loader --test \"src/**/*.test.ts\""`.
 2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
    the footer, the calls to action (data only, `satisfies SiteConfig`).
-3. `src/app/globals.css`: the four colours and the type scale. Both themes
-   follow from the `light-dark()` pairs.
+3. `src/app/globals.css`: the tokens — or start the `design` skill, which
+   begins there. Both themes follow from the `light-dark()` pairs.
 4. Copy `content/_templates/VOICE.md` to `content/VOICE.md` and write your
    rules; the prose and the fenced block say the same thing.
 5. Replace the content: the registries, the reviews, the FAQ sets, the use
    cases, the page files, the posts. `content/README.md` is the door;
    `content/_templates/` has an annotated template per collection. Keep or
    delete the `/sections/*` demo pages.
-6. `pnpm content:lint` until clean, `pnpm build`, `pnpm preview`, then
-   `pnpm run deploy`.
+6. `pnpm content:lint` until clean, `pnpm build`, then the host of your
+   choice. After a kit upgrade, `pnpm exec agentic-cms init . --agent-files`
+   brings the new rules and skills in and keeps your edits.
 
 </details>
 
@@ -273,7 +278,7 @@ A new kind of section is a copy schema, a component and a registry entry
 (`src/components/sections/`). A collection of your own is a schema and a
 definition returned from `createKit`'s `collections` option
 (`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`.
-Upgrading is bumping the tag and running the verify below; a release
+Upgrading is bumping the tag and running the verify below; `CHANGELOG.md`
 says what changed for a site.
 
 ## Commands
@@ -292,6 +297,7 @@ pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
+pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```
 
@@ -334,6 +340,8 @@ content/authors.json         content/categories.json   content/reviews.yaml   co
 content/VOICE.md             the voice and claim rules; _templates/VOICE.md is the blank
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
+.claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
+templates/site/              what init writes into a site: AGENTS.md, the rules, the config
 src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/, ix/, components/, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
@@ -342,7 +350,7 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md (the command line's contract), visual-parity.md (the harness), shot-probe-sheet.md, roadmap.md (0.4.0)
+docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, roadmap.md
 ```
 
 MIT licensed.

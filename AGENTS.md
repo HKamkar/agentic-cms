@@ -209,9 +209,18 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   test, its `docs/` page and a changelog line, in one pull request. Exit
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
 - `docs/` holds the guides (`docs/README.md` is the index): the command
-  line, the screenshot harness, the roadmap. A change to a command or the
+  line, the screenshot harness, the one-shot page commands, designing, the
+  skills, starting a site, the roadmap. A change to a command or the
   harness updates its guide in the same pull request; `CHANGELOG.md` gets a
   line under Unreleased.
+- The design skills are `.claude/skills/<name>/SKILL.md`, copied to
+  `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
+  assert the trees identical); design work on the example starts with the
+  `design` skill like on any site. `templates/site/` is what `agentic-cms
+  init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
+  the config); the kit's own `AGENTS.md` and `.claude/rules/` describe this
+  repo and are not what a site gets. A change to a rule of the kit that a
+  site shares goes to both.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own

@@ -168,4 +168,17 @@ export const SPECS = {
     exit: { 0: "written", 2: "usage, a spec error (the field is named), a missing file, or no browser" },
     json: "{ file, name, rows: [{ id, label, cells }], width, height }",
   },
+  init: {
+    command: "init", script: "init", summary: "a site from the package: the wireframe example, the agent files (rules and design skills), the config and a manifest; or a refresh of an existing site's agent files",
+    usage: "agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]",
+    positionals: [{ name: "dir", help: "where the site goes (default: the current directory)" }],
+    flags: {
+      "agent-files": { type: "boolean", help: "only the rules (.claude/rules/) and the design skills (.claude/skills/, .agents/skills/); a file the site edited is kept" },
+      check: { type: "boolean", help: "with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one), missing — and exit 1 on any drift; write nothing" },
+      force: { type: "boolean", help: "overwrite files that exist (package.json is always merged, never overwritten)" },
+      json: { type: "boolean", help: "print the result as JSON" },
+    },
+    exit: { 0: "written, or every agent file as the kit ships it", 1: "--check found drift", 2: "usage" },
+    json: "{ target, version, created, updated, kept } | { version, files: [{ file, status }] }",
+  },
 };

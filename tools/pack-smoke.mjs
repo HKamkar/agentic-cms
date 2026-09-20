@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Proves the package as a site sees it, which the checkout never does (the
-// example resolves the package's name to the source): packs the package, builds
-// a scratch site out of the example's own files with the tarball as its one
-// engine dependency and no path alias, installs it, and runs its build —
-// the content lint, the field-table check, next build and the SEO audit —
-// through the installed command line. Exit 1 on the first failure.
+// example resolves the package's name to the source): packs the package,
+// installs the tarball in a scratch directory as a site's one engine
+// dependency, lays the site out with `agentic-cms init` from that install,
+// installs its dependencies and runs its build — the content lint, the
+// field-table check, next build and the SEO audit — through the installed
+// command line; then checks the agent files are as shipped and the tarball's
+// size. Exit 1 on the first failure.
 //
-//   pnpm test:pack           (a few minutes: an install and a build)
+//   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -15,6 +17,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const keep = process.argv.includes("--keep");
+const MAX_TARBALL = 1024 * 1024;
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
 const site = path.join(scratch, "site");
 const run = (command, args, cwd) => {
@@ -28,33 +31,27 @@ const run = (command, args, cwd) => {
 // 1. The tarball: what a consumer installs, dist/ included (prepare runs first).
 const packed = execFileSync("pnpm", ["pack", "--pack-destination", scratch, "--json"], { cwd: ROOT, encoding: "utf8" });
 const tarball = path.join(scratch, path.basename(JSON.parse(packed.slice(packed.indexOf("{"))).filename));
+const size = fs.statSync(tarball).size;
+if (size > MAX_TARBALL) { console.error(`pack-smoke: the tarball is ${(size / 1024).toFixed(0)} KB, over the ${MAX_TARBALL / 1024} KB the files list is meant to stay under`); process.exit(1); }
 
-// 2. The scratch site: the example's files, none of the package's source.
+// 2. A scratch site with the tarball as its engine, laid out by the installed init.
 fs.mkdirSync(site, { recursive: true });
-for (const entry of ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "next.config.ts", "postcss.config.mjs", ".env.example"]) {
-  fs.cpSync(path.join(ROOT, entry), path.join(site, entry), { recursive: true });
-}
-const kit = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-const dev = kit.devDependencies;
-const consumer = {
-  name: "agentic-cms-smoke",
-  private: true,
-  type: "module",
-  scripts: { build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo" },
-  dependencies: { "agentic-cms": `file:${tarball}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
-  devDependencies: { "@opennextjs/cloudflare": dev["@opennextjs/cloudflare"], "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
-  pnpm: { onlyBuiltDependencies: ["sharp"] },
-};
-fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(consumer, null, 2));
-// The example's tsconfig minus the alias that points the package's name at the source.
-const tsconfig = JSON.parse(fs.readFileSync(path.join(ROOT, "tsconfig.json"), "utf8"));
-tsconfig.compilerOptions.paths = { "@/*": ["./src/*"] };
-fs.writeFileSync(path.join(site, "tsconfig.json"), JSON.stringify(tsconfig, null, 2));
-fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), "allowBuilds:\n  sharp: true\n  esbuild: true\n  unrs-resolver: true\n  workerd: true\n");
-
-// 3. Install and build through the installed command line.
+fs.writeFileSync(path.join(site, "package.json"), JSON.stringify({ name: "agentic-cms-smoke", private: true, type: "module", dependencies: { "agentic-cms": `file:${tarball}` } }, null, 2));
+fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), "allowBuilds:\n  sharp: true\n  unrs-resolver: true\n");
 run("pnpm", ["install", "--prefer-offline"], site);
+for (const shipped of ["templates/site/AGENTS.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "content/pages/home.yaml", "docs/commands.md"]) {
+  if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) { console.error(`pack-smoke: the tarball lacks ${shipped} (package.json files)`); process.exit(1); }
+}
+run("pnpm", ["exec", "agentic-cms", "init", "."], site);
+// init pins the dependency to the kit's tag; the smoke keeps the tarball
+const pkg = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8"));
+pkg.dependencies["agentic-cms"] = `file:${tarball}`;
+fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
+
+// 3. Install the site's dependencies (the lockfile moves: init added them) and build through the installed command line.
+run("pnpm", ["install", "--prefer-offline", "--no-frozen-lockfile"], site);
 run("pnpm", ["build"], site);
-console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)})`);
+run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
 if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
 else fs.rmSync(scratch, { recursive: true, force: true });
