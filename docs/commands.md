@@ -241,8 +241,8 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
-| `--select <css>` | the element: a CSS selector (the first match, or --index) |
-| `--heading <regex>` | the element: the section (article, [data-section]) holding the heading that matches |
+| `--select <css>` | the element: a CSS selector (the first match, or --index); with --heading, searched inside that section |
+| `--heading <regex>` | the element: the section (article, [data-section]) holding the heading that matches — or, with --select, the section the selector is searched in |
 | `--index <n>` | which match of --select or --heading, from 0 (default `0`) |
 | `--scale <n>` | device scale factor (2 for a crisp crop) (default `1`) |
 | `--pad <n>` | margin around the element's box, in px (default `24`) |
@@ -275,8 +275,8 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
-| `--select <css>` | the element: a CSS selector (the first match, or --index) |
-| `--heading <regex>` | the element: the section (article, [data-section]) holding the heading that matches |
+| `--select <css>` | the element: a CSS selector (the first match, or --index); with --heading, searched inside that section |
+| `--heading <regex>` | the element: the section (article, [data-section]) holding the heading that matches — or, with --select, the section the selector is searched in |
 | `--index <n>` | which match of --select or --heading, from 0 (default `0`) |
 | `--all` | every match of --select or --heading, not just one |
 | `--props <a,b>` | computed properties to add to the default set (opacity, transform, position, z-index, display, visibility, overflow, color, background-color, font-size, line-height, width, height, margin, padding) |
