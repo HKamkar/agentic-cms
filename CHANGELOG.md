@@ -4,6 +4,12 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `init --agent-files` on a site that wrote its own rules before any
+  manifest existed keeps them (they read as `modified`, the site's), where
+  0.4.0 took them for stale and overwrote them; `--force` takes the kit's.
+
 ## [0.4.0] — 2026-09-20
 
 The kit as an agent's design toolbox: six jobs, one release (`docs/roadmap.md`).

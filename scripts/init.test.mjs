@@ -84,3 +84,18 @@ test("agentFiles --check tells a site's edit from a kit update and a missing fil
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/design.md"], "created");
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/styling.md"], "updated");
 });
+
+test("a site's own rule that predates the manifest is kept on the first --agent-files run, not overwritten", () => {
+  const target = tmp();
+  fs.mkdirSync(path.join(target, ".claude/rules"), { recursive: true });
+  fs.writeFileSync(path.join(target, ".claude/rules/styling.md"), "the site's own styling rule\n");
+  const first = agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, ...quiet });
+  const status = Object.fromEntries(first.map((f) => [f.file, f.status]));
+  assert.equal(status[".claude/rules/styling.md"], "kept");
+  assert.equal(status[".claude/rules/design.md"], "created");
+  assert.equal(read(target, ".claude/rules/styling.md"), "the site's own styling rule\n");
+  const check = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: true, ...quiet }).map((f) => [f.file, f.status]));
+  assert.equal(check[".claude/rules/styling.md"], "modified", "and --check keeps calling it the site's");
+  const forced = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, force: true, ...quiet }).map((f) => [f.file, f.status]));
+  assert.equal(forced[".claude/rules/styling.md"], "updated", "--force is the way to take the kit's");
+});

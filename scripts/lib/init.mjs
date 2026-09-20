@@ -118,7 +118,8 @@ export function agentFiles(target, { kitRoot, version, check = false, force = fa
     const onDisk = fs.existsSync(full) ? fs.readFileSync(full, "utf8") : null;
     const recorded = manifest.files[file];
     const current = sha(text);
-    const status = onDisk === null ? "missing" : recorded && sha(onDisk) !== recorded ? "modified" : sha(onDisk) === current ? "ok" : "stale";
+    // A file the manifest never recorded is the site's own (a site adopting the agent files after writing its rules): kept, like an edit.
+    const status = onDisk === null ? "missing" : sha(onDisk) === current ? "ok" : !recorded || sha(onDisk) !== recorded ? "modified" : "stale";
     if (check) { report.push({ file, status }); continue; }
     if (status === "modified" && !force) { report.push({ file, status: "kept" }); result.kept.push(file); next.files[file] = recorded; continue; }
     if (status === "ok") { report.push({ file, status: "ok" }); next.files[file] = current; continue; }
