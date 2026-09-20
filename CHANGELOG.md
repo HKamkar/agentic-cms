@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.4.3] — 2026-09-20
 
 - `icons add`: a `<line>`'s attributes (`x1`, `y1`, `x2`, `y2`, digits in
   their names) are read; they were skipped, so a Lucide icon drawn with
