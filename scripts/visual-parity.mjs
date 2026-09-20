@@ -17,18 +17,20 @@
 // the animation inventory, the interaction states located by role and text
 // through the site's src/kit.ts, and the pixel compare.
 import "./lib/load-ts.mjs";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
 import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, NO_ANCHORING_CSS, PAUSE_LOOPS, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { compareCapture } from "./lib/compare-images.mjs";
+import { buildRef } from "./lib/ref-build.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-parity"], process.argv.slice(2));
 
-const { kit } = await import("@/kit");
-const { site } = kit;
-const BLOG = site.links.blog;
+// The site's config and page files are needed by --states alone (the labels
+// and pages the states look for); a static or motion capture reads the build.
+const loadKit = async () => (await import("@/kit")).kit;
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".parity/visual");
 const DEFAULT_WIDTHS = [1920, 1440, 1280, 1100, 992, 800, 767, 390];
@@ -41,18 +43,22 @@ if (!["light", "dark"].includes(scheme)) { console.error(`visual-parity capture:
 const states = Boolean(flags.states);
 if (motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
 const MOTION_WIDTHS = [1440, 390];
-const MOTION_FRAMES_MS = [150, 500, 2000];
+const MOTION_FRAMES_MS = [150, 500];
 const widths = (flags.widths ?? (motion ? MOTION_WIDTHS : DEFAULT_WIDTHS).join(",")).split(",").map(Number);
 const threshold = flags.threshold ?? 0.02;
 const thresholdMid = flags["threshold-mid"] ?? 20;
 const onlyPages = (flags.pages ?? "").split(",").filter(Boolean);
+const settleMs = flags.settle ?? 2000;
+if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
+if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+const say = (line) => (flags.json ? process.stderr.write(line) : process.stdout.write(line));
 
 /** The build's own routes: every page that is not a post and not the 404, and the first post. */
-const pageRoutes = () => listPages(ROOT).filter((route) => !route.startsWith("/blog-post/") && route !== "/_not-found");
-const firstPost = () => listPages(ROOT).find((route) => route.startsWith("/blog-post/"));
-const motionPages = () => {
-  const post = firstPost();
-  return post ? [...pageRoutes(), post] : pageRoutes();
+const pageRoutes = (root = ROOT) => listPages(root).filter((route) => !route.startsWith("/blog-post/") && route !== "/_not-found");
+const firstPost = (root = ROOT) => listPages(root).find((route) => route.startsWith("/blog-post/"));
+const motionPages = (root = ROOT) => {
+  const post = firstPost(root);
+  return post ? [...pageRoutes(root), post] : pageRoutes(root);
 };
 
 // ---- capture ---------------------------------------------------------------
@@ -90,23 +96,33 @@ async function recordAnimations(page) {
   };
 }
 
+// A section whose sequence runs longer than the settled frame's default
+// declares it: data-settle="2600" on any element, read while that element is
+// in the viewport at a step, so the settled frame waits for the longest one.
+const DECLARED_SETTLE = () => [...document.querySelectorAll("[data-settle]")].map((el) => ({ el, rect: el.getBoundingClientRect(), settle: Number(el.dataset.settle) })).filter(({ rect, settle }) => settle > 0 && rect.bottom > 0 && rect.top < innerHeight).map(({ el, rect, settle }) => ({ tag: el.tagName.toLowerCase(), id: el.id || null, top: Math.round(rect.top + scrollY), settle }));
+
 async function captureMotion(page, dir, name) {
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   const step = 900;
   let count = 0;
+  const steps = [];
   const finishRecording = await recordAnimations(page);
   for (let y = 0, i = 0; y < height; y += step, i++) {
     await page.evaluate((y) => window.scrollTo(0, y), y);
     const t0 = Date.now();
-    for (const ms of MOTION_FRAMES_MS) {
+    const declared = await page.evaluate(DECLARED_SETTLE);
+    const settled = Math.max(settleMs, ...declared.map((d) => d.settle));
+    for (const [ms, tag] of [...MOTION_FRAMES_MS.map((ms) => [ms, String(ms)]), [settled, "settled"]]) {
       await page.waitForTimeout(Math.max(0, ms - (Date.now() - t0)));
       await page.evaluate(PAUSE_LOOPS);
-      await page.screenshot({ path: path.join(dir, `${name}--s${String(i).padStart(2, "0")}-${ms}.png`), fullPage: false });
+      await page.screenshot({ path: path.join(dir, `${name}--s${String(i).padStart(2, "0")}-${tag}.png`), fullPage: false });
       count++;
     }
+    steps.push({ step: i, y, waited: settled, declared });
   }
   const animations = await finishRecording();
   fs.writeFileSync(path.join(dir, `${name}.animations.json`), JSON.stringify(animations, null, 1));
+  fs.writeFileSync(path.join(dir, `${name}.settle.json`), JSON.stringify(steps, null, 1));
   return count;
 }
 
@@ -114,28 +130,24 @@ async function captureMotion(page, dir, name) {
 const faqToggle = (p) => p.getByRole("main").locator("[aria-expanded]").first();
 
 /** The route of the first page file (folder order) with a section of that type, looking inside group wrappers; undefined when none has one. */
-function pageWith(type) {
+function pageWith(kit, type) {
   const holds = (sections) => sections.some((section) => section.type === type || (section.type === "group" && holds(section.sections)));
   return kit.content.getPages().find((entry) => holds(entry.data.sections))?.data.seo.path;
 }
 
-// The three labels a hover state looks for, read from the site's own config: the
-// CTA, a nav entry that is a page of its own rather than an anchor, and the
-// second footer quick link.
-const CTA_LABEL = site.cta.label;
-const NAV_LABEL = (site.nav.find((item) => item.href !== "/" && !item.href.includes("#")) ?? site.nav[1]).label;
-const FOOTER_LABEL = site.footer.quickLinks[1].label;
-
 // Interaction states. `act` performs the interaction and returns the element
 // whose box is photographed; the page is prepared like a static capture
 // (motion frozen), so the box shows the settled end state of the transition.
-// `post` is the build's first post route, `form` and `faq` the first pages that
-// show a form and a FAQ; a build without one of them drops those rows.
-const STATES = ({ post, form, faq }) => [
-  { page: "/", width: 1440, name: "cta-hover", act: async (p) => { const l = p.getByRole("link", { name: CTA_LABEL }).first(); await l.hover(); return l; } },
-  { page: "/", width: 1440, name: "nav-link-hover", act: async (p) => { const l = p.getByRole("navigation").getByRole("link", { name: NAV_LABEL }).first(); await l.hover(); return l; } },
-  { page: "/", width: 1440, name: "footer-link-hover", act: async (p) => { const l = p.getByRole("contentinfo").getByRole("link", { name: FOOTER_LABEL }); await l.hover(); return l; } },
-  { page: BLOG, width: 1440, name: "card-hover", act: async (p) => { const l = p.getByRole("main").locator("a:has(img[alt]:not([alt='']))").first(); await l.hover(); return l; } },
+// The three labels a hover state looks for come from the site's own config
+// (the CTA, a nav entry that is a page of its own rather than an anchor, the
+// second footer quick link); `post` is the build's first post route, `form`
+// and `faq` the first pages that show a form and a FAQ; a build without one
+// of them drops those rows.
+const STATES = ({ site, post, form, faq }) => [
+  { page: "/", width: 1440, name: "cta-hover", act: async (p) => { const l = p.getByRole("link", { name: site.cta.label }).first(); await l.hover(); return l; } },
+  { page: "/", width: 1440, name: "nav-link-hover", act: async (p) => { const l = p.getByRole("navigation").getByRole("link", { name: (site.nav.find((item) => item.href !== "/" && !item.href.includes("#")) ?? site.nav[1]).label }).first(); await l.hover(); return l; } },
+  { page: "/", width: 1440, name: "footer-link-hover", act: async (p) => { const l = p.getByRole("contentinfo").getByRole("link", { name: site.footer.quickLinks[1].label }); await l.hover(); return l; } },
+  { page: site.links.blog, width: 1440, name: "card-hover", act: async (p) => { const l = p.getByRole("main").locator("a:has(img[alt]:not([alt='']))").first(); await l.hover(); return l; } },
   { page: form, width: 1440, name: "field-focus", act: async (p) => { const l = p.getByRole("textbox").first(); await l.focus(); return l; } },
   { page: form, width: 1440, name: "checkbox-checked", act: async (p) => { const l = p.locator("label:has(input[type=checkbox])").first(); await l.click(); return l; } },
   { page: faq, width: 1440, name: "faq-open", act: async (p) => { const b = faqToggle(p); await b.click(); return b.locator("xpath=ancestor::section[1]"); } },
@@ -144,7 +156,8 @@ const STATES = ({ post, form, faq }) => [
 
 async function captureStates(context, baseUrl, dir) {
   let count = 0;
-  for (const state of STATES({ post: firstPost(), form: pageWith("contact-form"), faq: pageWith("faq") })) {
+  const kit = await loadKit();
+  for (const state of STATES({ site: kit.site, post: firstPost(), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
     const name = `${state.page === "/" ? "home" : state.page.slice(1).replace(/\//g, "__")}@${state.width}--state-${state.name}`;
     await onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
@@ -159,23 +172,34 @@ async function captureStates(context, baseUrl, dir) {
       await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true, clip: { x: Math.max(0, box.x - pad), y: Math.max(0, box.y + scrollY - pad), width: box.width + 2 * pad, height: box.height + 2 * pad } });
     }));
     count++;
-    process.stdout.write(`${state.name} `);
+    say(`${state.name} `);
   }
   return count;
 }
 
-async function capture(label, baseUrl) {
+async function capture(label, baseUrl, { root = ROOT, baseline = null } = {}) {
+  const started = Date.now();
   const dir = path.join(OUT, label);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify({ scheme, motion, states }));
-  const pages = onlyPages.length ? onlyPages : motion ? motionPages() : listPages(ROOT);
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha } : {}) };
+  fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
+  const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : listPages(root);
   const { context, close } = await launch({ scheme, motion });
   let count = 0;
+  const finish = () => {
+    const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
+    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, meta };
+    // written last: its presence is the sign that the capture finished (the directory is wiped at the start)
+    fs.writeFileSync(path.join(dir, "capture.json"), JSON.stringify(summary, null, 1));
+    if (flags.json) console.log(JSON.stringify(summary, null, 1));
+    return summary;
+  };
   if (states) {
     count = await captureStates(context, baseUrl, dir);
     await close();
-    console.log(`\n${label}: ${count} state screenshots in .parity/visual/${label}`);
+    say(`\n${label}: ${count} state screenshots in .parity/visual/${label}\n`);
+    finish();
     return;
   }
   for (const pagePath of pages) {
@@ -201,10 +225,11 @@ async function capture(label, baseUrl) {
         return 2;
       }));
     }
-    process.stdout.write(`${pagePath} `);
+    say(`${pagePath} `);
   }
   await close();
-  console.log(`\n${label}: ${count} screenshots in .parity/visual/${label}`);
+  say(`\n${label}: ${count} screenshots in .parity/visual/${label}\n`);
+  finish();
 }
 
 // ---- compare ---------------------------------------------------------------
@@ -213,43 +238,33 @@ async function compare(before, after) {
   for (const [label, dir] of [[before, a], [after, b]]) if (!fs.existsSync(dir)) { console.error(`visual-parity compare: no capture ${label} under .parity/visual/ — run agentic-cms visual-parity capture ${label} first`); process.exit(2); }
   const meta = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")); } catch { return {}; } };
   if (meta(a).scheme !== meta(b).scheme) { console.error(`${before} was captured with --scheme ${meta(a).scheme ?? "?"} and ${after} with --scheme ${meta(b).scheme ?? "?"}: compare captures of one scheme`); process.exit(2); }
-  fs.rmSync(diffDir, { recursive: true, force: true });
-  fs.mkdirSync(diffDir, { recursive: true });
-  // with --pages the "after" capture is partial: judge only what it contains
-  const names = new Set([...(onlyPages.length ? [] : fs.readdirSync(a)), ...fs.readdirSync(b)].filter((f) => f.endsWith(".png") || f.endsWith(".animations.json")));
-  let failures = 0;
-  for (const name of [...names].sort()) {
-    const fa = path.join(a, name), fb = path.join(b, name);
-    if (!fs.existsSync(fa) || !fs.existsSync(fb)) { console.log(`MISSING  ${name} (${fs.existsSync(fa) ? "after" : "before"})`); failures++; continue; }
-    if (name.endsWith(".json")) {
-      const [ja, jb] = [fa, fb].map((f) => JSON.parse(fs.readFileSync(f, "utf8")));
-      const same = JSON.stringify(ja) === JSON.stringify(jb);
-      if (!same) { failures++; const ka = new Set(ja.map((r) => JSON.stringify(r))), kb = new Set(jb.map((r) => JSON.stringify(r))); fs.writeFileSync(path.join(diffDir, name), JSON.stringify({ onlyBefore: ja.filter((r) => !kb.has(JSON.stringify(r))), onlyAfter: jb.filter((r) => !ka.has(JSON.stringify(r))) }, null, 1)); }
-      console.log(`${same ? "ok      " : "CHANGED "} ${name.padEnd(70)} ${ja.length} -> ${jb.length} animations`);
-      continue;
-    }
-    const [ia, ib] = await Promise.all([sharp(fa).raw().toBuffer({ resolveWithObject: true }), sharp(fb).raw().toBuffer({ resolveWithObject: true })]);
-    if (ia.info.width !== ib.info.width || ia.info.height !== ib.info.height) { console.log(`SIZE     ${name} ${ia.info.width}x${ia.info.height} -> ${ib.info.width}x${ib.info.height}`); failures++; continue; }
-    const { width, height, channels } = ia.info;
-    const diff = Buffer.alloc(width * height * 3);
-    let changed = 0;
-    for (let i = 0, o = 0; i < ia.data.length; i += channels, o += 3) {
-      const d = Math.max(Math.abs(ia.data[i] - ib.data[i]), Math.abs(ia.data[i + 1] - ib.data[i + 1]), Math.abs(ia.data[i + 2] - ib.data[i + 2]));
-      if (d > 24) { changed++; diff[o] = 255; diff[o + 1] = 0; diff[o + 2] = 0; } else { diff[o] = ia.data[i] >> 2; diff[o + 1] = ia.data[i + 1] >> 2; diff[o + 2] = ia.data[i + 2] >> 2; }
-    }
-    const pct = (100 * changed) / (width * height);
-    const midFlight = /--s\d+-(150|500)\.png$/.test(name);
-    const ok = pct <= (midFlight ? thresholdMid : threshold);
-    if (!ok) { failures++; await sharp(diff, { raw: { width, height, channels: 3 } }).png().toFile(path.join(diffDir, name)); }
-    console.log(`${ok ? "ok      " : "CHANGED "} ${name.padEnd(70)} ${pct.toFixed(3)}% (${changed} px)${midFlight ? "  mid-flight" : ""}`);
-  }
-  console.log(failures ? `\n${failures} image(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
-  process.exit(failures ? 1 : 0);
+  const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages });
+  const out = flags.json ? console.error : console.log;
+  if (report.baseline) out(`baseline: ${report.baseline.ref ?? ""} ${report.baseline.sha ?? ""}`.trim());
+  for (const file of report.files) out(file.line);
+  const failures = report.files.length - report.summary.ok;
+  out(failures ? `\n${failures} file(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
+  fs.writeFileSync(path.join(diffDir, "report.json"), JSON.stringify(report, null, 1));
+  if (flags.json) console.log(JSON.stringify(report, null, 1));
+  process.exit(report.summary.exit);
 }
 
 if (subcommand === "capture") {
-  const server = flags.url ? null : await serveStatic({ root: ROOT });
-  try { await capture(labels[0], flags.url || server.url); } finally { server?.close(); }
+  let root = ROOT;
+  let baseline = null;
+  if (flags.build) {
+    fs.mkdirSync(path.join(ROOT, ".parity"), { recursive: true });
+    const log = path.join(ROOT, ".parity", `${labels[0]}.build.log`);
+    say(`building (log: .parity/${labels[0]}.build.log)\n`);
+    const build = spawnSync("pnpm", ["build"], { cwd: ROOT, stdio: ["ignore", fs.openSync(log, "w"), fs.openSync(log, "a")], shell: process.platform === "win32" });
+    if (build.status !== 0) { console.error(`visual-parity capture: the build failed — the last lines of .parity/${labels[0]}.build.log:\n${fs.readFileSync(log, "utf8").trim().split("\n").slice(-20).join("\n")}`); process.exit(1); }
+  }
+  if (flags.ref) {
+    const exec = (command, args, options) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], shell: process.platform === "win32", ...options });
+    try { ({ dir: root, ...baseline } = buildRef(flags.ref, { root: ROOT, exec, exists: fs.existsSync, rm: (p) => fs.rmSync(p, { recursive: true, force: true }), log: (line) => console.error(line) })); baseline.ref = flags.ref; } catch (error) { console.error(`visual-parity capture: ${error.message}`); process.exit(2); }
+  }
+  const server = flags.url ? null : await serveStatic({ root });
+  try { await capture(labels[0], flags.url || server.url, { root, baseline }); } finally { server?.close(); }
 } else {
   await compare(labels[0], labels[1]);
 }
