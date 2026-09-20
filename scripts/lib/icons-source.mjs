@@ -32,7 +32,7 @@ export function toPathD(tag, a) {
   }
 }
 
-const attrs = (tag) => Object.fromEntries([...tag.matchAll(/([a-zA-Z:-]+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
+const attrs = (tag) => Object.fromEntries([...tag.matchAll(/([a-zA-Z0-9:-]+)="([^"]*)"/g)].map((m) => [m[1], m[2]]));
 
 /** An icon file's shapes as the kit's IconData: stroke paths for a line set, one fill path for a mark set. */
 export function parseIcon(svg, set) {

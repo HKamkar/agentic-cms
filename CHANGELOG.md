@@ -4,6 +4,14 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `icons add`: a `<line>`'s attributes (`x1`, `y1`, `x2`, `y2`, digits in
+  their names) are read; they were skipped, so a Lucide icon drawn with
+  lines (`server`, `terminal`'s siblings) got `NaN` paths, two console
+  errors and missing strokes. Re-run `icons add <id>` for such an icon to
+  regenerate the map.
+
 ## [0.4.2] — 2026-09-20
 
 - `seo`: the page's `<title>` is counted in `<head>` only; an inline

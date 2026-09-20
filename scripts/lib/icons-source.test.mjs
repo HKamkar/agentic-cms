@@ -20,6 +20,9 @@ test("toPathD turns the shapes an icon set uses into path data", () => {
 test("parseIcon reads a Lucide file into stroke paths and a Simple Icons file into one fill path", () => {
   const lucide = `<!-- @license lucide-static v1.47.0 - ISC -->\n<svg class="lucide lucide-database" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">\n  <ellipse cx="12" cy="5" rx="9" ry="3" />\n  <path d="M3 5V19A9 3 0 0 0 21 19V5" />\n</svg>\n`;
   assert.deepEqual(parseIcon(lucide, "lucide"), { kind: "stroke", d: ["M3 5a9 3 0 1 0 18 0a9 3 0 1 0-18 0", "M3 5V19A9 3 0 0 0 21 19V5"] });
+  // a <line>'s attributes carry digits in their names (x1, y2): they must be read, not skipped into NaN (0.4.3)
+  const server = `<svg viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /><line x1="6" x2="6.01" y1="6" y2="6" /></svg>`;
+  assert.deepEqual(parseIcon(server, "lucide"), { kind: "stroke", d: ["M4 2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z", "M6 6L6.01 6"] });
   const si = `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>NVIDIA</title><path d="M8.948 8.798v-1.43z"/></svg>`;
   assert.deepEqual(parseIcon(si, "si"), { kind: "fill", d: "M8.948 8.798v-1.43z", title: "NVIDIA" });
 });
