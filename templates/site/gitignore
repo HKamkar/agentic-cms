@@ -1,0 +1,27 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# env files
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# captures, shots and sheets of the kit's commands
+.parity/
+
+# personal agent settings and notes
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/worktrees/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

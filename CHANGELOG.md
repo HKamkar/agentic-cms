@@ -6,6 +6,20 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- Design works by default: four skills committed in the repo —
+  `.claude/skills/` for Claude Code and `.agents/skills/` for Codex,
+  identical (`pnpm skills:sync`), found from a checkout with nothing
+  installed — `design` (the loop from the wireframe to a look), `design-options`
+  (candidates the owner picks by row), `design-measure` (a screenshot claim
+  into numbers), `design-proof` (the pixel proof before a merge); a `design`
+  rule for `src/`; `docs/design.md`, `docs/skills.md`.
+- `agentic-cms init [dir]`: a site from the package — the wireframe
+  example, a site's `AGENTS.md`, rules and the skills, the config
+  (`package.json` merged, never overwritten), a manifest of the agent files;
+  `init --agent-files` refreshes the rules and skills after a kit upgrade
+  keeping the site's own edits, `--check` reports drift for CI. The package
+  now ships the example, the templates, the skills and `docs/` (`files`);
+  the pack smoke lays its scratch site out with `init`. `docs/init.md`.
 - `visual-parity compare` on two pages of different heights no longer stops
   at `SIZE`: it compares row by row from the top and the bottom and reports
   the first differing row, the intact tail, the band that changed on each

@@ -10,6 +10,12 @@ rules for an agent working on the code.
 - [shot-probe-sheet.md](shot-probe-sheet.md) — one command instead of a
   script: a picture of a section with its box, the numbers behind a
   screenshot claim, a sheet of candidates to pick from.
+- [design.md](design.md) — designing on the kit: what works by default,
+  the loop, measure-don't-guess, what stays out of the kit.
+- [skills.md](skills.md) — the design skills: when each applies, what it
+  leans on, how a site keeps them current.
+- [init.md](init.md) — starting a site with `agentic-cms init`, what it
+  writes, what comes next, what to do after a kit upgrade.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.
 
 The engines' contracts live next to their code and ship with the package:
