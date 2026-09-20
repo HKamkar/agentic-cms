@@ -6,6 +6,8 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `shot` and `probe` take `--heading` and `--select` together: the
+  selector is searched inside the section that holds the heading.
 - `init --agent-files` on a site that wrote its own rules before any
   manifest existed keeps them (they read as `modified`, the site's), where
   0.4.0 took them for stale and overwrote them; `--force` takes the kit's.
