@@ -1,5 +1,8 @@
 # Roadmap — 0.4.0: agentic-cms for agents
 
+> Landed 2026-09-20: the six jobs below are pull requests #13–#18 into
+> `develop`, released as 0.4.0. What comes after is under "Later".
+
 The kit's main user is an AI agent designing and maintaining a site built on
 it. Two days of design work on a site that installs the package showed what
 such an agent lacks: it hand-rolled some forty-five Playwright and sharp

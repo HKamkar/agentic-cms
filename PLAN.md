@@ -310,12 +310,26 @@ add HKamkar/agentic-cms --ref feat/codex-plugin && codex plugin add
 editorial@agentic-cms` resolved the marketplace and installed the plugin at
 `~/.codex/plugins/cache/agentic-cms/editorial/0.1.0+codex.<stamp>`.
 
-## Roadmap
+## Phase 10 — 0.4.0, the kit as an agent's design toolbox (implemented 2026-09-20)
 
-What comes next is `docs/roadmap.md`: 0.4.0, the kit as an agent's design
-toolbox — the harness that answers with rows and JSON, `shot`, `probe` and
-`sheet`, the skills that work from a checkout with nothing installed, `init`,
-the e-mail guard and the icon commands; one pull request per job, one release.
+`docs/roadmap.md` is the plan and the record; six pull requests into
+`develop` (#13–#18), one release. The command line's contract became one
+spec per command (`scripts/lib/specs.mjs`: strict flags, `--help`,
+`docs/commands.md` generated and checked), the harness's browser code a
+library the one-shot commands share (`shot`, `probe`, `sheet`), the compare
+learned to read two pages of different heights row by row (`shift`,
+`insert`, `remove`, `reflow`), a capture to build its own baseline
+(`--ref`), wait for a section's `data-settle` and say when it finished
+(`capture.json`). Design works by default: four skills committed for
+Claude Code and Codex (`design`, `design-options`, `design-measure`,
+`design-proof`, then `design-icons`), a site's agent files as templates,
+and `agentic-cms init` to lay a site out from the package with them. The
+e-mail guard (`agentic-cms/email`, `EmailLink`, `withEmailToken`,
+`guard-email`) and the icon commands (`Icon`, `icons add|remove|family|audit`)
+moved what a site had hand-rolled into the kit, with the kit shipping no
+icon data. CI (`verify.yml`), `CHANGELOG.md`, `tools/hygiene.mjs` and `docs/`
+arrived with the first job. The version stayed 0.3.3 on `develop` until
+the release commit.
 
 ## Verification recipe
 

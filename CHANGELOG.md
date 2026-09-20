@@ -4,7 +4,9 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.4.0] — 2026-09-20
+
+The kit as an agent's design toolbox: six jobs, one release (`docs/roadmap.md`).
 
 - Icons as families: `Icon` in `agentic-cms/components` (path data on the
   24 grid in the current colour, stroke or fill); `agentic-cms icons add |
