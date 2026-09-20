@@ -299,6 +299,7 @@ pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-sv
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
+pnpm kit icons <add|remove|family|audit>   # a site's icon map from Lucide and Simple Icons, a family of marks from primitives, the inventory
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```
 
