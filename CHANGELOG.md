@@ -4,6 +4,13 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `seo`: the page's `<title>` is counted in `<head>` only; an inline
+  `<svg>` with a `<title>` (a named icon) no longer fails a page for having
+  several. The icon family's spec is documented under `src/config/`, not
+  `content/` (whose folders the content lint reads as collections).
+
 ## [0.4.1] — 2026-09-20
 
 - `shot` and `probe` take `--heading` and `--select` together: the
