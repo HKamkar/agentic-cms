@@ -13,13 +13,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
 const DIR = "public/images";
 const DATA_URI = /data:image\/(?:png|webp);base64,([A-Za-z0-9+/=]+)/g;
-const args = process.argv.slice(2);
-const lossy = args.includes("--lossy");
-const dryRun = args.includes("--dry-run");
-const files = args.filter((a) => !a.startsWith("--"));
+const { positionals: files, flags } = parseOrExit(SPECS["optimize-svg-rasters"], process.argv.slice(2));
+const { lossy, "dry-run": dryRun } = flags;
 
 const kb = (n) => `${(n / 1024).toFixed(0)}KB`;
 

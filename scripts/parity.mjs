@@ -17,12 +17,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
 
-const label = process.argv[2];
-if (!label) {
-  console.error("usage: parity <label>");
-  process.exit(2);
-}
+const [label] = parseOrExit(SPECS.parity, process.argv.slice(2)).positionals;
 const root = process.cwd();
 const app = path.join(root, ".next/server/app");
 const out = path.join(root, ".parity", label);

@@ -19,6 +19,10 @@ import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { parseOrExit } from "./lib/args.mjs";
+import { SPECS } from "./lib/specs.mjs";
+
+const { strict, report } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
 
 const { kit } = await import("@/kit");
 const { site } = kit;
@@ -26,8 +30,6 @@ const ROOT = process.cwd();
 const APP = path.join(ROOT, ".next/server/app");
 const PUBLIC = path.join(ROOT, "public");
 const SITE_URL = site.url;
-const strict = process.argv.includes("--strict");
-const report = process.argv.includes("--report");
 
 const LIMITS = {
   title: { warnMax: 60, failMax: 70 },
