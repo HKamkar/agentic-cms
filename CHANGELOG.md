@@ -6,6 +6,14 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- The e-mail guard: `agentic-cms/email` (`encodeEmail`, `decodeEmail`,
+  `isEmailToken`, `readableEmail` — a token that never carries the address
+  as text), `EmailLink` in `agentic-cms/components` (the readable form
+  until hydration, a `mailto:` link after), `withEmailToken` in
+  `agentic-cms/forms` (a mailto form's recipient as a token; the backend
+  resolves it at submit), and `agentic-cms guard-email` (fails a build
+  whose served files carry an address at the site's domain as text). A
+  site opts in; `docs/email.md` says how.
 - Design works by default: four skills committed in the repo —
   `.claude/skills/` for Claude Code and `.agents/skills/` for Codex,
   identical (`pnpm skills:sync`), found from a checkout with nothing

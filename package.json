@@ -28,6 +28,10 @@
       "types": "./dist/forms/index.d.ts",
       "default": "./dist/forms/index.js"
     },
+    "./email": {
+      "types": "./dist/email.d.ts",
+      "default": "./dist/email.js"
+    },
     "./ix": {
       "types": "./dist/ix/index.d.ts",
       "default": "./dist/ix/index.js"

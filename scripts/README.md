@@ -106,6 +106,12 @@ against `fixtures/` by `pnpm test:browser`.
   lettered and cells numbered at the real size and background, to one
   picture. `docs/shot-probe-sheet.md` has the recipes; `lib/page-command.mjs`
   and `lib/sheet.mjs` are their shared parts.
+- `guard-email` — `pnpm kit guard-email [--domain <host>]… [--json]`
+  scans every served file of the build (pages, RSC payloads, the `.body`
+  routes, the static chunks) for an address at the site's domain (the host
+  of `site.url`) and exits 1 naming each file; the last step of a build on
+  a site that renders its address through `EmailLink` and tokens
+  (`docs/email.md`).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen
