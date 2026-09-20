@@ -7,6 +7,9 @@ rules for an agent working on the code.
   its exit codes, the JSON it prints (generated from the specs).
 - [visual-parity.md](visual-parity.md) — the screenshot harness: what a
   capture contains, how to read a compare, the traps a long run meets.
+- [shot-probe-sheet.md](shot-probe-sheet.md) — one command instead of a
+  script: a picture of a section with its box, the numbers behind a
+  screenshot claim, a sheet of candidates to pick from.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.
 
 The engines' contracts live next to their code and ship with the package:

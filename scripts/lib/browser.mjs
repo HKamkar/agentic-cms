@@ -185,3 +185,77 @@ export async function withPage(context, width, url, shoot, { height = 900 } = {}
     return await shoot(page);
   } finally { await page.close(); }
 }
+
+// ---- the one-shot commands' helpers (shot, probe, sheet) -------------------------
+/** A route of the build ("/about") against a base, or a URL as it is. */
+export function resolveTarget(target, { base }) {
+  if (/^https?:\/\//.test(target)) return target;
+  if (!target.startsWith("/")) throw new Error(`${target}: a target is a route of the build (/about) or a URL (http://…)`);
+  return base.replace(/\/$/, "") + target;
+}
+
+/** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through), or the motion one (images, loops held). */
+export async function prepare(page, { motion = false } = {}) {
+  await fontsReady(page);
+  await page.addStyleTag({ content: NO_ANCHORING_CSS });
+  if (motion) {
+    await imagesReady(page);
+    await page.waitForTimeout(600);
+    await page.evaluate(PAUSE_LOOPS);
+    return;
+  }
+  await page.addStyleTag({ content: FREEZE_CSS });
+  await revealed(page);
+  await settle(page);
+}
+
+/** The elements a command works on (a command takes .nth(index) or all): the matches of a selector, or the sections (article, [data-section]) holding the headings that match a regex. */
+export function findTarget(page, { select, heading }) {
+  if (select) return page.locator(select);
+  if (heading) return page.locator("h1, h2, h3, h4").filter({ hasText: new RegExp(heading, "i") }).locator("xpath=ancestor-or-self::*[self::section or self::article or @data-section][1]");
+  return null;
+}
+
+/** Collects console errors and warnings and page errors from now on; the returned function reads them. */
+export function collectConsole(page) {
+  const lines = [];
+  page.on("console", (message) => { if (["error", "warning"].includes(message.type())) lines.push({ type: message.type(), text: message.text() }); });
+  page.on("pageerror", (error) => lines.push({ type: "pageerror", text: String(error.message ?? error) }));
+  return () => lines;
+}
+
+/** In the page: keeps only the element and its ancestors visible, clears their backgrounds, so a shot with omitBackground shows the element alone. */
+export const ISOLATE = (el) => {
+  const keep = new Set();
+  for (let e = el; e; e = e.parentElement) keep.add(e);
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    for (const child of e.children) if (!keep.has(child)) child.style.setProperty("visibility", "hidden", "important");
+    e.style.setProperty("background", "transparent", "important");
+    e.style.setProperty("box-shadow", "none", "important");
+  }
+};
+
+/** The chain of stacking contexts above an element, nearest first, with the property that creates each (in-page function). */
+export const STACKING = (el) => {
+  const why = (e) => {
+    const s = getComputedStyle(e);
+    if (e === document.documentElement) return "root";
+    if (s.position !== "static" && s.zIndex !== "auto") return `position: ${s.position}; z-index: ${s.zIndex}`;
+    if (s.position === "fixed" || s.position === "sticky") return `position: ${s.position}`;
+    if (Number(s.opacity) < 1) return `opacity: ${s.opacity}`;
+    if (s.transform !== "none") return `transform: ${s.transform}`;
+    if (s.filter !== "none") return `filter: ${s.filter}`;
+    if (s.backdropFilter && s.backdropFilter !== "none") return `backdrop-filter: ${s.backdropFilter}`;
+    if (s.isolation === "isolate") return "isolation: isolate";
+    if (s.mixBlendMode !== "normal") return `mix-blend-mode: ${s.mixBlendMode}`;
+    if (/transform|opacity|filter/.test(s.willChange)) return `will-change: ${s.willChange}`;
+    if (/layout|paint|strict|content/.test(s.contain)) return `contain: ${s.contain}`;
+    return null;
+  };
+  const chain = [];
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    const reason = why(e);
+    if (reason) chain.push({ tag: e.tagName.toLowerCase(), id: e.id || null, classes: [...e.classList], reason });
+  }
+  return chain;
+};

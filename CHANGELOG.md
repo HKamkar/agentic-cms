@@ -6,6 +6,23 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `agentic-cms shot <route|url>`: one screenshot of a page or of an element
+  (`--select`, or `--heading` for the section holding a heading), prepared
+  like the harness prepares a page, at any width, scale and scheme, cropped
+  with a margin, isolated on a transparent ground (`--transparent`),
+  trimmed, resized, as PNG or WebP; `--json` prints the element's box.
+- `agentic-cms probe <route|url>`: the numbers behind a screenshot claim,
+  as JSON — an element's box, computed styles and the chain of stacking
+  contexts above it (with the property that creates each), a timeline of
+  its opacity, transform and position under `--motion`, the reveals still
+  pending on the page, the console's errors.
+- `agentic-cms sheet <spec>`: a candidate sheet from a YAML or JSON spec —
+  rows lettered, cells numbered, each candidate (a file, inline SVG, markup
+  or a served image) at the real size on the real background, the site's
+  stylesheets linked — rendered to one picture for a pick by row.
+- `scripts/lib/browser.mjs` gains the helpers the three share (a target by
+  selector or heading, the harness's preparation, console collection,
+  isolation, the stacking chain); `docs/shot-probe-sheet.md` has the recipes.
 - The command line is strict: an unknown flag is an error that names the fix
   (`run agentic-cms <command> --help`) instead of being ignored; every
   command has `--help`, with its flags, defaults and exit codes generated

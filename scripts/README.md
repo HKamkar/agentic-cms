@@ -96,6 +96,16 @@ against `fixtures/` by `pnpm test:browser`.
   JavaScript); every command loads `src/kit.ts` through it, and `pnpm test`
   (`src/**/*.test.ts` and `scripts/**/*.test.mjs`) uses it. No `.tsx`.
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
+- `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
+  --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one
+  screenshot of a page or an element with its box; `pnpm kit probe
+  <route|url> --select <css> | --heading <regex> [--all] [--motion
+  --timeline <ms>]` prints the numbers behind a screenshot claim (box,
+  computed styles, stacking contexts, a timeline, the pending reveals, the
+  console) as JSON; `pnpm kit sheet <spec.yaml>` renders candidates, rows
+  lettered and cells numbered at the real size and background, to one
+  picture. `docs/shot-probe-sheet.md` has the recipes; `lib/page-command.mjs`
+  and `lib/sheet.mjs` are their shared parts.
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen
