@@ -42,7 +42,7 @@ drawn in the language of a reference mark the site keeps, and generated
 from primitives so a new mark is a composition, never a new drawing style:
 
 ```yaml
-# content/icons/family.yaml
+# src/config/icon-family.yaml   (not under content/: the content lint reads every folder there as a collection)
 grid: 64
 gradients:
   warm:  { x2: 1, y2: 0, stops: [["0", "#E8734A"], [".5", "#F3B27A"], ["1", "#E8734A"]] }
@@ -59,8 +59,8 @@ marks:
 ```
 
 ```bash
-pnpm kit icons family content/icons/family.yaml            # writes every out file
-pnpm kit icons family content/icons/family.yaml --check    # exit 1 when a file on disk differs
+pnpm kit icons family src/config/icon-family.yaml            # writes every out file
+pnpm kit icons family src/config/icon-family.yaml --check    # exit 1 when a file on disk differs
 ```
 
 The primitives, on the grid: `tile(x, y, w, h, rx=5, grad, rot, cx, cy)`,

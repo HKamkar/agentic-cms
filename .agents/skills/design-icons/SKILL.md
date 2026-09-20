@@ -38,9 +38,9 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
      for the whole set; a trademark stays its owner's.
    - **The site's own marks** beside copy (a benefit, a conviction, a
      reason): one family generated from primitives in the language of the
-     site's reference mark — a spec (`content/icons/family.yaml`: the
-     gradients, the default paint, the ring, one entry per mark with its
-     parts) and `pnpm kit icons family <spec>`; a new mark is a composition
+     site's reference mark — a spec (`src/config/icon-family.yaml` — not under `content/`, whose
+     folders the lint reads as collections: the gradients, the default
+     paint, the ring, one entry per mark with its parts) and `pnpm kit icons family <spec>`; a new mark is a composition
      in the spec, never a new drawing style. Solid shapes at the sizes the
      marks render at: thin strokes below about 40 px do not survive.
    - Every icon means the copy it sits beside; a glyph that says
@@ -62,7 +62,7 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build
-pnpm kit icons family content/icons/family.yaml --check   # when the site has a family
+pnpm kit icons family src/config/icon-family.yaml --check   # when the site has a family
 pnpm kit icons audit --json                               # the class, covered
 ```
 

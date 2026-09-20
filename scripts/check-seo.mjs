@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { parseOrExit } from "./lib/args.mjs";
+import { pageTitles } from "./lib/head.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { strict, report } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
@@ -85,7 +86,7 @@ async function checkPage({ route, html }, ctx) {
 }
 
 function checkTitle(route, html, notFound, ctx) {
-  const titles = [...html.matchAll(/<title>([^<]*)<\/title>/g)].map((m) => decode(m[1]));
+  const titles = pageTitles(html).map(decode);
   if (titles.length !== 1) return fail(route, "title", titles.length ? `${titles.length} <title> tags` : "missing");
   const title = titles[0];
   if (!title.trim()) fail(route, "title", "empty");
