@@ -330,7 +330,7 @@ src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, 
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
-PLAN.md                      how the engine was built, condensed
+PLAN.md                      how the engine was built, condensed     docs/roadmap.md   what 0.4.0 adds for agents, job by job
 ```
 
 MIT licensed.

@@ -310,6 +310,13 @@ add HKamkar/agentic-cms --ref feat/codex-plugin && codex plugin add
 editorial@agentic-cms` resolved the marketplace and installed the plugin at
 `~/.codex/plugins/cache/agentic-cms/editorial/0.1.0+codex.<stamp>`.
 
+## Roadmap
+
+What comes next is `docs/roadmap.md`: 0.4.0, the kit as an agent's design
+toolbox — the harness that answers with rows and JSON, `shot`, `probe` and
+`sheet`, the skills that work from a checkout with nothing installed, `init`,
+the e-mail guard and the icon commands; one pull request per job, one release.
+
 ## Verification recipe
 
 ```bash
