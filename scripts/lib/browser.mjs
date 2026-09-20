@@ -209,11 +209,11 @@ export async function prepare(page, { motion = false } = {}) {
   await settle(page);
 }
 
-/** The elements a command works on (a command takes .nth(index) or all): the matches of a selector, or the sections (article, [data-section]) holding the headings that match a regex. */
+/** The elements a command works on (a command takes .nth(index) or all): the matches of a selector, the sections (article, [data-section]) holding the headings that match a regex, or — with both — the selector's matches inside that section. */
 export function findTarget(page, { select, heading }) {
-  if (select) return page.locator(select);
-  if (heading) return page.locator("h1, h2, h3, h4").filter({ hasText: new RegExp(heading, "i") }).locator("xpath=ancestor-or-self::*[self::section or self::article or @data-section][1]");
-  return null;
+  const section = heading ? page.locator("h1, h2, h3, h4").filter({ hasText: new RegExp(heading, "i") }).locator("xpath=ancestor-or-self::*[self::section or self::article or @data-section][1]") : null;
+  if (select) return section ? section.first().locator(select) : page.locator(select);
+  return section;
 }
 
 /** Collects console errors and warnings and page errors from now on; the returned function reads them. */

@@ -7,7 +7,7 @@ it lay the site out:
 ```bash
 mkdir my-site && cd my-site
 pnpm init                                                        # a package.json to add to
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.4.0           # the engine (allowBuilds below, first)
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.4.1           # the engine (allowBuilds below, first)
 pnpm exec agentic-cms init .                                     # the site
 pnpm install && pnpm dev
 ```

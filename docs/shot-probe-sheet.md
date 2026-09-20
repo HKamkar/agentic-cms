@@ -28,8 +28,10 @@ pnpm kit shot / --select ".card" --index 2 --pad 0 --out out/card.webp
 
 - `--heading <regex>` photographs the section (or article, or any
   `[data-section]`) that holds the first heading matching the pattern;
-  `--select <css>` the first match of a selector (`--index` for another).
-  The crop keeps `--pad` px around the element's box.
+  `--select <css>` the first match of a selector (`--index` for another);
+  both together the selector's match inside that section (`--heading "fits
+  the stack" --select ".stack-row"`). The crop keeps `--pad` px around the
+  element's box.
 - `--transparent` isolates the element: everything that is neither its
   ancestor nor its descendant is hidden and the ancestors' backgrounds are
   cleared, so the picture is the element alone on a transparent ground. With
@@ -38,7 +40,7 @@ pnpm kit shot / --select ".card" --index 2 --pad 0 --out out/card.webp
   desktop renders live, say — in one line:
 
   ```bash
-  pnpm kit shot / --url http://localhost:8000 --heading "fits the stack" --select ".stack-row" --scale 2 --transparent --trim --resize 1305 --out public/images/home/stack-phone.webp
+  pnpm kit shot / --url http://localhost:8000 --heading "fits the stack" --select ".stack-row" --scale 2 --pad 4 --transparent --trim --resize 1305 --out public/images/home/stack-phone.webp
   ```
 
 - `--json` prints the element's box on the viewport and on the page, the

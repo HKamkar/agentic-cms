@@ -42,6 +42,19 @@ test("shot: a full page, then an element by heading on a transparent ground, tri
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("shot: --heading with --select photographs the selector's match inside that section", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    const out = json(root, ["shot", "/", "--heading", "fits the stack", "--select", "img", "--json"]);
+    assert.equal(out.target.by, "heading+select");
+    assert.equal(out.target.tag, "img");
+    assert.equal(out.target.box.width, 24, "the img inside the second section, not the 64 px one in the hero");
+    const r = run(root, ["shot", "/", "--heading", "the end", "--select", "img"]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /img inside the section of \/the end\/: no element matches/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("shot: a target that is not on the page exits 1 and says so", { skip }, () => {
   const root = fixtureSite();
   try {

@@ -33,13 +33,13 @@ export async function openTarget(target, flags) {
 }
 
 /** The "by" and "value" of a target, for the JSON and the file name. */
-export const targetOf = (flags) => (flags.select ? { by: "select", value: flags.select } : flags.heading ? { by: "heading", value: flags.heading } : null);
+export const targetOf = (flags) => (flags.select && flags.heading ? { by: "heading+select", value: `${flags.heading} > ${flags.select}` } : flags.select ? { by: "select", value: flags.select } : flags.heading ? { by: "heading", value: flags.heading } : null);
 
 /** Exits 1 naming the selector or heading when nothing matched. */
 export async function requireMatch(locator, flags, route) {
   const count = await locator.count();
   if (count > flags.index) return count;
-  const what = flags.select ?? `a heading matching /${flags.heading}/`;
+  const what = flags.select && flags.heading ? `${flags.select} inside the section of /${flags.heading}/` : flags.select ?? `a heading matching /${flags.heading}/`;
   console.error(`${what}: no element matches on ${route}${count ? ` (only ${count} match${count === 1 ? "" : "es"}; --index ${flags.index} is out of range)` : ""}`);
   process.exit(1);
 }
