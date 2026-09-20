@@ -291,14 +291,16 @@ pnpm content:lint    # the content rules, about a second
 pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
+pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```
 
 Every command's flags, defaults and exit codes are in
 [docs/commands.md](docs/commands.md) (generated from the specs the parser
 reads, so it is the contract); the screenshot harness has its own guide,
-[docs/visual-parity.md](docs/visual-parity.md); [docs/](docs/README.md) is
-the index.
+[docs/visual-parity.md](docs/visual-parity.md), and the one-shot page
+commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
+[docs/](docs/README.md) is the index.
 
 - Node 22.18+ (`.nvmrc` says 26) and pnpm. The build fetches nothing: no
   webfont, no external data.
@@ -340,7 +342,7 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action
 bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md (the command line's contract), visual-parity.md (the harness), roadmap.md (0.4.0)
+docs/                        the guides: commands.md (the command line's contract), visual-parity.md (the harness), shot-probe-sheet.md, roadmap.md (0.4.0)
 ```
 
 MIT licensed.
