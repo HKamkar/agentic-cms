@@ -112,6 +112,13 @@ against `fixtures/` by `pnpm test:browser`.
   of `site.url`) and exits 1 naming each file; the last step of a build on
   a site that renders its address through `EmailLink` and tokens
   (`docs/email.md`).
+- `icons` — `pnpm kit icons add|remove <id>…` keeps the site's icon
+  manifest and generates `src/config/icons.ts` from `lucide-static` and
+  `simple-icons` (installed by the site; the kit ships no icon data);
+  `icons family <spec>` renders a family of marks from primitives;
+  `icons audit` inventories every icon on the built pages beside its copy,
+  as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
+  `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen

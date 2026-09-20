@@ -213,6 +213,18 @@ A page's OG image sits at the top level, named for its route with hyphens:
 it is, never with an export hash, and grep `src` for every user before moving
 one.
 
+**Icons come in families, not drawings.** A site has three kinds and one
+family per kind: line icons for the chrome and the cards' glyphs (Lucide,
+through `pnpm kit icons add lucide:<name>`, one stroke width), other
+companies' marks (Simple Icons, `si:<slug>`, one ink) and the site's own
+marks beside copy, generated from primitives in the language of a reference
+mark (`pnpm kit icons family <spec>`; a new mark is a composition in the
+spec, never a new drawing style). `pnpm kit icons audit` lists every icon on
+the built pages beside its copy; one template glyph is the whole class. The
+wireframe draws none of these — its `icon` fields are placeholder images —
+and a design names its families here (`docs/icons.md`).
+
+
 ## 5. Components
 
 The catalogue with props and examples is `src/components/README.md`; every new

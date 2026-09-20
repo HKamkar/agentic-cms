@@ -6,6 +6,16 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- Icons as families: `Icon` in `agentic-cms/components` (path data on the
+  24 grid in the current colour, stroke or fill); `agentic-cms icons add |
+  remove <id>…` keeps a site's manifest (`src/config/icons.json`) and
+  generates its map (`src/config/icons.ts`, each set's licence in the
+  header) from the sets the site installs — Lucide (`lucide:<name>`) and
+  Simple Icons (`si:<slug>`); the kit ships no icon data. `agentic-cms icons
+  family <spec>` renders a family of marks from primitives on one grid with
+  named gradients (`--check` for drift). `agentic-cms icons audit` lists
+  every icon on the built pages beside its copy, as JSON and a sheet. The
+  `design-icons` skill; `docs/icons.md`; `STANDARD.md` §4 on families.
 - The e-mail guard: `agentic-cms/email` (`encodeEmail`, `decodeEmail`,
   `isEmailToken`, `readableEmail` — a token that never carries the address
   as text), `EmailLink` in `agentic-cms/components` (the readable form

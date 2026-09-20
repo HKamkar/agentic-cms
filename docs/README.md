@@ -16,6 +16,8 @@ rules for an agent working on the code.
   leans on, how a site keeps them current.
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
   writes, what comes next, what to do after a kit upgrade.
+- [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
+  the site's own marks from primitives, the inventory of every icon.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.

@@ -21,6 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { fontsReady, imagesReady, launch } from "./browser.mjs";
 
 const KINDS = ["file", "svg", "html", "img"];
 
@@ -90,4 +91,22 @@ export function buildStylesheets(root) {
   const walk = (d) => { for (const f of fs.readdirSync(d)) { const full = path.join(d, f); if (fs.statSync(full).isDirectory()) walk(full); else if (f.endsWith(".css")) found.push("/_next/static/" + path.relative(dir, full).split(path.sep).join("/")); } };
   walk(dir);
   return found.sort();
+}
+
+/** Renders a spec to a picture: the sheet served at <base>/__sheet.html (so img: cells and the site's stylesheets resolve), a short viewport so the full-page shot is the sheet's own height; { file, width, height }. */
+export async function renderSheet(spec, { root = process.cwd(), base, out, scale = 2, scheme = "light", width = 1200, css } = {}) {
+  const html = sheetHtml(spec, { root, css: css ?? buildStylesheets(root) });
+  const { context, close } = await launch({ scheme, width, height: 200, scale });
+  try {
+    const page = await context.newPage();
+    await page.route(`${base}/__sheet.html`, (route) => route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html }));
+    await page.goto(`${base}/__sheet.html`, { waitUntil: "load" });
+    await fontsReady(page);
+    await imagesReady(page);
+    await page.waitForTimeout(200);
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    await page.screenshot({ path: out, fullPage: true });
+    const size = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
+    return { file: out, width: size.width * scale, height: size.height * scale };
+  } finally { await close(); }
 }

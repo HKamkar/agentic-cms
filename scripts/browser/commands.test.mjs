@@ -135,3 +135,21 @@ test("the bin lists the three commands and their help", () => {
   for (const name of ["shot", "probe", "sheet"]) assert.match(list, new RegExp(`^  ${name} `, "m"));
   assert.match(execFileSync(process.execPath, [BIN, "shot", "--help"], { encoding: "utf8" }), /--transparent/);
 });
+
+test("icons audit: every small img and inline svg on the pages, with the copy beside it, as JSON and a sheet", { skip }, async () => {
+  const root = fixtureSite();
+  try {
+    const out = json(root, ["icons", "audit", "--pages", "/", "--json"]);
+    assert.equal(out.count, 3, JSON.stringify(out.icons.map((i) => [i.kind, i.src, i.renderedWidth])));
+    const kinds = out.icons.map((i) => `${i.kind}:${i.src ?? "inline"}@${i.renderedWidth}`).sort();
+    assert.deepEqual(kinds, ["img:/images/mark.svg@24", "img:/images/mark.svg@64", "svg:inline@24"]);
+    const two = out.icons.find((i) => i.copy?.startsWith("two"));
+    assert.equal(two.section, "second");
+    assert.equal(two.heading, "Fits the stack");
+    assert.equal(out.files["/images/mark.svg"].uses, 2);
+    assert.equal(out.sheet, ".parity/icons/audit.png");
+    assert.ok(fs.existsSync(path.join(root, ".parity/icons/audit.png")) && fs.existsSync(path.join(root, ".parity/icons/audit.json")));
+    const meta = await sharp(path.join(root, ".parity/icons/audit.png")).metadata();
+    assert.equal(meta.width, 2400);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
