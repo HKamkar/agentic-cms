@@ -15,8 +15,9 @@ A checkout of this repo, or a site laid out by `agentic-cms init`, carries:
   (Codex), identical, auto-discovered from the checkout — no plugin, no
   install: `design` (the loop), `design-options` (candidates the owner picks
   from), `design-measure` (a screenshot claim turned into numbers),
-  `design-proof` (the pixel proof before a merge). [skills.md](skills.md)
-  says what each does.
+  `design-icons` (icons as families), `design-graphics` (the site's own
+  drawings, SVG in the lab, shipped pre-rendered), `design-proof` (the pixel
+  proof before a merge). [skills.md](skills.md) says what each does.
 - **The commands** every skill calls: `shot`, `probe`, `sheet`
   ([shot-probe-sheet.md](shot-probe-sheet.md)) and `visual-parity` with
   `--ref`, `--json` and a compare that says what moved

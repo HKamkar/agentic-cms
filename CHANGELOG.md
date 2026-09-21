@@ -29,6 +29,13 @@ changes what a capture writes says **recapture baselines**.
   the kind, its `viewBox` is kept off the 24 grid (`IconData.viewBox`,
   which `Icon` now applies), a group, transform, use, defs, style, mask or
   clipPath is refused with the fix.
+- The `design-graphics` skill: the site's own graphics — an icon beyond
+  the families, a mark, an illustration, a short 2D loop — drawn as SVG in
+  the lab, judged on the tokens in both schemes and on a phone, shipped
+  pre-rendered as the file a page embeds or as inline `Icon` data, the lab
+  removed after; named beside the other design skills in the rules, the
+  site template, `docs/skills.md`, `docs/design.md` and `STANDARD.md` §4.
+  `docs/roadmap.md` lists what comes after it (three.js scenes, `Graphic`).
 
 ## [0.4.3] — 2026-09-20
 

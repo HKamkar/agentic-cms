@@ -16,6 +16,7 @@ from the kit's marketplace.
 | `design-options` | the owner has to choose a look; "show me a few" | `pnpm kit sheet` for static candidates, a demo route on the dev server for live ones, the pick by row |
 | `design-measure` | a screenshot or a description of what a page looks like, before any layout, spacing, size, z-index or timing edit | `pnpm kit probe` (box, computed, stacking, reveals, timeline), `pnpm kit shot` |
 | `design-icons` | an icon that looks like a template, means nothing or breaks its family; a section, the chrome or a card set that needs icons | `pnpm kit icons audit` (the class), `icons add` (Lucide, Simple Icons), `icons family` (the site's marks from primitives), a sheet for the pick |
+| `design-graphics` | a drawing the icon family's primitives cannot say: an icon of the site's own, a mark, an illustration, a short 2D loop; "more graphical" | `pnpm kit lab new` / `serve` (the scene on the tokens, light and dark, on a phone), `lab render` (the file a page ships, its still beside a loop), `icons add file:` (inline `Icon` data), `lab clean` |
 | `design-proof` | before any merge that touches `src/`, styles or images; reading a compare | `pnpm kit visual-parity capture --ref`, `compare --json`, the verdicts |
 
 Each skill says what to read first, the steps, the verify block and where
