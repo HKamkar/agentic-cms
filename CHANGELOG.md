@@ -14,6 +14,15 @@ changes what a capture writes says **recapture baselines**.
   dark box and as an `<img>` on both grounds, with a scrubber over its SMIL
   and CSS animations, reloading on every save, on the LAN for a phone;
   `lab clean` removes it. `docs/lab.md`.
+- `lab render`: one scene to the file a page ships, by the extension of
+  `--out` — a `.svg` with the tokens resolved for one scheme (no browser
+  needed), a still `.webp`/`.png`/`.jpg` at `--at`, or with `--animate` one
+  cycle as an animated `.webp` (sharp, no ffmpeg) or a `.webm`/`.mp4`
+  (ffmpeg: a system build, else the VP8-only one in Playwright's cache).
+  The scene's clock is set frame by frame, so a render is deterministic; a
+  loop writes its still beside it and a raster its source scene. An
+  animated `<img>` never stops under reduced motion, so a loop ships as a
+  `<picture>` with that still — the doc has the markup.
 
 ## [0.4.3] — 2026-09-20
 

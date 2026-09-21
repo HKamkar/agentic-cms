@@ -39,6 +39,29 @@ export function chromePath() {
   try { const exe = playwright?.chromium.executablePath(); return exe && fs.existsSync(exe) ? exe : null; } catch { return null; }
 }
 
+// Playwright's browser cache also holds an ffmpeg build (for its video
+// recording): a small one — JPEG in, VP8 WebM out — that stands in for a
+// system ffmpeg when `lab render` writes a .webm and none is installed.
+const FFMPEG_EXECUTABLES = ["ffmpeg-linux", "ffmpeg-linux-arm64", "ffmpeg-mac", "ffmpeg-mac-arm64", "ffmpeg-win64.exe"];
+
+/** FFMPEG_PATH, else ffmpeg on PATH, else Playwright's bundled build: { file, bundled }; null when none exists. */
+export function ffmpegPath({ env = process.env, caches = CACHE_DIRS } = {}) {
+  if (env.FFMPEG_PATH) return { file: env.FFMPEG_PATH, bundled: false };
+  for (const dir of (env.PATH ?? "").split(path.delimiter).filter(Boolean)) {
+    const exe = ["ffmpeg", "ffmpeg.exe"].map((n) => path.join(dir, n)).find((f) => fs.existsSync(f));
+    if (exe) return { file: exe, bundled: false };
+  }
+  for (const cache of caches) {
+    if (!cache || !fs.existsSync(cache)) continue;
+    const builds = fs.readdirSync(cache).filter((d) => /^ffmpeg-\d+$/.test(d)).sort((a, b) => Number(b.slice(7)) - Number(a.slice(7)));
+    for (const build of builds) {
+      const exe = FFMPEG_EXECUTABLES.map((e) => path.join(cache, build, e)).find((e) => fs.existsSync(e));
+      if (exe) return { file: exe, bundled: true };
+    }
+  }
+  return null;
+}
+
 /** A browser and a context prepared for a capture: no sandbox, no font hinting, the scheme and the motion preference as asked. */
 export async function launch({ scheme = "light", motion = false, width = 1440, height = 900, scale = 1 } = {}) {
   const { chromium } = await requireBrowser();

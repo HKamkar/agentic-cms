@@ -143,3 +143,39 @@ export function parseSizes(text) {
     return n;
   });
 }
+
+const FORMATS = { ".svg": "svg", ".webp": "webp", ".png": "png", ".jpg": "jpg", ".jpeg": "jpg", ".webm": "webm", ".mp4": "mp4" };
+const RASTERS = ["webp", "png", "jpg", "webm", "mp4"];
+/** Whether a scene's text animates: a SMIL element, or a keyframes or animation declaration in its styles. */
+export const animates = (svg) => /<(animate|animateTransform|animateMotion|set)\b/.test(svg) || /@keyframes|\banimation(-[a-z-]+)?\s*:/.test(svg);
+
+/** What a render writes for --out and the flags: the format, whether it is a frame sequence and its times, the ground, the still and the source it writes beside the file. `duration` is the scene's, already resolved. */
+export function renderPlan(out, { at = 0, animate = false, frames = 0, fps = 30, background = "transparent", poster = true, source = true } = {}, { duration = 0, animated: sceneAnimates = false } = {}) {
+  const format = FORMATS[path.extname(out).toLowerCase()];
+  if (!format) throw new Error(`${path.extname(out) || "no extension"}: a render writes .svg, .webp, .png, .jpg, .webm or .mp4`);
+  if (!(fps > 0)) throw new Error(`--fps must be above 0, not ${fps}`);
+  const video = format === "webm" || format === "mp4";
+  const sequence = video || (format === "webp" && (animate || frames > 0));
+  const span = duration > 0 ? duration : 1;
+  const count = sequence ? (frames > 0 ? Math.round(frames) : Math.max(1, Math.round(span * fps))) : 1;
+  const times = Array.from({ length: count }, (_, i) => at + (sequence ? i / fps : 0));
+  const ground = format === "jpg" ? "paper" : background;
+  const base = out.replace(/\.[^.]+$/, "");
+  const still = poster && (sequence || (format === "svg" && sceneAnimates)) ? `${base}-still.${format === "svg" ? "svg" : "webp"}` : null;
+  return { format, sequence, video, times, fps, delay: Math.round(1000 / fps), background: ground, still, source: source && RASTERS.includes(format) ? `${base}.svg` : null };
+}
+
+/** The colour tokens as one scheme's values: light-dark() reduced to that side, var() chains followed, anything else verbatim. { colors: { "--color-ink": "#000000", … }, current, paper } */
+export function resolveTokenColors(tokens, scheme = "light") {
+  const side = scheme === "dark" ? 2 : 1;
+  const colors = {};
+  const resolve = (name, depth = 0) => {
+    const value = tokens[name];
+    if (value === undefined || depth > 8) return undefined;
+    const ref = value.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+    if (ref) return resolve(ref[1], depth + 1);
+    return value.replace(/light-dark\(\s*([^,()]+?)\s*,\s*([^()]+?)\s*\)/g, (m, light, dark) => (side === 2 ? dark : light)).trim();
+  };
+  for (const name of Object.keys(tokens)) if (name.startsWith("--color-")) { const v = resolve(name); if (v !== undefined) colors[name] = v; }
+  return { colors, current: colors["--color-ink"] ?? "currentColor", paper: colors["--color-paper"] ?? "#ffffff" };
+}

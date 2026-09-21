@@ -59,6 +59,68 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
 - No text that needs a font the reader may not have; no raster inside an
   SVG that a design tool exported (`optimize-svg-rasters` says why).
 
+## Render — what a page ships
+
+```bash
+pnpm kit lab render hero-mark --out public/images/home/hero-mark.svg              # the file, tokens resolved for the light scheme
+pnpm kit lab render hero-mark --out public/images/home/hero-mark.webp --scale 2   # a still, transparent, 2× for retina
+pnpm kit lab render spin --out public/images/home/spin.webp --animate --fps 12    # a loop as an animated WebP, no ffmpeg
+pnpm kit lab render hero --out public/images/home/hero.webm --animate --background paper   # a WebM through ffmpeg
+```
+
+The extension of `--out` picks the format; every render is deterministic —
+the scene's clock is set frame by frame, never read from the wall.
+
+| Graphic | Ship as | Runtime | Theme |
+|---|---|---|---|
+| a line icon used across pages | inline `Icon` data from the scene (`icons add file:<name>`) | none | follows the toggle |
+| an illustration, a diagram, a mark | `<img src="….svg">` — `--out x.svg`, the tokens resolved for one scheme | none | one scheme, so it must read on both grounds |
+| a short 2D loop, flat | the animated `.svg` as an `<img>` inside a `<picture>` with its still | none (the browser's image pipeline) | one scheme |
+| a loop that must be zero-compute, or is shaded | an animated `.webp` (`--animate`) in the same `<picture>` | none | one scheme |
+| a big hero loop | a `.webm` in `<video muted autoplay loop playsinline poster="…-still.webp">` | none | — |
+| an OG image | a static 1200×630 JPEG, as always | | |
+
+- **`.svg`** needs no browser: `currentColor` and `var(--color-*)` become
+  the hex of `--scheme` (read from the site's tokens), `light-dark()` keeps
+  that side, the animation is kept. Nothing inside an `<img>` follows the
+  site's theme toggle, so an asset that must follow it is `Icon` data.
+- **`.webp` / `.png` / `.jpg`** are a still at `--at` seconds, on a
+  transparent ground unless `--background paper` (a `.jpg` is always on
+  the paper), at the scene's width or `--width`, times `--scale`; WebP is
+  lossless like every placeholder, `--lossy` for a photograph-like one.
+- **`--animate`** renders one cycle — `data-duration`, else what the
+  animations declare, else `--duration` — at `--fps` as an **animated
+  WebP** (sharp; no ffmpeg) or, for `.webm` / `.mp4`, through **ffmpeg**:
+  a system build writes VP9 with alpha (and H.264 for `.mp4` when it has
+  `libx264`); without one, the small build in Playwright's cache
+  (`pnpm exec playwright-core install ffmpeg`) writes VP8 on the paper only,
+  and the command says so. `--frames` caps the count; `--reduced` renders
+  what a reduced-motion reader gets.
+- **Every loop writes its still beside it** (`<name>-still.webp`, or
+  `-still.svg` for an animated `.svg`) and every raster its **source**
+  (`<name>.svg`, the scene itself), unless `--no-poster` / `--no-source`;
+  reopen a shipped file with `lab serve --scenes public/images/<page>`.
+
+An animated file inside an `<img>` does not stop under
+`prefers-reduced-motion` — CSS and SMIL alike, the media query is not
+evaluated inside an image document — so a loop ships as a `<picture>` that
+picks the still for such a reader, with no script:
+
+```html
+<picture>
+  <source srcset="/images/home/spin.webp" type="image/webp" media="(prefers-reduced-motion: no-preference)">
+  <img src="/images/home/spin-still.webp" width="64" height="64" alt="" loading="lazy">
+</picture>
+```
+
+The inner `<img>` carries `width`, `height`, `alt` and `loading` like
+any other picture (the SEO audit reads it as one), and the parity harness,
+which captures under reduced motion, photographs the still. A `<video>`
+needs its `poster` and is never held still by the harness: re-run such a
+frame once, as a motion frame. The wireframe's own pages place none of this
+(`STANDARD.md` §7); on a site, a loop is a design change with its own
+commit and its own proof.
+
 ## Close
 
 ```bash

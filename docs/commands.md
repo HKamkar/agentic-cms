@@ -443,7 +443,7 @@ Exit: `0` written; `2` no build, or no browser.
 The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN; rendered to the files a page ships; removed when done.
 
 ```bash
-agentic-cms lab <new | serve | clean> …
+agentic-cms lab <new | serve | render | clean> …
 ```
 
 #### `lab new`
@@ -481,6 +481,40 @@ agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [-
 | `--sizes <px,px>` | the sizes an icon-sized scene (up to 96 px wide) is also shown at, inline and as an <img> (default `24,40,64`) |
 
 Exit: `0` stopped; `2` the port is taken, a --scenes path that does not exist, or usage.
+
+#### `lab render`
+
+Renders one scene to the file a page ships, by the extension of --out: .svg (the tokens resolved for one scheme, the animation kept), .webp/.png/.jpg (a still at --at), or with --animate a loop as an animated .webp (sharp, no ffmpeg), .webm or .mp4 (ffmpeg); a loop also writes its still beside it (the <picture> fallback, the poster) and a raster its source scene.
+
+```bash
+agentic-cms lab render <scene> --out <file> [--at 0] [--animate] [--frames <n>] [--fps 30] [--duration <s>] [--scale 1] [--width <px>] [--scheme light|dark] [--reduced] [--background transparent|paper] [--lossy] [--no-poster] [--no-source] [--scenes <file|dir>]… [--url <base>] [--json]
+```
+
+- `<scene>` — a scene: its name under .parity/lab, or its path without .svg under a --scenes file or folder
+
+| flag | what |
+|---|---|
+| `--out <file>` | the file to write; its extension picks the format |
+| `--at <n>` | the time of a still, and where a loop starts, in seconds (default `0`) |
+| `--animate` | a frame sequence over the scene's duration instead of a still (what .webm and .mp4 always are) |
+| `--frames <n>` | how many frames (default: the duration times --fps) (default `0`) |
+| `--fps <n>` | frames per second of a loop (default `30`) |
+| `--duration <n>` | one cycle in seconds (default: the scene's data-duration, else what its animations declare) (default `0`) |
+| `--scale <n>` | device pixels per CSS pixel of a raster (2 for a retina asset) (default `1`) |
+| `--width <n>` | the CSS width to render at (default: the scene's own) (default `0`) |
+| `--scheme light|dark` | the scheme the tokens resolve in (a raster is one scheme; render twice for both) (default `light`) |
+| `--reduced` | render under prefers-reduced-motion: reduce — what such a reader gets |
+| `--background transparent|paper` | the ground of a raster (.jpg is always on the paper) (default `transparent`) |
+| `--lossy` | lossy WebP (quality 82) instead of lossless |
+| `--no-poster` | do not write the still of a loop beside it (<name>-still.webp or .svg) |
+| `--no-source` | do not copy the scene beside a raster (<name>.svg) |
+| `--scenes <file|dir>` | more scenes, as for serve (repeatable) |
+| `--url <base>` | a running lab instead of one started for the render |
+| `--json` | print the report |
+
+Exit: `0` written; `2` an unknown scene, an extension the lab cannot write, no browser, no ffmpeg for .webm/.mp4 (or a transparent .webm with Playwright's bundled build, which writes VP8 on the paper only), or usage.
+
+`--json` prints `{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, console }`.
 
 #### `lab clean`
 

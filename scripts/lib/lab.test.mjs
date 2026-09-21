@@ -163,3 +163,63 @@ test("the server: the index, a scene page and its bare page, the file by id, not
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("renderPlan: the format by extension, a still or a sequence, the times, the still and the source beside the file", async () => {
+  const { animates, renderPlan } = await import("./lab.mjs");
+  const still = renderPlan("out/mark.webp", { at: 0.5 }, { duration: 2, animated: true });
+  assert.deepEqual(still, { format: "webp", sequence: false, video: false, times: [0.5], fps: 30, delay: 33, background: "transparent", still: null, source: "out/mark.svg" });
+  const loop = renderPlan("out/loop.webp", { animate: true, fps: 10 }, { duration: 2, animated: true });
+  assert.equal(loop.sequence, true);
+  assert.equal(loop.times.length, 20);
+  assert.deepEqual(loop.times.slice(0, 3), [0, 0.1, 0.2]);
+  assert.equal(loop.delay, 100);
+  assert.equal(loop.still, "out/loop-still.webp");
+  assert.equal(renderPlan("out/loop.webp", { frames: 3, fps: 10, at: 1 }, { duration: 2 }).times.length, 3, "--frames truncates");
+  assert.deepEqual(renderPlan("out/loop.webp", { frames: 3, fps: 10, at: 1 }, { duration: 2 }).times, [1, 1.1, 1.2]);
+  const video = renderPlan("out/hero.webm", { fps: 24 }, { duration: 0 });
+  assert.ok(video.video && video.sequence && video.times.length === 24, "a video is always a sequence; no duration means one second");
+  const jpg = renderPlan("out/a.JPG", {}, {});
+  assert.equal(jpg.format, "jpg");
+  assert.equal(jpg.background, "paper", ".jpg is always on the paper");
+  const svg = renderPlan("out/a.svg", {}, { animated: true });
+  assert.deepEqual([svg.still, svg.source], ["out/a-still.svg", null]);
+  assert.equal(renderPlan("out/a.svg", {}, { animated: false }).still, null);
+  assert.equal(renderPlan("out/a.svg", { poster: false }, { animated: true }).still, null);
+  assert.equal(renderPlan("out/a.png", { source: false }, {}).source, null);
+  assert.throws(() => renderPlan("out/a.gif", {}, {}), /\.gif: a render writes/);
+  assert.throws(() => renderPlan("out/a", {}, {}), /no extension/);
+  assert.throws(() => renderPlan("out/a.webm", { fps: 0 }, {}), /--fps must be above 0/);
+  assert.ok(animates("<svg><animate/></svg>") && animates("<svg><style>.a{animation: x 1s}</style></svg>") && !animates("<svg><rect/></svg>"));
+});
+
+test("resolveTokenColors: one scheme's side of every colour token, var() chains followed", async () => {
+  const { resolveTokenColors } = await import("./lab.mjs");
+  const tokens = { "--color-paper": "light-dark(#ffffff, #121212)", "--color-ink": "light-dark(#000000, #f2f2f2)", "--color-accent": "var(--color-ink)", "--color-plain": "oklch(60% 0.1 200)", "--font-sans": "system-ui" };
+  assert.deepEqual(resolveTokenColors(tokens, "dark"), { colors: { "--color-paper": "#121212", "--color-ink": "#f2f2f2", "--color-accent": "#f2f2f2", "--color-plain": "oklch(60% 0.1 200)" }, current: "#f2f2f2", paper: "#121212" });
+  assert.equal(resolveTokenColors(tokens).current, "#000000");
+  assert.deepEqual(resolveTokenColors({}), { colors: {}, current: "currentColor", paper: "#ffffff" });
+});
+
+test("the encoders: ffmpeg found on PATH or in Playwright's cache, its arguments per build and format, what it lacks named", async () => {
+  const { ffmpegPath } = await import("./browser.mjs");
+  const { checkFfmpeg, ffmpegArgs } = await import("./lab-encode.mjs");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ffmpeg-"));
+  assert.equal(ffmpegPath({ env: { PATH: dir }, caches: [] }), null);
+  fs.mkdirSync(path.join(dir, "cache/ffmpeg-1011"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "cache/ffmpeg-1011/ffmpeg-linux"), "");
+  assert.deepEqual(ffmpegPath({ env: { PATH: dir }, caches: [path.join(dir, "cache")] }), { file: path.join(dir, "cache/ffmpeg-1011/ffmpeg-linux"), bundled: true });
+  fs.writeFileSync(path.join(dir, "ffmpeg"), "#!/bin/sh\necho ' V....D libvpx               libvpx VP8 (codec vp8)'\necho ' V....D libvpx-vp9           libvpx VP9 (codec vp9)'\n", { mode: 0o755 });
+  const system = ffmpegPath({ env: { PATH: `${dir}:/nowhere` }, caches: [] });
+  assert.deepEqual(system, { file: path.join(dir, "ffmpeg"), bundled: false });
+  assert.deepEqual(ffmpegPath({ env: { FFMPEG_PATH: "/opt/ffmpeg" } }), { file: "/opt/ffmpeg", bundled: false });
+  assert.match(ffmpegArgs({ bundled: false, format: "webm", fps: 24, alpha: true, out: "a.webm" }).join(" "), /^-y -f image2pipe -c:v png -framerate 24 -i pipe:0 -vf pad=ceil\(iw\/2\)\*2:ceil\(ih\/2\)\*2 -c:v libvpx-vp9 -pix_fmt yuva420p /);
+  assert.match(ffmpegArgs({ bundled: true, format: "webm", fps: 10, alpha: false, out: "a.webm" }).join(" "), /-c:v mjpeg .* -c:v libvpx -pix_fmt yuv420p /);
+  assert.match(ffmpegArgs({ bundled: false, format: "mp4", fps: 30, alpha: false, out: "a.mp4" }).join(" "), /-c:v libx264 -pix_fmt yuv420p .* \+faststart a\.mp4$/);
+  assert.throws(() => checkFfmpeg(null, { format: "webm" }), /no ffmpeg for a \.webm: install ffmpeg/);
+  if (process.platform !== "win32") {
+    assert.throws(() => checkFfmpeg(system, { format: "mp4" }), /has no libx264/);
+    assert.throws(() => checkFfmpeg({ ...system, bundled: true }, { format: "webm", alpha: true }), /pass --background paper/);
+    assert.ok(checkFfmpeg(system, { format: "webm", alpha: true }).encoders.has("libvpx-vp9"));
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+});

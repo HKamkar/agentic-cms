@@ -38,6 +38,16 @@ if (subcommand === "new") {
   const stop = () => { server.close(); process.exit(0); };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
+} else if (subcommand === "render") {
+  if (!["light", "dark"].includes(flags.scheme)) fail(`--scheme must be light or dark, not ${flags.scheme}`);
+  if (!["transparent", "paper"].includes(flags.background)) fail(`--background must be transparent or paper, not ${flags.background}`);
+  if (!flags.out) fail("--out names the file to write; its extension picks the format");
+  const { renderScene } = await import("./lib/lab-render.mjs");
+  let report;
+  try { report = await renderScene(root, positionals[0], flags); } catch (error) { fail(error.message); }
+  const line = `${report.file}  ${report.width}x${report.height}  ${report.frames} frame${report.frames === 1 ? "" : "s"}${report.fps ? ` at ${report.fps} fps` : ""}  ${(report.bytes / 1024).toFixed(1)}KB${report.still ? `; still ${report.still}` : ""}${report.source ? `; source ${report.source}` : ""}`;
+  if (flags.json) { console.error(line); console.log(JSON.stringify(report, null, 1)); } else console.log(line);
+  for (const entry of report.console) console.error(`${entry.type}: ${entry.text}`);
 } else if (subcommand === "clean") {
   const dir = path.join(root, LAB_DIR);
   const removed = fs.existsSync(dir);

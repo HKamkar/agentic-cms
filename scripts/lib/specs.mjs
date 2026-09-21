@@ -240,7 +240,7 @@ export const SPECS = {
   },
   lab: {
     command: "lab", script: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN; rendered to the files a page ships; removed when done",
-    usage: "agentic-cms lab <new | serve | clean> …",
+    usage: "agentic-cms lab <new | serve | render | clean> …",
     subcommands: {
       new: {
         command: "lab new", summary: "writes a scene to start from, .parity/lab/<name>.svg, on the kit's own contracts: an icon on the 24 grid in currentColor (what Icon renders), a mark on the 64 grid, or a loop with the reduced-motion rule and one SMIL animation",
@@ -260,6 +260,32 @@ export const SPECS = {
           sizes: { type: "string", default: "24,40,64", value: "<px,px>", help: "the sizes an icon-sized scene (up to 96 px wide) is also shown at, inline and as an <img>" },
         },
         exit: { 0: "stopped", 2: "the port is taken, a --scenes path that does not exist, or usage" },
+      },
+      render: {
+        command: "lab render", summary: "renders one scene to the file a page ships, by the extension of --out: .svg (the tokens resolved for one scheme, the animation kept), .webp/.png/.jpg (a still at --at), or with --animate a loop as an animated .webp (sharp, no ffmpeg), .webm or .mp4 (ffmpeg); a loop also writes its still beside it (the <picture> fallback, the poster) and a raster its source scene",
+        usage: "agentic-cms lab render <scene> --out <file> [--at 0] [--animate] [--frames <n>] [--fps 30] [--duration <s>] [--scale 1] [--width <px>] [--scheme light|dark] [--reduced] [--background transparent|paper] [--lossy] [--no-poster] [--no-source] [--scenes <file|dir>]… [--url <base>] [--json]",
+        positionals: [{ name: "scene", required: true, help: "a scene: its name under .parity/lab, or its path without .svg under a --scenes file or folder" }],
+        flags: {
+          out: { type: "string", value: "<file>", help: "the file to write; its extension picks the format" },
+          at: { type: "number", default: 0, help: "the time of a still, and where a loop starts, in seconds" },
+          animate: { type: "boolean", help: "a frame sequence over the scene's duration instead of a still (what .webm and .mp4 always are)" },
+          frames: { type: "number", default: 0, help: "how many frames (default: the duration times --fps)" },
+          fps: { type: "number", default: 30, help: "frames per second of a loop" },
+          duration: { type: "number", default: 0, help: "one cycle in seconds (default: the scene's data-duration, else what its animations declare)" },
+          scale: { type: "number", default: 1, help: "device pixels per CSS pixel of a raster (2 for a retina asset)" },
+          width: { type: "number", default: 0, help: "the CSS width to render at (default: the scene's own)" },
+          scheme: { type: "string", default: "light", value: "light|dark", help: "the scheme the tokens resolve in (a raster is one scheme; render twice for both)" },
+          reduced: { type: "boolean", help: "render under prefers-reduced-motion: reduce — what such a reader gets" },
+          background: { type: "string", default: "transparent", value: "transparent|paper", help: "the ground of a raster (.jpg is always on the paper)" },
+          lossy: { type: "boolean", help: "lossy WebP (quality 82) instead of lossless" },
+          "no-poster": { type: "boolean", help: "do not write the still of a loop beside it (<name>-still.webp or .svg)" },
+          "no-source": { type: "boolean", help: "do not copy the scene beside a raster (<name>.svg)" },
+          scenes: { type: "string", multiple: true, value: "<file|dir>", help: "more scenes, as for serve" },
+          url: { type: "string", value: "<base>", help: "a running lab instead of one started for the render" },
+          json: { type: "boolean", help: "print the report" },
+        },
+        exit: { 0: "written", 2: "an unknown scene, an extension the lab cannot write, no browser, no ffmpeg for .webm/.mp4 (or a transparent .webm with Playwright's bundled build, which writes VP8 on the paper only), or usage" },
+        json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, console }",
       },
       clean: {
         command: "lab clean", summary: "removes .parity/lab; what a render wrote under public/ (and src/config/icons/) is what stays",
