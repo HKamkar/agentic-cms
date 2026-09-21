@@ -23,6 +23,12 @@ changes what a capture writes says **recapture baselines**.
   loop writes its still beside it and a raster its source scene. An
   animated `<img>` never stops under reduced motion, so a loop ships as a
   `<picture>` with that still — the doc has the markup.
+- `icons add file:<name>`: a third source beside Lucide and Simple Icons —
+  the site's own drawing, `src/config/icons/<name>.svg` (rendered there from
+  the lab), read as flat shapes with one paint; its root's paint decides
+  the kind, its `viewBox` is kept off the 24 grid (`IconData.viewBox`,
+  which `Icon` now applies), a group, transform, use, defs, style, mask or
+  clipPath is refused with the fix.
 
 ## [0.4.3] — 2026-09-20
 

@@ -359,20 +359,20 @@ agentic-cms icons <add | remove | family | audit> …
 
 #### `icons add`
 
-Adds ids (lucide:<name>, si:<slug>) to src/config/icons.json and regenerates src/config/icons.ts from the sets the site installs; an id already there is a no-op, so this also regenerates.
+Adds ids (lucide:<name>, si:<slug>, file:<name>) to src/config/icons.json and regenerates src/config/icons.ts from the sets the site installs and its own drawings under src/config/icons/; an id already there is a no-op, so this also regenerates.
 
 ```bash
 agentic-cms icons add <id>… [--manifest src/config/icons.json] [--json]
 ```
 
-- `<ids...>` — lucide:<name> (the file names under node_modules/lucide-static/icons) or si:<slug> (simple-icons)
+- `<ids...>` — lucide:<name> (the file names under node_modules/lucide-static/icons), si:<slug> (simple-icons), or file:<name> (the site's own src/config/icons/<name>.svg: flat shapes, one paint, its viewBox kept — drawn in the lab)
 
 | flag | what |
 |---|---|
 | `--manifest <file>` | the list of ids; the map is written beside it as .ts (default `src/config/icons.json`) |
 | `--json` | print { manifest, map, ids, added } |
 
-Exit: `0` written; `2` an unknown id, a set that is not installed (pnpm add -D lucide-static simple-icons), or usage.
+Exit: `0` written; `2` an unknown id, a set that is not installed (pnpm add -D lucide-static simple-icons), a file icon that is missing or not flat shapes, or usage.
 
 `--json` prints `{ manifest, map, ids, added }`.
 

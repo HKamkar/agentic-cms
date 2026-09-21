@@ -196,11 +196,11 @@ export const SPECS = {
     usage: "agentic-cms icons <add | remove | family | audit> …",
     subcommands: {
       add: {
-        command: "icons add", summary: "adds ids (lucide:<name>, si:<slug>) to src/config/icons.json and regenerates src/config/icons.ts from the sets the site installs; an id already there is a no-op, so this also regenerates",
+        command: "icons add", summary: "adds ids (lucide:<name>, si:<slug>, file:<name>) to src/config/icons.json and regenerates src/config/icons.ts from the sets the site installs and its own drawings under src/config/icons/; an id already there is a no-op, so this also regenerates",
         usage: "agentic-cms icons add <id>… [--manifest src/config/icons.json] [--json]",
-        positionals: [{ name: "ids", required: true, variadic: true, help: "lucide:<name> (the file names under node_modules/lucide-static/icons) or si:<slug> (simple-icons)" }],
+        positionals: [{ name: "ids", required: true, variadic: true, help: "lucide:<name> (the file names under node_modules/lucide-static/icons), si:<slug> (simple-icons), or file:<name> (the site's own src/config/icons/<name>.svg: flat shapes, one paint, its viewBox kept — drawn in the lab)" }],
         flags: { manifest: { type: "string", default: "src/config/icons.json", value: "<file>", help: "the list of ids; the map is written beside it as .ts" }, json: { type: "boolean", help: "print { manifest, map, ids, added }" } },
-        exit: { 0: "written", 2: "an unknown id, a set that is not installed (pnpm add -D lucide-static simple-icons), or usage" },
+        exit: { 0: "written", 2: "an unknown id, a set that is not installed (pnpm add -D lucide-static simple-icons), a file icon that is missing or not flat shapes, or usage" },
         json: "{ manifest, map, ids, added }",
       },
       remove: {

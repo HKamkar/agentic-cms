@@ -35,7 +35,8 @@ if (subcommand === "add" || subcommand === "remove") {
   }
   const sorted = [...ids].sort();
   let entries;
-  try { entries = sorted.map((id) => readIconSource(id, root)); } catch (error) { fail(error.message); }
+  const iconsDir = path.join(path.relative(root, path.dirname(manifestFile)), "icons");
+  try { entries = sorted.map((id) => readIconSource(id, root, { iconsDir })); } catch (error) { fail(error.message); }
   fs.mkdirSync(path.dirname(manifestFile), { recursive: true });
   fs.writeFileSync(manifestFile, JSON.stringify(sorted, null, 1) + "\n");
   try { fs.writeFileSync(mapFile, renderIconMap(entries, { site: root })); } catch (error) { fail(error.message); }
