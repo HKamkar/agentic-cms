@@ -83,7 +83,9 @@ the scene's clock is set frame by frame, never read from the wall.
 - **`.svg`** needs no browser: `currentColor` and `var(--color-*)` become
   the hex of `--scheme` (read from the site's tokens), `light-dark()` keeps
   that side, the animation is kept. Nothing inside an `<img>` follows the
-  site's theme toggle, so an asset that must follow it is `Icon` data.
+  site's theme toggle, so an asset that must follow it is `Icon` data; a
+  render of a scene drawn in the page's ink says so in a `note` line (on
+  the example's dark page such a file is black on black).
 - **`.webp` / `.png` / `.jpg`** are a still at `--at` seconds, on a
   transparent ground unless `--background paper` (a `.jpg` is always on
   the paper), at the scene's width or `--width`, times `--scale`; WebP is

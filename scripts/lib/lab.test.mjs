@@ -113,6 +113,8 @@ test("the pages: the bare page holds the scene in one scheme at its size with th
   assert.doesNotMatch(bare, /<\?xml|<!-- c -->/);
   assert.ok(bare.includes(LAB_API) && LAB_API.includes("setCurrentTime(t)") && LAB_API.includes("getAnimations()"));
   const page = sceneHtml("spin", { file: ".parity/lab/spin.svg", meta: sceneMeta(svg), tokens, sizes: [24, 64] });
+  assert.match(page, /id="lab-time"/);
+  assert.doesNotMatch(sceneHtml("still", { file: "x.svg", meta: sceneMeta(svg), tokens, animated: false }), /id="lab-time"/, "no scrubber for a scene that does not animate");
   assert.match(page, /<iframe class="lab-frame"[^>]*src="\/scene\/spin\?bare=1&scheme=light&background=paper&width=24&pad=8" width="40" height="28">/);
   assert.match(page, /<iframe class="lab-frame"[^>]*scheme=dark&background=paper&width=64/);
   assert.match(page, /64 px \(natural\)/);
@@ -190,6 +192,8 @@ test("renderPlan: the format by extension, a still or a sequence, the times, the
   assert.throws(() => renderPlan("out/a", {}, {}), /no extension/);
   assert.throws(() => renderPlan("out/a.webm", { fps: 0 }, {}), /--fps must be above 0/);
   assert.ok(animates("<svg><animate/></svg>") && animates("<svg><style>.a{animation: x 1s}</style></svg>") && !animates("<svg><rect/></svg>"));
+  const { followsTheme } = await import("./lab.mjs");
+  assert.ok(followsTheme('<svg stroke="currentColor"/>') && followsTheme('<svg fill="var(--color-fill)"/>') && !followsTheme('<!-- agentic-cms lab: currentColor in a comment --><svg fill="#888"/>'));
 });
 
 test("resolveTokenColors: one scheme's side of every colour token, var() chains followed", async () => {

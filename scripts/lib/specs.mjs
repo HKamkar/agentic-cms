@@ -285,7 +285,7 @@ export const SPECS = {
           json: { type: "boolean", help: "print the report" },
         },
         exit: { 0: "written", 2: "an unknown scene, an extension the lab cannot write, no browser, no ffmpeg for .webm/.mp4 (or a transparent .webm with Playwright's bundled build, which writes VP8 on the paper only), or usage" },
-        json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, console }",
+        json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }",
       },
       clean: {
         command: "lab clean", summary: "removes .parity/lab; what a render wrote under public/ (and src/config/icons/) is what stays",

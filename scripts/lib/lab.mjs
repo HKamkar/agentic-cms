@@ -146,6 +146,9 @@ export function parseSizes(text) {
 
 const FORMATS = { ".svg": "svg", ".webp": "webp", ".png": "png", ".jpg": "jpg", ".jpeg": "jpg", ".webm": "webm", ".mp4": "mp4" };
 const RASTERS = ["webp", "png", "jpg", "webm", "mp4"];
+/** Whether a scene paints with the page's colours — currentColor or a var(--color-*) token — which a file of it carries for one scheme only. */
+export const followsTheme = (svg) => /currentColor|var\(\s*--color-/.test(svg.replace(LAB_COMMENT, ""));
+
 /** Whether a scene's text animates: a SMIL element, or a keyframes or animation declaration in its styles. */
 export const animates = (svg) => /<(animate|animateTransform|animateMotion|set)\b/.test(svg) || /@keyframes|\banimation(-[a-z-]+)?\s*:/.test(svg);
 

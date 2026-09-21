@@ -47,6 +47,7 @@ if (subcommand === "new") {
   try { report = await renderScene(root, positionals[0], flags); } catch (error) { fail(error.message); }
   const line = `${report.file}  ${report.width}x${report.height}  ${report.frames} frame${report.frames === 1 ? "" : "s"}${report.fps ? ` at ${report.fps} fps` : ""}  ${(report.bytes / 1024).toFixed(1)}KB${report.still ? `; still ${report.still}` : ""}${report.source ? `; source ${report.source}` : ""}`;
   if (flags.json) { console.error(line); console.log(JSON.stringify(report, null, 1)); } else console.log(line);
+  if (report.note) console.error(`note: ${report.note}`);
   for (const entry of report.console) console.error(`${entry.type}: ${entry.text}`);
 } else if (subcommand === "clean") {
   const dir = path.join(root, LAB_DIR);

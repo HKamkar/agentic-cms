@@ -108,7 +108,7 @@ const CONTROLS = (duration) => `(() => {
 })();`;
 
 /** The scene page: inline in both schemes at the natural size and the given sizes (framed bare pages), as an <img> on both grounds, the scrubber, the render hint. */
-export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [] } = {}) {
+export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true } = {}) {
   const widths = [...new Set([meta.width, ...sizes])].filter((w) => w > 0).sort((a, b) => a - b);
   const label = (w) => `${w} px${w === meta.width ? " (natural)" : ""}`;
   const frame = (scheme, width) => {
@@ -120,12 +120,12 @@ export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [] } = {}) {
   const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", image(w))}${box("dark", image(w))}</div>`).join("");
   return shell(scene, tokens, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
 <h2>inline — currentColor and var(--color-*) follow each box's scheme</h2>
-<div class="lab-controls"><button id="lab-toggle" type="button">pause</button><button id="lab-back" type="button">◀</button><input id="lab-time" type="range" min="0" max="1" step="0.0166" value="0"><button id="lab-forward" type="button">▶</button><span id="lab-readout">0.00s</span></div>
+${animated ? `<div class="lab-controls"><button id="lab-toggle" type="button">pause</button><button id="lab-back" type="button">◀</button><input id="lab-time" type="range" min="0" max="1" step="0.0166" value="0"><button id="lab-forward" type="button">▶</button><span id="lab-readout">0.00s</span></div>` : ""}
 ${inline}
 <h2>as &lt;img&gt; — the file as a page would embed it: currentColor is black, a var() without a fallback is the initial paint, the scheme is the browser's (a render to .svg resolves the tokens)</h2>
 ${asImg}
 <p class="lab-note">pnpm kit lab render ${escape(scene)} --out public/images/&lt;page&gt;/${escape(scene.split("/").pop())}.svg · --out ….webp [--fps 30] · pnpm kit lab clean</p>
-<script>${CONTROLS(meta.duration)}</script>`);
+<script>${animated ? CONTROLS(meta.duration) : 'new EventSource("/events").onmessage = () => location.reload();'}</script>`);
 }
 
 /** The index: every scene by name and file, as an <img> on both grounds, linked to its page. */

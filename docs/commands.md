@@ -514,7 +514,7 @@ agentic-cms lab render <scene> --out <file> [--at 0] [--animate] [--frames <n>] 
 
 Exit: `0` written; `2` an unknown scene, an extension the lab cannot write, no browser, no ffmpeg for .webm/.mp4 (or a transparent .webm with Playwright's bundled build, which writes VP8 on the paper only), or usage.
 
-`--json` prints `{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, console }`.
+`--json` prints `{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }`.
 
 #### `lab clean`
 

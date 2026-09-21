@@ -9,13 +9,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import { collectConsole, ffmpegPath, fontsReady, frames as awaitFrames, imagesReady, launch } from "./browser.mjs";
-import { animates, listScenes, renderPlan, resolveTokenColors, resolveTokens, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
+import { animates, followsTheme, listScenes, renderPlan, resolveTokenColors, resolveTokens, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
 import { checkFfmpeg, encodeAnimatedWebp, encodeStill, encodeVideo } from "./lab-encode.mjs";
 import { startLabServer } from "./lab-server.mjs";
 import { relative } from "./page-command.mjs";
 
 const encode = (id) => id.split("/").map(encodeURIComponent).join("/");
 const header = (scene) => `<!-- rendered by agentic-cms lab from ${scene}; edit the scene and render again -->\n`;
+// A drawing in the page's ink is one scheme's ink once it is a file: the
+// report says so, because on a site with the theme toggle it will not read
+// on the other ground — seen on the example's dark page.
+const themeNote = (svg, scheme, format) => (followsTheme(svg) ? `the scene paints in the page's ink, so this ${format} carries the ${scheme} scheme's; an <img> of it will not follow the site's theme — for a page with the toggle, ship it inline (icons add file:<name>), draw it in mid-tones that read on both grounds, or render one file per scheme` : null);
 
 /** Photographs the bare page at every time: { frames (PNG buffers), width, height (device pixels), duration, console }. */
 export async function captureScene({ base, scene, scheme, motion, scale, width, height, background, times: plan }) {
@@ -53,7 +57,7 @@ function renderSvg({ scene, file, svg, out, scheme, tokens, poster }) {
   const still = poster && animates(svg) ? out.replace(/\.svg$/, "-still.svg") : null;
   if (still) fs.writeFileSync(still, stripAnimation(resolved).trim() + "\n");
   const meta = sceneMeta(svg);
-  return { scene, file: out, still, source: null, format: "svg", width: meta.width, height: meta.height, frames: 1, fps: null, duration: meta.duration || null, scheme, background: null, bytes: fs.statSync(out).size, console: [] };
+  return { scene, file: out, still, source: null, format: "svg", width: meta.width, height: meta.height, frames: 1, fps: null, duration: meta.duration || null, scheme, background: null, bytes: fs.statSync(out).size, note: themeNote(svg, scheme, "file"), console: [] };
 }
 
 /** The frames to their files: the still or the loop at --out, the loop's still and the raster's source beside it; { bytes, still, source } (absolute paths). */
@@ -98,6 +102,6 @@ export async function renderScene(root, scene, flags) {
     });
     const { bytes, still, source } = await writeRaster({ plan, shot, out, file, ffmpeg, paper, lossy: flags.lossy, root });
     const span = plan.sequence ? plan.times[plan.times.length - 1] - plan.times[0] + 1 / plan.fps : null;
-    return { scene, file: rel(out), still: rel(still), source: rel(source), format: plan.format, width: shot.width, height: shot.height, frames: shot.frames.length, fps: plan.sequence ? plan.fps : null, duration: span, scheme: flags.scheme, background: plan.background, bytes, console: shot.console };
+    return { scene, file: rel(out), still: rel(still), source: rel(source), format: plan.format, width: shot.width, height: shot.height, frames: shot.frames.length, fps: plan.sequence ? plan.fps : null, duration: span, scheme: flags.scheme, background: plan.background, bytes, note: themeNote(svg, flags.scheme, plan.format), console: shot.console };
   } finally { server?.close(); }
 }
