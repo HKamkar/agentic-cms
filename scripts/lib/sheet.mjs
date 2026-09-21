@@ -40,14 +40,17 @@ export function readSheetSpec(file) {
   return spec;
 }
 
-const escape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+/** Text for an attribute or a text node. */
+export const escape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+/** An SVG file's text as inline markup: the XML prolog and the comments dropped. */
+export const svgMarkup = (text) => text.replace(/^<\?xml[^>]*>\s*/, "").replace(/<!--[\s\S]*?-->\s*/g, "");
 const letter = (i) => String.fromCharCode(65 + i);
 
 function cellMarkup(cell, { root }) {
   if (cell.file !== undefined) {
     const file = path.resolve(root, cell.file);
     if (!fs.existsSync(file)) throw new Error(`${cell.file}: no such file (cells take file:, svg:, html: or img:)`);
-    return fs.readFileSync(file, "utf8").replace(/^<\?xml[^>]*>\s*/, "").replace(/<!--[\s\S]*?-->\s*/g, "");
+    return svgMarkup(fs.readFileSync(file, "utf8"));
   }
   if (cell.svg !== undefined) return cell.svg;
   if (cell.html !== undefined) return cell.html;

@@ -238,4 +238,36 @@ export const SPECS = {
       },
     },
   },
+  lab: {
+    command: "lab", script: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN; rendered to the files a page ships; removed when done",
+    usage: "agentic-cms lab <new | serve | clean> …",
+    subcommands: {
+      new: {
+        command: "lab new", summary: "writes a scene to start from, .parity/lab/<name>.svg, on the kit's own contracts: an icon on the 24 grid in currentColor (what Icon renders), a mark on the 64 grid, or a loop with the reduced-motion rule and one SMIL animation",
+        usage: "agentic-cms lab new <name> [--kind icon|mark|loop] [--json]",
+        positionals: [{ name: "name", required: true, help: "lowercase letters, digits and hyphens; also the prefix of the scene's ids and keyframe names" }],
+        flags: { kind: { type: "string", default: "icon", value: "icon|mark|loop", help: "the template" }, json: { type: "boolean", help: "print { scene, file, kind }" } },
+        exit: { 0: "written", 2: "a bad name, an unknown kind, or a scene that already exists" },
+        json: "{ scene, file, kind }",
+      },
+      serve: {
+        command: "lab serve", summary: "serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes, as an <img> on both grounds, with a scrubber over its animations — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C",
+        usage: "agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]",
+        flags: {
+          host: { type: "string", default: "0.0.0.0", value: "<address>", help: "the interface to listen on (0.0.0.0: every one, so a phone on the LAN can open it; 127.0.0.1: this machine only)" },
+          port: { type: "number", default: 8001, help: "the port" },
+          scenes: { type: "string", multiple: true, value: "<file|dir>", help: "more scenes: an SVG file, or a folder walked for .svg files (public/images/home, say, to reopen what a page ships)" },
+          sizes: { type: "string", default: "24,40,64", value: "<px,px>", help: "the sizes an icon-sized scene (up to 96 px wide) is also shown at, inline and as an <img>" },
+        },
+        exit: { 0: "stopped", 2: "the port is taken, a --scenes path that does not exist, or usage" },
+      },
+      clean: {
+        command: "lab clean", summary: "removes .parity/lab; what a render wrote under public/ (and src/config/icons/) is what stays",
+        usage: "agentic-cms lab clean [--json]",
+        flags: { json: { type: "boolean", help: "print { removed }" } },
+        exit: { 0: "removed, or nothing to remove" },
+        json: "{ removed }",
+      },
+    },
+  },
 };

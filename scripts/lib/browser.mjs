@@ -53,7 +53,7 @@ export async function launch({ scheme = "light", motion = false, width = 1440, h
 }
 
 // ---- a static server for the production build --------------------------------
-const TYPES = { ".html": "text/html; charset=utf-8", ".rsc": "text/x-component", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".json": "application/json", ".xml": "application/xml", ".txt": "text/plain" };
+export const TYPES = { ".html": "text/html; charset=utf-8", ".rsc": "text/x-component", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".json": "application/json", ".xml": "application/xml", ".txt": "text/plain" };
 
 /** Serves <root>/.next (the prerendered pages, their RSC payloads, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
 export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) {
