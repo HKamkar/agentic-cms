@@ -56,6 +56,19 @@ function renderSvg({ scene, file, svg, out, scheme, tokens, poster }) {
   return { scene, file: out, still, source: null, format: "svg", width: meta.width, height: meta.height, frames: 1, fps: null, duration: meta.duration || null, scheme, background: null, bytes: fs.statSync(out).size, console: [] };
 }
 
+/** The frames to their files: the still or the loop at --out, the loop's still and the raster's source beside it; { bytes, still, source } (absolute paths). */
+async function writeRaster({ plan, shot, out, file, ffmpeg, paper, lossy, root }) {
+  const still = plan.still ? path.resolve(root, plan.still) : null;
+  const source = plan.source && path.resolve(root, plan.source) !== path.resolve(file) ? path.resolve(root, plan.source) : null;
+  let bytes;
+  if (plan.video) ({ bytes } = await encodeVideo(shot.frames, out, { ffmpeg, format: plan.format, fps: plan.fps, alpha: plan.background === "transparent", paper }));
+  else if (plan.sequence) ({ bytes } = await encodeAnimatedWebp(shot.frames, out, { delay: plan.delay, lossy }));
+  else ({ bytes } = await encodeStill(shot.frames[0], out, { format: plan.format, lossy, paper }));
+  if (still) await encodeStill(shot.frames[0], still, { format: "webp", lossy, paper });
+  if (source) { fs.mkdirSync(path.dirname(source), { recursive: true }); fs.copyFileSync(file, source); }
+  return { bytes, still, source };
+}
+
 /** Renders one scene by the flags of `lab render`; returns the report (paths relative to root). Throws with the fix for anything the caller should exit 2 on. */
 export async function renderScene(root, scene, flags) {
   const file = listScenes(root, { extra: flags.scenes ?? [] }).get(scene);
@@ -78,18 +91,12 @@ export async function renderScene(root, scene, flags) {
   const server = flags.url ? null : await startLabServer({ root, extra: flags.scenes ?? [] });
   let plan;
   try {
+    // The plan waits for the page: a scene that declares no duration gets it from its animations there.
     const shot = await captureScene({
       base: (flags.url ?? server.url).replace(/\/$/, ""), scene, scheme: flags.scheme, motion: !flags.reduced, scale: flags.scale, width, height, background: probe.background,
       times: (measured) => { plan = renderPlan(out, options, { duration: flags.duration > 0 ? flags.duration : meta.duration || measured, animated: animates(svg) }); return plan.times; },
     });
-    const still = plan.still ? path.resolve(root, plan.still) : null;
-    const source = plan.source && path.resolve(root, plan.source) !== path.resolve(file) ? path.resolve(root, plan.source) : null;
-    let bytes;
-    if (plan.video) ({ bytes } = await encodeVideo(shot.frames, out, { ffmpeg, format: plan.format, fps: plan.fps, alpha: plan.background === "transparent", paper }));
-    else if (plan.sequence) ({ bytes } = await encodeAnimatedWebp(shot.frames, out, { delay: plan.delay, lossy: flags.lossy }));
-    else ({ bytes } = await encodeStill(shot.frames[0], out, { format: plan.format, lossy: flags.lossy, paper }));
-    if (still) await encodeStill(shot.frames[0], still, { format: "webp", lossy: flags.lossy, paper });
-    if (source) { fs.mkdirSync(path.dirname(source), { recursive: true }); fs.copyFileSync(file, source); }
+    const { bytes, still, source } = await writeRaster({ plan, shot, out, file, ffmpeg, paper, lossy: flags.lossy, root });
     const span = plan.sequence ? plan.times[plan.times.length - 1] - plan.times[0] + 1 / plan.fps : null;
     return { scene, file: rel(out), still: rel(still), source: rel(source), format: plan.format, width: shot.width, height: shot.height, frames: shot.frames.length, fps: plan.sequence ? plan.fps : null, duration: span, scheme: flags.scheme, background: plan.background, bytes, console: shot.console };
   } finally { server?.close(); }
