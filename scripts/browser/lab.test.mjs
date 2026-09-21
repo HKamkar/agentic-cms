@@ -32,7 +32,7 @@ test("lab render: a still with alpha at the scene's size, another at --at 0.5 wi
     const still = json(root, ["render", "spin", "--out", "out/spin.webp", "--json"]);
     assert.deepEqual([still.file, still.source, still.still, still.format, still.width, still.height, still.frames, still.fps, still.background], ["out/spin.webp", "out/spin.svg", null, "webp", 64, 64, 1, null, "transparent"]);
     assert.deepEqual(still.console, []);
-    assert.match(still.note, /the light scheme's/);
+    assert.equal(still.note, null, "out/ is not what a page embeds");
     const meta = await sharp(path.join(root, still.file)).metadata();
     assert.deepEqual([meta.width, meta.height, meta.hasAlpha], [64, 64, true]);
     assert.equal(fs.readFileSync(path.join(root, "out/spin.svg"), "utf8"), sceneTemplate("loop", "spin"), "the source beside the raster is the scene itself");
@@ -73,6 +73,7 @@ test("lab render: a .svg for the dark scheme resolves currentColor and the token
     assert.doesNotMatch(svg, /currentColor|var\(|data-duration|agentic-cms lab:/);
     assert.match(svg, /stroke="#f2f2f2"[\s\S]*<animate /);
     assert.match(out.note, /carries the dark scheme's; an <img> of it will not follow the site's theme/);
+    assert.equal(json(root, ["render", "spin", "--out", "src/config/icons/spin.svg", "--json"]).note, null, "Icon data follows the theme: no note");
     const still = fs.readFileSync(path.join(root, out.still), "utf8");
     assert.doesNotMatch(still, /<animate|@keyframes|animation:/);
     assert.equal(run(root, ["render", "spin", "--out", ".parity/lab/spin.svg"]).status, 2, "never over the scene itself");
