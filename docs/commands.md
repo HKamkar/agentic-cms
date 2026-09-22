@@ -709,34 +709,35 @@ agentic-cms demo <new | clean> …
 
 #### `demo new`
 
-Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the section's component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; the route reads the page's copy from its file on every render, shows every candidate in the section's real frame inside the site's own layout, lettered with one line, and the current version last.
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last.
 
 ```bash
-agentic-cms demo new <name> --section <type> [--page <slug>] [--candidates 2] [--component <file>] [--json]
+agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slug>] [--candidates 2] [--json]
 ```
 
 - `<name>` — the route is src/app/<name>-demo; lowercase letters, digits and hyphens
 
 | flag | what |
 |---|---|
-| `--section <type>` | the section type (a key of the registry, src/components/sections/render.tsx) |
-| `--page <slug>` | the page file whose copy the route reads (default: the first under content/pages carrying the section) |
+| `--section <type>` | the section type (a key of the registry, src/components/sections/render.tsx); the route then reads the page's copy and passes it to every candidate |
+| `--page <slug>` | the page file whose copy the route reads (default: the first under content/pages carrying the section); only with --section |
 | `--candidates <n>` | how many candidates, A onward (1 to 8) (default `2`) |
-| `--component <file>` | the component to copy, for a section outside the registry |
+| `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props |
 | `--json` | print the report |
 
-Exit: `0` written; `2` a bad name, a route or a candidate file that exists, a section the registry or no page carries, or usage.
+Exit: `0` written; `2` neither --section nor --component, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, or usage.
 
 `--json` prints `{ route, path, section, page, component, candidates: [{ letter, file }], data }`.
 
 ```bash
 agentic-cms demo new offers --section home-choose-us
 agentic-cms demo new band --section about-story --page sections-about --candidates 3
+agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props
 ```
 
 #### `demo clean`
 
-Removes the route (every src/app/*-demo without a name), every component file it alone imported — the losing candidates and their module.css — and next dev's generated route types while they still name the route (the production build's type check reads them); a file another module imports is kept and named.
+Removes the route (every src/app/*-demo without a name), the candidate files it alone imported (and their module.css) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a candidate another module imports is kept and named.
 
 ```bash
 agentic-cms demo clean [name] [--json]

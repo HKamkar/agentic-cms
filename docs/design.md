@@ -18,7 +18,7 @@ A checkout of this repo, or a site laid out by `agentic-cms init`, carries:
   `design-icons` (icons as families), `design-graphics` (the site's own
   drawings, SVG in the lab, shipped pre-rendered), `design-proof` (the pixel
   proof before a merge). [skills.md](skills.md) says what each does.
-- **The commands** every skill calls: `demo` (the round's route), `shot`, `probe`, `sheet`
+- **The commands** every skill calls: `demo` (the round's route, for a section or a piece of the chrome), `shot`, `probe`, `sheet`
   ([shot-probe-sheet.md](shot-probe-sheet.md)) and `visual-parity` with
   `--ref`, `--json` and a compare that says what moved
   ([visual-parity.md](visual-parity.md)).
@@ -70,6 +70,12 @@ How a section gets its design, as it runs in practice (the
    its chrome, its theme toggle, so a design is judged against the theme
    it will live in — lettered with one line on what differs, and the
    current version last. The agent hands over the dev-server URL.
+   A piece of the **chrome** — a footer, a navbar, a button — is named by
+   `--component <file>` instead: its copy comes from `src/config/site.ts`,
+   not a page file, so the route renders every candidate with no props.
+   (`--section` and `--component` together are a section whose component
+   is not in the registry.) `demo clean` then removes the route and the
+   candidate files, never the component they were copied from.
 5. **The look.** The owner looks on desktop and phone and picks by letter,
    or edits the pick in words: "merge B and C", "no icons", "change the
    radio colour too", "better wording for that row". Every "more" is an
@@ -107,6 +113,24 @@ props in the catalogue; `demo clean offers`; the verify block; the proof;
 the merge. The next round, on the closing band, went the same way and left
 `ui/GlassCard` and `ui/Meter` behind — the library grows from picks, not
 from plans.
+
+## When the dev server will not serve
+
+Two failures cost a round more time than the design does, and both have a
+one-line fix:
+
+- **Every page fails to compile with `Can't resolve
+  '@vercel/turbopack-next/internal/font/google/font'`** (or another
+  `@vercel/turbopack-next/internal/…` path) right after a production
+  build: `next dev` is reading caches a `next build` left behind. Stop the
+  server, `rm -rf .next/dev .next/cache/turbopack`, start it again. (Do
+  not delete `.next` whole while a capture or an audit is reading it.)
+- **A removed route still fails the next production build's type check**
+  (`Cannot find module '../../../src/app/<name>-demo/page.js'`): `next
+  dev` wrote `.next/dev/types/validator.ts` for it and the build reads it.
+  `pnpm kit demo clean` and `pnpm kit lab clean` delete that file when it
+  still names the route they removed; for any other route, remove it by
+  hand or run `next dev` once.
 
 ## Measure, don't guess
 

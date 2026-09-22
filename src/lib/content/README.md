@@ -49,7 +49,7 @@ engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
 | `define.ts` | `CollectionDef` (folder / list / map), `Entry`, `MarkdownEntry`, `EntryOf<D>`; `defineCollection()` (registers by name), `lookup()`, `contentRoot()` (`<cwd>/content`, spelled statically so Next's file tracer bundles only it) |
 | `schema.ts` | The field vocabulary: `text()`, `optional()`, `dateOnly()`, `isoTimestamp()`, `ref()` — each with its own error wording |
 | `read.ts` | `readCollection()`, `readEntry()`, `slugsOf()`, `sourceOf()`: listing, parsing (gray-matter + yaml, yaml, JSON), validation, the production-only cache |
-| `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()` |
+| `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()`, `colonTrap()` / `trappedLine()` / `COLON_FIX` (the colon trap's wording) |
 | `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the seven definitions around the site's section union; `SectionLike`, the least the engine knows about a section |
 | `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
 | `index.ts` | The public surface, `agentic-cms/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
@@ -134,6 +134,26 @@ content/x.yaml: is empty                                        content/faqs: no
 Unknown keys list the allowed ones at an entry's top level only. The
 object-level refine (`excerpt` or `seoDescription`) is skipped while any
 field issue is present; an unknown-key issue alone does not hide it.
+
+### The colon trap
+
+A YAML scalar that contains `": "` is a mapping, so a sentence with a
+colon becomes a key. Both halves of the mistake say what happened and what
+to do:
+
+```
+content/pages/x.yaml: sections[1].blocks[4].paragraphs[0] is a mapping, not text: the line contains ": ", which YAML reads as a key — quote it ("Every request carries technical data: an IP address")
+content/pages/x.yaml: invalid YAML: Nested mappings are not allowed in compact mappings at line 29, column 12 — a line that contains ": " is read as a key — quote the text
+```
+
+The first is a list item (or any field that expects text) the parser read
+as a mapping; the second is the same line inside a mapping, where the
+parser refuses it outright and names the line. The fix is the same:
+`- "Every request carries technical data: an IP address"`. The detection
+is in `toIssue()` (`read.ts`) and `colonTrap()` (`errors.ts`), keyed on a
+field that expects a string receiving a mapping or a list of them, so every
+collection and every site schema gets it; a mapping where a mapping belongs
+is untouched.
 
 A bad list item is reported at its index (`keywords[1] must be a string`),
 not as the whole list. Two edges to know: `draft: yes` is a string under

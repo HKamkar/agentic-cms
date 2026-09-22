@@ -11,6 +11,7 @@ const folderYaml = defineCollection({ name: "t-folder", kind: "folder", dir: "th
 const folderMd = defineCollection({ name: "t-notes", kind: "folder", dir: "notes", format: "markdown", schema: thing });
 const list = defineCollection({ name: "t-list", kind: "list", file: "things.yaml", schema: thing });
 const map = defineCollection({ name: "t-map", kind: "map", file: "things.json", schema: thing });
+const prose = defineCollection({ name: "t-prose", kind: "folder", dir: "prose", format: "yaml", schema: z.strictObject({ name: text(), paragraphs: optional(z.array(text())) }) });
 const nested = defineCollection({
   name: "t-nested",
   kind: "folder",
@@ -82,10 +83,54 @@ describe("files that cannot be read", () => {
     withContent({ "notes/n.md": "---\njust text\n---\n" }, () => expectContentError(() => readCollection(folderMd), "content/notes/n.md: frontmatter must be a mapping"));
   });
 
+  test("a colon in a mapping value dies in the parser, which keeps its line and gains the fix", () => {
+    withContent({ "things/a.yaml": "name: A\nnote: a note: of two halves\n" }, () =>
+      expectContentError(
+        () => readCollection(folderYaml),
+        "content/things/a.yaml: invalid YAML: Nested mappings are not allowed in compact mappings at line 2",
+        'a line that contains ": " is read as a key — quote the text',
+      ),
+    );
+    withContent({ "notes/n.md": "---\nname: A\nnote: a note: of two halves\n---\n" }, () =>
+      expectContentError(() => readCollection(folderMd), "content/notes/n.md: invalid frontmatter: Nested mappings are not allowed", 'quote the text'),
+    );
+    withContent({ "things/a.yaml": 'name: A\nnote: "a note: of two halves"\n' }, () => assert.equal(readCollection(folderYaml)[0].data.note, "a note: of two halves"));
+  });
+
   test("two files with one stem", () => {
     withContent({ "notes/n.md": "---\nname: N\n---\n", "notes/n.mdx": "---\nname: N\n---\n" }, () =>
       expectContentError(() => readCollection(folderMd), 'content/notes: duplicate slug "n" (n.md, n.mdx)'),
     );
+  });
+});
+
+describe("the colon trap", () => {
+  test("a text field that YAML read as a mapping names the trap, the line and the fix", () => {
+    withContent({ "prose/a.yaml": "name: A\nparagraphs:\n  - Every request carries technical data: an IP address and a browser.\n" }, () =>
+      expectContentError(
+        () => readCollection(prose),
+        'content/prose/a.yaml: paragraphs[0] is a mapping, not text: the line contains ": ", which YAML reads as a key — quote it ("Every request carries technical data: an IP address and a browser.")',
+      ),
+    );
+    withContent({ "prose/a.yaml": 'name: A\nparagraphs:\n  - "Every request carries technical data: an IP address and a browser."\n' }, () =>
+      assert.equal(readCollection(prose)[0].data.paragraphs?.[0], "Every request carries technical data: an IP address and a browser."),
+    );
+  });
+
+  test("a whole list read as mappings says so, and a mapping the trap cannot explain still says it is not text", () => {
+    withContent({ "prose/a.yaml": "name:\n  - A name: of two halves\n  - Another: one\n" }, () =>
+      expectContentError(() => readCollection(prose), 'content/prose/a.yaml: name is a list of mappings, not text: the line contains ": ", which YAML reads as a key — quote it ("A name: of two halves")'),
+    );
+    withContent({ "prose/a.yaml": "name:\n  first: A\n  second: B\n" }, () =>
+      expectContentError(() => readCollection(prose), 'content/prose/a.yaml: name is a mapping, not text: a line that contains ": " is read as a key — quote the text'),
+    );
+  });
+
+  test("a mapping where a mapping belongs is untouched", () => {
+    withContent({ "things.json": JSON.stringify({ one: { name: "One" } }), "sets/a.yaml": "owner: one\nitems:\n  - question: q\n" }, () => {
+      const error = expectContentError(() => readCollection(nested), "content/sets/a.yaml: items[0].answer");
+      assert.doesNotMatch(error.message, /quote it|is a mapping, not text/, error.message);
+    });
   });
 });
 
