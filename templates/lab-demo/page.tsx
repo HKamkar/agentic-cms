@@ -22,8 +22,9 @@ const GROUNDS: Ground[] = [
 
 export default function LabDemo() {
   return (
-    <main style={{ maxWidth: "72rem", margin: "0 auto", padding: "2rem 1rem 4rem" }}>
+    // Inside the site's root layout (its theme, its chrome, its <main>): a div, not a second <main>.
+    <div style={{ maxWidth: "72rem", margin: "0 auto", padding: "2rem 1rem 4rem" }}>
       <LabScenes grounds={GROUNDS} />
-    </main>
+    </div>
   );
 }
