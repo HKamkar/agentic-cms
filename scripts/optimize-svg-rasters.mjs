@@ -46,5 +46,6 @@ async function optimize(file) {
   if (!dryRun && saved > 0) fs.writeFileSync(file, out);
 }
 
+for (const file of files) if (!fs.existsSync(file)) { console.error(`optimize-svg-rasters: ${file}: no such file`); process.exit(2); }
 const targets = files.length ? files : fs.readdirSync(DIR, { recursive: true }).filter((f) => f.endsWith(".svg")).map((f) => path.join(DIR, f));
 for (const file of targets) await optimize(file);

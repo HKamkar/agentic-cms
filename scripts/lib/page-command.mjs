@@ -14,9 +14,11 @@ export function routeName(target) {
 export const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
 /** Opens the target in a prepared page; returns what a command needs and a close() for the end. */
-export async function openTarget(target, flags) {
+export async function openTarget(target, flags, { command = "agentic-cms" } = {}) {
   const root = process.cwd();
-  const server = flags.url ? null : await serveStatic({ root });
+  let server = null;
+  // No build is an environment error (exit 2), named with the fix, not a stack trace.
+  if (!flags.url) { try { server = await serveStatic({ root }); } catch (error) { console.error(`${command}: ${error.message}`); process.exit(2); } }
   const base = flags.url ?? server.url;
   const url = resolveTarget(target, { base });
   const { context, close: closeBrowser } = await launch({ scheme: flags.scheme, motion: flags.motion, width: flags.width, height: flags.height, scale: flags.scale ?? 1 });

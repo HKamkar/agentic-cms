@@ -15,7 +15,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
-const { KINDS, LAB_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
+const { LAB_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
 const { startLabServer } = await import("./lib/lab-server.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.lab, process.argv.slice(2));
@@ -25,7 +25,6 @@ const fail = (message, code = 2) => { console.error(`lab ${subcommand}: ${messag
 if (subcommand === "new") {
   const [name] = positionals;
   if (!isSceneName(name)) fail(`${name}: a scene name is lowercase letters, digits and hyphens`);
-  if (!KINDS.includes(flags.kind)) fail(`--kind must be one of ${KINDS.join(", ")}, not ${flags.kind}`);
   const file = path.join(root, LAB_DIR, `${name}.svg`);
   if (fs.existsSync(file)) fail(`${relative(root, file)} exists; pick another name, or edit it`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -50,8 +49,6 @@ if (subcommand === "new") {
   if (flags.json) console.log(JSON.stringify({ file: ROUTE_FILE, path: "/lab-demo" }, null, 1));
   else console.log(`${ROUTE_FILE} written: pnpm dev and open /lab-demo; add the site's surfaces to GROUNDS; pnpm kit lab clean removes it (it never merges: the SEO audit fails it)`);
 } else if (subcommand === "render") {
-  if (!["light", "dark"].includes(flags.scheme)) fail(`--scheme must be light or dark, not ${flags.scheme}`);
-  if (!["transparent", "paper"].includes(flags.background)) fail(`--background must be transparent or paper, not ${flags.background}`);
   if (!flags.out) fail("--out names the file to write; its extension picks the format");
   const { renderScene } = await import("./lib/lab-render.mjs");
   let report;

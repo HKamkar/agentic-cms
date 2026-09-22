@@ -23,7 +23,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { pageTitles } from "./lib/head.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
-const { strict, report } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
+const { strict, report, json } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
 
 const { kit } = await import("@/kit");
 const { site } = kit;
@@ -215,7 +215,8 @@ checkUniqueness(ctx);
 const lines = findings.map((f) => `${f.level} ${f.route} ${f.rule}: ${f.msg}`);
 const fails = findings.filter((f) => f.level === "FAIL").length;
 const warns = findings.length - fails;
-for (const l of lines) console.log(l);
-console.log(`check-seo: ${pages.length} pages, ${fails} failure${fails === 1 ? "" : "s"}, ${warns} warning${warns === 1 ? "" : "s"}${strict ? " (strict)" : ""}`);
+if (!json) for (const l of lines) console.log(l);
+(json ? console.error : console.log)(`check-seo: ${pages.length} pages, ${fails} failure${fails === 1 ? "" : "s"}, ${warns} warning${warns === 1 ? "" : "s"}${strict ? " (strict)" : ""}`);
+if (json) console.log(JSON.stringify({ pages: pages.length, findings: findings.map((f) => ({ level: f.level, route: f.route, rule: f.rule, problem: f.msg })), summary: { fails, warns, strict } }, null, 1));
 if (report) { fs.mkdirSync(path.join(ROOT, ".parity"), { recursive: true }); fs.writeFileSync(path.join(ROOT, ".parity/seo-report.txt"), lines.join("\n") + "\n"); }
 process.exit(fails ? 1 : 0);

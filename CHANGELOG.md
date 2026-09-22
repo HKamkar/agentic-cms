@@ -6,6 +6,17 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- The command line answers every wrong input with the right one: a wrong
+  command, subcommand or flag names the nearest ("did you mean"), a value
+  outside a flag's `choices` lists them (`--scheme`, `--kind`,
+  `--background` are choices in the spec now, validated in one place), a
+  stray value after a repeatable flag says how to repeat it, and a command
+  that reads the site refuses to run outside a site's root with the fix.
+  `agentic-cms --help` is a map by family; every command carries examples
+  in its `--help` and in `docs/commands.md`, which is now by family too.
+  `lint` and `seo` print `--json`. Exit codes made true to the contract:
+  `shot`/`probe` without a build, `parity` when the build fails and the
+  optimisers on a missing file exit 2 with the fix, not 1 with a stack.
 - The design round is a structured part of the kit. The `design-options`
   skill is rewritten as the six steps with the stops for the owner (after
   the ideas, after the look, after the build), the rule that a "more" is an
