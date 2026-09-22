@@ -13,7 +13,6 @@ import { buildStylesheets, readSheetSpec, renderSheet, sheetHtml } from "./lib/s
 import { SPECS } from "./lib/specs.mjs";
 
 const { positionals: [specFile], flags } = parseOrExit(SPECS.sheet, process.argv.slice(2));
-if (!["light", "dark"].includes(flags.scheme)) { console.error(`sheet: --scheme must be light or dark, not ${flags.scheme}`); process.exit(2); }
 const root = process.cwd();
 let spec;
 const css = flags.url ? [] : buildStylesheets(root);

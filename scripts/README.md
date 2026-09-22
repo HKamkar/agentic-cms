@@ -10,7 +10,11 @@ current directory: its registry and config through `src/kit.ts`, its
 `content/`, `public/`, `.next` and `.parity`. The flags, defaults and exit
 codes of every command are `docs/commands.md`, generated from
 `lib/specs.mjs` — the spec each script parses its arguments from
-(`lib/args.mjs`; an unknown flag is an error, `--help` prints the spec).
+(`lib/args.mjs`; an unknown flag is an error that names the nearest one,
+a value outside a flag's `choices` lists them, `--help` prints the spec
+with its `examples`; a spec's `group` is its family in the map the bin
+prints, `site: true` marks one that reads the site's registry and is
+refused outside a site's root).
 `lib/browser.mjs` is the Chromium, the static server and the waits the
 harness and the page commands share; `browser/` holds their tests, run
 against `fixtures/` by `pnpm test:browser`.

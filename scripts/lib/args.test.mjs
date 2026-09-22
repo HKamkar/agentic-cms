@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parse, UsageError, usageText } from "./args.mjs";
+import { parse, suggest, UsageError, usageText } from "./args.mjs";
 
 const spec = {
   command: "shot",
@@ -29,8 +29,22 @@ test("defaults, numbers, booleans and repeated flags", () => {
   assert.equal(parse(spec, ["/"]).flags.width, 1440);
 });
 
-test("an unknown flag is a usage error that names the fix", () => {
-  assert.throws(() => parse(spec, ["/", "--wide"]), (error) => error instanceof UsageError && /unknown flag --wide; run agentic-cms shot --help/.test(error.message));
+test("an unknown flag is a usage error that names the fix, and the nearest flag when one is close", () => {
+  assert.throws(() => parse(spec, ["/", "--wide"]), (error) => error instanceof UsageError && /unknown flag --wide — did you mean --width\?; run agentic-cms shot --help/.test(error.message));
+  assert.throws(() => parse(spec, ["/", "--zzz"]), (error) => error instanceof UsageError && /unknown flag --zzz; run agentic-cms shot --help/.test(error.message));
+});
+
+test("a value outside a flag's choices lists them; a stray argument after a repeatable flag says how to repeat it; a wrong subcommand names the nearest", () => {
+  const withChoices = { ...spec, flags: { ...spec.flags, scheme: { type: "string", choices: ["light", "dark"], default: "light" } } };
+  assert.equal(parse(withChoices, ["/", "--scheme", "dark"]).flags.scheme, "dark");
+  assert.throws(() => parse(withChoices, ["/", "--scheme", "grey"]), (error) => error instanceof UsageError && /--scheme is one of light, dark, not grey; run agentic-cms shot --help/.test(error.message));
+  assert.throws(() => parse(spec, ["/", "--domain", "a.example", "b.example"]), (error) => error instanceof UsageError && /shot takes 1 argument, not 2 \("b\.example" is extra\) — --domain takes one value each time: --domain a --domain b; run/.test(error.message));
+  const family = { command: "lab", subcommands: { serve: { command: "lab serve", summary: "s" }, render: { command: "lab render", summary: "r" } } };
+  assert.throws(() => parse(family, ["serv"]), (error) => error instanceof UsageError && /lab has no subcommand serv — did you mean serve\? \(serve, render\)/.test(error.message));
+  assert.throws(() => parse(family, ["zzzz"]), (error) => error instanceof UsageError && /lab has no subcommand zzzz \(serve, render\)/.test(error.message));
+  assert.equal(suggest("lints", ["lint", "check"]), " — did you mean lint?");
+  assert.equal(suggest("visual", ["visual-parity", "parity"]), " — did you mean visual-parity?");
+  assert.equal(suggest("xyz", ["lint"]), "");
 });
 
 test("a missing value, a bad number and a missing positional are usage errors", () => {
@@ -45,8 +59,10 @@ test("--help anywhere asks for the usage", () => {
   assert.equal(parse(spec, ["/"]).help, false);
 });
 
-test("the usage text carries every flag, its value, its default, the exit codes and the JSON shape", () => {
-  const text = usageText(spec);
+test("the usage text carries every flag, its value, its default, the exit codes, the JSON shape and the examples", () => {
+  const text = usageText({ ...spec, examples: ["agentic-cms shot / --width 390"], flags: { ...spec.flags, scheme: { type: "string", choices: ["light", "dark"], default: "light", help: "the scheme" } } });
+  assert.match(text, /--scheme light\|dark\s+the scheme \(default light\)/);
+  assert.match(text, /examples:\n {2}agentic-cms shot \/ --width 390/);
   assert.match(text, /agentic-cms shot <route\|url> \[options\]/);
   assert.match(text, /one screenshot of a page or an element/);
   assert.match(text, /--width <n>\s+viewport width in px \(default 1440\)/);

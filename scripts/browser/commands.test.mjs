@@ -145,7 +145,8 @@ test("sheet: a spec error exits 2 and names the field", { skip }, () => {
 
 test("the bin lists the three commands and their help", () => {
   const list = execFileSync(process.execPath, [BIN, "--help"], { encoding: "utf8" });
-  for (const name of ["shot", "probe", "sheet"]) assert.match(list, new RegExp(`^  ${name} `, "m"));
+  assert.match(list, /^ {2}look & measure\s+shot · probe · sheet$/m);
+  for (const name of ["shot", "probe", "sheet"]) assert.match(list, new RegExp(`^\\s+${name}\\s+\\S`, "m"));
   assert.match(execFileSync(process.execPath, [BIN, "shot", "--help"], { encoding: "utf8" }), /--transparent/);
 });
 

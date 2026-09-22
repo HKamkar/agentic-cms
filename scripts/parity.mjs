@@ -29,8 +29,8 @@ fs.mkdirSync(path.join(root, ".parity"), { recursive: true });
 const log = path.join(root, ".parity", `${label}.build.log`);
 const build = spawnSync("pnpm", ["build"], { cwd: root, stdio: ["ignore", fs.openSync(log, "w"), fs.openSync(log, "a")] });
 if (build.status !== 0) {
-  console.error(`build failed, see .parity/${label}.build.log`);
-  process.exit(1);
+  console.error(`parity: the build failed — see .parity/${label}.build.log`);
+  process.exit(2);
 }
 
 /** Every file under dir with the extension, as paths relative to dir. */

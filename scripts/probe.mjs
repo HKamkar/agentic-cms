@@ -20,7 +20,7 @@ if (!flags.select && !flags.heading) { console.error("probe: name the element wi
 if (flags.timeline && !flags.motion) { console.error("probe: --timeline samples a playing animation; add --motion"); process.exit(2); }
 const props = [...DEFAULT_PROPS, ...(flags.props ?? "").split(",").map((p) => p.trim()).filter(Boolean)];
 
-const { url, route, page, locator, consoleLines, close } = await openTarget(target, flags);
+const { url, route, page, locator, consoleLines, close } = await openTarget(target, flags, { command: "probe" });
 try {
   const count = await requireMatch(locator, flags, route);
   const indexes = flags.all ? [...Array(count).keys()] : [flags.index];

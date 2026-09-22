@@ -15,11 +15,10 @@ import { openTarget, relative, requireMatch, routeName, slug, targetOf } from ".
 import { SPECS } from "./lib/specs.mjs";
 
 const { positionals: [target], flags } = parseOrExit(SPECS.shot, process.argv.slice(2));
-if (!["light", "dark"].includes(flags.scheme)) { console.error(`shot: --scheme must be light or dark, not ${flags.scheme}`); process.exit(2); }
 if (flags.out && !/\.(png|webp)$/i.test(flags.out)) { console.error(`shot: --out takes a .png or .webp file, not ${flags.out}`); process.exit(2); }
 const say = (line) => (flags.json ? console.error(line) : console.log(line));
 
-const { root, url, route, page, locator, consoleLines, close } = await openTarget(target, flags);
+const { root, url, route, page, locator, consoleLines, close } = await openTarget(target, flags, { command: "shot" });
 try {
   const about = targetOf(flags);
   let element = null;
