@@ -121,16 +121,17 @@ export const jsonldSchema = z
       z
         .strictObject({
           type: z.literal("WebPage").describe("The schema.org page type"),
-          application,
+          application: optional(application).describe("The SoftwareApplication the page is about; left out, the page describes no software (a notice, a policy, a page of plain text)"),
           itemList: optional(
             z.strictObject({
               name: text().describe("The list's name"),
               description: text().describe("The list's description"),
             }),
           ).describe("An ItemList of the page's use-case cards (needs a use-case-cards section)"),
-          organization: z.enum(["provider", "publisher"], { error: "must be provider or publisher" }).describe("How the organisation is attached: as the page's provider (with its URL) or its publisher"),
+          organization: optional(z.enum(["provider", "publisher"], { error: "must be provider or publisher" })).describe("How the organisation is attached to the application: as its provider (with its URL) or its publisher; only with an application"),
         })
-        .describe("A WebPage about the software (the home and Use cases pages)"),
+        .refine((jsonld) => jsonld.application || !jsonld.organization, { error: "belongs to the application: drop it, or add the application it describes", path: ["organization"] })
+        .describe("A WebPage: about the software when it carries an application, otherwise a page of its own (a notice, a policy)"),
       z
         .strictObject({
           type: z.literal("AboutPage").describe("The schema.org page type"),

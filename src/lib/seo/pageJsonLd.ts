@@ -53,17 +53,22 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
       description: page.seo.description,
       url: absoluteUrl(page.seo.path),
       inLanguage: site.locale,
-      about: {
-        "@type": "SoftwareApplication",
-        name: application.name,
-        applicationCategory: "BusinessApplication",
-        description: application.description,
-        operatingSystem: application.operatingSystem,
-        offers: { "@type": "Offer", description: application.offer },
-        featureList: application.featureList,
-        ...(application.signIn ? { url: site.signIn.href, sameAs: site.footer.social.map((s) => s.href) } : {}),
-        ...(organization === "provider" ? { provider: organizationLd({ name: site.name, url: true }) } : {}),
-      },
+      // A page that describes no software (a notice, a policy) carries no `about`: mark up what is on the page.
+      ...(application
+        ? {
+            about: {
+              "@type": "SoftwareApplication",
+              name: application.name,
+              applicationCategory: "BusinessApplication",
+              description: application.description,
+              operatingSystem: application.operatingSystem,
+              offers: { "@type": "Offer", description: application.offer },
+              featureList: application.featureList,
+              ...(application.signIn ? { url: site.signIn.href, sameAs: site.footer.social.map((s) => s.href) } : {}),
+              ...(organization === "provider" ? { provider: organizationLd({ name: site.name, url: true }) } : {}),
+            },
+          }
+        : {}),
       ...(itemList
         ? {
             mainEntity: {
