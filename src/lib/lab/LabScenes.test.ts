@@ -41,7 +41,9 @@ test("LabScenes: every scene on every ground — an icon-sized one at the sizes 
   assert.ok(html.indexOf("The loop.") < html.indexOf('data-scene="'), "the procedure is above the first scene");
   assert.match(html, /pnpm kit lab clean/);
   assert.equal(count(html, /id="lab-time"/g), 1, "one scrubber for the page");
+  assert.match(html, /<button id="lab-toggle" type="button">pause<\/button>[\s\S]*<input id="lab-time" type="range" min="0" max="1" step="0\.016666666666666666" value="0"\/>[\s\S]*<span id="lab-readout">0\.00s \/ 0\.00s<\/span>/, "the controls are React elements, not a string");
   assert.match(html, /window\.lab = /);
+  assert.doesNotMatch(html, /const api = \(\) =>/, "the string controls of api.ts stay on the lab's own page");
   assert.ok(html.indexOf("<script>") > html.lastIndexOf("data-scene="), "the clock's script comes after the scenes");
   fs.rmSync(root, { recursive: true, force: true });
 });

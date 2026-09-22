@@ -9,12 +9,14 @@
 // with the procedure for the person looking at it. A server component with
 // no JSX (createElement), so it renders under node:test too; it reads the
 // filesystem, which is why it lives at agentic-cms/lab and not beside the
-// client components. The route that hosts it never merges: the build's SEO
-// audit fails it, which is the guard.
+// client components. The scrubber is LabControls, a client component over
+// the inline LAB_API clock. The route that hosts it never merges: the
+// build's SEO audit fails it, which is the guard.
 import fs from "node:fs";
 import path from "node:path";
 import { createElement as h, type ComponentType, type ReactNode } from "react";
-import { LAB_API, LAB_CONTROLS_HTML, labControls } from "./api.ts";
+import { LAB_API } from "./api.ts";
+import { LabControls } from "./LabControls.ts";
 import { LAB_DIR, animates, listScenes, sceneMeta, svgMarkup, tagRoot } from "./scenes.ts";
 
 /** A ground of the site: a label and a component that wraps children in that surface. */
@@ -104,8 +106,9 @@ export function LabScenes({ grounds, sizes = [24, 40, 64], folders = [], root = 
     children ?? null,
     scenes.length === 0 ? h("p", null, "No scenes yet: ", h("code", null, "pnpm kit lab new <name> --kind icon|mark|loop"), ".") : null,
     animated ? h("style", { dangerouslySetInnerHTML: { __html: CONTROLS_CSS } }) : null,
-    animated ? h("div", { dangerouslySetInnerHTML: { __html: LAB_CONTROLS_HTML } }) : null,
+    animated ? h(LabControls, { duration: 0 }) : null,
     ...scenes.map((scene) => h(SceneRow, { key: scene.id, scene, grounds, sizes })),
-    animated ? h("script", { dangerouslySetInnerHTML: { __html: `${LAB_API}\n${labControls()}` } }) : null,
+    // The clock alone: LabControls drives it from React; the string controls of api.ts are the lab's own page's.
+    animated ? h("script", { dangerouslySetInnerHTML: { __html: LAB_API } }) : null,
   );
 }
