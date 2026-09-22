@@ -6,6 +6,19 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- The design round is a structured part of the kit. The `design-options`
+  skill is rewritten as the six steps with the stops for the owner (after
+  the ideas, after the look, after the build), the rule that a "more" is an
+  edit on the route inside the round, the rule that a candidate's graphic is
+  the meaning of the copy beside it, and the rule that generic pieces leave
+  the section for `ui/` in the same job. `demo new <name> --section <type>`
+  scaffolds the route from the registry and the page file — a candidate per
+  letter as a copy of the section's component, the page's copy read from its
+  file on every render, the section's real frame inside the site's own
+  layout (its theme, its chrome), the current version last; `demo clean`
+  removes the route, every component file it alone imported and next dev's
+  stale route types (`lab clean` shares that step). `docs/design.md` § The
+  round, with a worked example; the rules and the site template name it.
 - `lab route`: the lab as a throwaway route inside the site,
   `src/app/lab-demo/page.tsx` from the kit's template, rendering
   `LabScenes` from the new `agentic-cms/lab` — every scene under

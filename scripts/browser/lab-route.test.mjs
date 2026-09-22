@@ -3,35 +3,17 @@
 // procedure, the scrubber. Runs in this checkout, so it only writes what it
 // removes again — the route, and the lab folder when there was none.
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import net from "node:net";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
+import { devServer } from "./dev-server.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const BIN = path.join(ROOT, "bin/agentic-cms.mjs");
-const NEXT = path.join(ROOT, "node_modules/next/dist/bin/next");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
 const lab = (...args) => spawnSync(process.execPath, [BIN, "lab", ...args], { cwd: ROOT, encoding: "utf8" });
-const freePort = () => new Promise((resolve) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => resolve(port)); }); });
-
-/** next dev on a free port, resolved once it is ready; { url, stop }. */
-async function devServer() {
-  const port = await freePort();
-  const child = spawn(process.execPath, [NEXT, "dev", "-p", String(port), "-H", "127.0.0.1"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], detached: true });
-  let log = "";
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`next dev not ready in 120s:\n${log.slice(-800)}`)), 120000);
-    const onData = (chunk) => { log += chunk; if (/Ready in/.test(log)) { clearTimeout(timer); resolve(); } };
-    child.stdout.on("data", onData);
-    child.stderr.on("data", onData);
-    child.on("exit", (code) => { clearTimeout(timer); reject(new Error(`next dev exited ${code}:\n${log.slice(-800)}`)); });
-  });
-  return { url: `http://127.0.0.1:${port}`, stop: () => { try { process.kill(-child.pid, "SIGTERM"); } catch { child.kill("SIGTERM"); } } };
-}
-
 test("lab route: the example site renders /lab-demo with every scene on the grounds, the procedure first, one scrubber that seeks", { skip, timeout: 180000 }, async () => {
   const labDir = path.join(ROOT, ".parity/lab");
   const hadLab = fs.existsSync(labDir);

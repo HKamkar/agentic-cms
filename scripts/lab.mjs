@@ -15,7 +15,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
-const { KINDS, LAB_DIR, ROUTE_DIR, ROUTE_FILE, STALE_TYPES, isSceneName, parseSizes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
+const { KINDS, LAB_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
 const { startLabServer } = await import("./lib/lab-server.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.lab, process.argv.slice(2));
@@ -71,10 +71,9 @@ if (subcommand === "new") {
     else kept.push(ROUTE_FILE);
   }
   // next dev's generated route types keep naming a removed route, and the
-  // production build's type check reads them (tsconfig includes them); the
-  // stale file goes, next dev writes it again.
-  const validator = path.join(root, STALE_TYPES);
-  if (!fs.existsSync(route) && fs.existsSync(validator) && fs.readFileSync(validator, "utf8").includes(ROUTE_DIR)) { fs.rmSync(validator); removed.push(STALE_TYPES); }
+  // production build's type check reads them; the stale file goes (demo.mjs).
+  const stale = fs.existsSync(route) ? null : removeStaleTypes(root, ROUTE_DIR);
+  if (stale) removed.push(stale);
   if (flags.json) console.log(JSON.stringify({ removed, kept }, null, 1));
   else console.log(`${removed.length ? `${removed.join(" and ")} removed` : "nothing to remove"}${kept.length ? `; ${kept.join(", ")} kept (not the kit's route: it does not import agentic-cms/lab)` : ""}`);
 }

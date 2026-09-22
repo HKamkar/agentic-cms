@@ -303,4 +303,32 @@ export const SPECS = {
       },
     },
   },
+  demo: {
+    command: "demo", script: "demo", summary: "the design round's throwaway route: candidates for a section as real components in its frame with the page's real copy, lettered, the current version last — scaffolded from the registry and the page file, removed with the losing candidates",
+    usage: "agentic-cms demo <new | clean> …",
+    subcommands: {
+      new: {
+        command: "demo new", summary: "writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the section's component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; the route reads the page's copy from its file on every render, shows every candidate in the section's real frame inside the site's own layout, lettered with one line, and the current version last",
+        usage: "agentic-cms demo new <name> --section <type> [--page <slug>] [--candidates 2] [--component <file>] [--json]",
+        positionals: [{ name: "name", required: true, help: "the route is src/app/<name>-demo; lowercase letters, digits and hyphens" }],
+        flags: {
+          section: { type: "string", value: "<type>", help: "the section type (a key of the registry, src/components/sections/render.tsx)" },
+          page: { type: "string", value: "<slug>", help: "the page file whose copy the route reads (default: the first under content/pages carrying the section)" },
+          candidates: { type: "number", default: 2, help: "how many candidates, A onward (1 to 8)" },
+          component: { type: "string", value: "<file>", help: "the component to copy, for a section outside the registry" },
+          json: { type: "boolean", help: "print the report" },
+        },
+        exit: { 0: "written", 2: "a bad name, a route or a candidate file that exists, a section the registry or no page carries, or usage" },
+        json: "{ route, path, section, page, component, candidates: [{ letter, file }], data }",
+      },
+      clean: {
+        command: "demo clean", summary: "removes the route (every src/app/*-demo without a name), every component file it alone imported — the losing candidates and their module.css — and next dev's generated route types while they still name the route (the production build's type check reads them); a file another module imports is kept and named",
+        usage: "agentic-cms demo clean [name] [--json]",
+        positionals: [{ name: "name", help: "the demo's name; without one, every *-demo route" }],
+        flags: { json: { type: "boolean", help: "print { removed, kept }" } },
+        exit: { 0: "removed, or nothing to remove" },
+        json: "{ removed, kept }",
+      },
+    },
+  },
 };

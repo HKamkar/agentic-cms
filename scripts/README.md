@@ -119,6 +119,14 @@ against `fixtures/` by `pnpm test:browser`.
   `icons audit` inventories every icon on the built pages beside its copy,
   as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
   `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
+- `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
+  [--candidates 2]` scaffolds the design round's throwaway route,
+  `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the
+  section's component beside it, from the registry) reading the page's real
+  copy from its file, in the section's frame inside the site's own layout,
+  the current version last; `demo clean [name]` removes the route, every
+  component file it alone imported and next dev's stale route types
+  (`docs/design.md` § The round; `lib/demo.mjs`).
 - `lab` — `pnpm kit lab new <name> --kind icon|mark|loop` writes an SVG
   scene under `.parity/lab/` to start from; `lab serve` shows every scene
   on the site's tokens (light and dark, inline and as an `<img>`, with a
