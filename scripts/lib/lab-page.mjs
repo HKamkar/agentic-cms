@@ -3,42 +3,16 @@
 // scene page frames and what a render photographs), the scene page (the
 // scene inline in a light and a dark box at its sizes, the same file as an
 // <img> on both grounds, a scrubber over its animations, a reload on every
-// save) and the index. The in-page seek is one implementation, LAB_API,
-// shared by the scrubber and by `lab render`.
-import { escape, svgMarkup } from "./sheet.mjs";
+// save) and the index. The in-page seek and the controls are the package's
+// (src/lib/lab/api.ts), shared with the LabScenes route inside a site and
+// used by `lab render`.
+import { LAB_API, LAB_CONTROLS_HTML, labControls, svgMarkup, tagRoot } from "agentic-cms/lab";
+import { escape } from "./sheet.mjs";
 import { tokensCss } from "./lab.mjs";
 
-// window.lab — the clock of a bare page: SMIL through the root <svg>'s own
-// timeline, CSS and Web Animations through document.getAnimations(). A seek
-// pauses everything at t (seconds); an infinite loop counts as one cycle.
-export const LAB_API = `window.lab = (() => {
-  const roots = () => [...document.querySelectorAll("svg")].filter((s) => !s.parentElement.closest("svg"));
-  const anims = () => document.getAnimations();
-  const declared = () => roots().map((s) => Number(s.dataset.duration)).find((n) => n > 0) || 0;
-  function duration() {
-    let max = declared();
-    if (max) return max;
-    for (const a of anims()) { const t = a.effect.getComputedTiming(); const n = t.iterations === Infinity ? 1 : (t.iterations || 1); max = Math.max(max, ((Number(t.delay) || 0) + (Number(t.duration) || 0) * n) / 1000); }
-    for (const el of document.querySelectorAll("animate, animateTransform, animateMotion, set")) { try { const d = el.getSimpleDuration(); if (Number.isFinite(d)) max = Math.max(max, d); } catch {} }
-    return max || 1;
-  }
-  function seek(t) { for (const s of roots()) { s.pauseAnimations(); s.setCurrentTime(t); } for (const a of anims()) { a.pause(); a.currentTime = t * 1000; } return t; }
-  function play() { for (const s of roots()) s.unpauseAnimations(); for (const a of anims()) a.play(); }
-  function pause() { for (const s of roots()) s.pauseAnimations(); for (const a of anims()) a.pause(); }
-  function time() { const s = roots()[0]; return s ? s.getCurrentTime() : 0; }
-  return { duration, seek, play, pause, time };
-})();`;
-
+export { LAB_API };
 const FONT = "var(--font-sans, system-ui, sans-serif)";
 const LABEL = "var(--font-label, ui-monospace, monospace)";
-
-/** The root <svg> of a scene's markup tagged with a class, so the page can size it. */
-function tagRoot(markup, className) {
-  const root = markup.match(/<svg\b[^>]*>/)?.[0];
-  if (!root) throw new Error("not an SVG: no <svg> root");
-  const tagged = /\sclass="/.test(root) ? root.replace(/\sclass="/, ` class="${className} `) : root.replace(/^<svg\b/, `<svg class="${className}"`);
-  return markup.replace(root, tagged);
-}
 
 /** One scene alone: inline, in one scheme, on a transparent ground (or the paper), at an explicit size, with the seek API. */
 export function bareHtml(scene, svg, { tokens = {}, scheme = "light", background = "transparent", width, height, pad = 0 } = {}) {
@@ -87,26 +61,6 @@ const box = (scheme, inner) => `<div class="lab-box" data-scheme="${scheme}">${i
 const sizeOf = (meta, width) => ({ width, height: Math.max(1, Math.round((width * meta.height) / meta.width)) });
 const encode = (id) => id.split("/").map(encodeURIComponent).join("/");
 
-// The controls of the scene page: every frame's window.lab driven together.
-const CONTROLS = (duration) => `(() => {
-  const frames = [...document.querySelectorAll("iframe.lab-frame")];
-  const api = () => frames.map((f) => f.contentWindow && f.contentWindow.lab).filter(Boolean);
-  const range = document.getElementById("lab-time"), readout = document.getElementById("lab-readout"), toggle = document.getElementById("lab-toggle");
-  let duration = ${Number(duration) || 0}, playing = true;
-  const show = (t) => { readout.textContent = t.toFixed(2) + "s / " + duration.toFixed(2) + "s"; };
-  const ready = () => { const a = api()[0]; if (!a) return; duration = duration || a.duration(); range.max = duration; range.step = 1 / 60; show(0); };
-  frames.forEach((f) => f.addEventListener("load", ready));
-  const seekAll = (t) => { t = Math.max(0, Math.min(duration, t)); api().forEach((a) => a.seek(t)); range.value = t; show(t); };
-  const pause = () => { playing = false; api().forEach((a) => a.pause()); toggle.textContent = "play"; };
-  const play = () => { playing = true; api().forEach((a) => a.play()); toggle.textContent = "pause"; };
-  toggle.onclick = () => (playing ? pause() : play());
-  range.oninput = () => { pause(); seekAll(Number(range.value)); };
-  document.getElementById("lab-back").onclick = () => { pause(); seekAll(Number(range.value) - 1 / 30); };
-  document.getElementById("lab-forward").onclick = () => { pause(); seekAll(Number(range.value) + 1 / 30); };
-  setInterval(() => { if (!playing || !duration) return; const a = api()[0]; if (!a) return; const t = a.time() % duration; range.value = t; show(t); }, 100);
-  new EventSource("/events").onmessage = () => location.reload();
-})();`;
-
 /** The scene page: inline in both schemes at the natural size and the given sizes (framed bare pages), as an <img> on both grounds, the scrubber, the render hint. */
 export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true } = {}) {
   const widths = [...new Set([meta.width, ...sizes])].filter((w) => w > 0).sort((a, b) => a - b);
@@ -120,12 +74,12 @@ export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated
   const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", image(w))}${box("dark", image(w))}</div>`).join("");
   return shell(scene, tokens, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
 <h2>inline — currentColor and var(--color-*) follow each box's scheme</h2>
-${animated ? `<div class="lab-controls"><button id="lab-toggle" type="button">pause</button><button id="lab-back" type="button">◀</button><input id="lab-time" type="range" min="0" max="1" step="0.0166" value="0"><button id="lab-forward" type="button">▶</button><span id="lab-readout">0.00s</span></div>` : ""}
+${animated ? LAB_CONTROLS_HTML : ""}
 ${inline}
 <h2>as &lt;img&gt; — the file as a page would embed it: currentColor is black, a var() without a fallback is the initial paint, the scheme is the browser's (a render to .svg resolves the tokens)</h2>
 ${asImg}
 <p class="lab-note">pnpm kit lab render ${escape(scene)} --out public/images/&lt;page&gt;/${escape(scene.split("/").pop())}.svg · --out ….webp [--fps 30] · pnpm kit lab clean</p>
-<script>${animated ? CONTROLS(meta.duration) : 'new EventSource("/events").onmessage = () => location.reload();'}</script>`);
+<script>${animated ? labControls({ frames: true, duration: meta.duration }) : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
 }
 
 /** The index: every scene by name and file, as an <img> on both grounds, linked to its page. */

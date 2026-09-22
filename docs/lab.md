@@ -40,6 +40,56 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   address, so the owner opens the same page on a phone; it serves only the
   scenes it listed and generated HTML — nothing else of the tree.
   `--host 127.0.0.1` keeps it on this machine.
+- The second window is the route (below): the same scenes on the site's
+  real grounds, inside its chrome, on the dev server.
+
+## The route — the lab on the site's theme
+
+The lab's page shows a scene on the site's tokens, in a light and a dark
+box. To judge it on the site's real theme — its background, its type, its
+surfaces, next to the real chrome — there is a second window: a throwaway
+route inside the site.
+
+```bash
+pnpm kit lab route          # src/app/lab-demo/page.tsx from the kit's template
+pnpm dev                    # then /lab-demo (on the LAN address too)
+pnpm kit lab clean          # removes the route with the lab
+```
+
+The route renders `LabScenes` from `agentic-cms/lab`: every scene under
+`.parity/lab` (and the `folders` given, like `--scenes`) inline on the
+**grounds** the site passes — `{ label, Frame }` pairs, a Frame being any
+component that wraps children in one of the site's surfaces — at the
+scene's size and, for an icon-sized one, at `sizes` (24 / 40 / 64 by
+default). `currentColor` is each ground's ink and the `var()` tokens are
+the site's, because the drawing is inline in the site's own document; the
+site's theme toggle flips the page ground and leaves a white card white,
+which is the point. The template starts with two grounds every site has —
+the page and a white card — and the site adds its own (a card, a panel, a
+dark band): keep them in a file of your own that the route imports, since
+`lab clean` deletes the route. The files are read on every render, so a
+save in the lab is a refresh here. When a scene animates, one scrubber on
+the page pauses every scene at a time — the same clock the lab's page and
+`lab render` use, inline script, no library.
+
+The page opens with the procedure for the person looking at it (the
+component renders it; `intro={false}` hides it, children add the site's
+note): what a scene is, the two windows, the loop, and the commands. The
+loop, in short — say what you want and where it goes; the agent draws two
+to four candidate scenes; pick one by its name on the page and ask for
+changes, the agent edits the file, refresh; the pick ships pre-rendered
+(`lab render`, or `icons add file:`) and is placed in its section; `lab
+clean`.
+
+The route is a plain server component, not `force-dynamic`: `next dev`
+renders it on every request anyway, and `next build` prerenders it, where
+the SEO audit fails it (`FAIL /lab-demo canonical: missing`, …) — the guard
+that keeps it out of a merge. `init` does not ship it; `lab clean` removes
+only a route that imports `agentic-cms/lab` and names any other — and,
+with it, `next dev`'s generated route types (`.next/dev/types/validator.ts`)
+while they still name the route: the production build's type check reads
+them and would fail on a page that is gone (any removed route does this;
+`next dev` writes the file again).
 
 ## Drawing rules
 
@@ -126,7 +176,7 @@ commit and its own proof.
 ## Close
 
 ```bash
-pnpm kit lab clean          # removes .parity/lab; git status shows nothing of the lab
+pnpm kit lab clean          # removes .parity/lab and src/app/lab-demo; git status shows nothing of the lab
 ```
 
 What stays is what a render wrote under `public/images/` (and, for an

@@ -440,10 +440,10 @@ Exit: `0` written; `2` no build, or no browser.
 
 ### `lab`
 
-The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN; rendered to the files a page ships; removed when done.
+The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done.
 
 ```bash
-agentic-cms lab <new | serve | render | clean> …
+agentic-cms lab <new | serve | route | render | clean> …
 ```
 
 #### `lab new`
@@ -482,6 +482,23 @@ agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [-
 
 Exit: `0` stopped; `2` the port is taken, a --scenes path that does not exist, or usage.
 
+#### `lab route`
+
+Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it).
+
+```bash
+agentic-cms lab route [--force] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--force` | overwrite a route that is already there |
+| `--json` | print { file, path } |
+
+Exit: `0` written; `2` the route exists (pass --force), or usage.
+
+`--json` prints `{ file, path }`.
+
 #### `lab render`
 
 Renders one scene to the file a page ships, by the extension of --out: .svg (the tokens resolved for one scheme, the animation kept), .webp/.png/.jpg (a still at --at), or with --animate a loop as an animated .webp (sharp, no ffmpeg), .webm or .mp4 (ffmpeg); a loop also writes its still beside it (the <picture> fallback, the poster) and a raster its source scene.
@@ -518,7 +535,7 @@ Exit: `0` written; `2` an unknown scene, an extension the lab cannot write, no b
 
 #### `lab clean`
 
-Removes .parity/lab; what a render wrote under public/ (and src/config/icons/) is what stays.
+Removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays.
 
 ```bash
 agentic-cms lab clean [--json]
@@ -526,10 +543,10 @@ agentic-cms lab clean [--json]
 
 | flag | what |
 |---|---|
-| `--json` | print { removed } |
+| `--json` | print { removed: [paths], kept: [paths] } |
 
 Exit: `0` removed, or nothing to remove.
 
-`--json` prints `{ removed }`.
+`--json` prints `{ removed, kept }`.
 
 <!-- commands-doc:end -->

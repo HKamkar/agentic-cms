@@ -239,8 +239,8 @@ export const SPECS = {
     },
   },
   lab: {
-    command: "lab", script: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN; rendered to the files a page ships; removed when done",
-    usage: "agentic-cms lab <new | serve | render | clean> …",
+    command: "lab", script: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done",
+    usage: "agentic-cms lab <new | serve | route | render | clean> …",
     subcommands: {
       new: {
         command: "lab new", summary: "writes a scene to start from, .parity/lab/<name>.svg, on the kit's own contracts: an icon on the 24 grid in currentColor (what Icon renders), a mark on the 64 grid, or a loop with the reduced-motion rule and one SMIL animation",
@@ -260,6 +260,13 @@ export const SPECS = {
           sizes: { type: "string", default: "24,40,64", value: "<px,px>", help: "the sizes an icon-sized scene (up to 96 px wide) is also shown at, inline and as an <img>" },
         },
         exit: { 0: "stopped", 2: "the port is taken, a --scenes path that does not exist, or usage" },
+      },
+      route: {
+        command: "lab route", summary: "writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it)",
+        usage: "agentic-cms lab route [--force] [--json]",
+        flags: { force: { type: "boolean", help: "overwrite a route that is already there" }, json: { type: "boolean", help: "print { file, path }" } },
+        exit: { 0: "written", 2: "the route exists (pass --force), or usage" },
+        json: "{ file, path }",
       },
       render: {
         command: "lab render", summary: "renders one scene to the file a page ships, by the extension of --out: .svg (the tokens resolved for one scheme, the animation kept), .webp/.png/.jpg (a still at --at), or with --animate a loop as an animated .webp (sharp, no ffmpeg), .webm or .mp4 (ffmpeg); a loop also writes its still beside it (the <picture> fallback, the poster) and a raster its source scene",
@@ -288,11 +295,11 @@ export const SPECS = {
         json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }",
       },
       clean: {
-        command: "lab clean", summary: "removes .parity/lab; what a render wrote under public/ (and src/config/icons/) is what stays",
+        command: "lab clean", summary: "removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
         usage: "agentic-cms lab clean [--json]",
-        flags: { json: { type: "boolean", help: "print { removed }" } },
+        flags: { json: { type: "boolean", help: "print { removed: [paths], kept: [paths] }" } },
         exit: { 0: "removed, or nothing to remove" },
-        json: "{ removed }",
+        json: "{ removed, kept }",
       },
     },
   },

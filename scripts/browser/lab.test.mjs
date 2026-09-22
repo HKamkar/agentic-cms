@@ -9,7 +9,10 @@ import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
 import { chromePath, ffmpegPath } from "../lib/browser.mjs";
-import { LAB_DIR, sceneTemplate } from "../lib/lab.mjs";
+// The lab's modules reach the package (TypeScript in this checkout): the hook first, the import after it.
+import "../lib/load-ts.mjs";
+
+const { LAB_DIR, sceneTemplate } = await import("../lib/lab.mjs");
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";

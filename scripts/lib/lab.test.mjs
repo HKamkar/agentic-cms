@@ -4,7 +4,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { KINDS, LAB_DIR, isSceneName, listScenes, parseSizes, readThemeTokens, resolveTokens, sceneMeta, sceneTemplate, siteTokens, stripAnimation, tokensCss } from "./lab.mjs";
+import { KINDS, LAB_DIR, parseSizes, readThemeTokens, resolveTokens, sceneMeta, sceneTemplate, siteTokens, stripAnimation, tokensCss } from "./lab.mjs";
 import { LAB_API, bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
 import { startLabServer } from "./lab-server.mjs";
 
@@ -56,31 +56,6 @@ test("the templates: one per kind, a valid root with a size, on the kit's contra
   assert.equal(sceneMeta(sceneTemplate("loop", "x")).duration, 2);
   assert.throws(() => sceneTemplate("photo", "x"), /not a kind of scene \(icon, mark, loop\)/);
   assert.throws(() => sceneTemplate("icon", "Bad Name"), /lowercase letters, digits and hyphens/);
-  assert.ok(isSceneName("a-1") && !isSceneName("-a") && !isSceneName("a/b") && !isSceneName("A"));
-});
-
-test("sceneMeta reads width and height from the attributes, else the viewBox; a non-SVG throws", () => {
-  assert.deepEqual(sceneMeta('<svg viewBox="0 0 160 90"></svg>'), { width: 160, height: 90, viewBox: "0 0 160 90", duration: 0 });
-  assert.deepEqual(sceneMeta('<?xml version="1.0"?>\n<svg width="32px" height="16" data-duration="1.5" viewBox="0 0 64 32"/>'), { width: 32, height: 16, viewBox: "0 0 64 32", duration: 1.5 });
-  assert.throws(() => sceneMeta("<html></html>"), /no <svg> root/);
-});
-
-test("listScenes: the lab's files by name, extra files and folders by path without the extension, a missing path named", () => {
-  const root = site();
-  fs.mkdirSync(path.join(root, LAB_DIR), { recursive: true });
-  fs.writeFileSync(path.join(root, LAB_DIR, "b.svg"), "<svg/>");
-  fs.writeFileSync(path.join(root, LAB_DIR, "a.svg"), "<svg/>");
-  fs.writeFileSync(path.join(root, LAB_DIR, "notes.txt"), "not a scene");
-  fs.mkdirSync(path.join(root, "public/images/home/deep"), { recursive: true });
-  fs.writeFileSync(path.join(root, "public/images/home/mark.svg"), "<svg/>");
-  fs.writeFileSync(path.join(root, "public/images/home/deep/hero.svg"), "<svg/>");
-  fs.writeFileSync(path.join(root, "public/images/one.svg"), "<svg/>");
-  const scenes = listScenes(root, { extra: ["public/images/home", "public/images/one.svg"] });
-  assert.deepEqual([...scenes.keys()], ["a", "b", "public/images/home/deep/hero", "public/images/home/mark", "public/images/one"]);
-  assert.equal(scenes.get("a"), path.join(root, LAB_DIR, "a.svg"));
-  assert.throws(() => listScenes(root, { extra: ["public/nope"] }), /public\/nope: no such file or folder/);
-  assert.equal(listScenes(os.tmpdir()).size >= 0, true);
-  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test("resolveTokens writes one scheme's hex into the file; stripAnimation leaves a still", () => {
@@ -167,7 +142,7 @@ test("the server: the index, a scene page and its bare page, the file by id, not
 });
 
 test("renderPlan: the format by extension, a still or a sequence, the times, the still and the source beside the file", async () => {
-  const { animates, renderPlan } = await import("./lab.mjs");
+  const { renderPlan } = await import("./lab.mjs");
   const still = renderPlan("out/mark.webp", { at: 0.5 }, { duration: 2, animated: true });
   assert.deepEqual(still, { format: "webp", sequence: false, video: false, times: [0.5], fps: 30, delay: 33, background: "transparent", still: null, source: "out/mark.svg" });
   const loop = renderPlan("out/loop.webp", { animate: true, fps: 10 }, { duration: 2, animated: true });
@@ -191,9 +166,6 @@ test("renderPlan: the format by extension, a still or a sequence, the times, the
   assert.throws(() => renderPlan("out/a.gif", {}, {}), /\.gif: a render writes/);
   assert.throws(() => renderPlan("out/a", {}, {}), /no extension/);
   assert.throws(() => renderPlan("out/a.webm", { fps: 0 }, {}), /--fps must be above 0/);
-  assert.ok(animates("<svg><animate/></svg>") && animates("<svg><style>.a{animation: x 1s}</style></svg>") && !animates("<svg><rect/></svg>"));
-  const { followsTheme } = await import("./lab.mjs");
-  assert.ok(followsTheme('<svg stroke="currentColor"/>') && followsTheme('<svg fill="var(--color-fill)"/>') && !followsTheme('<!-- agentic-cms lab: currentColor in a comment --><svg fill="#888"/>'));
 });
 
 test("resolveTokenColors: one scheme's side of every colour token, var() chains followed", async () => {
