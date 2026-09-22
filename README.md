@@ -215,7 +215,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.4.3      # allowBuilds below, first
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.0      # allowBuilds below, first
 pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
 pnpm install && pnpm dev
 ```

@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.0] — 2026-09-22
 
 - `docs/design.md` gains "When the dev server will not serve": the
   `@vercel/turbopack-next/internal/…` resolve failures a `next dev`
@@ -34,7 +34,6 @@ changes what a capture writes says **recapture baselines**.
   alone and its block is the page itself — name, description, url and
   language — beside the breadcrumb the route emits. `organization` without
   an `application` is an error that says so.
-
 - `LabScenes`: the route's scrubber is a client component, `LabControls`
   (React state over the inline `window.lab` clock), instead of a string
   the controls' script mutated before React hydrated — which logged a
