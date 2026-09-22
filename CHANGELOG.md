@@ -4,6 +4,110 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.5.0] — 2026-09-22
+
+- `docs/design.md` gains "When the dev server will not serve": the
+  `@vercel/turbopack-next/internal/…` resolve failures a `next dev`
+  restarted after a production build hits (`rm -rf .next/dev
+  .next/cache/turbopack`), and the stale route types a removed route
+  leaves behind.
+- `demo new` scaffolds a round for the chrome: `--component <file>` alone
+  is enough, and the route then renders every candidate with no props and
+  reads no page file (a footer, a navbar, a button takes its copy from
+  `src/config/site.ts`). `--section` and `--component` together are
+  unchanged, `--page` without `--section` is refused, and neither names
+  what the candidates are for. `demo clean` now removes only the candidate
+  files (`<Name><Letter>.tsx`) — the component they were copied from is
+  never deleted, whatever imports it.
+- The colon trap says what happened and what to do. A YAML scalar that
+  contains `": "` is a mapping, so a sentence with a colon becomes a key:
+  a field that expects text and receives one now fails with
+  `paragraphs[0] is a mapping, not text: the line contains ": ", which YAML
+  reads as a key — quote it ("Every request carries …")` instead of
+  `must be a non-empty string`, and a parser error ("Nested mappings are
+  not allowed…") keeps its line and gains the same fix. Detected in the
+  engine's issue mapping, so every collection and every site schema gets
+  it; a mapping where a mapping belongs is untouched.
+- A page's `WebPage` structured data no longer has to describe software:
+  `application` (and `organization`, which attaches to it) are optional, so
+  a notice, a policy or any page of plain text declares `type: WebPage`
+  alone and its block is the page itself — name, description, url and
+  language — beside the breadcrumb the route emits. `organization` without
+  an `application` is an error that says so.
+- `LabScenes`: the route's scrubber is a client component, `LabControls`
+  (React state over the inline `window.lab` clock), instead of a string
+  the controls' script mutated before React hydrated — which logged a
+  hydration mismatch on every load of the lab route. The lab's own served
+  page, which has no React, keeps the string controls. The route test now
+  fails on any console error through hydration.
+- The command line answers every wrong input with the right one: a wrong
+  command, subcommand or flag names the nearest ("did you mean"), a value
+  outside a flag's `choices` lists them (`--scheme`, `--kind`,
+  `--background` are choices in the spec now, validated in one place), a
+  stray value after a repeatable flag says how to repeat it, and a command
+  that reads the site refuses to run outside a site's root with the fix.
+  `agentic-cms --help` is a map by family; every command carries examples
+  in its `--help` and in `docs/commands.md`, which is now by family too.
+  `lint` and `seo` print `--json`. Exit codes made true to the contract:
+  `shot`/`probe` without a build, `parity` when the build fails and the
+  optimisers on a missing file exit 2 with the fix, not 1 with a stack.
+- The design round is a structured part of the kit. The `design-options`
+  skill is rewritten as the six steps with the stops for the owner (after
+  the ideas, after the look, after the build), the rule that a "more" is an
+  edit on the route inside the round, the rule that a candidate's graphic is
+  the meaning of the copy beside it, and the rule that generic pieces leave
+  the section for `ui/` in the same job. `demo new <name> --section <type>`
+  scaffolds the route from the registry and the page file — a candidate per
+  letter as a copy of the section's component, the page's copy read from its
+  file on every render, the section's real frame inside the site's own
+  layout (its theme, its chrome), the current version last; `demo clean`
+  removes the route, every component file it alone imported and next dev's
+  stale route types (`lab clean` shares that step). `docs/design.md` § The
+  round, with a worked example; the rules and the site template name it.
+- `lab route`: the lab as a throwaway route inside the site,
+  `src/app/lab-demo/page.tsx` from the kit's template, rendering
+  `LabScenes` from the new `agentic-cms/lab` — every scene under
+  `.parity/lab` inline on the site's own grounds (the page and a white card
+  to start; the site adds its surfaces), at its size and the icon sizes,
+  inside the real chrome, with the procedure for the person looking at it
+  and one scrubber over the animated scenes (the same clock as the lab's
+  page, inline, no library). A plain server component, so `next build`
+  prerenders it and the SEO audit fails it — the guard; `lab clean` removes
+  it with the lab (a site's own route at that path is left and named).
+  The scene functions the command line and the route share moved into the
+  package (`src/lib/lab/`); `scripts/lab.mjs` loads them through the
+  TypeScript hook. `docs/lab.md` § The route.
+- `lab new | serve | clean`: the design canvas for the site's own graphics.
+  An SVG scene under `.parity/lab/` starts from a template on the kit's
+  contracts (an icon on Icon's 24 grid, a mark on the 64 grid, a loop with
+  the reduced-motion rule); `lab serve` shows every scene on the site's
+  tokens read from `globals.css` (no build needed), inline in a light and a
+  dark box and as an `<img>` on both grounds, with a scrubber over its SMIL
+  and CSS animations, reloading on every save, on the LAN for a phone;
+  `lab clean` removes it. `docs/lab.md`.
+- `lab render`: one scene to the file a page ships, by the extension of
+  `--out` — a `.svg` with the tokens resolved for one scheme (no browser
+  needed), a still `.webp`/`.png`/`.jpg` at `--at`, or with `--animate` one
+  cycle as an animated `.webp` (sharp, no ffmpeg) or a `.webm`/`.mp4`
+  (ffmpeg: a system build, else the VP8-only one in Playwright's cache).
+  The scene's clock is set frame by frame, so a render is deterministic; a
+  loop writes its still beside it and a raster its source scene. An
+  animated `<img>` never stops under reduced motion, so a loop ships as a
+  `<picture>` with that still — the doc has the markup.
+- `icons add file:<name>`: a third source beside Lucide and Simple Icons —
+  the site's own drawing, `src/config/icons/<name>.svg` (rendered there from
+  the lab), read as flat shapes with one paint; its root's paint decides
+  the kind, its `viewBox` is kept off the 24 grid (`IconData.viewBox`,
+  which `Icon` now applies), a group, transform, use, defs, style, mask or
+  clipPath is refused with the fix.
+- The `design-graphics` skill: the site's own graphics — an icon beyond
+  the families, a mark, an illustration, a short 2D loop — drawn as SVG in
+  the lab, judged on the tokens in both schemes and on a phone, shipped
+  pre-rendered as the file a page embeds or as inline `Icon` data, the lab
+  removed after; named beside the other design skills in the rules, the
+  site template, `docs/skills.md`, `docs/design.md` and `STANDARD.md` §4.
+  `docs/roadmap.md` lists what comes after it (three.js scenes, `Graphic`).
+
 ## [0.4.3] — 2026-09-20
 
 - `icons add`: a `<line>`'s attributes (`x1`, `y1`, `x2`, `y2`, digits in

@@ -15,6 +15,8 @@ a patch under `node_modules`.
   `design` skill (`.claude/skills/`, `.agents/skills/` — found from this
   checkout with nothing installed); a look the owner has to choose goes
   through `design-options`, a screenshot claim through `design-measure`,
+  icons through `design-icons`, the site's own graphics (drawn as SVG in
+  the lab, `pnpm kit lab`, shipped pre-rendered) through `design-graphics`,
   and nothing merges without `design-proof`.
 - Content is files under `content/`, validated at build time: posts in
   `content/blog/` (the filename is the slug), the registries, `reviews.yaml`,
@@ -87,7 +89,7 @@ a patch under `node_modules`.
   cached under `.next/dev`): a class the production build has but the dev
   page lacks means `rm -rf .next/dev` and a restart, not a bug.
 - `pnpm build` fails a route without an `seo` block; a demo route
-  (`src/app/<name>-demo/`) is therefore removed before a branch merges — the
+  (`src/app/<name>-demo/`, `pnpm kit demo clean`) is therefore removed before a branch merges — the
   guard, not an obstacle.
 
 ## Parity harness and long runs
@@ -108,10 +110,14 @@ before the next change; `.parity/` is gitignored and grows fast.
   before editing. Typos and one-line tweaks need no plan.
 - Match scope to the ask: a bug fix is not a refactor is not a redesign;
   drive-by cleanups are separate suggestions.
-- Design choices go to the owner as candidates (`design-options`): a sheet
-  for static ones, a demo route on the dev server for live ones, the current
-  version beside them, at the real size and colour; the owner picks by row.
-  One preview round, one build.
+- Design choices go to the owner as a round (`design-options`): three to
+  five ideas in one message, the owner's pick of what to build, the
+  candidates as real components on a demo route (`pnpm kit demo new <name>
+  --section <type>`) in the section's frame with the page's copy on the
+  site's theme, the current version last; the owner picks by letter or edits
+  the pick in words on the route, inside the round; on their word the winner
+  is built, generic pieces leave for `ui/`, and `pnpm kit demo clean` removes
+  the rest. A sheet for static candidates. One round, one build.
 - One instance means the class: a report of one template glyph, one
   hard-coded value, one unaligned card is a report of every one of its
   kind; inventory the class first (`pnpm kit probe … --all`, `grep`, a

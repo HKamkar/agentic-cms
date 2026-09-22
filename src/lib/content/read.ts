@@ -14,7 +14,7 @@ import matter from "gray-matter";
 import { parse as parseYaml } from "yaml";
 import { ZodObject, type ZodError, type ZodType } from "zod";
 import { contentRoot, type CollectionDef, type EntryOf, type FileCollection, type FolderCollection, type Format } from "./define.ts";
-import { ContentError, formatPath, type ContentIssue } from "./errors.ts";
+import { COLON_FIX, ContentError, colonTrap, formatPath, type ContentIssue } from "./errors.ts";
 
 type Loaded = { slug: string; file: string; data: unknown; body?: string; format?: "md" | "mdx" };
 /** A parsed entry before validation; `base` prefixes its issue paths ([2] in a list, the key in a map). */
@@ -29,6 +29,11 @@ const ENGINES = { yaml: { parse: (text: string) => parseYaml(text) as object } }
 const cache = new Map<CollectionDef, Loaded[]>();
 const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const firstLine = (error: unknown) => (error instanceof Error ? error.message : String(error)).split("\n")[0];
+// A parser error whose cause is the colon trap ("Nested mappings are not
+// allowed…") keeps the file and line it names and gains the fix.
+const withFix = (message: string) => (/nested mappings are not allowed/i.test(message) ? `${message} — ${COLON_FIX}` : message);
+/** The value the file really holds at an issue's path, for a message that can name it. */
+const valueAt = (data: unknown, segments: readonly PropertyKey[]) => segments.reduce<unknown>((value, segment) => (value == null ? undefined : (value as Record<PropertyKey, unknown>)[segment]), data);
 
 /** The logical location used in messages: "content/blog", "content/authors.json". */
 export function sourceOf(def: CollectionDef): string {
@@ -108,7 +113,7 @@ function parseMarkdown(raw: string, file: string) {
   try {
     return matter(raw, { engines: ENGINES });
   } catch (error) {
-    throw new ContentError(file, "", `invalid frontmatter: ${firstLine(error)}`);
+    throw new ContentError(file, "", `invalid frontmatter: ${withFix(firstLine(error))}`);
   }
 }
 
@@ -131,7 +136,7 @@ function parseData(raw: string, file: string, ext: string): unknown {
   try {
     return json ? JSON.parse(raw) : parseYaml(raw);
   } catch (error) {
-    throw new ContentError(file, "", `invalid ${json ? "JSON" : "YAML"}: ${firstLine(error)}`);
+    throw new ContentError(file, "", `invalid ${json ? "JSON" : "YAML"}: ${withFix(firstLine(error))}`);
   }
 }
 
@@ -139,13 +144,16 @@ function validate(def: CollectionDef, { base, ...entry }: RawEntry): Loaded {
   if (!isPlainObject(entry.data)) throw new ContentError(entry.file, formatPath(base), "must be a mapping");
   const result = def.schema.safeParse(entry.data);
   if (result.success) return { ...entry, data: result.data };
-  const [first, ...rest] = result.error.issues.map((issue) => toIssue(issue, base, def.schema));
+  const [first, ...rest] = result.error.issues.map((issue) => toIssue(issue, base, def.schema, entry.data));
   throw new ContentError(entry.file, first.path, first.problem, rest);
 }
 
-function toIssue(issue: Issue, base: PropertyKey[], schema: ZodType): ContentIssue {
-  const problem = issue.code === "unrecognized_keys" ? unknownKeys(issue.keys, issue.path.length === 0 ? schema : undefined) : issue.message;
-  return { path: formatPath([...base, ...issue.path]), problem };
+function toIssue(issue: Issue, base: PropertyKey[], schema: ZodType, data: unknown): ContentIssue {
+  const path = formatPath([...base, ...issue.path]);
+  if (issue.code === "unrecognized_keys") return { path, problem: unknownKeys(issue.keys, issue.path.length === 0 ? schema : undefined) };
+  // Text that YAML read as a mapping is the colon trap, whatever the schema: say so once, here, for every collection.
+  const trapped = issue.code === "invalid_type" && issue.expected === "string" ? colonTrap(valueAt(data, issue.path)) : null;
+  return { path, problem: trapped ?? issue.message };
 }
 
 /** At an entry's top level the allowed keys are at hand (the shape); deeper down only the offending ones are named. */

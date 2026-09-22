@@ -32,4 +32,5 @@ async function optimize(file) {
   if (!dryRun && !keep) fs.writeFileSync(file, after);
 }
 
+for (const target of targets) if (!fs.existsSync(target)) { console.error(`optimize-webp: ${target}: no such file or folder`); process.exit(2); }
 for (const file of targets.flatMap(walk)) await optimize(file);

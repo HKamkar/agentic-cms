@@ -10,7 +10,11 @@ current directory: its registry and config through `src/kit.ts`, its
 `content/`, `public/`, `.next` and `.parity`. The flags, defaults and exit
 codes of every command are `docs/commands.md`, generated from
 `lib/specs.mjs` — the spec each script parses its arguments from
-(`lib/args.mjs`; an unknown flag is an error, `--help` prints the spec).
+(`lib/args.mjs`; an unknown flag is an error that names the nearest one,
+a value outside a flag's `choices` lists them, `--help` prints the spec
+with its `examples`; a spec's `group` is its family in the map the bin
+prints, `site: true` marks one that reads the site's registry and is
+refused outside a site's root).
 `lib/browser.mjs` is the Chromium, the static server and the waits the
 harness and the page commands share; `browser/` holds their tests, run
 against `fixtures/` by `pnpm test:browser`.
@@ -119,6 +123,22 @@ against `fixtures/` by `pnpm test:browser`.
   `icons audit` inventories every icon on the built pages beside its copy,
   as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
   `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
+- `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
+  [--candidates 2]` scaffolds the design round's throwaway route,
+  `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the
+  section's component beside it, from the registry) reading the page's real
+  copy from its file, in the section's frame inside the site's own layout,
+  the current version last; `demo clean [name]` removes the route, every
+  component file it alone imported and next dev's stale route types
+  (`docs/design.md` § The round; `lib/demo.mjs`).
+- `lab` — `pnpm kit lab new <name> --kind icon|mark|loop` writes an SVG
+  scene under `.parity/lab/` to start from; `lab serve` shows every scene
+  on the site's tokens (light and dark, inline and as an `<img>`, with a
+  scrubber over its animations) on this machine and the LAN, reloading on
+  every save; `lab clean` removes the lab. The design canvas for the site's
+  own icons, graphics and short 2D loops, opened when a drawing is needed
+  and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
+  `lib/lab-page.mjs`, `lib/lab-server.mjs`).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen

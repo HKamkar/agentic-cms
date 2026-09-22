@@ -39,7 +39,6 @@ const MENU_WIDTHS = [767, 390];
 const motion = Boolean(flags.motion);
 // The theme follows prefers-color-scheme (and a stored choice, absent in a fresh browser context), so a scheme is a capture option.
 const scheme = flags.scheme ?? "light";
-if (!["light", "dark"].includes(scheme)) { console.error(`visual-parity capture: --scheme must be light or dark, not ${scheme}`); process.exit(2); }
 const states = Boolean(flags.states);
 if (motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
 const MOTION_WIDTHS = [1440, 390];

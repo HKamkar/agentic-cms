@@ -32,6 +32,10 @@ on a structural problem.
    collections (the engine reads a `faq` section's `set`, a `group`'s
    `sections`, and looks for `use-case-cards` by type; every other section
    is the site's).
+   A `WebPage` describes software only when its block carries an
+   `application`: a notice or a policy declares `type: WebPage` and nothing
+   else, and the block is then the page itself (name, description, url,
+   language) beside the breadcrumb the route already emits.
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
