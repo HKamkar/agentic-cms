@@ -103,6 +103,12 @@ describe("the post contract", () => {
     withContent(page(`${seo.replace("path: /x", "path: x/")}${jsonld}sections:\n${faq}`), () => expectContentError(readPages, "content/pages/x.yaml: seo.path must be / or /lowercase-words, without a trailing slash"));
     withContent(page(`${seo}${jsonld}sections:\n  - type: about-benefits\n    eyebrow: e\n    heading: h\n    cards:\n      - icon: i\n        title: t\n        text: x\n`), () => expectContentError(readPages, "content/pages/x.yaml: sections[0].cards must have exactly 3 cards"));
     withContent(page(`${seo}jsonld:\n  type: Nope\nsections:\n${faq}`), () => expectContentError(readPages, "content/pages/x.yaml: jsonld.type must be one of WebPage, AboutPage, ContactPage, Blog"));
+    // A sentence with a colon in a section's list of copy: YAML read it as a key, and the message says which line and what to do.
+    const strategy = "  - type: about-strategy\n    eyebrow: e\n    heading: h\n    text: t\n    beliefsHeading: b\n    cta:\n      label: l\n      href: /x\n    beliefs:\n";
+    const belief = (line: string) => `      - ${line}\n`;
+    withContent(page(`${seo}${jsonld}sections:\n${strategy}${belief("One file per page: the page is the file.")}${belief("b").repeat(3)}`), () =>
+      expectContentError(readPages, 'content/pages/x.yaml: sections[0].beliefs[0] is a mapping, not text: the line contains ": ", which YAML reads as a key — quote it ("One file per page: the page is the file.")'),
+    );
     // A WebPage describes software only when it carries an application: a notice or a policy is the type alone, and organization without one is an error.
     withContent(page(`${seo}jsonld:\n  type: WebPage\nsections:\n${faq}`), () => assert.equal(readPages()[0].data.jsonld.type, "WebPage"));
     withContent(page(`${seo}jsonld:\n  type: WebPage\n  organization: provider\nsections:\n${faq}`), () =>

@@ -36,12 +36,16 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    owner** — they pick which to build ("A and B", "all of them").
 3. **The pick of what to build.** Only the picked ideas become candidates.
 4. **Build the candidates.** `pnpm kit demo new <name> --section <type>`
-   writes `src/app/<name>-demo/page.tsx` and one candidate per letter — a
-   copy of the section's component beside it (`<Name>A.tsx`, `<Name>B.tsx`)
-   to edit into its idea — and the route reads the page's copy from its
-   file on every render, shows each candidate in the section's real frame
-   inside the site's own layout, lettered with the one line from step 2
-   (fill the `note` in), and the current version last. Copy a candidate
+   for a section, `--component <file>` for a piece of the chrome (a
+   footer, a navbar, a button — its copy is the site's config, so its
+   candidates take no props); both together for a section whose component
+   is not in the registry. It writes `src/app/<name>-demo/page.tsx` and one
+   candidate per letter — a copy of that component beside it
+   (`<Name>A.tsx`, `<Name>B.tsx`) to edit into its idea — and the route
+   shows each candidate inside the site's own layout, lettered with the one
+   line from step 2 (fill the `note` in), the current version last; a
+   section's candidates carry the page's copy, read from its file on every
+   render. Copy a candidate
    needs that the page does not yet have goes into the page file and its
    schema now, never into code or SVG text. A static candidate (a mark, a
    palette, a type sample) goes on a sheet (`pnpm kit sheet`,

@@ -6,6 +6,28 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `docs/design.md` gains "When the dev server will not serve": the
+  `@vercel/turbopack-next/internal/…` resolve failures a `next dev`
+  restarted after a production build hits (`rm -rf .next/dev
+  .next/cache/turbopack`), and the stale route types a removed route
+  leaves behind.
+- `demo new` scaffolds a round for the chrome: `--component <file>` alone
+  is enough, and the route then renders every candidate with no props and
+  reads no page file (a footer, a navbar, a button takes its copy from
+  `src/config/site.ts`). `--section` and `--component` together are
+  unchanged, `--page` without `--section` is refused, and neither names
+  what the candidates are for. `demo clean` now removes only the candidate
+  files (`<Name><Letter>.tsx`) — the component they were copied from is
+  never deleted, whatever imports it.
+- The colon trap says what happened and what to do. A YAML scalar that
+  contains `": "` is a mapping, so a sentence with a colon becomes a key:
+  a field that expects text and receives one now fails with
+  `paragraphs[0] is a mapping, not text: the line contains ": ", which YAML
+  reads as a key — quote it ("Every request carries …")` instead of
+  `must be a non-empty string`, and a parser error ("Nested mappings are
+  not allowed…") keeps its line and gains the same fix. Detected in the
+  engine's issue mapping, so every collection and every site schema gets
+  it; a mapping where a mapping belongs is untouched.
 - A page's `WebPage` structured data no longer has to describe software:
   `application` (and `organization`, which attaches to it) are optional, so
   a notice, a policy or any page of plain text declares `type: WebPage`
