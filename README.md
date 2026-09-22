@@ -297,6 +297,7 @@ pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
+pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit icons <add|remove|family|audit>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory
@@ -350,7 +351,7 @@ src/kit.ts                   the example composing the package for itself; the f
 src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
-bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab
+bin/, scripts/               the command line: lint, check, status, docs, seo, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
 docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, icons.md, lab.md, email.md, roadmap.md

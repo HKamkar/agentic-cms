@@ -1,77 +1,98 @@
 ---
 name: design-options
-description: Put design candidates in front of the owner so they pick by row - static ones (icons, marks, chips, palettes, type samples) on one rendered sheet with `pnpm kit sheet`, live ones (a footer, a menu, a card with hover or motion) on a throwaway demo route on the dev server - at the real size on the real background, the current version beside them. Use when the owner has to choose a look, when asked for options, variants, alternatives or "show me a few", or before building any element whose look is not yet decided.
-argument-hint: <what to show candidates for> [how many]
+description: Run a design round the way it works - the owner says what they want or what looks wrong, the agent brainstorms three to five ideas in one message, the owner picks which to build, the agent builds them as real components on a throwaway demo route (`pnpm kit demo new`) in the section's real frame with the page's real copy on the site's own theme, the current version last, the owner looks on the dev server and picks by letter or edits the pick in words, and on the owner's word the winner becomes the section, generic pieces leave for `src/components/ui/`, the route and the losers go (`pnpm kit demo clean`). Use when the owner asks for a design, says a section "looks empty", "looks like a template", asks for options, variants, alternatives, "show me a few", or before building any element whose look is not yet decided; static candidates (a mark, a palette, a type sample) go on a sheet (`pnpm kit sheet`) inside the same round.
+argument-hint: <what to design, or what looks wrong> [the section or element]
 ---
 
-# Design options
+# Design options — the round
 
-A design decision is the owner's; the job is to make it a pick, not a
-conversation. Candidates are rendered, labelled and comparable — the owner
-answers with a letter and a number ("B2", "the alternate", "A but with C's
-mark") — and one round of candidates is followed by one build, not by a
-second round.
+A design decision is the owner's; the round makes it a pick, not a
+conversation. Six steps, three stops, and the candidates are always real:
+components on the branch, in the section's real frame, with the page's real
+copy, on the site's own theme (the demo route renders inside the site's
+layout: its tokens, its chrome, its theme toggle), the current version
+after them. The command is `pnpm kit demo`; the guide is `docs/design.md`
+§ The round (`node_modules/agentic-cms/docs/design.md` on a site that
+installs the kit).
 
 ## Read first
 
-`STANDARD.md` §1 (the tokens the candidates must be drawn in) and §4 (the
-icon families, if the candidates are marks); the component or the asset the
-candidates replace, and where it renders (`grep -rn` the file name under
-`src/`); `docs/shot-probe-sheet.md` § sheet.
+`STANDARD.md` §1 (the tokens a candidate draws in), §6 (the section's
+anatomy) and §8; `src/components/README.md` (what the library already has
+— a candidate reuses before it invents); the section's component (from
+the registry, `src/components/sections/render.tsx`) and its page file
+(`content/pages/<slug>.yaml`, the copy every candidate must carry); the
+site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 
-## Which kind
+## Steps
 
-- **Static** — a mark, an icon set, a chip, a palette swatch, a type
-  sample: a **sheet**. One picture the owner reads in the chat.
-- **Live** — anything with a state or a motion (a footer's reveal, a menu
-  opening, a card's hover, a hero's choreography), or anything that must be
-  judged in the page's own flow: a **demo route** the owner opens on the dev
-  server, on a phone if that is where it matters.
+1. **The ask.** The owner asks for a design or says what looks wrong
+   ("this section looks empty", "redesign the closing band"). Read the
+   section and its copy before answering; the copy is what the candidates
+   are for.
+2. **Ideas, three to five, one message.** Each one line: what it shows,
+   what moves and why the motion is the meaning (or that nothing moves),
+   what it reuses from the library. No building yet. **Stop for the
+   owner** — they pick which to build ("A and B", "all of them").
+3. **The pick of what to build.** Only the picked ideas become candidates.
+4. **Build the candidates.** `pnpm kit demo new <name> --section <type>`
+   writes `src/app/<name>-demo/page.tsx` and one candidate per letter — a
+   copy of the section's component beside it (`<Name>A.tsx`, `<Name>B.tsx`)
+   to edit into its idea — and the route reads the page's copy from its
+   file on every render, shows each candidate in the section's real frame
+   inside the site's own layout, lettered with the one line from step 2
+   (fill the `note` in), and the current version last. Copy a candidate
+   needs that the page does not yet have goes into the page file and its
+   schema now, never into code or SVG text. A static candidate (a mark, a
+   palette, a type sample) goes on a sheet (`pnpm kit sheet`,
+   `docs/shot-probe-sheet.md`) in the same round. `pnpm dev`; hand over the
+   route's URL on the dev server (and the LAN address for a phone).
+5. **The look and the pick.** The owner looks on desktop and phone and
+   picks by letter, or edits the pick in words ("merge B and C", "no
+   icons", "change the radio colour too", "better wording for that row").
+   Every "more" is an edit on the route inside the round — a change to the
+   candidate's file and a second look — never a new round of candidates and
+   never prose. **Stop for the owner** — the pick.
+6. **Build it, on the owner's word** ("build it", "make it the section's
+   card"). The winner becomes the real component (its file replaces the
+   section's, or its markup moves in); its copy lives in the page file's
+   schema, nothing left in code or SVG text; every generic piece — a
+   control, a table, a card, a meter — leaves the section for
+   `src/components/ui/` and the catalogue in the same job; `pnpm kit demo
+   clean <name>` removes the route, the losing candidates and next dev's
+   stale route types; the docs follow (`STANDARD.md` §5/§7 when a piece or a
+   motion is new, the catalogue, `content/README.md` when the schema grew);
+   the verify block runs; `design-proof` proves the pages; and the branch
+   is shown on the dev server once more. **Stop for the owner** — the look
+   before the merge.
 
-## A sheet
+## The rules of a good round
 
-1. Inventory the class first: every place the element appears (`pnpm kit
-   probe / --select "<its selector>" --all`, and the other pages), so the
-   candidates cover the whole family, not one instance.
-2. Write the spec, `.parity/<name>.yaml`: the first row is `now` (what the
-   site renders today, as `img:` from the build); each further row one
-   direction with two to five cells; `size` the pixel size the section
-   really renders the element at; `background` and `color` the section's
-   real ones (a token, `var(--color-paper)`, or the hex). A candidate is an
-   SVG file, inline SVG, markup with the site's utilities, or a served path.
-3. `pnpm kit sheet .parity/<name>.yaml` and hand over
-   `.parity/sheets/<name>.png` with one line per row saying what it is.
-4. The pick names the row and cell. Build exactly that; do not blend rows
-   unless the owner asked for the blend.
+- A candidate's graphic is the meaning of the copy beside it: what moves
+  is what the sentence says (a meter fills because the copy is about a
+  threshold), never a relabelled cycling bar or a decoration a different
+  sentence would fit as well.
+- Two to four candidates on the route, the current version last; more is
+  a survey, not a choice. Every candidate carries the page's real copy.
+- A "more" is an edit inside the round. The round ends with a pick, not
+  with a second set.
+- What is generic leaves the section for the library in the same job, and
+  goes into the catalogue with its props; the section composes it. Cards
+  stay the section's own.
+- The route and the losers never merge: the build's SEO audit fails a route
+  without a `seo` block, which is the guard; `demo clean` is the last step
+  before the verify block.
 
-## A demo route
+## Verify
 
-1. `src/app/<name>-demo/page.tsx`, a server component with `export const
-   metadata = { robots: { index: false } }`, rendering each candidate as a
-   labelled block — a mono chip with the letter and one line on what
-   differs — in the section's real container, the current version **last**.
-   Candidates are real components on the branch (a `FooterA.tsx`,
-   `FooterB.tsx` beside the current `Footer.tsx`), so the winner is a rename
-   away and the losers are a delete.
-2. `pnpm dev` and hand over the URL of the route, at the widths that matter.
-3. Iterate on the route, not in prose: a "more transparent" is a change on
-   the route and a second look, in the same round.
-4. After the pick: the winner replaces the component, the route and the
-   losing files are deleted **before** the branch is pushed for a merge
-   (`pnpm build` fails a route without an `seo` block, which is the guard).
-
-## The rules of a good sheet
-
-- Real size, real background, real colour: a mark at 64 px on white
-  flatters a mark that lives at 24 px on midnight.
-- The current version is always there, first on a sheet and last on a
-  route: a pick is a comparison.
-- Two to four rows. More is a survey, not a choice.
-- Every candidate means what it sits beside: an icon for "one-line
-  migration" says migration, not "something technical".
-- A sheet pick is a direction, the dev-server look is the decision: build
-  the pick, show it in place, ask, then merge.
+```bash
+pnpm lint && pnpm test && pnpm content:lint && pnpm build   # no *-demo route left: the SEO audit would fail it
+pnpm kit demo clean && git status --short                   # nothing of the round but the winner and the library pieces
+pnpm kit visual-parity capture before --ref develop && pnpm build && pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after --json
+```
 
 ## Stop for the user
 
-The pick; the look at the built candidate on the dev server; the merge.
+After the ideas (step 2: which to build); after the look (step 5: the
+pick, or the edit in words); after the build (step 6: the look on the dev
+server before the merge). Never merge on a sheet pick alone.

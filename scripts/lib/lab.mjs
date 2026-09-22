@@ -16,8 +16,7 @@ export { LAB_COMMENT, LAB_DIR, animates, followsTheme, isSceneName, listScenes, 
 export const KINDS = ["icon", "mark", "loop"];
 export const ROUTE_DIR = "src/app/lab-demo";
 export const ROUTE_FILE = `${ROUTE_DIR}/page.tsx`;
-/** next dev's generated route types, which go on naming a removed route until dev runs again. */
-export const STALE_TYPES = ".next/dev/types/validator.ts";
+export { STALE_TYPES, removeStaleTypes } from "./demo.mjs";
 
 /** The throwaway route, from the kit's template (templates/lab-demo/page.tsx). */
 export const routeTemplate = () => fs.readFileSync(new URL("../../templates/lab-demo/page.tsx", import.meta.url), "utf8");

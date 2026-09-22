@@ -549,4 +549,52 @@ Exit: `0` removed, or nothing to remove.
 
 `--json` prints `{ removed, kept }`.
 
+### `demo`
+
+The design round's throwaway route: candidates for a section as real components in its frame with the page's real copy, lettered, the current version last — scaffolded from the registry and the page file, removed with the losing candidates.
+
+```bash
+agentic-cms demo <new | clean> …
+```
+
+#### `demo new`
+
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the section's component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; the route reads the page's copy from its file on every render, shows every candidate in the section's real frame inside the site's own layout, lettered with one line, and the current version last.
+
+```bash
+agentic-cms demo new <name> --section <type> [--page <slug>] [--candidates 2] [--component <file>] [--json]
+```
+
+- `<name>` — the route is src/app/<name>-demo; lowercase letters, digits and hyphens
+
+| flag | what |
+|---|---|
+| `--section <type>` | the section type (a key of the registry, src/components/sections/render.tsx) |
+| `--page <slug>` | the page file whose copy the route reads (default: the first under content/pages carrying the section) |
+| `--candidates <n>` | how many candidates, A onward (1 to 8) (default `2`) |
+| `--component <file>` | the component to copy, for a section outside the registry |
+| `--json` | print the report |
+
+Exit: `0` written; `2` a bad name, a route or a candidate file that exists, a section the registry or no page carries, or usage.
+
+`--json` prints `{ route, path, section, page, component, candidates: [{ letter, file }], data }`.
+
+#### `demo clean`
+
+Removes the route (every src/app/*-demo without a name), every component file it alone imported — the losing candidates and their module.css — and next dev's generated route types while they still name the route (the production build's type check reads them); a file another module imports is kept and named.
+
+```bash
+agentic-cms demo clean [name] [--json]
+```
+
+- `<name>` — the demo's name; without one, every *-demo route
+
+| flag | what |
+|---|---|
+| `--json` | print { removed, kept } |
+
+Exit: `0` removed, or nothing to remove.
+
+`--json` prints `{ removed, kept }`.
+
 <!-- commands-doc:end -->
