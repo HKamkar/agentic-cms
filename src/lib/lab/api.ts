@@ -28,7 +28,7 @@ export const LAB_API = `window.lab = (() => {
 /** The controls' markup: play/pause, a frame back, the scrubber, a frame forward, the readout. */
 export const LAB_CONTROLS_HTML = `<div class="lab-controls"><button id="lab-toggle" type="button">pause</button><button id="lab-back" type="button">◀</button><input id="lab-time" type="range" min="0" max="1" step="0.0166" value="0"><button id="lab-forward" type="button">▶</button><span id="lab-readout">0.00s</span></div>`;
 
-/** The controls' script: `frames` drives the window.lab of every iframe.lab-frame on the page (the lab's page), otherwise the page's own window.lab (the route); `duration` when the page knows it. */
+/** The controls' script for a page without React (the lab's own): `frames` drives the window.lab of every iframe.lab-frame, otherwise the page's own window.lab; `duration` when the page knows it. The route uses LabControls instead. */
 export function labControls({ frames = false, duration = 0 }: { frames?: boolean; duration?: number } = {}): string {
   const targets = frames ? `const frames = [...document.querySelectorAll("iframe.lab-frame")]; const api = () => frames.map((f) => f.contentWindow && f.contentWindow.lab).filter(Boolean); const onReady = (fn) => frames.forEach((f) => f.addEventListener("load", fn));` : `const api = () => (window.lab ? [window.lab] : []); const onReady = (fn) => fn();`;
   return `(() => {

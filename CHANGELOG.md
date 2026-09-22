@@ -6,6 +6,12 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `LabScenes`: the route's scrubber is a client component, `LabControls`
+  (React state over the inline `window.lab` clock), instead of a string
+  the controls' script mutated before React hydrated — which logged a
+  hydration mismatch on every load of the lab route. The lab's own served
+  page, which has no React, keeps the string controls. The route test now
+  fails on any console error through hydration.
 - The command line answers every wrong input with the right one: a wrong
   command, subcommand or flag names the nearest ("did you mean"), a value
   outside a flag's `choices` lists them (`--scheme`, `--kind`,

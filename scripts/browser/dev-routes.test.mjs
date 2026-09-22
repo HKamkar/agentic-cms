@@ -16,7 +16,10 @@ const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm e
 const lab = (...args) => spawnSync(process.execPath, [BIN, "lab", ...args], { cwd: ROOT, encoding: "utf8" });
 const demo = (...args) => spawnSync(process.execPath, [BIN, "demo", ...args], { cwd: ROOT, encoding: "utf8" });
 
-test("lab route: the example site renders /lab-demo with every scene on the grounds, the procedure first, one scrubber that seeks", { skip, timeout: 180000 }, async () => {
+// The dev server's HMR socket fails its handshake under this harness; every other console error counts (a hydration mismatch is one).
+const notHmr = (line) => !/WebSocket|_next\/hmr/.test(line);
+
+test("lab route: the example site renders /lab-demo with every scene on the grounds, the procedure first, one scrubber that seeks — and hydrates without a console error", { skip, timeout: 180000 }, async () => {
   const labDir = path.join(ROOT, ".parity/lab");
   const hadLab = fs.existsSync(labDir);
   const routeDir = path.join(ROOT, "src/app/lab-demo");
@@ -33,8 +36,14 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
     const page = await browser.newPage({ viewport: { width: 1100, height: 900 }, reducedMotion: "no-preference" });
     const errors = [];
     page.on("pageerror", (e) => errors.push(String(e)));
+    page.on("console", (m) => { if (m.type() === "error" && notHmr(m.text())) errors.push(m.text().slice(0, 200)); });
     await page.goto(`${server.url}/lab-demo`, { waitUntil: "load", timeout: 120000 });
     await page.waitForSelector('[data-scene="route-test-spin"]', { timeout: 60000 });
+    // Hydration, and the controls' first tick: a mismatch is logged by then.
+    await page.waitForFunction(() => document.getElementById("lab-time")?.max === "2", null, { timeout: 30000 });
+    await page.waitForTimeout(1000);
+    assert.deepEqual(errors, [], "no console error through hydration");
+    assert.match(await page.textContent("#lab-readout"), /^\d\.\d\ds \/ 2\.00s$/, "the readout ticks from React state");
     const seen = await page.evaluate(() => ({
       h1: document.querySelector("[data-lab] h1")?.textContent,
       grounds: [...document.querySelectorAll('[data-scene="route-test-spin"] [data-ground]')].map((g) => g.dataset.ground),
@@ -53,6 +62,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
     await page.waitForTimeout(200);
     const cx = await page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value));
     assert.deepEqual(cx, [32, 32, 32, 32, 32, 32], "every copy paused at 0.5 s");
+    assert.equal(await page.textContent("#lab-toggle"), "play", "a seek pauses, and the button says so");
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
