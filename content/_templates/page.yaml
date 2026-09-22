@@ -17,6 +17,8 @@ seo:
   priority: 0.5                                      # optional sitemap hint, 0–1
 jsonld:                                              # the page type and the copy of its structured data
   type: WebPage                                      # WebPage | AboutPage | ContactPage | Blog — each with its own fields, see the tables
+  # `application` and `organization` go together and are both optional: a page
+  # that describes no software (a notice, a policy) carries `type: WebPage` alone.
   application:
     name: Acme
     description: One sentence on what the application is.

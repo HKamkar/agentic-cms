@@ -6,6 +6,13 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- A page's `WebPage` structured data no longer has to describe software:
+  `application` (and `organization`, which attaches to it) are optional, so
+  a notice, a policy or any page of plain text declares `type: WebPage`
+  alone and its block is the page itself — name, description, url and
+  language — beside the breadcrumb the route emits. `organization` without
+  an `application` is an error that says so.
+
 - `LabScenes`: the route's scrubber is a client component, `LabControls`
   (React state over the inline `window.lab` clock), instead of a string
   the controls' script mutated before React hydrated — which logged a

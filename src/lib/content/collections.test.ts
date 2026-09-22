@@ -103,6 +103,11 @@ describe("the post contract", () => {
     withContent(page(`${seo.replace("path: /x", "path: x/")}${jsonld}sections:\n${faq}`), () => expectContentError(readPages, "content/pages/x.yaml: seo.path must be / or /lowercase-words, without a trailing slash"));
     withContent(page(`${seo}${jsonld}sections:\n  - type: about-benefits\n    eyebrow: e\n    heading: h\n    cards:\n      - icon: i\n        title: t\n        text: x\n`), () => expectContentError(readPages, "content/pages/x.yaml: sections[0].cards must have exactly 3 cards"));
     withContent(page(`${seo}jsonld:\n  type: Nope\nsections:\n${faq}`), () => expectContentError(readPages, "content/pages/x.yaml: jsonld.type must be one of WebPage, AboutPage, ContactPage, Blog"));
+    // A WebPage describes software only when it carries an application: a notice or a policy is the type alone, and organization without one is an error.
+    withContent(page(`${seo}jsonld:\n  type: WebPage\nsections:\n${faq}`), () => assert.equal(readPages()[0].data.jsonld.type, "WebPage"));
+    withContent(page(`${seo}jsonld:\n  type: WebPage\n  organization: provider\nsections:\n${faq}`), () =>
+      expectContentError(readPages, "content/pages/x.yaml: jsonld.organization belongs to the application: drop it, or add the application it describes"),
+    );
     withContent(page(`${seo}${jsonld}sections:\n  - type: group\n    variant: use-cases-upper\n    sections:\n${faq.replace(/^/gm, "    ").replace("set: about", "set: abou")}`), () =>
       expectContentError(readPages, 'content/pages/x.yaml: sections[0].sections[0].set "abou" is not in content/faqs (about)'),
     );
