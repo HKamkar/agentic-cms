@@ -375,6 +375,11 @@ settles.
   preset start states, importable); `sheet` cells rendered from a route
   (`route: "/#footer"`); the `editorial` plugin mirrored as project skills if
   wanted. Consent mode and a form backend stay a site's.
+- After the lab (`agentic-cms lab`, 0.5.0): three.js scenes as a second
+  scene kind (`.parity/lab/<name>.js` modules on a pinned CDN import map —
+  still no dependency — `build(ctx) → { scene, camera, update(t) }`, rasters
+  only, `launch()` taking `--enable-unsafe-swiftshader`); a `Graphic`
+  component for animated, theme-following inline SVG markup.
 
 ## Risks and how each is held
 

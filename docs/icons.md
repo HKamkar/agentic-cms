@@ -19,6 +19,9 @@ pnpm kit icons add lucide:house lucide:database si:nvidia    # src/config/icons.
 pnpm kit icons remove si:nvidia
 ```
 
+(A third kind of id, `file:<name>`, is the site's own drawing — the
+section after this one.)
+
 `src/config/icons.json` is the list of ids; `src/config/icons.ts` is
 generated from it — every shape of the icon file (rect, circle, ellipse,
 line, polyline, polygon, path) as path data on the 24 grid, and each set's
@@ -34,6 +37,28 @@ import { ICONS } from "@/config/icons";
 ```
 
 One stroke width for a family of line icons; one ink for a set of marks.
+
+## The site's own drawings: `file:<name>`
+
+An icon no set has and the primitives below cannot say is drawn in the lab
+([lab.md](lab.md)) on the `Icon` component's contract — the `icon`
+template: the 24 grid, flat shapes, one paint — rendered into the site's own
+folder and added like any other id:
+
+```bash
+pnpm kit lab new pipeline --kind icon && pnpm kit lab serve        # draw it, look at it at 24 px, light and dark
+pnpm kit lab render pipeline --out src/config/icons/pipeline.svg   # the folder beside the manifest
+pnpm kit icons add file:pipeline                                   # ICONS["file:pipeline"], regenerated from the file
+```
+
+The file is read again on every `icons add` or `remove`, so it stays
+committed. Its root's paint decides the kind (`fill="none"` or a `stroke`
+→ a line icon painted `currentColor` at the site's stroke width; a fill →
+a mark), a `viewBox` other than `0 0 24 24` is kept, a `<title>` names
+it. A group, a transform, a `<use>`, `<defs>`, `<style>`, a mask or a
+clipPath is refused with the reason: flatten first, an icon is flat shapes
+with one paint. An animated or gradient mark is not an icon in this sense —
+it ships as a file (`lab render … --out public/images/…`).
 
 ## The site's own marks: `icons family`
 

@@ -15,6 +15,8 @@ a patch under `node_modules`.
   `design` skill (`.claude/skills/`, `.agents/skills/` — found from this
   checkout with nothing installed); a look the owner has to choose goes
   through `design-options`, a screenshot claim through `design-measure`,
+  icons through `design-icons`, the site's own graphics (drawn as SVG in
+  the lab, `pnpm kit lab`, shipped pre-rendered) through `design-graphics`,
   and nothing merges without `design-proof`.
 - Content is files under `content/`, validated at build time: posts in
   `content/blog/` (the filename is the slug), the registries, `reviews.yaml`,

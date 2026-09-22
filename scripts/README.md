@@ -119,6 +119,14 @@ against `fixtures/` by `pnpm test:browser`.
   `icons audit` inventories every icon on the built pages beside its copy,
   as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
   `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
+- `lab` — `pnpm kit lab new <name> --kind icon|mark|loop` writes an SVG
+  scene under `.parity/lab/` to start from; `lab serve` shows every scene
+  on the site's tokens (light and dark, inline and as an `<img>`, with a
+  scrubber over its animations) on this machine and the LAN, reloading on
+  every save; `lab clean` removes the lab. The design canvas for the site's
+  own icons, graphics and short 2D loops, opened when a drawing is needed
+  and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
+  `lib/lab-page.mjs`, `lib/lab-server.mjs`).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen

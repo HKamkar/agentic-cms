@@ -18,6 +18,9 @@ rules for an agent working on the code.
   writes, what comes next, what to do after a kit upgrade.
 - [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
   the site's own marks from primitives, the inventory of every icon.
+- [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
+  scenes on the site's tokens, light and dark, on a phone; rendered to the
+  files a page ships; removed when done.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.

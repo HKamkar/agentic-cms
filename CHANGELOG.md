@@ -4,6 +4,39 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `lab new | serve | clean`: the design canvas for the site's own graphics.
+  An SVG scene under `.parity/lab/` starts from a template on the kit's
+  contracts (an icon on Icon's 24 grid, a mark on the 64 grid, a loop with
+  the reduced-motion rule); `lab serve` shows every scene on the site's
+  tokens read from `globals.css` (no build needed), inline in a light and a
+  dark box and as an `<img>` on both grounds, with a scrubber over its SMIL
+  and CSS animations, reloading on every save, on the LAN for a phone;
+  `lab clean` removes it. `docs/lab.md`.
+- `lab render`: one scene to the file a page ships, by the extension of
+  `--out` — a `.svg` with the tokens resolved for one scheme (no browser
+  needed), a still `.webp`/`.png`/`.jpg` at `--at`, or with `--animate` one
+  cycle as an animated `.webp` (sharp, no ffmpeg) or a `.webm`/`.mp4`
+  (ffmpeg: a system build, else the VP8-only one in Playwright's cache).
+  The scene's clock is set frame by frame, so a render is deterministic; a
+  loop writes its still beside it and a raster its source scene. An
+  animated `<img>` never stops under reduced motion, so a loop ships as a
+  `<picture>` with that still — the doc has the markup.
+- `icons add file:<name>`: a third source beside Lucide and Simple Icons —
+  the site's own drawing, `src/config/icons/<name>.svg` (rendered there from
+  the lab), read as flat shapes with one paint; its root's paint decides
+  the kind, its `viewBox` is kept off the 24 grid (`IconData.viewBox`,
+  which `Icon` now applies), a group, transform, use, defs, style, mask or
+  clipPath is refused with the fix.
+- The `design-graphics` skill: the site's own graphics — an icon beyond
+  the families, a mark, an illustration, a short 2D loop — drawn as SVG in
+  the lab, judged on the tokens in both schemes and on a phone, shipped
+  pre-rendered as the file a page embeds or as inline `Icon` data, the lab
+  removed after; named beside the other design skills in the rules, the
+  site template, `docs/skills.md`, `docs/design.md` and `STANDARD.md` §4.
+  `docs/roadmap.md` lists what comes after it (three.js scenes, `Graphic`).
+
 ## [0.4.3] — 2026-09-20
 
 - `icons add`: a `<line>`'s attributes (`x1`, `y1`, `x2`, `y2`, digits in

@@ -222,7 +222,12 @@ mark (`pnpm kit icons family <spec>`; a new mark is a composition in the
 spec, never a new drawing style). `pnpm kit icons audit` lists every icon on
 the built pages beside its copy; one template glyph is the whole class. The
 wireframe draws none of these — its `icon` fields are placeholder images —
-and a design names its families here (`docs/icons.md`).
+and a design names its families here (`docs/icons.md`). A drawing beyond
+the families — an icon of the site's own, an illustration, a short loop —
+is designed as SVG in the lab (`pnpm kit lab`, `docs/lab.md`) and ships
+pre-rendered like any other picture: a file here, or inline `Icon` data
+(`icons add file:<name>`, its source under `src/config/icons/`); the lab
+itself leaves nothing in the tree.
 
 
 ## 5. Components
