@@ -48,10 +48,14 @@ a drawing means what it stands next to.
    text that needs a font, no bitmap inside the SVG, no double hyphen in a
    comment. An icon for `Icon` is flat shapes with one paint on the 24
    grid — no group, transform, `<use>`, `<defs>` or `<style>`.
-3. **Look, then pick.** `pnpm kit lab serve` and hand the owner the LAN URL
-   it prints: the scene inline in a light and a dark box at its sizes, the
-   same file as an `<img>` on both grounds (what an embed really gets), a
-   scrubber over its animation. Candidates are scenes `a`, `b`, `c` beside
+3. **Look, then pick.** Two windows. `pnpm kit lab serve` and hand the
+   owner the LAN URL it prints: the scene inline in a light and a dark box
+   at its sizes, the same file as an `<img>` on both grounds (what an embed
+   really gets), a scrubber over its animation. And `pnpm kit lab route`
+   then `/lab-demo` on the dev server: the same scenes on the site's own
+   grounds — its page, its cards, its panels, as the route's `GROUNDS` list
+   says — inside the real chrome, with the procedure written for the owner
+   at the top; a scene that must sit on a surface is judged there. Candidates are scenes `a`, `b`, `c` beside
    the current version, two to four, the owner answers with a letter
    (`design-options`); a "more" is a change on the file and a second look
    in the same round, not another round of candidates. A saved file
@@ -69,7 +73,8 @@ a drawing means what it stands next to.
    (`STANDARD.md` §7).
 5. **Prove, then close.** `design-proof` (a `<picture>` loop is still under
    the harness's reduced motion; a `<video>` is not — re-run that frame
-   once); `pnpm kit lab clean`; `git status` shows nothing of the lab, only
+   once); `pnpm kit lab clean` (the lab and the route; a route left in the
+   tree fails the build's SEO audit, on purpose); `git status` shows nothing of the lab, only
    the files a page ships and, for an icon, its source under
    `src/config/icons/`. Record the family or the form in `STANDARD.md` §4
    when it is one the site will reuse.
@@ -80,7 +85,7 @@ a drawing means what it stands next to.
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # the SEO audit reads every <img>
 pnpm kit lab render <name> --out <file> --json              # the report: size, frames, bytes, the console
 pnpm kit visual-parity capture before --ref develop && pnpm build && pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after --json
-pnpm kit lab clean && git status --short                    # nothing of the lab
+pnpm kit lab clean && git status --short                    # nothing of the lab, no src/app/lab-demo
 ```
 
 ## Stop for the user

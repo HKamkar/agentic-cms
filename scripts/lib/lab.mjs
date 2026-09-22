@@ -1,18 +1,26 @@
-// The lab's pure parts, for `agentic-cms lab`: the scratch folder and its
-// scenes (one SVG file each), the three templates a scene starts from, the
-// site's tokens read from the @theme block of src/app/globals.css, and the
-// text transforms a render applies to a scene (tokens resolved to one scheme,
-// the animation stripped for a still). Nothing here touches a browser; the
-// server is lab-server.mjs, the page lab-page.mjs, the render lab-render.mjs.
+// The lab's pure parts, for `agentic-cms lab`: the three templates a scene
+// starts from, the site's tokens read from the @theme block of
+// src/app/globals.css, and the text transforms a render applies to a scene
+// (tokens resolved to one scheme, the animation stripped for a still). The
+// scenes themselves — the folder, the listing, a file's size, its markup —
+// are the package's (src/lib/lab/scenes.ts, shared with the LabScenes route),
+// re-exported here for the command's modules. Nothing here touches a
+// browser; the server is lab-server.mjs, the page lab-page.mjs, the render
+// lab-render.mjs. Loaded after scripts/lib/load-ts.mjs (the package is
+// TypeScript in this checkout).
 import fs from "node:fs";
 import path from "node:path";
-import { relative } from "./page-command.mjs";
+import { LAB_COMMENT } from "agentic-cms/lab";
 
-export const LAB_DIR = ".parity/lab";
+export { LAB_COMMENT, LAB_DIR, animates, followsTheme, isSceneName, listScenes, sceneMeta } from "agentic-cms/lab";
 export const KINDS = ["icon", "mark", "loop"];
-/** Lowercase letters, digits and hyphens: a file name, a URL segment, a CSS name prefix. */
-export const isSceneName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name);
-export const LAB_COMMENT = /<!--\s*agentic-cms lab:[\s\S]*?-->\s*/g;
+export const ROUTE_DIR = "src/app/lab-demo";
+export const ROUTE_FILE = `${ROUTE_DIR}/page.tsx`;
+/** next dev's generated route types, which go on naming a removed route until dev runs again. */
+export const STALE_TYPES = ".next/dev/types/validator.ts";
+
+/** The throwaway route, from the kit's template (templates/lab-demo/page.tsx). */
+export const routeTemplate = () => fs.readFileSync(new URL("../../templates/lab-demo/page.tsx", import.meta.url), "utf8");
 
 // The templates carry only the kit's own contracts — Icon's 24 grid and
 // stroke, the 64 grid of the icon families, the reduced-motion rule — drawn
@@ -49,36 +57,8 @@ const TEMPLATES = {
 /** The SVG text a scene of that kind starts from. */
 export function sceneTemplate(kind, name) {
   if (!TEMPLATES[kind]) throw new Error(`${kind} is not a kind of scene (${KINDS.join(", ")})`);
-  if (!isSceneName(name)) throw new Error(`${name}: a scene name is lowercase letters, digits and hyphens`);
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) throw new Error(`${name}: a scene name is lowercase letters, digits and hyphens`);
   return TEMPLATES[kind](name);
-}
-
-const walkSvg = (p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).sort().flatMap((f) => walkSvg(path.join(p, f))) : p.endsWith(".svg") ? [p] : []);
-
-/** Every scene as id → file: the lab's own by name, `extra` files and folders (walked for .svg) by their path under root without the extension. A missing extra path throws. */
-export function listScenes(root, { extra = [] } = {}) {
-  const scenes = new Map();
-  const lab = path.join(root, LAB_DIR);
-  if (fs.existsSync(lab)) for (const f of fs.readdirSync(lab).sort()) if (f.endsWith(".svg")) scenes.set(f.slice(0, -4), path.join(lab, f));
-  for (const p of extra) {
-    const full = path.resolve(root, p);
-    if (!fs.existsSync(full)) throw new Error(`${p}: no such file or folder`);
-    for (const file of walkSvg(full)) scenes.set(relative(root, file).replace(/\.svg$/, ""), file);
-  }
-  return scenes;
-}
-
-const attrs = (tag) => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]));
-
-/** The root's size and duration: width/height from the attributes, else the viewBox; data-duration in seconds (0 when absent). */
-export function sceneMeta(svg) {
-  const root = svg.match(/<svg\b[^>]*>/)?.[0];
-  if (!root) throw new Error("not an SVG: no <svg> root");
-  const a = attrs(root);
-  const box = a.viewBox?.trim().split(/[\s,]+/).map(Number);
-  const width = Number.parseFloat(a.width) || (box?.[2] ?? 0);
-  const height = Number.parseFloat(a.height) || (box?.[3] ?? 0);
-  return { width, height, viewBox: a.viewBox ?? null, duration: Number(a["data-duration"]) || 0 };
 }
 
 /** The colour and font tokens of a globals.css: every --color-* and --font-* declared in its @theme block, values verbatim (light-dark() included), resets to `initial` skipped. */
@@ -146,12 +126,6 @@ export function parseSizes(text) {
 
 const FORMATS = { ".svg": "svg", ".webp": "webp", ".png": "png", ".jpg": "jpg", ".jpeg": "jpg", ".webm": "webm", ".mp4": "mp4" };
 const RASTERS = ["webp", "png", "jpg", "webm", "mp4"];
-/** Whether a scene paints with the page's colours — currentColor or a var(--color-*) token — which a file of it carries for one scheme only. */
-export const followsTheme = (svg) => /currentColor|var\(\s*--color-/.test(svg.replace(LAB_COMMENT, ""));
-
-/** Whether a scene's text animates: a SMIL element, or a keyframes or animation declaration in its styles. */
-export const animates = (svg) => /<(animate|animateTransform|animateMotion|set)\b/.test(svg) || /@keyframes|\banimation(-[a-z-]+)?\s*:/.test(svg);
-
 /** What a render writes for --out and the flags: the format, whether it is a frame sequence and its times, the ground, the still and the source it writes beside the file. `duration` is the scene's, already resolved. */
 export function renderPlan(out, { at = 0, animate = false, frames = 0, fps = 30, background = "transparent", poster = true, source = true } = {}, { duration = 0, animated: sceneAnimates = false } = {}) {
   const format = FORMATS[path.extname(out).toLowerCase()];

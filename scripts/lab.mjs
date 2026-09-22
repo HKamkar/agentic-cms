@@ -6,13 +6,17 @@
 // owner's browser and phone, `render` writes the file a page ships, `clean`
 // removes the lab. Nothing of it lives under src/ or in package.json;
 // docs/lab.md has the recipe and the design-graphics skill the procedure.
+// The scene functions are the package's (TypeScript in this checkout), so
+// the loader hook comes first and the lab's modules after it.
+import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { KINDS, LAB_DIR, isSceneName, parseSizes, sceneTemplate } from "./lib/lab.mjs";
-import { startLabServer } from "./lib/lab-server.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
+
+const { KINDS, LAB_DIR, ROUTE_DIR, ROUTE_FILE, STALE_TYPES, isSceneName, parseSizes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
+const { startLabServer } = await import("./lib/lab-server.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.lab, process.argv.slice(2));
 const root = process.cwd();
@@ -38,6 +42,13 @@ if (subcommand === "new") {
   const stop = () => { server.close(); process.exit(0); };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
+} else if (subcommand === "route") {
+  const file = path.join(root, ROUTE_FILE);
+  if (fs.existsSync(file) && !flags.force) fail(`${ROUTE_FILE} exists; edit it, or pass --force to write the template over it`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, routeTemplate());
+  if (flags.json) console.log(JSON.stringify({ file: ROUTE_FILE, path: "/lab-demo" }, null, 1));
+  else console.log(`${ROUTE_FILE} written: pnpm dev and open /lab-demo; add the site's surfaces to GROUNDS; pnpm kit lab clean removes it (it never merges: the SEO audit fails it)`);
 } else if (subcommand === "render") {
   if (!["light", "dark"].includes(flags.scheme)) fail(`--scheme must be light or dark, not ${flags.scheme}`);
   if (!["transparent", "paper"].includes(flags.background)) fail(`--background must be transparent or paper, not ${flags.background}`);
@@ -50,9 +61,20 @@ if (subcommand === "new") {
   if (report.note) console.error(`note: ${report.note}`);
   for (const entry of report.console) console.error(`${entry.type}: ${entry.text}`);
 } else if (subcommand === "clean") {
-  const dir = path.join(root, LAB_DIR);
-  const removed = fs.existsSync(dir);
-  if (removed) fs.rmSync(dir, { recursive: true, force: true });
-  if (flags.json) console.log(JSON.stringify({ removed: removed ? LAB_DIR : null }, null, 1));
-  else console.log(removed ? `${LAB_DIR} removed` : `nothing to remove: no ${LAB_DIR}`);
+  const removed = [], kept = [];
+  const lab = path.join(root, LAB_DIR);
+  if (fs.existsSync(lab)) { fs.rmSync(lab, { recursive: true, force: true }); removed.push(LAB_DIR); }
+  const route = path.join(root, ROUTE_FILE);
+  // Only the kit's route goes: a site's own page at that path is left and named.
+  if (fs.existsSync(route)) {
+    if (/from "agentic-cms\/lab"/.test(fs.readFileSync(route, "utf8"))) { fs.rmSync(path.join(root, ROUTE_DIR), { recursive: true, force: true }); removed.push(ROUTE_DIR); }
+    else kept.push(ROUTE_FILE);
+  }
+  // next dev's generated route types keep naming a removed route, and the
+  // production build's type check reads them (tsconfig includes them); the
+  // stale file goes, next dev writes it again.
+  const validator = path.join(root, STALE_TYPES);
+  if (!fs.existsSync(route) && fs.existsSync(validator) && fs.readFileSync(validator, "utf8").includes(ROUTE_DIR)) { fs.rmSync(validator); removed.push(STALE_TYPES); }
+  if (flags.json) console.log(JSON.stringify({ removed, kept }, null, 1));
+  else console.log(`${removed.length ? `${removed.join(" and ")} removed` : "nothing to remove"}${kept.length ? `; ${kept.join(", ")} kept (not the kit's route: it does not import agentic-cms/lab)` : ""}`);
 }

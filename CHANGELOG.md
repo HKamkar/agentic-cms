@@ -6,6 +6,19 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `lab route`: the lab as a throwaway route inside the site,
+  `src/app/lab-demo/page.tsx` from the kit's template, rendering
+  `LabScenes` from the new `agentic-cms/lab` — every scene under
+  `.parity/lab` inline on the site's own grounds (the page and a white card
+  to start; the site adds its surfaces), at its size and the icon sizes,
+  inside the real chrome, with the procedure for the person looking at it
+  and one scrubber over the animated scenes (the same clock as the lab's
+  page, inline, no library). A plain server component, so `next build`
+  prerenders it and the SEO audit fails it — the guard; `lab clean` removes
+  it with the lab (a site's own route at that path is left and named).
+  The scene functions the command line and the route share moved into the
+  package (`src/lib/lab/`); `scripts/lab.mjs` loads them through the
+  TypeScript hook. `docs/lab.md` § The route.
 - `lab new | serve | clean`: the design canvas for the site's own graphics.
   An SVG scene under `.parity/lab/` starts from a template on the kit's
   contracts (an icon on Icon's 24 grid, a mark on the 64 grid, a loop with

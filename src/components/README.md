@@ -80,12 +80,15 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 
 ## The engine's React pieces (`src/lib/components/`)
 
-Three components that carry no design, imported from `agentic-cms/components`;
-the site styles around them.
+Components that carry no design, imported from `agentic-cms/components`
+(and one from `agentic-cms/lab`); the site styles around them.
 
 | Component | Props | Notes |
 |---|---|---|
 | `JsonLd` | `data` | Structured data with `<` escaped. |
+| `Icon` | `kind`, `d`, `viewBox?`, `size`, `strokeWidth`, `title?` | An inline SVG icon in `currentColor` from the site's map (`icons add lucide:… \| si:… \| file:…`); decorative unless it has a `title`. |
+| `EmailLink` | `token`, `children?` | `"use client"`. The address from its token after hydration, a `<span>` before it (`docs/email.md`). |
+| `LabScenes` (`agentic-cms/lab`) | `grounds`, `sizes?`, `folders?`, `intro?`, `children?` | A server component for the throwaway route `lab route` writes: every scene under `.parity/lab` inline on the site's grounds, with the procedure and a scrubber. Reads the filesystem — hence its own subpath. Never merges (`docs/lab.md`). |
 | `EagerImage` | any `<img>` props | `"use client"`. A plain eager `<img>` in a server component becomes a preload hint in the page's RSC payload, which every other page executes when it prefetches a link here. Below-the-fold images stay plain `<img loading="lazy">`. |
 | `FaqAccordion` | `children` | `"use client"`. Every `h3` inside a `[data-faq]` block toggles the paragraphs after it (`aria-expanded` on the question, `data-open` on the answers); the site's post body styles draw both. Not the site's `ui/Faq`. |
 
