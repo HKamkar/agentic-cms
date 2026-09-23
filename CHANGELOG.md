@@ -6,6 +6,18 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `lab serve`'s scene page is the review surface a loop needs. `--sizes`
+  now applies to a scene of any width — the sizes a mark ships at — and,
+  without the flag, an icon-sized scene still shows at 24, 40 and 64 (a
+  bigger one at its own size; `--sizes 20,32` beside a wide scene now
+  shows it at 20 and 32 too). One **enlarged** pair, light and dark, fits
+  the screen up to 640 px and follows the scrubber. **replay** restarts the
+  inline copies and moves every `<img>` copy to one new URL, so they keep
+  sharing one image as on a page. **animated · still** switches the page to
+  the scene with its animation stripped (`/scene/<name>?still=1`, also on
+  `/files/…` and the bare page) — the `-still.svg` a render writes, what a
+  reduced-motion reader gets. The `design-graphics` skill's step 4 and its
+  reference say so, and no longer send those controls to the route.
 - `design-graphics` starts from the artwork the site already has — its
   master file, exact colours, proportions, sizes and stated constraints —
   and keeps that master at rest and in every still. Motion for a mark is

@@ -2,8 +2,8 @@
 // The design canvas for the site's own graphics, opened when a drawing is
 // needed and removed when its files are rendered: `new` writes a scene to
 // start from under .parity/lab, `serve` shows every scene on the site's
-// tokens (light and dark, inline and as an <img>, with a scrubber) to the
-// owner's browser and phone, `render` writes the file a page ships, `clean`
+// tokens (light and dark, inline and as an <img>, at its sizes and enlarged,
+// with a scrubber, a replay and its still) to the owner's browser and phone, `render` writes the file a page ships, `clean`
 // removes the lab. Nothing of it lives under src/ or in package.json;
 // docs/lab.md has the recipe and the design-graphics skill the procedure.
 // The scene functions are the package's (TypeScript in this checkout), so
@@ -34,7 +34,7 @@ if (subcommand === "new") {
   else console.log(`${summary.file}  ${flags.kind}; pnpm kit lab serve to look at it, pnpm kit lab render ${name} --out <file> to ship it`);
 } else if (subcommand === "serve") {
   let sizes;
-  try { sizes = parseSizes(flags.sizes); } catch (error) { fail(`--sizes: ${error.message}`); }
+  try { sizes = flags.sizes === undefined ? null : parseSizes(flags.sizes); } catch (error) { fail(`--sizes: ${error.message}`); }
   let server;
   try { server = await startLabServer({ root, extra: flags.scenes, host: flags.host, port: flags.port, watch: true, sizes }); } catch (error) { fail(error.message); }
   console.log(`lab: ${server.urls.join("  ")}\n     scenes under ${LAB_DIR}/${flags.scenes.length ? ` and ${flags.scenes.join(", ")}` : ""}; a saved file reloads the page; Ctrl-C stops`);

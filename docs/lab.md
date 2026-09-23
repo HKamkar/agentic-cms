@@ -14,6 +14,7 @@ in `package.json` or in a route. The flags are in
 ```bash
 pnpm kit lab new hero-mark --kind mark        # .parity/lab/hero-mark.svg from a template
 pnpm kit lab serve                            # http://localhost:8001 and the LAN URLs
+pnpm kit lab serve --sizes 32,160              # every scene also at the sizes it ships at
 pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a page ships
 ```
 
@@ -29,16 +30,31 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   `@theme` block of `src/app/globals.css`, so no build is needed and a
   fork's palette follows — **inline in a light and a dark box** (each box
   sets its own `color-scheme`, and `light-dark()`, `currentColor` and
-  `var(--color-*)` resolve inside it), at the natural size and, for an
-  icon-sized scene (up to 96 px wide), at `--sizes`; then **the same file as
-  an `<img>`** on both grounds, which is what a page embedding the file
-  really gets: `currentColor` is black, a `var()` without a fallback is the
-  initial paint, and the scheme is the browser's, not the box's. A scrubber
-  pauses every animation of the scene (SMIL and CSS alike) at a time and
-  steps it by a frame; a saved file reloads the page. Each scene has its
-  own page (`/scene/<name>`, the URL to hand over) and a bare one at any
-  width (`/scene/<name>?bare=1&scheme=dark&width=512`), the enlargement for
-  inspecting a frame.
+  `var(--color-*)` resolve inside it), at the natural size and at
+  `--sizes` — the sizes it ships at, for a scene of any width; without the
+  flag an icon-sized scene (up to 96 px wide) is shown at 24, 40 and 64 and
+  a bigger one at its own size — and **enlarged**, one pair that fits the
+  screen up to 640 px wide (none for a scene already that wide); then
+  **the same file as an `<img>`** on both grounds, which is what a page
+  embedding the file really gets: `currentColor` is black, a `var()`
+  without a fallback is the initial paint, and the scheme is the
+  browser's, not the box's. A scrubber pauses every inline copy (SMIL and
+  CSS alike, the enlarged one too) at a time and steps it by a frame; a
+  saved file reloads the page.
+- A scene that moves has three more controls. **replay** sends the inline
+  copies back to 0 and plays them, and restarts the `<img>` copies — an
+  animated image restarts only as a new image, so every copy moves to one
+  new URL (`?replay=<n>`); one URL for all of them keeps them sharing one
+  image, as a page that embeds the file at several sizes does, so a
+  shared-image repaint problem stays visible (a URL per copy would hide
+  it). **animated · still** switches the whole page to the scene with its
+  animation stripped (`/scene/<name>?still=1`: the `-still.svg` a render
+  writes beside a loop, the `<picture>`'s fallback, what a reduced-motion
+  reader gets), inline and as the `<img>`; the switch is in the URL, so a
+  reload on save keeps it.
+- Each scene has its own page (`/scene/<name>`, the URL to hand over) and
+  a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
+  `&still=1` for its still).
 - The server listens on `0.0.0.0:8001` by default and prints every LAN
   address, so the owner opens the same page on a phone; it serves only the
   scenes it listed and generated HTML — nothing else of the tree.

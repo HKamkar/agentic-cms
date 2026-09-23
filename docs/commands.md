@@ -593,7 +593,7 @@ agentic-cms lab new spin --kind loop
 
 #### `lab serve`
 
-Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes, as an <img> on both grounds, with a scrubber over its animations — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
+Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes and enlarged, as an <img> on both grounds, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
 
 ```bash
 agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]
@@ -604,12 +604,13 @@ agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [-
 | `--host <address>` | the interface to listen on (0.0.0.0: every one, so a phone on the LAN can open it; 127.0.0.1: this machine only) (default `0.0.0.0`) |
 | `--port <n>` | the port (default `8001`) |
 | `--scenes <file|dir>` | more scenes: an SVG file, or a folder walked for .svg files (public/images/home, say, to reopen what a page ships) (repeatable) |
-| `--sizes <px,px>` | the sizes an icon-sized scene (up to 96 px wide) is also shown at, inline and as an <img> (default `24,40,64`) |
+| `--sizes <px,px>` | the sizes every scene is also shown at, inline and as an <img> — the sizes it ships at (without it: 24, 40 and 64 for an icon-sized scene, up to 96 px wide, and none for a bigger one) |
 
 Exit: `0` stopped; `2` the port is taken, a --scenes path that does not exist, or usage.
 
 ```bash
 agentic-cms lab serve
+agentic-cms lab serve --sizes 32,160                 # a mark at the sizes it ships
 agentic-cms lab serve --scenes public/images/home --scenes public/images/ui --sizes 20,32
 ```
 
