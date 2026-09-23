@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.1] — 2026-09-23
 
 - `design-graphics` and its motion reference teach the join: a join is a
   pose of its own (approach, contact, overlap, settled shape); solid parts
