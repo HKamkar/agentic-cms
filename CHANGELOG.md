@@ -6,6 +6,18 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `design-graphics` and its motion reference teach the join: a join is a
+  pose of its own (approach, contact, overlap, settled shape); solid parts
+  that become one surface grow an overlap along their internal boundaries
+  or become one silhouette, the outer contour and negative space kept;
+  the handoff keeps the pieces opaque until the master is fully present,
+  because a crossfade between overlapping solid copies dips to three
+  quarters opacity halfway; a seam is fixed in geometry and timing, not
+  hidden with a blur, a stroke or a bigger mark; a fix leaves the approved
+  motion around it alone. The reference's old advice — swap the pieces
+  for the master on the frame where they meet — is replaced, and the
+  check steps through the join a frame at a time and measures that solid
+  artwork keeps full alpha inside its outline.
 - One timeline for every animated preview (`agentic-cms/lab`): Play /
   Pause, Replay, a range over one cycle that holds the frame it is
   dragged or tapped to and steps 0.01 s an arrow key, the time and the
