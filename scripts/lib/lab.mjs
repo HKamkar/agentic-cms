@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { LAB_COMMENT } from "agentic-cms/lab";
 
-export { LAB_COMMENT, LAB_DIR, animates, followsTheme, isSceneName, listScenes, sceneMeta } from "agentic-cms/lab";
+export { LAB_COMMENT, LAB_DIR, animates, followsTheme, isSceneName, listScenes, sceneDuration, sceneMeta } from "agentic-cms/lab";
 export const KINDS = ["icon", "mark", "loop"];
 export const ROUTE_DIR = "src/app/lab-demo";
 export const ROUTE_FILE = `${ROUTE_DIR}/page.tsx`;

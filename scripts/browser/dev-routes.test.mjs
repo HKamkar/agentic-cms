@@ -19,7 +19,7 @@ const demo = (...args) => spawnSync(process.execPath, [BIN, "demo", ...args], { 
 // The dev server's HMR socket fails its handshake under this harness; every other console error counts (a hydration mismatch is one).
 const notHmr = (line) => !/WebSocket|_next\/hmr/.test(line);
 
-test("lab route: the example site renders /lab-demo with every scene on the grounds, the procedure first, one scrubber that seeks — and hydrates without a console error", { skip, timeout: 180000 }, async () => {
+test("lab route: the example site renders /lab-demo with every scene on the grounds, the procedure first, a timeline per animated scene that seeks every copy — and hydrates without a console error", { skip, timeout: 180000 }, async () => {
   const labDir = path.join(ROOT, ".parity/lab");
   const hadLab = fs.existsSync(labDir);
   const routeDir = path.join(ROOT, "src/app/lab-demo");
@@ -39,30 +39,32 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
     page.on("console", (m) => { if (m.type() === "error" && notHmr(m.text())) errors.push(m.text().slice(0, 200)); });
     await page.goto(`${server.url}/lab-demo`, { waitUntil: "load", timeout: 120000 });
     await page.waitForSelector('[data-scene="route-test-spin"]', { timeout: 60000 });
-    // Hydration, and the controls' first tick: a mismatch is logged by then.
-    await page.waitForFunction(() => document.getElementById("lab-time")?.max === "2", null, { timeout: 30000 });
+    // Hydration, and the timeline's first frames: a mismatch is logged by then.
+    const scene = '[data-scene="route-test-spin"]';
+    await page.waitForFunction((s) => document.querySelector(`${s} [data-lab-play]`)?.textContent === "Pause", scene, { timeout: 30000 });
     await page.waitForTimeout(1000);
     assert.deepEqual(errors, [], "no console error through hydration");
-    assert.match(await page.textContent("#lab-readout"), /^\d\.\d\ds \/ 2\.00s$/, "the readout ticks from React state");
+    assert.match(await page.textContent(`${scene} [data-lab-readout]`), /^\d\.\d\d s \/ 2\.00 s$/, "the readout ticks over the scene's cycle");
     const seen = await page.evaluate(() => ({
       h1: document.querySelector("[data-lab] h1")?.textContent,
       grounds: [...document.querySelectorAll('[data-scene="route-test-spin"] [data-ground]')].map((g) => g.dataset.ground),
       copies: document.querySelectorAll('[data-scene="route-test-spin"] svg.lab-scene').length,
       chrome: !!document.querySelector("header nav, nav"),
-      scrubber: !!document.getElementById("lab-time"),
-      duration: window.lab?.duration(),
+      timeline: document.querySelector('[data-scene="route-test-spin"] [data-lab-timeline]')?.getAttribute("aria-label"),
+      max: document.querySelector('[data-scene="route-test-spin"] [data-lab-time]')?.max,
+      ids: [...document.querySelectorAll("[id]")].map((e) => e.id),
     }));
     assert.equal(seen.h1, "The lab, on this site's theme");
     assert.deepEqual(seen.grounds, ["the page", "white card"]);
     assert.equal(seen.copies, 6, "24, 40 and 64 px on each of the two grounds");
     assert.ok(seen.chrome, "inside the site's chrome");
-    assert.ok(seen.scrubber && seen.duration === 2);
-    await page.fill("#lab-time", "0.5");
-    await page.$eval("#lab-time", (el) => el.dispatchEvent(new Event("input", { bubbles: true })));
+    assert.deepEqual([seen.timeline, seen.max], ["route-test-spin: timeline", "2"]);
+    assert.equal(new Set(seen.ids).size, seen.ids.length, "every id on the page is unique");
+    await page.fill(`${scene} [data-lab-time]`, "0.5");
     await page.waitForTimeout(200);
     const cx = await page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value));
     assert.deepEqual(cx, [32, 32, 32, 32, 32, 32], "every copy paused at 0.5 s");
-    assert.equal(await page.textContent("#lab-toggle"), "play", "a seek pauses, and the button says so");
+    assert.equal(await page.textContent(`${scene} [data-lab-play]`), "Play", "a seek pauses, and the button says so");
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();

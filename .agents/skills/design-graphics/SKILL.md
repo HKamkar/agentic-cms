@@ -80,28 +80,36 @@ already stated. For anything that moves, `references/svg-motion.md`.
    sizes it ships at>` and hand the owner the LAN URL it prints: each
    scene's page shows it inline in a light and a dark box at those sizes
    and enlarged, the same file as an `<img>` on both grounds (what an embed
-   really gets), a scrubber and a replay over its animation, and a switch
-   to its still (`?still=1`: what a reduced-motion reader gets through the
+   really gets), the timeline over its animation (Play / Pause, Replay, a
+   range over one cycle that holds the frame it is dragged to and steps
+   0.01 s an arrow key, the time and the cycle in seconds), and a switch to
+   its still (`?still=1`: what a reduced-motion reader gets through the
    `<picture>`) — the review surface a loop is judged on, per candidate.
    And `pnpm kit lab route` then `/lab-demo` on the dev server: the same
    scenes on the site's own grounds — its page, its cards, its panels, as
-   the route's `GROUNDS` list says — inside the real chrome, with the
-   procedure written for the owner at the top; a scene that must sit on a
-   surface is judged there. The message carries the direct URL of each
-   candidate's page (`/scene/<name>`), not the index. Candidates are
-   scenes `a`, `b`, `c` beside the current version: two to four, or every
-   idea when the owner asked for all (`design-options`). A letter names its candidate for the whole round:
+   the route's `GROUNDS` list says — inside the real chrome, each animated
+   scene with a timeline of its own. When animated candidates are judged
+   on a design round's demo route instead, they get the same timeline
+   there — `<LabStudy file>` for a file, `<LabTimeline>` around a component
+   (`docs/lab.md` § Inspecting motion) — never an `<img>` of the animated
+   file alone, which the page can neither pause nor seek; the file ships
+   unchanged and the study offers it as a download. The message carries
+   the direct URL of each candidate (`/scene/<name>`, or the demo route),
+   not the index. Candidates are scenes `a`, `b`, `c` beside the current
+   version: two to four, or every idea when the owner asked for all
+   (`design-options`). A letter names its candidate for the whole round:
    a "more" is a change on that file and a second look; alternatives the
    owner asks for beside an approved candidate join the same lab or route
    under the next letters, the approved file and every label left as they
    are (an experiment on it is a copy under a new letter). A saved file
    reloads the page.
 5. **Check the frames, not only the ending.** A right final silhouette
-   proves little. Scrub every candidate through its cycle, at the sizes it
-   ships and enlarged: the parts in flight (no seam, gap, clipped edge or
-   jump), the moment they meet, the hold, and the loop boundary — the last
-   frame and the first are the same picture, and the rest frame is the
-   master. Check the `<img>` the page will embed (the lab's second row,
+   proves little. On each candidate's timeline, pause and step through its
+   cycle with the arrow keys, at the sizes it ships and enlarged — every
+   copy holds the same frame: the parts in flight (no seam, gap, clipped
+   edge or jump), the moment they meet, the hold, and the loop boundary —
+   the last frame and the first are the same picture, and the rest frame
+   is the master. Check the `<img>` the page will embed (the lab's second row,
    then the placed page), not the inline copy: an image has its own
    timeline and none of the page's CSS. The kit's commands drive Chromium;
    when Safari matters, run the same frames in WebKit as well and report

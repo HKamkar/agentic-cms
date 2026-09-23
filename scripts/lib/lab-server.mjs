@@ -9,7 +9,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { LAB_DIR, animates, listScenes, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
+import { LAB_DIR, animates, listScenes, sceneDuration, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
 import { bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
 
 const NO_STORE = { "cache-control": "no-store" };
@@ -62,7 +62,7 @@ export function startLabServer({ root = process.cwd(), extra = [], host = "127.0
     if (p.startsWith("/files/")) return send(res, 200, "image/svg+xml", svg);
     let meta;
     try { meta = sceneMeta(svg); } catch (error) { return send(res, 200, "text/plain", `${id}: ${error.message}`); }
-    if (url.searchParams.get("bare") !== "1") return html(res, sceneHtml(id, { file: path.relative(root, file), meta, tokens, sizes: sizesFor(meta), animated: animates(source), still }));
+    if (url.searchParams.get("bare") !== "1") return html(res, sceneHtml(id, { file: path.relative(root, file), meta, tokens, sizes: sizesFor(meta), animated: animates(source), still, duration: sceneDuration(source) }));
     const width = Number(url.searchParams.get("width")) || meta.width;
     const height = Number(url.searchParams.get("height")) || Math.max(1, Math.round((width * meta.height) / meta.width));
     return html(res, bareHtml(id, svg, { tokens, scheme: url.searchParams.get("scheme") === "dark" ? "dark" : "light", background: url.searchParams.get("background") === "paper" ? "paper" : "transparent", width, height, pad: url.searchParams.get("pad"), fit: url.searchParams.get("fit") === "1" }));
