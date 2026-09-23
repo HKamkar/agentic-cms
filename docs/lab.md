@@ -35,7 +35,10 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   really gets: `currentColor` is black, a `var()` without a fallback is the
   initial paint, and the scheme is the browser's, not the box's. A scrubber
   pauses every animation of the scene (SMIL and CSS alike) at a time and
-  steps it by a frame; a saved file reloads the page.
+  steps it by a frame; a saved file reloads the page. Each scene has its
+  own page (`/scene/<name>`, the URL to hand over) and a bare one at any
+  width (`/scene/<name>?bare=1&scheme=dark&width=512`), the enlargement for
+  inspecting a frame.
 - The server listens on `0.0.0.0:8001` by default and prints every LAN
   address, so the owner opens the same page on a phone; it serves only the
   scenes it listed and generated HTML — nothing else of the tree.
@@ -108,6 +111,12 @@ them and would fail on a page that is gone (any removed route does this;
   JavaScript cannot reach.
 - No text that needs a font the reader may not have; no raster inside an
   SVG that a design tool exported (`optimize-svg-rasters` says why).
+- A mark that moves starts from its master file — its path data, colours
+  and proportions as they came — and shows that master at rest, in the
+  hold and in every still; the moving pieces exist for the move. The notes
+  on origins, mask regions, seams, the rest frame, the loop boundary and
+  an animated `<img>` are the skill's reference,
+  [svg-motion.md](../.claude/skills/design-graphics/references/svg-motion.md).
 
 ## Render — what a page ships
 
@@ -180,4 +189,10 @@ pnpm kit lab clean          # removes .parity/lab and src/app/lab-demo; git stat
 ```
 
 What stays is what a render wrote under `public/images/` (and, for an
-inline icon, `src/config/icons/<name>.svg` with its `ICONS` entry).
+inline icon, `src/config/icons/<name>.svg` with its `ICONS` entry). `lab
+clean` deletes everything under `.parity/lab`, so the picked artwork's
+editable source goes into the tree before it: a raster's render already
+copies its scene beside it; an `.svg` render resolves the tokens, so the
+scene goes beside it as `<name>.source.svg` when its `var()`s matter; a
+script that generated the geometry is committed outside `public/` with
+the command that regenerates the scene.

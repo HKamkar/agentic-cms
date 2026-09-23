@@ -4,6 +4,35 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `design-graphics` starts from the artwork the site already has — its
+  master file, exact colours, proportions, sizes and stated constraints —
+  and keeps that master at rest and in every still. Motion for a mark is
+  built from its parts and negative space, with the choreography
+  (anticipation, separation, interaction, reassembly, a readable hold) as
+  tools rather than a recipe and a subtle idea kept beside the expressive
+  ones. A loop is judged on light and dark at its shipping sizes and
+  enlarged, with replay, an animated / still switch and the reduced-motion
+  still, from a direct URL; the frames between and the loop boundary are
+  checked on the embedded `<img>`, in WebKit too when Safari matters (and
+  reported as WebKit, not Safari); the picked artwork's editable source or
+  generator is committed before `lab clean`. The SVG details — coordinate
+  systems and origins, mask regions, seams, the master at rest, the loop,
+  an animated `<img>` at several sizes — are a reference the skill links,
+  `design-graphics/references/svg-motion.md`, synced to `.agents/skills/`
+  with the rest.
+- `design-options`: an ask to build every idea is honoured without a
+  second selection question, and alternatives asked for beside a liked
+  candidate join the same route under new letters, the candidates already
+  shown (an approved one above all) left as they are. `docs/design.md` §
+  The round says the same.
+- `docs/lab.md` names the scene page and the bare page at any width (the
+  URL to hand over, the enlargement) and says what to commit before `lab
+  clean`.
+- The skills test checks that every relative link in a skill resolves
+  inside its own tree, in both copies.
+
 ## [0.5.0] — 2026-09-22
 
 - `docs/design.md` gains "When the dev server will not serve": the
