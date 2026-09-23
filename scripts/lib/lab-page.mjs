@@ -1,12 +1,13 @@
 // The lab's pages as HTML strings, on the site's tokens and nothing of the
 // site's design: the bare page (one scene alone, in one scheme — what the
 // scene page frames and what a render photographs), the scene page (the
-// scene inline in a light and a dark box at its sizes and enlarged, the same
-// file as an <img> on both grounds, a scrubber and a replay over its
-// animations, a switch to its still, a reload on every save) and the index. The in-page seek and the controls are the package's
-// (src/lib/lab/api.ts), shared with the LabScenes route inside a site and
-// used by `lab render`.
-import { LAB_API, LAB_CONTROLS_HTML, labControls, svgMarkup, tagRoot } from "agentic-cms/lab";
+// scene inline in a light and a dark box at its sizes and enlarged, under
+// one timeline; the same file as an <img> on both grounds; a switch to its
+// still; a reload on every save) and the index. The bare page's clock
+// (LAB_API, which `lab render` sets frame by frame) and the timeline that
+// drives every frame of the scene page (mountTimeline, inlined: this page
+// has no React) are the package's, the same the routes inside a site use.
+import { LAB_API, TIMELINE_CSS, svgMarkup, tagRoot, timelineControlsHtml, timelineScript } from "agentic-cms/lab";
 import { escape } from "./sheet.mjs";
 import { tokensCss } from "./lab.mjs";
 
@@ -45,8 +46,7 @@ h2 { font: 500 13px/1.3 ${LABEL}; margin: 28px 0 8px; }
 .lab-box[data-scheme="dark"] { color-scheme: dark; }
 .lab-box img, iframe.lab-frame { display: block; border: 0; }
 .lab-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; font: 12px/1.3 ${LABEL}; }
-.lab-controls button { font: inherit; border: 1px solid var(--color-ink); background: var(--color-paper); color: var(--color-ink); padding: 2px 10px; cursor: pointer; }
-.lab-controls input[type="range"] { width: min(360px, 60vw); }
+${TIMELINE_CSS}
 .lab-enlarged .lab-label { flex-basis: 100%; }
 .lab-enlarged .lab-box { flex: 1 1 240px; min-width: 0; max-width: ${ENLARGED + 18}px; }
 .lab-enlarged iframe.lab-frame { width: 100%; height: auto; }
@@ -63,31 +63,27 @@ ${PAGE_CSS}
 </style></head>
 <body>${body}</body></html>`;
 
-// Replay: the scrubber back to 0 and playing, and every <img> moved to one
-// new URL — an animated image restarts only as a new image. One URL for all
-// copies keeps them sharing one image, as a page that embeds the file at
-// several sizes does, so a shared-image repaint problem stays visible.
-const REPLAY_JS = `(() => {
-  const button = document.getElementById("lab-replay");
+// Replay reaches the <img> copies too, which no timeline can drive: every
+// one moves to one new URL — an animated image restarts only as a new image.
+// One URL for all copies keeps them sharing one image, as a page that embeds
+// the file at several sizes does, so a shared-image repaint problem stays
+// visible. The inline copies restart on the timeline's own replay.
+const IMG_REPLAY_JS = `(() => {
+  const button = document.querySelector("[data-lab-replay]");
   if (!button) return;
   let count = 0;
-  button.onclick = () => {
+  button.addEventListener("click", () => {
     count += 1;
     for (const img of document.querySelectorAll("img.lab-img")) img.src = img.src.replace(/\\?.*$/, "") + "?replay=" + count;
-    const range = document.getElementById("lab-time"), toggle = document.getElementById("lab-toggle");
-    if (!range) return;
-    range.value = 0;
-    range.dispatchEvent(new Event("input"));
-    if (toggle.textContent === "play") toggle.click();
-  };
+  });
 })();`;
 
 const box = (scheme, inner) => `<div class="lab-box" data-scheme="${scheme}">${inner}</div>`;
 const sizeOf = (meta, width) => ({ width, height: Math.max(1, Math.round((width * meta.height) / meta.width)) });
 const encode = (id) => id.split("/").map(encodeURIComponent).join("/");
 
-/** The scene page: inline in both schemes at the natural size, the given sizes and enlarged (framed bare pages), as an <img> on both grounds, the scrubber and the replay, the animated / still switch (`still`: every copy without its animation), the render hint. */
-export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true, still = false } = {}) {
+/** The scene page: inline in both schemes at the natural size, the given sizes and enlarged (framed bare pages) under one timeline over `duration` (the scene's cycle), as an <img> on both grounds, the animated / still switch (`still`: every copy without its animation), the render hint. */
+export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true, still = false, duration = meta.duration } = {}) {
   const moving = animated && !still;
   const stillQuery = still ? "&still=1" : "";
   const widths = [...new Set([meta.width, ...sizes])].filter((w) => w > 0).sort((a, b) => a - b);
@@ -104,18 +100,18 @@ export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated
   const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", image(w))}${box("dark", image(w))}</div>`).join("");
   const page = `/scene/${encode(scene)}`;
   const mode = still ? `<a href="${page}">animated</a> · <strong>still</strong>` : `<strong>animated</strong> · <a href="${page}?still=1">still</a>`;
-  const bar = animated ? `<div class="lab-controls"><span>${mode}</span>${moving ? `<button id="lab-replay" type="button" title="restarts the inline scenes and moves every &lt;img&gt; to one new URL, so they still share one image, as on a page">replay</button>` : ""}</div>` : "";
+  const bar = animated ? `<div class="lab-controls"><span>${mode}</span></div>` : "";
+  // One timeline over every inline copy (each a frame with its own clock, sought from this one); the <img> rows are outside it.
+  const framed = moving ? `<div data-lab-timeline role="group" aria-label="${escape(scene)}: timeline"><div class="lab-timeline" data-lab-controls>${timelineControlsHtml({ duration })}</div>${inline}${enlarged}</div>` : `${inline}${enlarged}`;
   return shell(scene, tokens, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
 ${still ? `<p class="lab-note">still — every copy without its animation: the -still.svg a render writes beside a loop, the &lt;picture&gt;'s fallback, what a reduced-motion reader gets</p>` : ""}
 <h2>inline — currentColor and var(--color-*) follow each box's scheme</h2>
 ${bar}
-${moving ? LAB_CONTROLS_HTML : ""}
-${inline}
-${enlarged}
+${framed}
 <h2>as &lt;img&gt; — the file as a page would embed it: currentColor is black, a var() without a fallback is the initial paint, the scheme is the browser's (a render to .svg resolves the tokens)</h2>
 ${asImg}
 <p class="lab-note">pnpm kit lab render ${escape(scene)} --out public/images/&lt;page&gt;/${escape(scene.split("/").pop())}.svg · --out ….webp [--fps 30] · pnpm kit lab clean</p>
-<script>${moving ? labControls({ frames: true, duration: meta.duration }) + REPLAY_JS : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
+<script>${moving ? timelineScript("[data-lab-timeline]", { duration }) + IMG_REPLAY_JS : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
 }
 
 /** The index: every scene by name and file, as an <img> on both grounds, linked to its page. */

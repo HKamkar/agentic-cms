@@ -6,6 +6,38 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- One timeline for every animated preview (`agentic-cms/lab`): Play /
+  Pause, Replay, a range over one cycle that holds the frame it is
+  dragged or tapped to and steps 0.01 s an arrow key, the time and the
+  cycle in seconds; labelled, with a visible focus ring and 44 px
+  targets. A timeline drives everything inside it from one frame
+  callback — each inline SVG paused and set with `setCurrentTime()`, each
+  CSS animation by `currentTime`, each lab frame sought — so every copy
+  of an animation (its sizes, colours, grounds, on screen or not) shows
+  the same frame; two timelines are independent. The cycle is read from
+  the file (`sceneDuration()`: `data-duration`, else its SMIL and CSS);
+  a reader who prefers reduced motion gets it paused on the first frame
+  until Play. `mountTimeline` is the engine, `LabTimeline` the client
+  component; the lab's served page inlines the same engine. **Removed:**
+  `LabControls`, `labControls` and `LAB_CONTROLS_HTML` (the page-wide
+  scrubber they drove is gone; `LAB_API` stays for `lab render`).
+- `LabStudy`, for a design round's demo route: an SVG the repository owns,
+  inline at the sizes it ships at on the route's grounds under one
+  timeline, with the still a render wrote beside it and a link that
+  downloads the original. An animated file in an `<img>` cannot be
+  paused or sought, so inspection uses inline copies and the file stays
+  what ships. `demo new`'s route says so in its header.
+- Every inline copy's ids are its own (`namespaceIds()`: masks, clip
+  paths, gradients, `<use>` / `href` targets, SMIL begin/end, ARIA lists,
+  `#id` selectors) — `LabScenes` repeated each scene's ids once per size
+  and ground before. Only repository-owned SVG without script, event
+  handlers or `javascript:` URLs goes inline (`readTrustedSvg()`).
+- `LabScenes` gives each animated scene a timeline of its own instead of
+  one scrubber over the page. The `design-graphics` and `design-options`
+  skills, the reference, `docs/lab.md` (§ Inspecting motion) and
+  `docs/design.md` tell an agent to put the timeline on every animated
+  candidate. A browser suite checks it in Chromium and WebKit at desktop
+  and phone widths.
 - `lab serve`'s scene page is the review surface a loop needs. `--sizes`
   now applies to a scene of any width — the sizes a mark ships at — and,
   without the flag, an icon-sized scene still shows at 24, 40 and 64 (a

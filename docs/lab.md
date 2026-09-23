@@ -38,16 +38,16 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   **the same file as an `<img>`** on both grounds, which is what a page
   embedding the file really gets: `currentColor` is black, a `var()`
   without a fallback is the initial paint, and the scheme is the
-  browser's, not the box's. A scrubber pauses every inline copy (SMIL and
-  CSS alike, the enlarged one too) at a time and steps it by a frame; a
-  saved file reloads the page.
-- A scene that moves has three more controls. **replay** sends the inline
-  copies back to 0 and plays them, and restarts the `<img>` copies — an
-  animated image restarts only as a new image, so every copy moves to one
-  new URL (`?replay=<n>`); one URL for all of them keeps them sharing one
-  image, as a page that embeds the file at several sizes does, so a
-  shared-image repaint problem stays visible (a URL per copy would hide
-  it). **animated · still** switches the whole page to the scene with its
+  browser's, not the box's. A saved file reloads the page.
+- A scene that moves gets the **timeline** (§ Inspecting motion) over
+  every inline copy, the enlarged ones too: Play / Pause, Replay, a range
+  over one cycle, the time and the cycle in seconds. Its **Replay** also
+  restarts the `<img>` copies, which no timeline can drive — an animated
+  image restarts only as a new image, so every copy moves to one new URL
+  (`?replay=<n>`); one URL for all of them keeps them sharing one image,
+  as a page that embeds the file at several sizes does, so a shared-image
+  repaint problem stays visible (a URL per copy would hide it).
+  **animated · still** switches the whole page to the scene with its
   animation stripped (`/scene/<name>?still=1`: the `-still.svg` a render
   writes beside a loop, the `<picture>`'s fallback, what a reduced-motion
   reader gets), inline and as the `<img>`; the switch is in the URL, so a
@@ -87,9 +87,9 @@ which is the point. The template starts with two grounds every site has —
 the page and a white card — and the site adds its own (a card, a panel, a
 dark band): keep them in a file of your own that the route imports, since
 `lab clean` deletes the route. The files are read on every render, so a
-save in the lab is a refresh here. When a scene animates, one scrubber on
-the page pauses every scene at a time — the same clock the lab's page and
-`lab render` use, inline script, no library.
+save in the lab is a refresh here. Every copy's ids are its own, and an
+animated scene gets a timeline of its own (§ Inspecting motion) — its
+controls, its cycle, one clock for all its copies.
 
 The page opens with the procedure for the person looking at it (the
 component renders it; `intro={false}` hides it, children add the site's
@@ -109,6 +109,71 @@ with it, `next dev`'s generated route types (`.next/dev/types/validator.ts`)
 while they still name the route: the production build's type check reads
 them and would fail on a page that is gone (any removed route does this;
 `next dev` writes the file again).
+
+## Inspecting motion — the timeline
+
+An animation is judged frame by frame, not only as it plays, and every
+animated preview the kit shows — the lab's page, the lab route, a design
+round's demo route — has the same controls for it, the one timeline of
+`agentic-cms/lab` (`mountTimeline`; `LabTimeline` on a route):
+
+- **Play / Pause**, **Replay** (from 0), and a **range over one cycle**,
+  with the time and the cycle in seconds beside it. A press on the range
+  pauses and holds the frame; a drag or a tap seeks; focused, the arrow
+  keys step it by 0.01 s (Home and End go to the ends). Play resumes from
+  where the range stands. The controls are labelled (the group is
+  "<name>: timeline", the range "Time" with the seconds as its value
+  text), keep a visible focus ring, and are 44 px tall for a finger.
+- **One clock per animation.** A timeline drives everything inside it from
+  one `requestAnimationFrame`: each inline SVG's own timeline is paused and
+  set with `setCurrentTime()`, each CSS animation paused and set by
+  `currentTime`, each lab frame sought. The copies of one animation — its
+  sizes, its colour variants, its grounds — show the same frame whether
+  they are on screen or not; left to run on their own, SVG timelines
+  drift (WebKit advances visible and offscreen ones differently). Two
+  timelines on a page are independent: their own controls, their own
+  cycle. The frame callback stops on pause, on a cycle of 0 (the controls
+  are disabled) and when the component unmounts, and the readout is
+  written at most ten times a second, apart from the frames.
+- **The cycle is read, not restated**: `data-duration` on the root, else
+  the longest SMIL `begin` + `dur` and CSS delay + duration in the file
+  (`sceneDuration()`); a timeline given none measures what it holds.
+- **Reduced motion**: a reader who prefers it gets every timeline paused
+  on its first frame until they press Play, and a scene's own
+  `prefers-reduced-motion` rule still applies inside it.
+- **Inline copies, not the `<img>`.** An animated file inside an `<img>`
+  runs in its own document, which the page cannot pause or seek; a
+  timeline inspects inline copies of the file, and the file itself stays
+  what ships. Every inline copy's ids are renamed for it
+  (`namespaceIds()`: masks, clip paths, gradients, `<use>` and `href`
+  targets, SMIL begin/end references, `#id` selectors), so copies never
+  resolve each other's references. Only SVG the repository owns goes
+  inline: a file under the site's root, outside `node_modules`, with no
+  script, event handler or `javascript:` URL (`readTrustedSvg()` refuses
+  anything else).
+
+On a **demo route** (`pnpm kit demo new`, the `design-options` round), an
+animated candidate gets the same inspection. A file — a mark, a loop — is
+a `LabStudy`: the file inline at the sizes it ships at, on the grounds
+the route passes, under one timeline, with the still a render wrote
+beside it and a link that downloads the original:
+
+```tsx
+import { LabStudy, LabTimeline } from "agentic-cms/lab";
+
+<LabStudy file="public/images/brand/mark-a.svg" label="A" sizes={[32, 160]} grounds={GROUNDS} />
+
+// a candidate whose motion is its own markup or CSS: wrap it
+<LabTimeline label="B"><CandidateB {...props} /></LabTimeline>
+```
+
+`LabStudy` reads the file, so it belongs in the route (a server
+component), not inside a client component; `LabTimeline` wraps whatever
+the route renders, and drives the inline SVG and the CSS animations
+inside it (an `<img>` inside it stays out of reach). Candidates that are
+different animations get a timeline each; the copies of one animation
+share one. The route and its studies leave with `demo clean`, like every
+candidate.
 
 ## Drawing rules
 

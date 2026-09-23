@@ -23,7 +23,7 @@ for every scene.
   `animateTransform` per element — a second one, and the element's own
   `transform` attribute, are replaced unless `additive="sum"`. An outer
   `<g>` for the travel, an inner one for the turn: each reads on its own
-  in the scrubber.
+  on the timeline.
 
 ## Masks and clips
 
@@ -89,6 +89,28 @@ for every scene.
   moves every copy to one new URL, so they still share one image, as on a
   page; a review page that gives each copy a URL of its own hides the
   shared-image problem — judge it on the page's real markup.
+
+## Inspecting it
+
+- Inspect on the lab's timeline (`docs/lab.md` § Inspecting motion), not
+  on a player of your own: an animated SVG inside an `<img>` cannot be
+  paused or sought from the page, so the timeline drives inline copies —
+  `LabStudy` for a file, `LabTimeline` around a component on a demo route
+  — and the file stays what ships and what downloads.
+- Several copies of one SVG inline on one page share one id space: a copy
+  resolves the first copy's mask, clip path, gradient or `<use>` target,
+  and hiding or changing that copy breaks the others. `LabStudy` and the
+  lab route rename every copy's ids and references (`namespaceIds()`);
+  markup inlined by hand gets the same, and only SVG the repository owns
+  goes inline at all.
+- One clock for all the copies: each root paused and set with
+  `setCurrentTime(t)` from one frame callback, rather than each running on
+  its own — WebKit can advance visible and offscreen SVG timelines
+  differently, so free-running copies drift apart. The callback stops on
+  pause, when there is nothing to play and on unmount, and the readout
+  updates slower than the frames.
+- The cycle comes from the file (`data-duration`, else its SMIL and CSS
+  timings), never from a constant restated in the route.
 
 ## Browsers
 

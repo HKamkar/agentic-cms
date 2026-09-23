@@ -52,8 +52,12 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    needs that the page does not yet have goes into the page file and its
    schema now, never into code or SVG text. A static candidate (a mark, a
    palette, a type sample) goes on a sheet (`pnpm kit sheet`,
-   `docs/shot-probe-sheet.md`) in the same round. `pnpm dev`; hand over the
-   route's URL on the dev server (and the LAN address for a phone).
+   `docs/shot-probe-sheet.md`) in the same round. A candidate that moves
+   gets the lab's timeline on the route, so the owner can pause, step and
+   replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
+   around a component (`docs/lab.md` § Inspecting motion). `pnpm dev`;
+   hand over the route's URL on the dev server (and the LAN address for a
+   phone).
 5. **The look and the pick.** The owner looks on desktop and phone and
    picks by letter, or edits the pick in words ("merge B and C", "no
    icons", "change the radio colour too", "better wording for that row").

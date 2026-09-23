@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { LAB_DIR, animates, followsTheme, isSceneName, listScenes, sceneMeta, svgMarkup, tagRoot } from "./scenes.ts";
+import { LAB_DIR, animates, followsTheme, isSceneName, listScenes, namespaceIds, readTrustedSvg, sceneDuration, sceneMeta, svgMarkup, tagRoot } from "./scenes.ts";
 
 test("listScenes: the lab's files by name, extra files and folders by path without the extension, a missing path named", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "scenes-"));
@@ -41,4 +41,41 @@ test("tagRoot tags the root <svg> with a class, joins an existing one, and sizes
   assert.equal(tagRoot('<svg class="x" viewBox="0 0 8 8"/>', "lab-scene"), '<svg class="lab-scene x" viewBox="0 0 8 8"/>');
   assert.equal(tagRoot('<svg width="64" height="32" viewBox="0 0 64 32"><rect width="64"/></svg>', "lab-scene", { width: 24, height: 12 }), '<svg width="24" height="12" class="lab-scene" viewBox="0 0 64 32"><rect width="64"/></svg>', "the shapes' own width attributes are untouched");
   assert.throws(() => tagRoot("<div/>", "x"), /no <svg> root/);
+});
+
+test("namespaceIds: every id and every reference to one — url(#…) in attributes and styles, href and xlink:href, a SMIL syncbase, an ARIA list, a #… selector — and nothing else", () => {
+  const svg = `<svg><style>#m rect { fill: #fff } .x { fill: url(#g) }</style><defs><mask id="m"><rect/></mask><linearGradient id="g"/><clipPath id="c"/><path id="p"/></defs><rect mask="url(#m)" clip-path="url('#c')" style="fill:url(#g)"/><use href="#p"/><use xlink:href="#p"/><a href="#top"/><animate id="a1" dur="1s"/><animate begin="a1.end+0.1s; 2s" end="a1.repeat(2)" dur="1s"/><title id="t"/><g aria-labelledby="t other"/></svg>`;
+  const out = namespaceIds(svg, "lab-x-3");
+  assert.deepEqual([...out.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]), ["lab-x-3-m", "lab-x-3-g", "lab-x-3-c", "lab-x-3-p", "lab-x-3-a1", "lab-x-3-t"]);
+  assert.match(out, /<style>#lab-x-3-m rect \{ fill: #fff \} \.x \{ fill: url\(#lab-x-3-g\) \}<\/style>/, "a selector and a url() in the styles; a colour untouched");
+  assert.match(out, /mask="url\(#lab-x-3-m\)" clip-path="url\('#lab-x-3-c'\)" style="fill:url\(#lab-x-3-g\)"/);
+  assert.match(out, /<use href="#lab-x-3-p"\/><use xlink:href="#lab-x-3-p"\/><a href="#top"\/>/, "an href to an id the scene does not hold is left alone");
+  assert.match(out, /begin="lab-x-3-a1\.end\+0\.1s; 2s" end="lab-x-3-a1\.repeat\(2\)"/);
+  assert.match(out, /aria-labelledby="lab-x-3-t other"/);
+  assert.equal(namespaceIds("<svg><rect/></svg>", "p"), "<svg><rect/></svg>");
+});
+
+test("sceneDuration: data-duration first, else the longest SMIL begin + dur and CSS delay + duration; 0 for a still", () => {
+  assert.equal(sceneDuration(`<svg data-duration="3"><animate dur="9s"/></svg>`), 3);
+  assert.equal(sceneDuration(`<svg><animate dur="1.5s" begin="0.25s"/><set dur="500ms" begin="x.end"/></svg>`), 1.75);
+  assert.equal(sceneDuration(`<svg><style>.a { animation: a 2s linear 0.5s infinite } .b { animation-duration: 800ms, 1.2s }</style></svg>`), 2.5);
+  assert.equal(sceneDuration(`<svg><style>.b { animation-duration: 800ms, 1.2s }</style></svg>`), 1.2);
+  assert.equal(sceneDuration(`<svg><rect/></svg>`), 0);
+});
+
+test("readTrustedSvg: a file under the root, outside node_modules, without code — anything else refused with the reason", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "trusted-"));
+  fs.mkdirSync(path.join(root, "public/images"), { recursive: true });
+  fs.mkdirSync(path.join(root, "node_modules/x"), { recursive: true });
+  fs.writeFileSync(path.join(root, "public/images/ok.svg"), "<svg><rect/></svg>");
+  fs.writeFileSync(path.join(root, "public/images/script.svg"), "<svg><script>alert(1)</script></svg>");
+  fs.writeFileSync(path.join(root, "public/images/handler.svg"), '<svg><rect onclick="x()"/></svg>');
+  fs.writeFileSync(path.join(root, "node_modules/x/a.svg"), "<svg/>");
+  assert.equal(readTrustedSvg(root, "public/images/ok.svg"), "<svg><rect/></svg>");
+  assert.throws(() => readTrustedSvg(root, "public/images/script.svg"), /carries code \(<script\)/);
+  assert.throws(() => readTrustedSvg(root, "public/images/handler.svg"), /carries code \(onclick=\)/);
+  assert.throws(() => readTrustedSvg(root, "node_modules/x/a.svg"), /only an SVG the site's repository owns/);
+  assert.throws(() => readTrustedSvg(root, "../elsewhere.svg"), /only an SVG the site's repository owns/);
+  assert.throws(() => readTrustedSvg(root, "public/images/ok.png"), /not an \.svg file/);
+  fs.rmSync(root, { recursive: true, force: true });
 });

@@ -110,18 +110,19 @@ test("lab serve's scene page at a phone's width: no sideways scroll, the enlarge
     const inner = await big.contentFrame().locator("svg.lab-scene").boundingBox();
     assert.ok(Math.abs(inner.width - box.width) <= 1, "the drawing fills the frame");
 
-    await page.locator("#lab-time").fill("1");
-    assert.equal(await page.locator("#lab-toggle").textContent(), "play", "the scrubber paused it at 1 s");
-    await page.locator("#lab-replay").click();
-    assert.equal(await page.locator("#lab-toggle").textContent(), "pause", "playing again");
+    const scrub = page.locator("[data-lab-timeline] [data-lab-time]");
+    await scrub.fill("1");
+    assert.equal(await page.locator("[data-lab-play]").textContent(), "Play", "the range paused it at 1 s");
+    await page.locator("[data-lab-replay]").click();
+    assert.equal(await page.locator("[data-lab-play]").textContent(), "Pause", "playing again");
     const sources = await page.locator("img.lab-img").evaluateAll((imgs) => imgs.map((img) => new URL(img.src).pathname + new URL(img.src).search));
     assert.ok(sources.length >= 2 && sources.every((src) => src === "/files/spin.svg?replay=1"), `one new URL for every copy: ${sources}`);
-    const time = await big.contentFrame().locator("svg.lab-scene").evaluate(() => window.lab.time());
-    assert.ok(time < 0.9, `restarted from 0: ${time}`);
+    const times = await page.evaluate(() => [...document.querySelectorAll("iframe.lab-frame")].map((f) => f.contentWindow.lab.time()));
+    assert.ok(times.every((t) => t < 0.9 && Math.abs(t - times[0]) < 1e-6), `every frame restarted from 0, on one clock: ${times}`);
 
     await page.getByRole("link", { name: "still" }).click();
     await page.waitForURL(/\?still=1$/);
-    assert.equal(await page.locator("#lab-time").count(), 0);
+    assert.equal(await page.locator("[data-lab-timeline]").count(), 0);
     const frames = page.frames().filter((f) => f !== page.mainFrame());
     assert.ok(frames.length >= 8, `every size, both schemes, enlarged: ${frames.length} frames`);
     for (const frame of frames) {

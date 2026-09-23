@@ -70,7 +70,11 @@ How a section gets its design, as it runs in practice (the
    the section's real frame **inside the site's own layout** — its tokens,
    its chrome, its theme toggle, so a design is judged against the theme
    it will live in — lettered with one line on what differs, and the
-   current version last. The agent hands over the dev-server URL.
+   current version last. A candidate that moves gets the lab's timeline
+   there — `<LabStudy file>` for an animated file, `<LabTimeline>` around
+   a component — so the owner can pause it, step it 0.01 s at a time and
+   replay it (`docs/lab.md` § Inspecting motion). The agent hands over the
+   dev-server URL.
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
