@@ -194,9 +194,13 @@ candidate.
   SVG that a design tool exported (`optimize-svg-rasters` says why).
 - A mark that moves starts from its master file — its path data, colours
   and proportions as they came — and shows that master at rest, in the
-  hold and in every still; the moving pieces exist for the move. The notes
-  on origins, mask regions, seams, the rest frame, the loop boundary and
-  an animated `<img>` are the skill's reference,
+  hold and in every still; the moving pieces exist for the move, and where
+  they come together the join is designed frame by frame — an overlap
+  grown along the internal boundaries, the pieces opaque until the master
+  is fully present, never a crossfade between overlapping solid copies.
+  The notes on origins, mask regions, joins and seams, the handoff, the
+  rest frame, the loop boundary and an animated `<img>` are the skill's
+  reference,
   [svg-motion.md](../.claude/skills/design-graphics/references/svg-motion.md).
 
 ## Render — what a page ships

@@ -37,23 +37,41 @@ for every scene.
   hides). At rest the master's own cutout — its `fill-rule` or subpath —
   takes over again.
 
-## Edges and seams
+## Joins and seams
 
-- Two shapes that abut are antialiased separately, and a hairline of the
-  ground shows along the joint: worst at small sizes and on the dark
-  ground. Overlap the pieces slightly under the joint, or draw them as one
-  path while they touch.
+- A join is a pose of its own. Design and inspect its frames — the
+  approach, the contact, the overlap, the settled shape — not only the
+  pose apart and the pose assembled; a reader sees every one of them.
+- Two shapes that abut exactly are antialiased separately, and a hairline
+  of the ground shows along the joint: worst at small sizes and on the
+  dark ground. Where solid parts are to read as one surface, let them
+  overlap along their internal boundaries, or give the assembled state
+  one unified silhouette. Grow the overlap during the approach, never in
+  one frame, and keep it inside: the outer contour and the negative space
+  stay the master's.
+- Correct the join's geometry and timing; do not cover it with a blur, a
+  stroke around everything or the whole mark scaled up — each changes the
+  mark's edge, weight or size and only moves the flaw.
 - A clip or mask edge that crosses a moving part reads as a glitch. Put a
   cut where the master already has an edge, or move the mask with the part.
 - Leave `shape-rendering` at `auto`; `crispEdges` steps every diagonal.
+- A fix to a join changes that join's frames. The approved motion around
+  it — the other phases, the hold, the loop boundary — stays as it was.
 
 ## Rest is the master
 
 - The pieces exist for the move. At rest — the first frame, the hold, the
-  last frame — the master path shows, exactly as it came, and the pieces
-  are hidden (a discrete `<set>`, or `calcMode="discrete"` on `opacity`, at
-  the keyTime where they meet). Reassembled pieces are almost the mark:
-  rounding, seams and antialiasing show at the hold.
+  last frame — the master path shows, exactly as it came; reassembled
+  pieces are almost the mark, and rounding, seams and antialiasing show at
+  the hold.
+- The handoff from pieces to master belongs to the join. Never crossfade
+  two overlapping copies of solid artwork: layers at 1 − t and t over one
+  pixel composite to 1 − t + t², three quarters opaque halfway, so the
+  whole mark turns translucent while its seams vanish at once. Keep the
+  pieces fully opaque, bring the master in beneath them until it is fully
+  present (its fill closing any seam that is left), and only then retire
+  the pieces, now redundant, over a few frames. A discrete swap is safe
+  only on a frame where the pieces and the master are the same picture.
 - The still (`-still.svg`, the `<picture>` fallback, the reduced-motion
   render) is the master. A `-still.svg` is the file with every animation
   stripped, so the plain attributes are the rest state: master visible,
@@ -111,6 +129,15 @@ for every scene.
   updates slower than the frames.
 - The cycle comes from the file (`data-duration`, else its SMIL and CSS
   timings), never from a constant restated in the route.
+- Around a join, check consecutive frames, not samples a beat apart: pause
+  before the contact and step 0.01 s at a time through the overlap and the
+  handoff, at the display sizes, on the light and the dark ground, inline
+  and in the embedding the page will use, in Chromium and — when Safari
+  matters — WebKit. Look for a hairline gap, a clipped edge, a colour
+  flash, an opacity dip, a snap. For artwork meant to stay solid, measure
+  it as well: render those frames on a transparent ground (`lab render
+  --at <t> --scale 4`), and every pixel inside the silhouette — the
+  master's own alpha shrunk by the antialiased edge — keeps full alpha.
 
 ## Browsers
 

@@ -74,8 +74,16 @@ already stated. For anything that moves, `references/svg-motion.md`.
    inside the SVG, no double hyphen in a comment. An icon for `Icon` is
    flat shapes with one paint on the 24 grid — no group, transform,
    `<use>`, `<defs>` or `<style>`. A mark that moves keeps the master path
-   in the file and shows it at rest; the moving pieces exist for the move
-   (the reference says how: origins, mask regions, seams, the rest frame).
+   in the file and shows it at rest; the moving pieces exist for the move.
+   Where pieces come together, the join is designed like a pose —
+   approach, contact, overlap, settled shape: solid parts grow an overlap
+   along their internal boundaries (or become one silhouette) with the
+   outer contour and negative space left as the master's, and they stay
+   opaque until the master is fully present — no crossfade between
+   overlapping solid copies. A seam is fixed in the join's geometry and
+   timing, never hidden with a blur, a stroke or a bigger mark (the
+   reference says how: origins, mask regions, joins, the handoff, the rest
+   frame).
 4. **Look, then pick.** Two windows. `pnpm kit lab serve --sizes <the
    sizes it ships at>` and hand the owner the LAN URL it prints: each
    scene's page shows it inline in a light and a dark box at those sizes
@@ -106,10 +114,14 @@ already stated. For anything that moves, `references/svg-motion.md`.
 5. **Check the frames, not only the ending.** A right final silhouette
    proves little. On each candidate's timeline, pause and step through its
    cycle with the arrow keys, at the sizes it ships and enlarged — every
-   copy holds the same frame: the parts in flight (no seam, gap, clipped
-   edge or jump), the moment they meet, the hold, and the loop boundary —
-   the last frame and the first are the same picture, and the rest frame
-   is the master. Check the `<img>` the page will embed (the lab's second row,
+   copy holds the same frame: the parts in flight, the join a frame at a
+   time from before the contact through the handoff (no hairline gap,
+   clipped edge, colour flash, opacity dip or snap; solid artwork opaque
+   inside its outline throughout), the hold, and the loop boundary — the
+   last frame and the first are the same picture, and the rest frame is
+   the master. A fix to a join changes that join's frames only; the
+   approved motion around it stays. Check the `<img>` the page will embed
+   (the lab's second row,
    then the placed page), not the inline copy: an image has its own
    timeline and none of the page's CSS. The kit's commands drive Chromium;
    when Safari matters, run the same frames in WebKit as well and report
@@ -147,7 +159,7 @@ already stated. For anything that moves, `references/svg-motion.md`.
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # the SEO audit reads every <img>
 pnpm kit lab render <name> --out <file> --json              # the report: size, frames, bytes, the console
-pnpm kit lab render <name> --out .parity/frames/<name>-<s>.png --at <s> --scale 4 --no-source   # a frame between, enlarged; the rest frame against the master
+pnpm kit lab render <name> --out .parity/frames/<name>-<s>.png --at <s> --scale 4 --no-source   # a frame between, enlarged: around a join, alpha stays full inside the silhouette; the rest frame against the master
 pnpm kit visual-parity capture before --ref develop && pnpm build && pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after --json
 pnpm kit lab clean && git status --short                    # nothing of the lab, no src/app/lab-demo; the picked source kept
 ```
