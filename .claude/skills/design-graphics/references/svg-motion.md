@@ -85,9 +85,10 @@ for every scene.
   (a query string gives each its own image), a file per size, or the still
   where the size is too small to need motion. Write the engine and version
   that showed it next to the fix, so it can go when the engine is fixed.
-- An `<img>` replays only as a new image — a fresh URL. A review page that
-  replays that way gives every copy its own image and hides the shared-image
-  problem; judge it on the page's real markup.
+- An `<img>` replays only as a new image — a fresh URL. The lab's replay
+  moves every copy to one new URL, so they still share one image, as on a
+  page; a review page that gives each copy a URL of its own hides the
+  shared-image problem — judge it on the page's real markup.
 
 ## Browsers
 

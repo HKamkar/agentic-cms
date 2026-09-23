@@ -1,6 +1,7 @@
 // lab render against a throwaway site with one loop scene, run through the
 // bin the way an agent runs it: a still, a frame sequence, a resolved .svg,
-// and — when an ffmpeg exists — a WebM.
+// and — when an ffmpeg exists — a WebM; and the scene page of lab serve in
+// Chromium at a phone's width: the enlarged view, the replay, the still.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -8,11 +9,12 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
-import { chromePath, ffmpegPath } from "../lib/browser.mjs";
+import { chromePath, ffmpegPath, launch } from "../lib/browser.mjs";
 // The lab's modules reach the package (TypeScript in this checkout): the hook first, the import after it.
 import "../lib/load-ts.mjs";
 
 const { LAB_DIR, sceneTemplate } = await import("../lib/lab.mjs");
+const { startLabServer } = await import("../lib/lab-server.mjs");
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -92,4 +94,43 @@ test("lab render: a .webm through the ffmpeg at hand (Playwright's build writes 
     assert.equal(fs.readFileSync(path.join(root, video.file)).subarray(0, 4).toString("hex"), "1a45dfa3", "an EBML (WebM) file");
     assert.ok(video.bytes > 1000, `${video.bytes} bytes`);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("lab serve's scene page at a phone's width: no sideways scroll, the enlarged frame at the scene's ratio, a replay that restarts everything under one new URL, a still with nothing running", { skip }, async () => {
+  const root = labSite();
+  const server = await startLabServer({ root });
+  const { context, close } = await launch({ motion: true, width: 390, height: 844 });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${server.url}/scene/spin`, { waitUntil: "load" });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "fits the phone");
+    const big = page.locator('iframe[title="spin light enlarged"]');
+    const box = await big.boundingBox();
+    assert.ok(box.width > 200 && Math.abs(box.height - box.width) <= 1, `a square scene, enlarged: ${box.width}×${box.height}`);
+    const inner = await big.contentFrame().locator("svg.lab-scene").boundingBox();
+    assert.ok(Math.abs(inner.width - box.width) <= 1, "the drawing fills the frame");
+
+    await page.locator("#lab-time").fill("1");
+    assert.equal(await page.locator("#lab-toggle").textContent(), "play", "the scrubber paused it at 1 s");
+    await page.locator("#lab-replay").click();
+    assert.equal(await page.locator("#lab-toggle").textContent(), "pause", "playing again");
+    const sources = await page.locator("img.lab-img").evaluateAll((imgs) => imgs.map((img) => new URL(img.src).pathname + new URL(img.src).search));
+    assert.ok(sources.length >= 2 && sources.every((src) => src === "/files/spin.svg?replay=1"), `one new URL for every copy: ${sources}`);
+    const time = await big.contentFrame().locator("svg.lab-scene").evaluate(() => window.lab.time());
+    assert.ok(time < 0.9, `restarted from 0: ${time}`);
+
+    await page.getByRole("link", { name: "still" }).click();
+    await page.waitForURL(/\?still=1$/);
+    assert.equal(await page.locator("#lab-time").count(), 0);
+    const frames = page.frames().filter((f) => f !== page.mainFrame());
+    assert.ok(frames.length >= 8, `every size, both schemes, enlarged: ${frames.length} frames`);
+    for (const frame of frames) {
+      assert.deepEqual(await frame.evaluate(() => [document.getAnimations().length, document.querySelectorAll("animate").length]), [0, 0], frame.url());
+    }
+    assert.ok(await page.locator("img.lab-img").evaluateAll((imgs) => imgs.every((img) => img.complete && img.naturalWidth > 0 && img.src.endsWith("?still=1"))));
+  } finally {
+    await close();
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

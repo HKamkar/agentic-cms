@@ -76,24 +76,21 @@ already stated. For anything that moves, `references/svg-motion.md`.
    `<use>`, `<defs>` or `<style>`. A mark that moves keeps the master path
    in the file and shows it at rest; the moving pieces exist for the move
    (the reference says how: origins, mask regions, seams, the rest frame).
-4. **Look, then pick.** Two windows. `pnpm kit lab serve` and hand the
-   owner the LAN URL it prints: the scene inline in a light and a dark box
-   at its sizes, the same file as an `<img>` on both grounds (what an embed
-   really gets), a scrubber over its animation, and a bare page at any
-   width (`/scene/<name>?bare=1&scheme=dark&width=<px>`). And `pnpm kit
-   lab route` then `/lab-demo` on the dev server: the same scenes on the
-   site's own grounds — its page, its cards, its panels, as the route's
-   `GROUNDS` list says — inside the real chrome, with the procedure written
-   for the owner at the top; a scene that must sit on a surface is judged
-   there. A loop is judged per candidate on light and dark, at every size
-   it ships and once enlarged, with a replay, an animated / still switch
-   and what a reduced-motion reader gets (the `<picture>`'s still); what
-   the lab's page lacks of that — a size beyond 96 px, the enlargement,
-   replay, the switch — goes on the route as a small control that leaves
-   with it. The message carries the direct URL of the candidates, not the
-   index. Candidates are scenes `a`, `b`, `c` beside the current version:
-   two to four, or every idea when the owner asked for all
-   (`design-options`). A letter names its candidate for the whole round:
+4. **Look, then pick.** Two windows. `pnpm kit lab serve --sizes <the
+   sizes it ships at>` and hand the owner the LAN URL it prints: each
+   scene's page shows it inline in a light and a dark box at those sizes
+   and enlarged, the same file as an `<img>` on both grounds (what an embed
+   really gets), a scrubber and a replay over its animation, and a switch
+   to its still (`?still=1`: what a reduced-motion reader gets through the
+   `<picture>`) — the review surface a loop is judged on, per candidate.
+   And `pnpm kit lab route` then `/lab-demo` on the dev server: the same
+   scenes on the site's own grounds — its page, its cards, its panels, as
+   the route's `GROUNDS` list says — inside the real chrome, with the
+   procedure written for the owner at the top; a scene that must sit on a
+   surface is judged there. The message carries the direct URL of each
+   candidate's page (`/scene/<name>`), not the index. Candidates are
+   scenes `a`, `b`, `c` beside the current version: two to four, or every
+   idea when the owner asked for all (`design-options`). A letter names its candidate for the whole round:
    a "more" is a change on that file and a second look; alternatives the
    owner asks for beside an approved candidate join the same lab or route
    under the next letters, the approved file and every label left as they
