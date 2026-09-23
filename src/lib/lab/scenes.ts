@@ -60,3 +60,60 @@ export function tagRoot(markup: string, className: string, size?: { width: numbe
   if (size) tagged = tagged.replace(/\s(width|height)="[^"]*"/g, "").replace(/^<svg\b/, `<svg width="${size.width}" height="${size.height}"`);
   return markup.replace(root, tagged);
 }
+
+/** A time in SMIL or CSS ("2s", "150ms", "1.5") in seconds; NaN when it is not one. */
+const seconds = (value: string): number => {
+  const m = value.trim().match(/^(-?\d*\.?\d+)(ms|s)?$/);
+  return m ? Number(m[1]) / (m[2] === "ms" ? 1000 : 1) : Number.NaN;
+};
+
+/** One cycle in seconds, read from a scene's source rather than restated: its data-duration, else the longest begin + dur of its SMIL and delay + duration of its CSS animations; 0 when it declares none. */
+export function sceneDuration(svg: string): number {
+  const declared = sceneMeta(svg).duration;
+  if (declared) return declared;
+  let max = 0;
+  for (const tag of svg.match(/<(?:animate|animateTransform|animateMotion|set)\b[^>]*>/g) ?? []) {
+    const a = attrs(tag);
+    const dur = seconds(a.dur ?? "");
+    const begin = seconds((a.begin ?? "0").split(";")[0]);
+    if (dur > 0) max = Math.max(max, (Number.isFinite(begin) ? begin : 0) + dur);
+  }
+  for (const block of svg.match(/<style\b[^>]*>[\s\S]*?<\/style>/g) ?? []) {
+    for (const [, longhand, value] of block.matchAll(/animation(-duration)?\s*:\s*([^;}]+)/g)) {
+      for (const part of value.split(",")) {
+        const times = part.split(/\s+/).map(seconds).filter(Number.isFinite);
+        if (times.length) max = Math.max(max, longhand ? times[0] : times[0] + (times[1] ?? 0));
+      }
+    }
+  }
+  return max;
+}
+
+const escapeRe = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A copy of a scene whose ids are its own: every id becomes `<prefix>-<id>`, and every reference follows — url(#…), href and xlink:href "#…", a SMIL begin/end on an element, an ARIA id list, a #… selector in its styles — so copies of one scene on one page never resolve each other's masks, clip paths, gradients or <use> targets. */
+export function namespaceIds(markup: string, prefix: string): string {
+  const ids = new Set([...markup.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+  if (!ids.size) return markup;
+  const name = (id: string) => (ids.has(id) ? `${prefix}-${id}` : id);
+  const syncbase = new RegExp(`(^|[;\\s])(${[...ids].map(escapeRe).join("|")})\\.(?=begin|end|repeat|click|mouse|focus|activate)`, "g");
+  return markup
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, (block) => block.replace(/#([A-Za-z_][\w-]*)/g, (m, id) => (ids.has(id) ? `#${name(id)}` : m)))
+    .replace(/(\sid=")([^"]+)"/g, (m, head, id) => `${head}${name(id)}"`)
+    .replace(/url\(\s*(['"]?)#([^'")\s]+)\1\s*\)/g, (m, quote, id) => `url(${quote}#${name(id)}${quote})`)
+    .replace(/(\s(?:xlink:)?href=")#([^"]+)"/g, (m, head, id) => `${head}#${name(id)}"`)
+    .replace(/(\s(?:begin|end)=")([^"]*)"/g, (m, head, value) => `${head}${value.replace(syncbase, (s: string, lead: string, id: string) => `${lead}${name(id)}.`)}"`)
+    .replace(/(\saria-(?:labelledby|describedby)=")([^"]*)"/g, (m, head, list) => `${head}${list.split(/\s+/).map(name).join(" ")}"`);
+}
+
+/** The text of an SVG the site's repository owns — a file under its root, outside node_modules — for inline use; throws on a path outside, and on markup that carries code (a script, an event handler, a javascript: URL), which a drawing never needs. */
+export function readTrustedSvg(root: string, file: string): string {
+  const full = path.resolve(root, file);
+  const rel = path.relative(path.resolve(root), full);
+  if (!full.endsWith(".svg")) throw new Error(`${file}: not an .svg file`);
+  if (rel.startsWith("..") || path.isAbsolute(rel) || rel.split(path.sep).includes("node_modules")) throw new Error(`${file}: only an SVG the site's repository owns is put inline — a file under its root, outside node_modules`);
+  const text = fs.readFileSync(full, "utf8");
+  const code = text.match(/<script\b|\son[a-z]+\s*=|javascript:/i);
+  if (code) throw new Error(`${file}: carries code (${code[0].trim()}); a drawing is put inline only without a script, an event handler or a javascript: URL`);
+  return text;
+}

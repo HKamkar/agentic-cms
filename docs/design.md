@@ -59,8 +59,9 @@ How a section gets its design, as it runs in practice (the
 2. **Ideas.** The agent brainstorms three to five in one message, each one
    line — what it shows, what moves and why the motion is the meaning, what
    it reuses from the library. *Stop:* the owner picks which to build ("A
-   and B", "all of them").
-3. **The pick of what to build.**
+   and B", "all of them"); an ask that already said to build every idea
+   skips the stop.
+3. **The pick of what to build.** "All" is every idea, none trimmed.
 4. **The candidates, real.** `pnpm kit demo new <name> --section <type>`
    writes `src/app/<name>-demo/page.tsx` (`robots: { index: false }`) and a
    candidate per letter — a copy of the section's component beside it,
@@ -69,7 +70,11 @@ How a section gets its design, as it runs in practice (the
    the section's real frame **inside the site's own layout** — its tokens,
    its chrome, its theme toggle, so a design is judged against the theme
    it will live in — lettered with one line on what differs, and the
-   current version last. The agent hands over the dev-server URL.
+   current version last. A candidate that moves gets the lab's timeline
+   there — `<LabStudy file>` for an animated file, `<LabTimeline>` around
+   a component — so the owner can pause it, step it 0.01 s at a time and
+   replay it (`docs/lab.md` § Inspecting motion). The agent hands over the
+   dev-server URL.
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
@@ -80,7 +85,10 @@ How a section gets its design, as it runs in practice (the
    or edits the pick in words: "merge B and C", "no icons", "change the
    radio colour too", "better wording for that row". Every "more" is an
    edit on the route inside the round — a change to the candidate's file
-   and a second look — not a new round and not prose. *Stop:* the pick.
+   and a second look — not a new round and not prose. Alternatives the
+   owner asks for beside a candidate they liked join the same route under
+   the next letters; the candidates already shown keep their files and
+   letters, an approved one untouched. *Stop:* the pick.
 6. **Build it**, on the owner's word ("build it", "make it the section's
    card"): the winner becomes the real component; its copy moves into the
    page file's schema (nothing left in code or SVG text); every generic
@@ -92,11 +100,13 @@ How a section gets its design, as it runs in practice (the
 
 The rules that make a round work: a candidate's graphic is the meaning of
 the copy beside it (a meter fills because the copy is about a threshold —
-never a relabelled cycling bar); two to four candidates, the current
-version last, every one with the page's real copy; a "more" is an edit
-inside the round; what is generic leaves the section for the library in
-the same job; the route and the losers never merge — the build's SEO audit
-fails a route without a `seo` block, which is the guard.
+never a relabelled cycling bar); two to four candidates, or every idea
+when the owner asked for all, the current version last, every one with
+the page's real copy; a "more" is an edit inside the round, and an
+alternative is added beside the candidates already shown, never over one;
+what is generic leaves the section for the library in the same job; the
+route and the losers never merge — the build's SEO audit fails a route
+without a `seo` block, which is the guard.
 
 A worked example, from a site's week of rounds. The owner: "the two-offers
 card looks like a slide". Ideas: A a switch that hops the platform block

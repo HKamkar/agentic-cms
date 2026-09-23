@@ -22,6 +22,19 @@ test("the skills are committed twice and identical, one directory per skill name
   }
 });
 
+test("every relative link in a skill resolves inside its own tree, in both copies", () => {
+  for (const tree of [".claude/skills", ".agents/skills"]) {
+    for (const file of walk(path.join(ROOT, tree)).filter((f) => f.endsWith(".md"))) {
+      for (const [, target] of fs.readFileSync(file, "utf8").matchAll(/\]\(([^)#\s]+)(?:#[^)]*)?\)/g)) {
+        if (/^[a-z]+:|^\//.test(target)) continue;
+        const resolved = path.resolve(path.dirname(file), target);
+        assert.ok(resolved.startsWith(path.join(ROOT, tree) + path.sep), `${path.relative(ROOT, file)}: ${target} leaves ${tree}`);
+        assert.ok(fs.existsSync(resolved), `${path.relative(ROOT, file)}: ${target} exists`);
+      }
+    }
+  }
+});
+
 test("every site rule template is path-scoped and points at the installed package, never at the kit's source", () => {
   for (const file of walk(path.join(ROOT, "templates/site/rules"))) {
     const text = fs.readFileSync(file, "utf8");

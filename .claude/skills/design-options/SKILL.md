@@ -33,8 +33,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 2. **Ideas, three to five, one message.** Each one line: what it shows,
    what moves and why the motion is the meaning (or that nothing moves),
    what it reuses from the library. No building yet. **Stop for the
-   owner** — they pick which to build ("A and B", "all of them").
-3. **The pick of what to build.** Only the picked ideas become candidates.
+   owner** — they pick which to build ("A and B", "all of them"). An ask
+   that already said to build every idea skips this stop: no second
+   selection question.
+3. **The pick of what to build.** Only the picked ideas become candidates;
+   "all" is every idea, none trimmed.
 4. **Build the candidates.** `pnpm kit demo new <name> --section <type>`
    for a section, `--component <file>` for a piece of the chrome (a
    footer, a navbar, a button — its copy is the site's config, so its
@@ -49,14 +52,22 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    needs that the page does not yet have goes into the page file and its
    schema now, never into code or SVG text. A static candidate (a mark, a
    palette, a type sample) goes on a sheet (`pnpm kit sheet`,
-   `docs/shot-probe-sheet.md`) in the same round. `pnpm dev`; hand over the
-   route's URL on the dev server (and the LAN address for a phone).
+   `docs/shot-probe-sheet.md`) in the same round. A candidate that moves
+   gets the lab's timeline on the route, so the owner can pause, step and
+   replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
+   around a component (`docs/lab.md` § Inspecting motion). `pnpm dev`;
+   hand over the route's URL on the dev server (and the LAN address for a
+   phone).
 5. **The look and the pick.** The owner looks on desktop and phone and
    picks by letter, or edits the pick in words ("merge B and C", "no
    icons", "change the radio colour too", "better wording for that row").
    Every "more" is an edit on the route inside the round — a change to the
    candidate's file and a second look — never a new round of candidates and
-   never prose. **Stop for the owner** — the pick.
+   never prose. Alternatives the owner asks for beside a candidate they
+   liked join the same route under the next letters: every candidate
+   already shown keeps its file and its letter, and an approved one is not
+   touched (an experiment on it is a copy under a new letter). **Stop for
+   the owner** — the pick.
 6. **Build it, on the owner's word** ("build it", "make it the section's
    card"). The winner becomes the real component (its file replaces the
    section's, or its markup moves in); its copy lives in the page file's
@@ -77,9 +88,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
   threshold), never a relabelled cycling bar or a decoration a different
   sentence would fit as well.
 - Two to four candidates on the route, the current version last; more is
-  a survey, not a choice. Every candidate carries the page's real copy.
-- A "more" is an edit inside the round. The round ends with a pick, not
-  with a second set.
+  a survey, not a choice — unless the owner asked for every idea. Every
+  candidate carries the page's real copy.
+- A "more" is an edit inside the round, and alternatives the owner asks
+  for are added to the same route, the candidates already shown left as
+  they are. The round ends with a pick, not with a set nobody asked for.
 - What is generic leaves the section for the library in the same job, and
   goes into the catalogue with its props; the section composes it. Cards
   stay the section's own.
@@ -97,6 +110,7 @@ pnpm kit visual-parity capture before --ref develop && pnpm build && pnpm kit vi
 
 ## Stop for the user
 
-After the ideas (step 2: which to build); after the look (step 5: the
+After the ideas (step 2: which to build, unless the ask already said all
+of them); after the look (step 5: the
 pick, or the edit in words); after the build (step 6: the look on the dev
 server before the merge). Never merge on a sheet pick alone.

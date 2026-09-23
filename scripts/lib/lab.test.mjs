@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { KINDS, LAB_DIR, parseSizes, readThemeTokens, resolveTokens, sceneMeta, sceneTemplate, siteTokens, stripAnimation, tokensCss } from "./lab.mjs";
-import { LAB_API, bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
-import { startLabServer } from "./lab-server.mjs";
+import { ENLARGED, LAB_API, bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
+import { ICON_SIZES, startLabServer } from "./lab-server.mjs";
 
 const GLOBALS = `@layer theme, base;
 @theme static {
@@ -88,27 +88,49 @@ test("the pages: the bare page holds the scene in one scheme at its size with th
   assert.doesNotMatch(bare, /<\?xml|<!-- c -->/);
   assert.ok(bare.includes(LAB_API) && LAB_API.includes("setCurrentTime(t)") && LAB_API.includes("getAnimations()"));
   const page = sceneHtml("spin", { file: ".parity/lab/spin.svg", meta: sceneMeta(svg), tokens, sizes: [24, 64] });
-  assert.match(page, /id="lab-time"/);
-  assert.doesNotMatch(sceneHtml("still", { file: "x.svg", meta: sceneMeta(svg), tokens, animated: false }), /id="lab-time"/, "no scrubber for a scene that does not animate");
+  assert.match(page, /<div data-lab-timeline role="group" aria-label="spin: timeline"><div class="lab-timeline" data-lab-controls><button type="button" data-lab-play>Play<\/button><button type="button" data-lab-replay>Replay<\/button><input type="range" data-lab-time min="0" max="2" step="0\.01" value="0" aria-label="Time" aria-valuetext="0\.00 of 2\.00 seconds"><span data-lab-readout>0\.00 s \/ 2\.00 s<\/span><\/div><div class="lab-row">/, "the timeline over the scene's cycle, before its frames");
+  assert.ok(page.indexOf("data-lab-timeline") < page.indexOf("fit=1") && page.indexOf("fit=1") < page.indexOf("as &lt;img&gt;"), "the enlarged frames are on the timeline, the <img> rows are not");
+  assert.match(page, /\(function mountTimeline\(root[\s\S]*\)\(document\.querySelector\("\[data-lab-timeline\]"\), \{"duration":2\}\);/, "the package's timeline, inlined");
+  assert.match(sceneHtml("spin", { file: "x.svg", meta: sceneMeta(svg), tokens, duration: 1.5 }), /max="1\.5"/, "the cycle the server read from the source wins");
+  assert.doesNotMatch(sceneHtml("still", { file: "x.svg", meta: sceneMeta(svg), tokens, animated: false }), /<div data-lab-timeline/, "no timeline for a scene that does not animate");
   assert.match(page, /<iframe class="lab-frame"[^>]*src="\/scene\/spin\?bare=1&scheme=light&background=paper&width=24&pad=8" width="40" height="28">/);
   assert.match(page, /<iframe class="lab-frame"[^>]*scheme=dark&background=paper&width=64/);
   assert.match(page, /64 px \(natural\)/);
-  assert.match(page, /<img src="\/files\/spin\.svg" width="24" height="12" alt="">/);
+  assert.match(page, /<img class="lab-img" src="\/files\/spin\.svg" width="24" height="12" alt="">/);
   assert.match(page, /new EventSource\("\/events"\)/);
+  assert.match(page, /<iframe class="lab-frame" title="spin dark enlarged" src="\/scene\/spin\?bare=1&scheme=dark&background=paper&fit=1" style="aspect-ratio: 64 \/ 32">/, "one enlarged view, scrubbed with the rest");
+  assert.match(page, new RegExp(`enlarged, up to ${ENLARGED} px`));
+  assert.match(page, /<strong>animated<\/strong> · <a href="\/scene\/spin\?still=1">still<\/a>/);
+  assert.match(page, /querySelector\("\[data-lab-replay\]"\)[\s\S]*img\.lab-img[\s\S]*"\?replay=" \+ count/, "replay moves every <img> to one new URL");
+  const big = sceneHtml("hero", { file: "x.svg", meta: { width: ENLARGED, height: 320 }, tokens });
+  assert.doesNotMatch(big, /fit=1|lab-row lab-enlarged/, "no enlargement for a scene already that wide");
+  const plain = sceneHtml("mark", { file: "x.svg", meta: sceneMeta(svg), tokens, animated: false });
+  assert.doesNotMatch(plain, /data-lab-replay|still<\/a>/, "nothing to replay or hold still");
+  const held = sceneHtml("spin", { file: ".parity/lab/spin.svg", meta: sceneMeta(svg), tokens, sizes: [24], still: true });
+  assert.doesNotMatch(held, /<div data-lab-timeline|data-lab-replay>/);
+  assert.match(held, /<a href="\/scene\/spin">animated<\/a> · <strong>still<\/strong>/);
+  assert.match(held, /src="\/scene\/spin\?bare=1&scheme=light&background=paper&width=24&pad=8&still=1"/);
+  assert.match(held, /fit=1&still=1/);
+  assert.match(held, /<img class="lab-img" src="\/files\/spin\.svg\?still=1" width="24"/);
+  assert.match(held, /what a reduced-motion reader gets/);
+  const fit = bareHtml("spin", svg, { tokens, background: "paper", fit: true });
+  assert.match(fit, /display: block; color-scheme: light/);
+  assert.match(fit, /svg\.lab-scene \{ display: block; width: 100%; height: auto; \}/, "the enlarged frame's width, the viewBox's ratio");
   const index = indexHtml(new Map([["a/b", "public/a/b.svg"], ["spin", ".parity/lab/spin.svg"]]), { tokens, metas: new Map([["spin", sceneMeta(svg)]]) });
   assert.match(index, /<a href="\/scene\/a\/b">a\/b<\/a>/);
   assert.match(index, /<img src="\/files\/spin\.svg" width="64" height="32" alt="">/);
   assert.match(index, /64×32 · 2s/);
 });
 
-test("the server: the index, a scene page and its bare page, the file by id, nothing outside the whitelist, and a change event after a save", async () => {
+test("the server: the index, a scene page and its bare page, the file by id (and still), nothing outside the whitelist, and a change event after a save", async () => {
   const root = site();
   fs.mkdirSync(path.join(root, LAB_DIR), { recursive: true });
   fs.writeFileSync(path.join(root, LAB_DIR, "spin.svg"), sceneTemplate("loop", "spin"));
   fs.mkdirSync(path.join(root, "public/images"), { recursive: true });
   fs.writeFileSync(path.join(root, "public/images/mark.svg"), sceneTemplate("mark", "mark"));
   fs.writeFileSync(path.join(root, "public/images/secret.svg"), "<svg/>");
-  const server = await startLabServer({ root, extra: ["public/images/mark.svg"], watch: true, sizes: [24] });
+  fs.writeFileSync(path.join(root, "public/images/wide.svg"), '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" viewBox="0 0 400 100"><rect/></svg>');
+  const server = await startLabServer({ root, extra: ["public/images/mark.svg", "public/images/wide.svg"], watch: true, sizes: [24] });
   try {
     assert.match(server.url, /^http:\/\/127\.0\.0\.1:\d+$/);
     const index = await get(`${server.url}/`);
@@ -120,9 +142,21 @@ test("the server: the index, a scene page and its bare page, the file by id, not
     assert.match(page.body, /width=24&pad=8/);
     const bare = await get(`${server.url}/scene/public/images/mark?bare=1&scheme=dark&width=16`);
     assert.match(bare.body, /color-scheme: dark[\s\S]*width: 16px; height: 16px/);
+    assert.match((await get(`${server.url}/scene/public/images/wide`)).body, /width=24&pad=8/, "the sizes given apply to a scene of any width");
+    const fit = await get(`${server.url}/scene/public/images/mark?bare=1&fit=1`);
+    assert.match(fit.body, /width: 100%; height: auto;/);
     const file = await get(`${server.url}/files/spin.svg`);
     assert.equal(file.type, "image/svg+xml");
     assert.match(file.body, /agentic-cms lab: loop/);
+    assert.match(file.body, /<animate [\s\S]*@keyframes|@keyframes[\s\S]*<animate /);
+    assert.equal((await get(`${server.url}/files/spin.svg?replay=3`)).body, file.body, "a replay is the same file under a new URL");
+    const stillFile = await get(`${server.url}/files/spin.svg?still=1`);
+    assert.equal(stillFile.body, stripAnimation(file.body));
+    assert.doesNotMatch(stillFile.body, /<animate |@keyframes/);
+    const stillPage = await get(`${server.url}/scene/spin?still=1`);
+    assert.match(stillPage.body, /&still=1/);
+    assert.doesNotMatch(stillPage.body, /<div data-lab-timeline/);
+    assert.doesNotMatch((await get(`${server.url}/scene/spin?bare=1&still=1`)).body, /<animate |@keyframes/);
     assert.equal((await get(`${server.url}/files/public/images/secret.svg`)).status, 404, "not listed, not served");
     assert.equal((await get(`${server.url}/files/..%2Fsrc%2Fapp%2Fglobals.css.svg`)).status, 404);
     assert.equal((await get(`${server.url}/scene/nope`)).status, 404);
@@ -135,6 +169,25 @@ test("the server: the index, a scene page and its bare page, the file by id, not
     fs.writeFileSync(path.join(root, LAB_DIR, "new.svg"), "<svg viewBox='0 0 1 1'/>");
     await event;
     assert.match((await get(`${server.url}/`)).body, /href="\/scene\/new"/, "re-listed after the save");
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the server without --sizes: an icon-sized scene at the icon sizes, a bigger one at its own size only", async () => {
+  const root = site();
+  fs.mkdirSync(path.join(root, LAB_DIR), { recursive: true });
+  fs.writeFileSync(path.join(root, LAB_DIR, "spin.svg"), sceneTemplate("loop", "spin"));
+  fs.writeFileSync(path.join(root, LAB_DIR, "wide.svg"), '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" viewBox="0 0 400 100"><rect/></svg>');
+  const server = await startLabServer({ root });
+  try {
+    const icon = (await get(`${server.url}/scene/spin`)).body;
+    for (const size of ICON_SIZES) assert.match(icon, new RegExp(`scheme=light&background=paper&width=${size}&pad=8"`));
+    const wide = (await get(`${server.url}/scene/wide`)).body;
+    assert.equal(wide.match(/scheme=light&background=paper&width=\d+&pad=8"/g).length, 1);
+    assert.match(wide, /width=400&pad=8/);
+    assert.match(wide, /fit=1/, "enlarged: 400 px is under the enlargement's width");
   } finally {
     server.close();
     fs.rmSync(root, { recursive: true, force: true });

@@ -1,12 +1,13 @@
 // The lab's pages as HTML strings, on the site's tokens and nothing of the
 // site's design: the bare page (one scene alone, in one scheme — what the
 // scene page frames and what a render photographs), the scene page (the
-// scene inline in a light and a dark box at its sizes, the same file as an
-// <img> on both grounds, a scrubber over its animations, a reload on every
-// save) and the index. The in-page seek and the controls are the package's
-// (src/lib/lab/api.ts), shared with the LabScenes route inside a site and
-// used by `lab render`.
-import { LAB_API, LAB_CONTROLS_HTML, labControls, svgMarkup, tagRoot } from "agentic-cms/lab";
+// scene inline in a light and a dark box at its sizes and enlarged, under
+// one timeline; the same file as an <img> on both grounds; a switch to its
+// still; a reload on every save) and the index. The bare page's clock
+// (LAB_API, which `lab render` sets frame by frame) and the timeline that
+// drives every frame of the scene page (mountTimeline, inlined: this page
+// has no React) are the package's, the same the routes inside a site use.
+import { LAB_API, TIMELINE_CSS, svgMarkup, tagRoot, timelineControlsHtml, timelineScript } from "agentic-cms/lab";
 import { escape } from "./sheet.mjs";
 import { tokensCss } from "./lab.mjs";
 
@@ -14,19 +15,22 @@ export { LAB_API };
 const FONT = "var(--font-sans, system-ui, sans-serif)";
 const LABEL = "var(--font-label, ui-monospace, monospace)";
 
-/** One scene alone: inline, in one scheme, on a transparent ground (or the paper), at an explicit size, with the seek API. */
-export function bareHtml(scene, svg, { tokens = {}, scheme = "light", background = "transparent", width, height, pad = 0 } = {}) {
+/** One scene alone: inline, in one scheme, on a transparent ground (or the paper), at an explicit size or (`fit`) the frame's width, with the seek API. */
+export function bareHtml(scene, svg, { tokens = {}, scheme = "light", background = "transparent", width, height, pad = 0, fit = false } = {}) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escape(scene)}</title>
 <style>
 ${tokensCss(tokens)}
 html { background: transparent; }
-body { margin: 0; padding: ${Number(pad) || 0}px; display: inline-block; color-scheme: ${scheme === "dark" ? "dark" : "light"}; background: ${background === "paper" ? "var(--color-paper)" : "transparent"}; color: var(--color-ink); }
-svg.lab-scene { display: block; width: ${Number(width)}px; height: ${Number(height)}px; }
+body { margin: 0; padding: ${Number(pad) || 0}px; display: ${fit ? "block" : "inline-block"}; color-scheme: ${scheme === "dark" ? "dark" : "light"}; background: ${background === "paper" ? "var(--color-paper)" : "transparent"}; color: var(--color-ink); }
+svg.lab-scene { display: block; ${fit ? "width: 100%; height: auto;" : `width: ${Number(width)}px; height: ${Number(height)}px;`} }
 </style></head>
 <body>${tagRoot(svgMarkup(svg).trim(), "lab-scene")}
 <script>${LAB_API}</script></body></html>`;
 }
+
+/** The widest the enlarged view gets; below it, it fits the screen (a phone). */
+export const ENLARGED = 640;
 
 const PAGE_CSS = `
 html { background: var(--color-paper); color: var(--color-ink); font: 14px/1.5 ${FONT}; }
@@ -42,8 +46,10 @@ h2 { font: 500 13px/1.3 ${LABEL}; margin: 28px 0 8px; }
 .lab-box[data-scheme="dark"] { color-scheme: dark; }
 .lab-box img, iframe.lab-frame { display: block; border: 0; }
 .lab-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; font: 12px/1.3 ${LABEL}; }
-.lab-controls button { font: inherit; border: 1px solid var(--color-ink); background: var(--color-paper); color: var(--color-ink); padding: 2px 10px; cursor: pointer; }
-.lab-controls input[type="range"] { width: min(360px, 60vw); }
+${TIMELINE_CSS}
+.lab-enlarged .lab-label { flex-basis: 100%; }
+.lab-enlarged .lab-box { flex: 1 1 240px; min-width: 0; max-width: ${ENLARGED + 18}px; }
+.lab-enlarged iframe.lab-frame { width: 100%; height: auto; }
 table { border-collapse: collapse; }
 td, th { text-align: left; vertical-align: top; padding: 8px 16px 8px 0; border-bottom: 1px solid var(--color-ink); }
 th { font: 500 12px/1.3 ${LABEL}; }
@@ -57,29 +63,55 @@ ${PAGE_CSS}
 </style></head>
 <body>${body}</body></html>`;
 
+// Replay reaches the <img> copies too, which no timeline can drive: every
+// one moves to one new URL — an animated image restarts only as a new image.
+// One URL for all copies keeps them sharing one image, as a page that embeds
+// the file at several sizes does, so a shared-image repaint problem stays
+// visible. The inline copies restart on the timeline's own replay.
+const IMG_REPLAY_JS = `(() => {
+  const button = document.querySelector("[data-lab-replay]");
+  if (!button) return;
+  let count = 0;
+  button.addEventListener("click", () => {
+    count += 1;
+    for (const img of document.querySelectorAll("img.lab-img")) img.src = img.src.replace(/\\?.*$/, "") + "?replay=" + count;
+  });
+})();`;
+
 const box = (scheme, inner) => `<div class="lab-box" data-scheme="${scheme}">${inner}</div>`;
 const sizeOf = (meta, width) => ({ width, height: Math.max(1, Math.round((width * meta.height) / meta.width)) });
 const encode = (id) => id.split("/").map(encodeURIComponent).join("/");
 
-/** The scene page: inline in both schemes at the natural size and the given sizes (framed bare pages), as an <img> on both grounds, the scrubber, the render hint. */
-export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true } = {}) {
+/** The scene page: inline in both schemes at the natural size, the given sizes and enlarged (framed bare pages) under one timeline over `duration` (the scene's cycle), as an <img> on both grounds, the animated / still switch (`still`: every copy without its animation), the render hint. */
+export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true, still = false, duration = meta.duration } = {}) {
+  const moving = animated && !still;
+  const stillQuery = still ? "&still=1" : "";
   const widths = [...new Set([meta.width, ...sizes])].filter((w) => w > 0).sort((a, b) => a - b);
   const label = (w) => `${w} px${w === meta.width ? " (natural)" : ""}`;
+  const bare = (scheme, rest) => `/scene/${encode(scene)}?bare=1&scheme=${scheme}&background=paper&${rest}${stillQuery}`;
   const frame = (scheme, width) => {
     const { height } = sizeOf(meta, width);
-    return `<iframe class="lab-frame" title="${escape(scene)} ${scheme} ${width}px" src="/scene/${encode(scene)}?bare=1&scheme=${scheme}&background=paper&width=${width}&pad=8" width="${width + 16}" height="${height + 16}"></iframe>`;
+    return `<iframe class="lab-frame" title="${escape(scene)} ${scheme} ${width}px" src="${bare(scheme, `width=${width}&pad=8`)}" width="${width + 16}" height="${height + 16}"></iframe>`;
   };
   const inline = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", frame("light", w))}${box("dark", frame("dark", w))}</div>`).join("");
-  const image = (w) => `<img src="/files/${encode(scene)}.svg" width="${w}" height="${sizeOf(meta, w).height}" alt="">`;
+  const big = (scheme) => `<iframe class="lab-frame" title="${escape(scene)} ${scheme} enlarged" src="${bare(scheme, "fit=1")}" style="aspect-ratio: ${meta.width} / ${meta.height}"></iframe>`;
+  const enlarged = Math.max(...widths) < ENLARGED ? `<div class="lab-row lab-enlarged"><span class="lab-label">enlarged, up to ${ENLARGED} px</span>${box("light", big("light"))}${box("dark", big("dark"))}</div>` : "";
+  const image = (w) => `<img class="lab-img" src="/files/${encode(scene)}.svg${still ? "?still=1" : ""}" width="${w}" height="${sizeOf(meta, w).height}" alt="">`;
   const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", image(w))}${box("dark", image(w))}</div>`).join("");
+  const page = `/scene/${encode(scene)}`;
+  const mode = still ? `<a href="${page}">animated</a> · <strong>still</strong>` : `<strong>animated</strong> · <a href="${page}?still=1">still</a>`;
+  const bar = animated ? `<div class="lab-controls"><span>${mode}</span></div>` : "";
+  // One timeline over every inline copy (each a frame with its own clock, sought from this one); the <img> rows are outside it.
+  const framed = moving ? `<div data-lab-timeline role="group" aria-label="${escape(scene)}: timeline"><div class="lab-timeline" data-lab-controls>${timelineControlsHtml({ duration })}</div>${inline}${enlarged}</div>` : `${inline}${enlarged}`;
   return shell(scene, tokens, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
+${still ? `<p class="lab-note">still — every copy without its animation: the -still.svg a render writes beside a loop, the &lt;picture&gt;'s fallback, what a reduced-motion reader gets</p>` : ""}
 <h2>inline — currentColor and var(--color-*) follow each box's scheme</h2>
-${animated ? LAB_CONTROLS_HTML : ""}
-${inline}
+${bar}
+${framed}
 <h2>as &lt;img&gt; — the file as a page would embed it: currentColor is black, a var() without a fallback is the initial paint, the scheme is the browser's (a render to .svg resolves the tokens)</h2>
 ${asImg}
 <p class="lab-note">pnpm kit lab render ${escape(scene)} --out public/images/&lt;page&gt;/${escape(scene.split("/").pop())}.svg · --out ….webp [--fps 30] · pnpm kit lab clean</p>
-<script>${animated ? labControls({ frames: true, duration: meta.duration }) : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
+<script>${moving ? timelineScript("[data-lab-timeline]", { duration }) + IMG_REPLAY_JS : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
 }
 
 /** The index: every scene by name and file, as an <img> on both grounds, linked to its page. */
