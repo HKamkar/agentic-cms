@@ -27,6 +27,8 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.equal(summary.meta.scheme, "light");
     assert.deepEqual(files(root, "a"), ["about@390.png", "about@390.sections.json", "about@800.png", "about@800.sections.json", "capture.json", "home@390--menu.png", "home@390.png", "home@390.sections.json", "home@800.png", "home@800.sections.json", "meta.json"]);
     assert.equal(summary.files, 9, "the shots and their section geometry; meta.json and capture.json are not counted");
+    assert.equal(summary.timings.taken, 4, "one timing per page-width");
+    assert.ok(summary.timings.seconds > 0 && summary.timings.slowest.length === 4 && summary.timings.slowest[0].name.includes("@"), "the slowest page-widths, named");
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/a/home@800.sections.json"), "utf8")).map((s) => s.section), ["hero", "second", "third"]);
     assert.match(r.stderr, /a: 5 screenshots/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

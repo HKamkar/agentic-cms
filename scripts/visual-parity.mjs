@@ -22,7 +22,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, snap, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -119,7 +119,7 @@ async function captureMotion(page, dir, name) {
       await page.evaluate(PAUSE_LOOPS);
       // a SMIL clock is set to the frame's own time since the step (the settled frame to its data-rest), never to when the shot happened to run
       await page.evaluate(HOLD_SMIL, { at: ms / 1000, rest: tag === "settled" });
-      await page.screenshot({ path: path.join(dir, `${name}--s${String(i).padStart(2, "0")}-${tag}.png`), fullPage: false });
+      await snap(page, path.join(dir, `${name}--s${String(i).padStart(2, "0")}-${tag}.png`));
       count++;
     }
     steps.push({ step: i, y, waited: settled, declared });
@@ -158,12 +158,22 @@ const STATES = ({ site, post, form, faq }) => [
   { page: post, width: 1440, name: "post-faq-open", act: async (p) => { const b = faqToggle(p); await b.scrollIntoViewIfNeeded(); await b.click(); return b.locator("xpath=ancestor::div[1]"); } },
 ].filter((state) => state.page);
 
+/** How long each page-width (or state) took, for capture.json: where a run's time went. */
+const timings = [];
+const timed = async (name, fn) => { const start = Date.now(); try { return await fn(); } finally { timings.push([name, Date.now() - start]); } };
+/** The timings in brief: how many, their total and mean in seconds, and the five slowest. */
+function timingSummary() {
+  const total = timings.reduce((sum, [, ms]) => sum + ms, 0);
+  const s = (ms) => Math.round(ms / 100) / 10;
+  return { taken: timings.length, seconds: s(total), mean: timings.length ? s(total / timings.length) : 0, slowest: [...timings].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, ms]) => ({ name, seconds: s(ms) })) };
+}
+
 async function captureStates(context, baseUrl, dir, root) {
   let count = 0;
   const kit = await loadKit();
   for (const state of STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
     const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
-    await onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
+    await timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
       await fontsReady(page);
       await revealed(page);
@@ -174,8 +184,8 @@ async function captureStates(context, baseUrl, dir, root) {
       const box = await target.boundingBox();
       const scrollY = await page.evaluate(() => window.scrollY);
       const pad = 24;
-      await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true, clip: { x: Math.max(0, box.x - pad), y: Math.max(0, box.y + scrollY - pad), width: box.width + 2 * pad, height: box.height + 2 * pad } });
-    }));
+      await snap(page, path.join(dir, `${name}.png`), { fullPage: true, clip: { x: Math.max(0, box.x - pad), y: Math.max(0, box.y + scrollY - pad), width: box.width + 2 * pad, height: box.height + 2 * pad } });
+    })));
     count++;
     say(`${state.name} `);
   }
@@ -194,7 +204,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
   let count = 0;
   const finish = () => {
     const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
-    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, meta };
+    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, timings: timingSummary(), meta };
     // written last: its presence is the sign that the capture finished (the directory is wiped at the start)
     fs.writeFileSync(path.join(dir, "capture.json"), JSON.stringify(summary, null, 1));
     if (flags.json) console.log(JSON.stringify(summary, null, 1));
@@ -210,7 +220,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
   for (const pagePath of pages) {
     for (const width of widths) {
       const name = `${routeName(pagePath)}@${width}`;
-      count += await onceMore(name, () => withPage(context, width, baseUrl + pagePath, async (page) => {
+      count += await timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, async (page) => {
         await fontsReady(page);
         await page.addStyleTag({ content: NO_ANCHORING_CSS });
         if (motion) {
@@ -223,14 +233,14 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
         await revealed(page);
         await settle(page);
         await page.evaluate(HOLD_SMIL, { rest: true });
-        await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
+        await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
         fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
         if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
         await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
         await page.waitForTimeout(600);
-        await page.screenshot({ path: path.join(dir, `${name}--menu.png`), fullPage: false });
+        await snap(page, path.join(dir, `${name}--menu.png`));
         return 2;
-      }));
+      })));
     }
     say(`${pagePath} `);
   }

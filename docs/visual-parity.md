@@ -17,7 +17,10 @@ pnpm kit visual-parity compare before after --json    # exit 1 on any difference
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should
-poll). Every capture records its mode, scheme and, for a baseline, the ref
+poll), with how long it took: `seconds` for the whole run and `timings`
+for its shots — how many page-widths (or states) it took, their total and
+mean, and the five slowest, which is where to look when a run is slow.
+Every capture records its mode, scheme and, for a baseline, the ref
 and sha in `meta.json` — for the site's own build also the checkout it was
 (`tree: { head, dirty }`, `null` outside git); `compare` refuses two
 captures of different schemes and prints the baseline it is judging
@@ -105,7 +108,8 @@ with a margin, at 1440 (`home@1440--state-cta-hover.png`).
 `--url <base>` captures a served site instead of the build under `.next`
 (print its `git log -1` first: a baseline from a checkout that had moved on
 proves nothing). `--pages /a,/b` captures only those routes; pass the same
-`--pages` to `compare`, which then judges only the after capture's files.
+`--pages` to `compare`, which then judges only those routes' files, on both
+sides.
 
 ## Reading a compare
 
@@ -184,6 +188,15 @@ image loaded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
 a stalled page.
+
+The scroll-through exists to run what entering the view runs — reveals,
+lazy images, observers — so it runs with every element `visibility:
+hidden`: layout, scrolling and intersection observers behave as ever, and
+nothing is painted until the page is back at the top, which on a long page
+at a desktop width is most of the scroll-through's time. The shot is one
+DevTools screenshot at the page's full size with the renderer's fast PNG
+encoding: the pixels Playwright's full-page screenshot takes, in half the
+time. The same scroll-through serves `shot`, `probe` and `icons audit`.
 
 To load every image without scrolling, the harness switches lazy images to
 `loading="eager"` — in every mode, and in `shot` and `probe` — but only once
