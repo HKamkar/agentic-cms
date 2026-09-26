@@ -129,3 +129,47 @@ test("demo clean: the route, the candidates it alone imported (and their module.
     assert.deepEqual(all.removed, ["src/app/one-demo", "src/components/home/HeroA.tsx", "src/app/two-demo", "src/components/home/TestimonialsA.tsx"]);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test("demo clean in a git checkout: what the round created goes with it — a stage only a candidate uses, the round's assets — and what the promoted section now uses stays; --dry-run removes nothing", () => {
+  const root = site();
+  const git = (...args) => spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" });
+  try {
+    assert.equal(git("init", "-q").status, 0);
+    assert.equal(git("add", "src", "content").status, 0);
+    assert.equal(git("commit", "-q", "-m", "base").status, 0);
+    put(root, "notes-before.tsx", "export const untrackedBeforeTheRound = 1;\n");
+    put(root, "src/components/ui/Loose.tsx", "export const Loose = 1;\n");
+    // src/components/ui/Loose.tsx was untracked when the round began: never the round's to remove
+    assert.equal(run(root, ["new", "hero-card", "--section", "home-hero", "--candidates", "2"]).status, 0);
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, "src/app/hero-card-demo/demo.json"), "utf8"));
+    assert.deepEqual(manifest.created, ["src/components/home/HeroA.tsx", "src/components/home/HeroB.tsx"]);
+    assert.equal(manifest.component, "src/components/home/Hero.tsx");
+    assert.match(manifest.base, /^[0-9a-f]{40}$/);
+    assert.ok(manifest.untracked.includes("src/components/ui/Loose.tsx"));
+    // the round: a stage and a card face for the candidates, a stylesheet, an asset; B wins, its card face promoted into the real hero
+    put(root, "src/components/home/HeroStage.tsx", 'import s from "./HeroStage.module.css";\nexport const HeroStage = () => s;\n');
+    put(root, "src/components/home/HeroStage.module.css", ".stage { display: grid }\n");
+    put(root, "src/components/ui/CardFace.tsx", 'import { Loose } from "@/components/ui/Loose";\nexport const CardFace = () => Loose;\n');
+    put(root, "src/components/home/HeroA.tsx", 'import { HeroStage } from "./HeroStage";\nexport function HeroA() { return HeroStage(); }\n');
+    put(root, "src/components/home/HeroB.tsx", 'import { CardFace } from "@/components/ui/CardFace";\nimport type { Section } from "@/components/ui/Section";\nexport function HeroB() { return CardFace(); }\n');
+    put(root, "src/components/home/Hero.tsx", 'import { CardFace } from "@/components/ui/CardFace";\nexport function Hero() { return CardFace(); }\n');
+    put(root, "public/images/hero-card-demo/b-face.svg", "<svg/>");
+    assert.equal(git("add", "src/components/home/HeroStage.tsx").status, 0);
+    assert.equal(git("commit", "-q", "-m", "a stage, committed mid-round").status, 0);
+
+    const expected = {
+      removed: ["src/app/hero-card-demo", "src/components/home/HeroA.tsx", "src/components/home/HeroB.tsx", "src/components/home/HeroStage.tsx", "src/components/home/HeroStage.module.css", "public/images/hero-card-demo"],
+      kept: ["src/components/home/Hero.tsx (the component the candidates started from)", "src/components/ui/CardFace.tsx (imported by src/components/home/Hero.tsx)"],
+    };
+    const dry = run(root, ["clean", "hero-card", "--dry-run", "--json"]);
+    assert.equal(dry.status, 0, dry.stderr);
+    assert.deepEqual(JSON.parse(dry.stdout), { ...expected, dryRun: true });
+    for (const file of expected.removed) assert.ok(fs.existsSync(path.join(root, file)), `--dry-run left ${file}`);
+    assert.match(run(root, ["clean", "hero-card", "--dry-run"]).stdout, /^would remove: src\/app\/hero-card-demo, /);
+
+    const r = run(root, ["clean", "hero-card", "--json"]);
+    assert.deepEqual(JSON.parse(r.stdout), expected);
+    for (const file of expected.removed) assert.ok(!fs.existsSync(path.join(root, file)), `${file} removed`);
+    for (const file of ["src/components/home/Hero.tsx", "src/components/ui/CardFace.tsx", "src/components/ui/Loose.tsx", "src/components/ui/Section.tsx", "notes-before.tsx"]) assert.ok(fs.existsSync(path.join(root, file)), `${file} kept`);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
