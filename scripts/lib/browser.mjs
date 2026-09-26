@@ -246,6 +246,12 @@ export async function withPage(context, width, url, shoot, { height = 900 } = {}
   } finally { await page.close(); }
 }
 
+/** A route's name in the files a command writes — the harness's shots, shot's picture: "/" → "home", "/blog/x" → "blog__x", a URL → its path the same way. */
+export function routeName(target) {
+  const route = /^https?:\/\//.test(target) ? new URL(target).pathname : target;
+  return route === "/" ? "home" : route.replace(/^\//, "").replace(/\/$/, "").replace(/\//g, "__") || "home";
+}
+
 // ---- the one-shot commands' helpers (shot, probe, sheet) -------------------------
 /** A route of the build ("/about") against a base, or a URL as it is. */
 export function resolveTarget(target, { base }) {

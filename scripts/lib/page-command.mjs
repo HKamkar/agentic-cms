@@ -3,13 +3,9 @@
 // or heading, the names of things. A command calls openTarget() and works on
 // the page it gets back.
 import path from "node:path";
-import { collectConsole, findTarget, launch, prepare, resolveTarget, serveStatic } from "./browser.mjs";
+import { collectConsole, findTarget, launch, prepare, resolveTarget, routeName, serveStatic } from "./browser.mjs";
 
-/** "/" → "home", "/blog/x" → "blog__x", a URL → its path the same way. */
-export function routeName(target) {
-  const route = /^https?:\/\//.test(target) ? new URL(target).pathname : target;
-  return route === "/" ? "home" : route.replace(/^\//, "").replace(/\/$/, "").replace(/\//g, "__") || "home";
-}
+export { routeName };
 
 export const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 

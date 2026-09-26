@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
-import { compareCapture, compareSameSize, mergeBands, rowDiff } from "./compare-images.mjs";
+import { compareCapture, compareSameSize, judged, mergeBands, rowDiff } from "./compare-images.mjs";
 
 // A synthetic page: width w, every row a colour by index (so rows differ from each other), 3 channels.
 const W = 40;
@@ -101,5 +101,25 @@ test("compareCapture: two capture directories give the report, the lines and the
   assert.equal(report.baseline.sha, "abc123");
   assert.match(report.files.find((f) => f.name === "about@40.png").line, /^SIZE {5}about@40\.png +40x300 -> 40x330 \(\+30\) {2}same to row 100, tail 190 rows, band 100-110 -> 100-140: shift$/);
   assert.match(byName["blog@40.png"].line, /^CHANGED {2}blog@40\.png +0\.333% \(40 px\) rows 10-10$/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("--pages judges the named pages on both sides: the other pages of a full capture are not MISSING, a frame lost at a width the after capture took is", () => {
+  const before = ["home@40.png", "home@40--s01-500.png", "home@80.png", "about@40.png", "blog__a@40.png", "home@40.animations.json"];
+  const after = ["home@40.png", "about@40.png", "blog__a@40.png", "blog__b@40.png", "home@40.animations.json"];
+  assert.deepEqual(judged(before, after, ["/"]).sort(), ["home@40--s01-500.png", "home@40.animations.json", "home@40.png"], "home@80: a width the after capture did not take");
+  assert.deepEqual(judged(before, after, ["/blog/a", "/about"]).sort(), ["about@40.png", "blog__a@40.png"]);
+  assert.deepEqual(judged(["about@40.png"], ["home@40.png", "about@40.png", "x@40.png"], ["/about"]), ["about@40.png"], "a partial before, a full after: one page, nothing MISSING");
+  assert.equal(judged(before, after).length, 7, "without --pages: every file of both, once");
+});
+
+test("compareCapture with --pages reports only the named page, a lost frame of it as MISSING", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-pages-"));
+  const write = async (label, name) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(page(20)); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  for (const name of ["home@40.png", "home@40--s01-500.png"]) await write("a", name);
+  for (const name of ["home@40.png", "about@40.png", "blog@40.png"]) await write("b", name);
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20, pages: ["/"] });
+  assert.deepEqual(report.files.map((f) => [f.name, f.status]), [["home@40--s01-500.png", "MISSING"], ["home@40.png", "ok"]]);
+  assert.deepEqual(report.pages, ["/"]);
   fs.rmSync(dir, { recursive: true, force: true });
 });

@@ -144,7 +144,12 @@ ok       home@1440.animations.json                                              
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
 - `MISSING`: a file only one capture has (a page added or removed, or a
-  partial capture without `--pages` on the compare).
+  partial capture without `--pages` on the compare). With `--pages` the
+  compare judges only those pages' files, on both sides, and of the before
+  capture only the widths the after capture took: a full capture against a
+  partial one lists no other page, and a frame of a named page that one side
+  lacks (a motion step lost because the page got shorter) is still
+  `MISSING`.
 - `.animations.json` / `.settle.json`: `CHANGED` when the inventories
   differ; the diff directory then holds the entries only one side has.
 

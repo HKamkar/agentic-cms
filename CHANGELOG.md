@@ -55,6 +55,14 @@ changes what a capture writes says **recapture baselines**.
   cycle, rest and box). An animated SVG in an `<img>` is out of reach and
   photographed as it runs. **Recapture baselines**: a static shot of a page
   with inline SMIL and every `.animations.json` of one change.
+- `visual-parity compare --pages` judges the named pages' files on both
+  sides, and of the before capture only the widths the after capture took.
+  The value used to be read as a switch alone (judge every file of the
+  after capture), so a partial capture against a full one reported every
+  other page as `MISSING`, hundreds of lines on a motion capture; a frame
+  of a named page that one side lacks is still `MISSING`. `routeName` is
+  now the one route-to-file-name mapping the harness, `shot` and the
+  compare share.
 
 ## [0.5.1] — 2026-09-23
 

@@ -22,7 +22,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -162,7 +162,7 @@ async function captureStates(context, baseUrl, dir, root) {
   let count = 0;
   const kit = await loadKit();
   for (const state of STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
-    const name = `${state.page === "/" ? "home" : state.page.slice(1).replace(/\//g, "__")}@${state.width}--state-${state.name}`;
+    const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
     await onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
       await fontsReady(page);
@@ -209,7 +209,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
   }
   for (const pagePath of pages) {
     for (const width of widths) {
-      const name = `${pagePath === "/" ? "home" : pagePath.slice(1).replace(/\//g, "__")}@${width}`;
+      const name = `${routeName(pagePath)}@${width}`;
       count += await onceMore(name, () => withPage(context, width, baseUrl + pagePath, async (page) => {
         await fontsReady(page);
         await page.addStyleTag({ content: NO_ANCHORING_CSS });

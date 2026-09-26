@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { routeName } from "./browser.mjs";
 
 const TOLERANCE = 24;
 const MID_FLIGHT = /--s\d+-(150|500)\.png$/;
@@ -126,13 +127,29 @@ async function compareImage(name, fa, fb, diffDir, { threshold, thresholdMid }) 
   return entry;
 }
 
+/** "<page>@<width>" of a capture's file name, the shot it belongs to. */
+const shotOf = (name) => /^[^@]+@\d+/.exec(name)?.[0] ?? name;
+
+/**
+ * The files a compare judges. Without pages, every file of both captures. With --pages (a partial capture on one side or
+ * both), only the named pages' files — a full capture against a partial one is not a page of MISSING lines — and of the
+ * before capture only the page-widths the after capture took, so a frame lost at a width it did take is still MISSING.
+ */
+export function judged(before, after, pages = []) {
+  if (!pages.length) return [...new Set([...before, ...after])];
+  const wanted = new Set(pages.map(routeName));
+  const named = (f) => wanted.has(f.slice(0, f.indexOf("@")));
+  const kept = after.filter(named);
+  const shots = new Set(kept.map(shotOf));
+  return [...new Set([...kept, ...before.filter((f) => named(f) && shots.has(shotOf(f)))])];
+}
+
 /** The report of two capture directories: one entry per file (with its printed line), the summary, the baseline the after capture names. */
 export async function compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages = [] }) {
   fs.rmSync(diffDir, { recursive: true, force: true });
   fs.mkdirSync(diffDir, { recursive: true });
-  // with --pages the "after" capture is partial: judge only what it contains
   const isResult = (f) => f.endsWith(".png") || f.endsWith(".animations.json") || f.endsWith(".settle.json");
-  const names = [...new Set([...(pages.length ? [] : fs.readdirSync(a)), ...fs.readdirSync(b)].filter(isResult))].sort();
+  const names = judged(fs.readdirSync(a).filter(isResult), fs.readdirSync(b).filter(isResult), pages).sort();
   const files = [];
   for (const name of names) {
     const fa = path.join(a, name), fb = path.join(b, name);

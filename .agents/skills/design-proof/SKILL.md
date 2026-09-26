@@ -66,7 +66,8 @@ decides whether `--motion` is part of the proof.
    - A settled motion frame that keeps differing where a sequence runs long:
      the section declares `data-settle="<ms>"` (`STANDARD.md` §7).
    - `MISSING`: a page appeared or disappeared, or the compare lacks the
-     `--pages` the capture had.
+     `--pages` the capture had (with it, only the named pages are judged,
+     on both sides).
 4. **Say what the proof says**, in numbers: how many files, which
    differed, the verdicts, and why each difference is the change. A design
    change is its own commit and says so.
