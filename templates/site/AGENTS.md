@@ -101,7 +101,8 @@ a patch under `node_modules`.
 
 The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
-on; never build, edit `public/` or move assets while a capture runs; a
+on; a capture photographs a copy of the build, so after its `snapshot:`
+line the tree is free, but build the exact tree you mean to prove; a
 static or settled frame never jitters, a mid-flight one may (re-run once);
 a `reflow` verdict or a diff on every text line below one section means a
 stacking context flipped the compositor (`pnpm kit probe` prints the chain);

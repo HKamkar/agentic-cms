@@ -134,7 +134,8 @@ one-line fix:
   `@vercel/turbopack-next/internal/…` path) right after a production
   build: `next dev` is reading caches a `next build` left behind. Stop the
   server, `rm -rf .next/dev .next/cache/turbopack`, start it again. (Do
-  not delete `.next` whole while a capture or an audit is reading it.)
+  not delete `.next` whole while an audit is reading it, or before a
+  capture has printed its `snapshot:` line.)
 - **A removed route still fails the next production build's type check**
   (`Cannot find module '../../../src/app/<name>-demo/page.js'`): `next
   dev` wrote `.next/dev/types/validator.ts` for it and the build reads it.

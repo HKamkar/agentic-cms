@@ -265,10 +265,12 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   it. A full set of the current site's routes takes minutes, not the tens of
   minutes a heavy design does, but still run long captures in the background
   with the log under `.parity/<label>.log` and read the tail.
-- A capture reads `.next` and `public/`: never `pnpm build`, edit `public/`
-  or move assets while one runs, and build the exact tree you will commit
-  before capturing — an edit after the build, however trivial, means the
-  capture is of a different tree.
+- A capture photographs a copy of the build and `public/`
+  (`.parity/snapshots/<label>/`), taken before the browser starts: after
+  its `snapshot:` line the tree is free to build and edit. Still build the
+  exact tree you will commit before capturing — an edit before the build,
+  however trivial, means the capture is of a different tree; `meta.json`'s
+  `tree` records the HEAD and whether it was modified.
 - Baselines come from a build of the exact commit you compare against:
   `capture <label> --ref <commit>` builds it in a sibling worktree and
   stamps the sha. When a served build stands in for a commit (`capture …

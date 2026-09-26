@@ -70,7 +70,9 @@ decides whether `--motion` is part of the proof.
 
 ## Traps
 
-- Never `pnpm build`, edit `public/` or move assets while a capture runs.
+- Build the exact tree you mean to prove before capturing. The capture
+  photographs a copy of that build; after its `snapshot:` line the tree is
+  free to build and edit.
 - Commit each proven state before the next change.
 - `.parity/` is gitignored and grows fast; delete old labels.
 - A baseline built for the wrong sha proves nothing: the sha is in

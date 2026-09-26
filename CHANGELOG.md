@@ -19,6 +19,17 @@ changes what a capture writes says **recapture baselines**.
   `docs/deploy.md` is the guide (the build and preview scripts, the check
   alone, what the host needs besides the package); the site template's
   AGENTS.md says it.
+- A capture photographs a copy of the build, not the working tree: the
+  site's own `.next/server/app`, `.next/static` and `public/` are copied
+  into `.parity/snapshots/<label>/` before the browser starts, served and
+  listed from there, and removed when the capture ends (a copy a capture
+  that died left behind goes at the next start). The `snapshot:` line says
+  when the tree is free: a build, an asset edit or a moved file during the
+  15–40 minutes of a full set no longer silently invalidates it. A build
+  that changes during the seconds of the copy fails the capture (exit 2)
+  instead of mixing two builds. `meta.json` records the checkout it was,
+  `tree: { head, dirty }` (`null` outside git). `--ref` and `--url` were
+  already apart from the tree and are unchanged.
 
 ## [0.5.1] — 2026-09-23
 

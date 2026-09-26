@@ -18,14 +18,21 @@ Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should
 poll). Every capture records its mode, scheme and, for a baseline, the ref
-and sha in `meta.json`; `compare` refuses two captures of different schemes
-and prints the baseline it is judging against.
+and sha in `meta.json` — for the site's own build also the checkout it was
+(`tree: { head, dirty }`, `null` outside git); `compare` refuses two
+captures of different schemes and prints the baseline it is judging
+against.
 
 ## Where the build comes from
 
 A capture photographs one build, from one of three sources: the site's own
 `.next` (the default; `--build` runs `pnpm build` first, with its output in
-`.parity/<label>.build.log` and the last lines printed on failure); a served
+`.parity/<label>.build.log` and the last lines printed on failure) — copied
+first, with `public/`, into `.parity/snapshots/<label>/` and photographed from
+there, so a build or an asset edit while the capture runs changes nothing it
+shows (the `snapshot:` line says when the tree is free; the copy is removed
+when the capture ends, and a build that changes during the seconds of the
+copy fails it); a served
 site (`--url http://host:port` — print its `git log -1` first, because a
 baseline from a checkout that had moved on proves nothing); or another commit
 (`--ref <git ref>`: the ref resolved on `origin` first, checked out as a
@@ -151,10 +158,12 @@ a stalled page.
   and the full set once per pull request. Run a long capture in the
   background with its output in a log (`.parity/<label>.log`) and read the
   tail, not the log.
-- A capture reads `.next` and `public/`: never build, edit `public/` or
-  move assets while one runs, and build the exact tree you will commit
-  before capturing — an edit after the build, however trivial, means the
-  capture is of a different tree.
+- A capture photographs a copy of the build and `public/`, taken before
+  the browser starts: once it prints `snapshot:`, building, editing
+  `public/` or moving assets no longer reaches it. Still build the exact
+  tree you will commit before capturing — an edit before the build,
+  however trivial, means the capture is of a different tree; `meta.json`'s
+  `tree` (HEAD, modified or not) says which checkout it was.
 - Baselines come from a build of the exact commit you compare against:
   `capture <label> --ref <commit>` does the worktree, the install, the build
   and the serving, and stamps the sha into the capture. If a served build

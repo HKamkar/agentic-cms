@@ -300,7 +300,7 @@ agentic-cms visual-parity <capture | compare> …
 
 #### `visual-parity capture`
 
-Screenshots of the build (or of a served site) into .parity/visual/<label>/.
+Screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed.
 
 ```bash
 agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b]
@@ -323,7 +323,7 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 
 Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop
