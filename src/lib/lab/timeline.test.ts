@@ -17,14 +17,19 @@ function control() {
     fire(type: string) { for (const fn of listeners[type] ?? []) fn(); },
   };
 }
-function page({ duration = "2" } = {}) {
+// An element of the stub page: `closest` answers from the selectors it (or an ancestor) matches.
+const element = (matches: Record<string, unknown>) => ({ closest: (s: string) => matches[s] ?? null });
+const animation = (target: unknown, iterations = Infinity, duration = 1000) => ({ currentTime: 0 as number | null, paused: false, effect: { target, getComputedTiming: () => ({ delay: 0, duration, iterations }) }, pause() { this.paused = true; } });
+function page({ duration = "2", extra = [] as ReturnType<typeof animation>[] } = {}) {
   const [button, again, slider, readout] = [control(), control(), control(), control()];
   const svg = { time: -1, paused: false, parentElement: { closest: () => null }, getAttribute: (name: string) => (name === "data-duration" ? duration : null), pauseAnimations() { this.paused = true; }, setCurrentTime(t: number) { this.time = t; } };
-  const css = { currentTime: 0 as number | null, paused: false, effect: null, pause() { this.paused = true; } };
+  // the CSS animation of a shape inside the SVG: driven
+  const css = animation(element({ svg }));
   const byRole: Record<string, unknown> = { "[data-lab-play]": button, "[data-lab-replay]": again, "[data-lab-time]": slider, "[data-lab-readout]": readout };
   const controls = { querySelector: (selector: string) => byRole[selector] };
-  const root = { querySelector: (s: string) => (s === "[data-lab-controls]" ? controls : null), querySelectorAll: (s: string) => (s === "svg" ? [svg] : []), getAnimations: () => [css] };
-  return { root: root as unknown as HTMLElement, button, again, slider, readout, svg, css };
+  const inside = new Set<unknown>();
+  const root = { querySelector: (s: string) => (s === "[data-lab-controls]" ? controls : null), querySelectorAll: (s: string) => (s === "svg" ? [svg] : []), getAnimations: () => [css, ...extra], contains: (el: unknown) => inside.has(el) };
+  return { root: root as unknown as HTMLElement, button, again, slider, readout, svg, css, inside };
 }
 
 let now = 0, frames: (((t: number) => void) | null)[] = [], reduce = false;
@@ -44,6 +49,22 @@ beforeEach(() => {
 afterEach(() => {
   if (saved.performance) Object.defineProperty(globalThis, "performance", saved.performance);
   for (const name of ["requestAnimationFrame", "cancelAnimationFrame", "matchMedia"]) delete (globalThis as Record<string, unknown>)[name];
+});
+
+test("the timeline drives what it wraps — the SVG's animations and a [data-lab-drive] subtree inside it — and leaves the page's reveals alone, in the clock and in the cycle", () => {
+  const drive = {};
+  const reveal = animation(element({}), 1, 9000);
+  const html = animation(element({ "[data-lab-drive]": drive }));
+  const outer = animation(element({ "[data-lab-drive]": {} }));
+  const p = page({ duration: "0", extra: [reveal, html, outer] });
+  p.inside.add(drive);
+  const t = mountTimeline(p.root, { autoplay: false });
+  assert.equal(t.duration(), 1, "the 9 s reveal is not the cycle; the driven 1 s animations are");
+  t.seek(0.5);
+  assert.deepEqual([p.css.currentTime, html.currentTime], [500, 500], "inside the SVG, and under data-lab-drive in the root: driven");
+  assert.deepEqual([reveal.currentTime, reveal.paused], [0, false], "a reveal of the page: its own clock");
+  assert.deepEqual([outer.currentTime, outer.paused], [0, false], "a data-lab-drive above the root is not this timeline's");
+  t.destroy();
 });
 
 test("the timeline plays every preview from one clock, pauses on the frame, seeks to the hundredth, resumes from there, wraps, replays from zero", () => {
