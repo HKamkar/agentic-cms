@@ -95,8 +95,8 @@ changes what a capture writes says **recapture baselines**.
   payload, which the router rejects and asks for again at every frame: about
   660 requests in one scroll-through of a real site's page, now one per
   link. No shot changes: static, `--states` and motion frames compare
-  identical on the example and on a consumer site, apart from a home page
-  whose own 6 s timer runs from mount.
+  identical on the example and on a consumer site, apart from a section
+  driven by its own timer.
 - Captures are faster, with the same pixels. A static shot, a `--motion`
   frame, a `--states` crop and the menu shot are one DevTools screenshot
   with the renderer's fast PNG encoding, sized, clipped and with the caret
