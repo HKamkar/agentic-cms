@@ -19,6 +19,14 @@ changes what a capture writes says **recapture baselines**.
   origin), or pass `--third-party allow`. The harness adds its styles with
   its own `addStyle` in place of Playwright's `addStyleTag`, which fails
   when any CSP error is logged while it runs.
+- The static scroll-through steps on as soon as the page is quiet. Each 600
+  px step waited eight animation frames whatever the page did; it now waits
+  until the page has not changed (no DOM mutation) for two frames in a row —
+  two at least, never more than the eight it had — so a busy section still
+  gets them all (`quiet()` in the harness's library; also `shot`, `probe`
+  and `icons audit`). The same shots, faster: the example's static set 66.6
+  s to 44.3 s (82/82 identical), its states 12.8 s to 9.9 s (8/8), a
+  consumer site's six pages 98.4 s to 76.7 s (50/50), every shot taken.
 - Codex finds the path-scoped rules. Claude Code loads `.claude/rules/*.md`
   by their `paths` frontmatter; Codex reads `AGENTS.md` and nothing under
   `.claude/`, so it never saw them. `AGENTS.md` now carries a scoped-rules

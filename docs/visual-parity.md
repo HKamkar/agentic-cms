@@ -256,7 +256,10 @@ A static shot is taken only when the page has proved itself: fonts ready
 than a hang); every reveal at its end state, which is the trace hydration
 leaves under reduced motion; a scroll-through whose steps are counted in the
 renderer's animation frames rather than milliseconds, so a loaded machine
-slows the capture instead of photographing a reveal before it ran; every
+slows the capture instead of photographing a reveal before it ran — each
+600 px step done once the page has not changed (no DOM mutation) for two
+frames in a row, two frames at least and never more than eight, so a busy
+section gets the eight a step always had and a quiet one is not held; every
 image loaded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
