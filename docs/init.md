@@ -69,3 +69,7 @@ pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm exec agentic-cms init . --agent-files          # the new rules and skills; the site's own edits are kept
 pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit 1 on drift)
 ```
+
+Each release's own steps — the lines a site's `AGENTS.md` and its edited
+rules take by hand, the scripts to change, the baselines to recapture — are
+in [upgrading.md](upgrading.md).
