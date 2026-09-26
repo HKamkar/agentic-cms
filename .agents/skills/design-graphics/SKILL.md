@@ -135,7 +135,12 @@ already stated. For anything that moves, `references/svg-motion.md`.
    file:<name>` for inline `Icon` data. Place it with the image rules:
    `<img>` with `width`, `height`, `alt` and `loading="lazy"` (`EagerImage`
    above the fold), a loop inside the `<picture>` from `docs/lab.md`, a
-   `.webm` with its `poster`, the OG image untouched. A loop on a page is a
+   `.webm` with its `poster`, the OG image untouched. A loop that should
+   start when it is seen, stop off screen and rest for reduced motion goes
+   inline instead: `readInlineSvg` in the section's resolve, rendered by
+   `InlineAnimation` (`docs/lab.md` § Inline), the scene carrying
+   `data-duration` and a `data-rest` on a frame where the picture is whole.
+   A loop on a page is a
    design change with its own commit; the wireframe's own pages place none
    (`STANDARD.md` §7).
 7. **Keep the source, prove, close.** `lab clean` deletes `.parity/lab`

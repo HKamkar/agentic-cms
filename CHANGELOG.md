@@ -98,6 +98,19 @@ changes what a capture writes says **recapture baselines**.
   keep a round's support files (a stage, a card face) as "the component
   the candidates started from", for hand removal. A demo from an older kit
   (no manifest) is cleaned as before.
+- A loop the page runs: `InlineAnimation` (`agentic-cms/ix`) puts one of
+  the site's own SMIL SVGs inline, waits on its first frame until it
+  scrolls into view, plays from the start on each entry (`useReveal`),
+  pauses off screen, and shows its `data-rest` frame under reduced motion;
+  the svg fills the box from its own style attribute, so the first paint
+  needs no site stylesheet. `readInlineSvg(file, { prefix })`
+  (`agentic-cms/content`) reads the SVG when the page is built — a file
+  the site owns, no code in it — with every id prefixed and its references
+  followed. `lab render --out x.svg` keeps `data-duration` and `data-rest`
+  on the root (it dropped `data-duration`). The SVG string helpers
+  (`svgMarkup`, `tagRoot`, `namespaceIds`) and `readTrustedSvg` moved to
+  `src/lib/svg.ts` and `svg-read.ts`; `agentic-cms/lab` re-exports them.
+  `docs/lab.md` § Inline is the guide.
 
 ## [0.5.1] — 2026-09-23
 
