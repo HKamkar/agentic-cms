@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.4] — 2026-09-26
 
 - A proof's rules follow the faster harness: the kit's and the site
   template's `AGENTS.md`, the `design-proof` skill, `docs/visual-parity.md`

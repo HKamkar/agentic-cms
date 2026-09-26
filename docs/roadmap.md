@@ -381,6 +381,12 @@ settles.
   only, `launch()` taking `--enable-unsafe-swiftshader`). (The inline SVG
   component this list named `Graphic` landed in 0.5.2 as `InlineAnimation`,
   with `readInlineSvg`.)
+- The harness, by demand (0.5.4 made a proof minutes: cheaper shots, reuse
+  of unchanged ones, several browsers, sampling): a scroll-through that
+  steps as soon as the page is quiet, where it counts frames today (most of
+  a short page's time); third-party requests (analytics beacons) held off
+  during a capture; `visual-parity proof`, the baseline, the after capture
+  and the compare as one command.
 
 ## Risks and how each is held
 

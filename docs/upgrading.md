@@ -18,6 +18,32 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.5.3 → 0.5.4
+
+Faster captures; nothing a site has to change. Take the tag and the agent
+files: the site template's `AGENTS.md` and the `design-proof` and
+`design-graphics` skills now say to re-run a jittery motion frame with
+`--fresh`, and a site's own `AGENTS.md` (never rewritten) that says to
+re-run one takes the same word. What a capture does now:
+
+- **Unchanged shots are reused.** A page-width whose build files are all
+  the same bytes as when it was last photographed is copied from
+  `.parity/shot-cache/` (gitignored with the rest of `.parity/`): the second
+  capture of a proof takes the changed pages alone, and a `--ref` baseline
+  taken again is seconds. `--fresh` takes everything again.
+- **Several browsers.** `--jobs <n>`; by default every core but one, four at
+  most, and two for `--motion`.
+- **A template sampled.** `--sample <n>` photographs the first n posts (or
+  pages of any dynamic route) and the compare leaves the rest out. Off by
+  default.
+- **Rules to update by hand.** A site's own `AGENTS.md` that says to run
+  captures in the background or to narrow a proof with `--pages` to save
+  time can drop that: capture the full set; only a first capture of a
+  large site needs the background.
+- **The same pixels.** Shots are identical to 0.5.3's, so baselines stay.
+  `capture.json` gains `jobs`, `reused` and `timings`; `compare --json`
+  read through a pipe now arrives whole.
+
 ## 0.5.2 → 0.5.3
 
 A fix, nothing to change beyond the tag. The screenshot harness waited for
