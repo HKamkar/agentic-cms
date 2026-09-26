@@ -25,8 +25,9 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.deepEqual(summary.pages, ["/", "/about"]);
     assert.deepEqual(summary.widths, [800, 390]);
     assert.equal(summary.meta.scheme, "light");
-    assert.deepEqual(files(root, "a"), ["about@390.png", "about@800.png", "capture.json", "home@390--menu.png", "home@390.png", "home@800.png", "meta.json"]);
-    assert.equal(summary.files, 5, "the shots; meta.json and capture.json are not counted");
+    assert.deepEqual(files(root, "a"), ["about@390.png", "about@390.sections.json", "about@800.png", "about@800.sections.json", "capture.json", "home@390--menu.png", "home@390.png", "home@390.sections.json", "home@800.png", "home@800.sections.json", "meta.json"]);
+    assert.equal(summary.files, 9, "the shots and their section geometry; meta.json and capture.json are not counted");
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/a/home@800.sections.json"), "utf8")).map((s) => s.section), ["hero", "second", "third"]);
     assert.match(r.stderr, /a: 5 screenshots/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
@@ -110,6 +111,23 @@ test("an inline SMIL loop is held: two static captures agree, two motion capture
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("compare names the section behind a sub-pixel shift: a hero half a pixel taller, every row below re-antialiased", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    const page = path.join(root, ".next/server/app/index.html");
+    const html = fs.readFileSync(page, "utf8");
+    fs.writeFileSync(page, html.replace('<section id="hero" data-section="hero">', '<section id="hero" data-section="hero" style="min-height: 0">'));
+    assert.equal(run(root, ["capture", "before", "--widths", "800", "--pages", "/"]).status, 0);
+    fs.writeFileSync(page, html.replace('<section id="hero" data-section="hero">', '<section id="hero" data-section="hero" style="min-height: 0; padding-bottom: calc(2rem + 0.5px)">'));
+    assert.equal(run(root, ["capture", "after", "--widths", "800", "--pages", "/"]).status, 0);
+    const r = run(root, ["compare", "before", "after", "--pages", "/", "--json"]);
+    assert.equal(r.status, 1);
+    const home = JSON.parse(r.stdout).files.find((f) => f.name === "home@800.png");
+    assert.deepEqual([home.cause.section, home.cause.moved, home.cause.delta, home.cause.fractional], ["hero", "height", 0.5, true]);
+    assert.match(r.stderr, /cause: hero height [\d.]+ → [\d.]+ \(\+0\.500 px, fractional: every row below re-antialiased\)/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("compare: a page whose section changed and grew is a SIZE line with the row, the tail, the band and the verdict, crops and report.json", { skip }, () => {
   const root = fixtureSite();
   try {
@@ -128,6 +146,8 @@ test("compare: a page whose section changed and grew is a SIZE line with the row
     assert.equal(home.delta, 40);
     assert.ok(home.head > 0 && home.tail > 0, `head ${home.head}, tail ${home.tail}`);
     assert.match(home.line, /^SIZE {5}home@800\.png +800x\d+ -> 800x\d+ \(\+40\) {2}same to row \d+, tail \d+ rows, band \d+-\d+ -> \d+-\d+: shift$/);
+    assert.deepEqual([home.cause.section, home.cause.moved, home.cause.delta, home.cause.fractional], ["hero", "height", 40, false], "the hero, by the 40 px block");
+    assert.match(r.stderr, /\n {9}cause: hero height [\d.]+ → [\d.]+ \(\+40\.000 px\)\n/);
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.before)) && fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.after)));
     assert.equal(report.files.find((f) => f.name === "about@800.png").status, "ok");
     assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, exit: 1 });

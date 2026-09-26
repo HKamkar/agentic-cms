@@ -223,6 +223,20 @@ export const HOLD_SMIL = ({ at = 0, rest = false } = {}) => {
   return held;
 };
 
+// The sections of a page and where they sit, for the compare to name the one
+// behind a shift: every [data-section] (else the header, main's children and
+// the footer) with its top and height as layout gives them — fractions
+// included, since a section a quarter pixel taller moves every row below it
+// by a quarter pixel and re-antialiases the rest of the page.
+export const SECTIONS = () => {
+  const marked = [...document.querySelectorAll("[data-section]")];
+  const round = (n) => Math.round(n * 1000) / 1000;
+  return (marked.length ? marked : [...document.querySelectorAll("header, main > *, footer")]).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { id: el.id || null, section: el.dataset.section ?? el.tagName.toLowerCase(), top: round(r.top + scrollY), height: round(r.height) };
+  });
+};
+
 // The inline SMIL loops of a page, for the animation inventory: one entry per
 // outermost animated svg with its cycle (data-duration, else its longest
 // animation), its rest and its box on the page, so a loop removed or retimed

@@ -63,6 +63,17 @@ changes what a capture writes says **recapture baselines**.
   of a named page that one side lacks is still `MISSING`. `routeName` is
   now the one route-to-file-name mapping the harness, `shot` and the
   compare share.
+- `visual-parity compare` names the section behind a shift. A static
+  capture writes `<page>@<width>.sections.json` beside each full-page shot
+  (every `[data-section]`, else the header, `main`'s children and the
+  footer, with its top and height in fractional pixels), and a `SIZE` or
+  `CHANGED` page shot gets a `cause:` line — the first section whose height
+  changed and by how much, `fractional` when not a whole pixel, or the
+  first whose top moved when something above the sections changed — and
+  `cause` in `--json`. A `reflow` from a section a quarter pixel taller,
+  every row below it re-antialiased, used to be measured by hand each time.
+  A capture without geometry compares as before and the compare names it.
+  **Recapture baselines** (a new file beside every static shot).
 
 ## [0.5.1] — 2026-09-23
 

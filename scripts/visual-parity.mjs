@@ -22,8 +22,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, withPage } from "./lib/browser.mjs";
-import { compareCapture } from "./lib/compare-images.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
@@ -224,6 +224,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
         await settle(page);
         await page.evaluate(HOLD_SMIL, { rest: true });
         await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
+        fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
         if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
         await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
         await page.waitForTimeout(600);
@@ -247,7 +248,9 @@ async function compare(before, after) {
   const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages });
   const out = flags.json ? console.error : console.log;
   if (report.baseline) out(`baseline: ${report.baseline.ref ?? ""} ${report.baseline.sha ?? ""}`.trim());
-  for (const file of report.files) out(file.line);
+  for (const file of report.files) { out(file.line); if (file.cause) out(`         ${causeLine(file.cause)}`); }
+  const lacking = [[before, report.geometry.before], [after, report.geometry.after]].filter(([, has]) => !has).map(([label]) => label);
+  if (lacking.length && report.files.some((f) => f.cause === null)) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);
   const failures = report.files.length - report.summary.ok;
   out(failures ? `\n${failures} file(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
   fs.writeFileSync(path.join(diffDir, "report.json"), JSON.stringify(report, null, 1));
