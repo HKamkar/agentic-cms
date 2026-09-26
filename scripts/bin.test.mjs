@@ -61,6 +61,25 @@ test("assemble runs in any folder and, without a standalone build, says how to m
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("a --json report larger than a pipe's buffer reaches the reader whole, though the command exits right after printing it", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "big-report-"));
+  try {
+    // two captures of 1500 animation inventories, every one different: a report of several hundred KB, printed and then process.exit()
+    for (const [label, inventory] of [["a", "[]"], ["b", '[{"type":"CSSTransition","name":"opacity","duration":300}]']]) {
+      const capture = path.join(dir, ".parity/visual", label);
+      fs.mkdirSync(capture, { recursive: true });
+      fs.writeFileSync(path.join(capture, "meta.json"), '{"scheme":"light"}');
+      for (let i = 0; i < 1500; i++) fs.writeFileSync(path.join(capture, `page-${i}@390.animations.json`), inventory);
+    }
+    const r = run(["visual-parity", "compare", "a", "b", "--json"], dir);
+    assert.equal(r.status, 1, r.stderr);
+    assert.ok(r.stdout.length > 65536, `the report is larger than a pipe's 64 KB (${r.stdout.length} bytes)`);
+    const report = JSON.parse(r.stdout);
+    assert.equal(report.files.length, 1500);
+    assert.equal(report.summary.changed, 1500);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a family inside a family: icons round lists its three actions, each has its help, a wrong one is named", () => {
   const family = run(["icons", "round", "--help"]);
   assert.equal(family.status, 0);
