@@ -93,6 +93,7 @@
     "test:pack": "node tools/pack-smoke.mjs",
     "hygiene": "node tools/hygiene.mjs",
     "docs:commands": "node tools/commands-doc.mjs",
+    "docs:rules": "node tools/rules-table.mjs",
     "skills:sync": "node tools/skills-sync.mjs",
     "content:check": "node bin/agentic-cms.mjs check",
     "content:lint": "node bin/agentic-cms.mjs lint",

@@ -35,7 +35,8 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
 - **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
   it), `.claude/rules/` (path-scoped invariants for the content engine, the
   blog, forms, SEO, styling and design, pointing at the engine's READMEs
-  under `node_modules/agentic-cms/`), `.claude/skills/` and
+  under `node_modules/agentic-cms/`; `AGENTS.md`'s scoped-rules table routes
+  Codex to them), `.claude/skills/` and
   `.agents/skills/` (the design skills), `.claude/settings.json` (the
   editorial plugin from the kit's marketplace), and `.agentic-cms.json`, the
   manifest of the agent files as written.
@@ -69,6 +70,18 @@ pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm exec agentic-cms init . --agent-files          # the new rules and skills; the site's own edits are kept
 pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit 1 on drift)
 ```
+
+A rule is `ok`, `modified` (the site edited it: kept, never overwritten),
+`stale` (the kit has a newer one) or `missing`. `AGENTS.md` is the site's
+own, but for one block between `<!-- rules-table:start -->` and
+`<!-- rules-table:end -->`: the scoped-rules table, written from the rules'
+`paths` frontmatter — the site's edited rules included — because Codex reads
+`AGENTS.md` and nothing under `.claude/`, so without the table it never sees
+the rules. `--agent-files` writes that block alone (before the first `##`
+section when there is none; move it anywhere, it is found by its markers),
+and `--check` reports it `stale` when a rule's scope changed since, and
+`AGENTS.md` `too big` when it passes the 32 KiB Codex reads by default:
+move procedures into linked docs.
 
 Each release's own steps — the lines a site's `AGENTS.md` and its edited
 rules take by hand, the scripts to change, the baselines to recapture — are

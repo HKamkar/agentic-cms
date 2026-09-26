@@ -10,6 +10,16 @@ any site `agentic-cms init` laid out, with nothing installed. The content
 jobs are the `editorial` plugin (`plugin/README.md`), which a site enables
 from the kit's marketplace.
 
+The rules travel beside them, and the two tools find them differently.
+Claude Code loads `.claude/rules/*.md` itself when an edited path matches a
+rule's `paths` frontmatter, and `CLAUDE.md` includes `AGENTS.md`. Codex reads
+`AGENTS.md` — the first 32 KiB, by default — discovers the skills under
+`.agents/skills/`, and never looks under `.claude/`: it finds the rules
+through the scoped-rules table in `AGENTS.md`, one row per rule, its paths
+and a link. The table is written from the rules' frontmatter, never by hand
+(`agentic-cms init --agent-files` in a site, `pnpm docs:rules` in the kit),
+and `init --agent-files --check` reports it stale, and `AGENTS.md` too big.
+
 | skill | when | what it leans on |
 |---|---|---|
 | `design` | designing a site from the wireframe or from one look to the next; restyling, theming, branding | the order (tokens → chrome → sections → motion), the loop per element, the rules that survive every look |

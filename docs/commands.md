@@ -888,14 +888,14 @@ agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/) and the design skills (.claude/skills/, .agents/skills/); a file the site edited is kept |
-| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one), missing — and exit 1 on any drift; write nothing |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
+| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
 | `--force` | overwrite files that exist (package.json is always merged, never overwritten) |
 | `--json` | print the result as JSON |
 
 Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage.
 
-`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status }] }`.
+`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }`.
 
 ```bash
 agentic-cms init .
