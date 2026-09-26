@@ -191,13 +191,38 @@ export async function sequencesRan(page) {
   if (undrawn.length) throw new Error(`${page.url()}: ${undrawn.join(", ")} not drawn after the scroll-through — the page's scroll-into-view sequences did not run`);
 }
 
+// React hydrates the server's HTML by comparing each element with its client
+// props, and in development it reports an attribute that is on the element
+// and in neither ("A tree hydrated but some attributes of the server rendered
+// HTML didn't match the client properties"). imagesReady sets `loading` on
+// images, so it first waits until React owns every image it will own: each
+// <img> carries React's fiber key, or sits inside markup React inserted as a
+// string (dangerouslySetInnerHTML), which React never hydrates. A page that is
+// not a Next app (the lab's, a sheet, a plain HTML site) passes at once; one
+// that never gets there falls through after 10 s rather than hang the run.
+// Before this, a motion capture or `probe --motion` against a slow hydrate
+// (`next dev`) switched the images first and React blamed the site.
+export const hydrated = (page) => inPage(page, "hydration", 15000, () => new Promise((resolve) => {
+  const reactKey = (el, prefix) => Object.keys(el).find((k) => k.startsWith(prefix));
+  const inserted = (img) => { for (let e = img.parentElement; e; e = e.parentElement) { const props = reactKey(e, "__reactProps$"); if (props) return Boolean(e[props]?.dangerouslySetInnerHTML); } return false; };
+  const next = Boolean(window.__next_f || window.__NEXT_DATA__ || document.getElementById("__next"));
+  const done = () => !next || [...document.images].every((img) => reactKey(img, "__reactFiber$") || inserted(img));
+  const deadline = setTimeout(() => resolve(false), 10000);
+  const tick = () => { if (!done()) return requestAnimationFrame(tick); clearTimeout(deadline); resolve(true); };
+  tick();
+}));
+
 // Every image must have arrived before the shots: a lazy image that lands
 // mid-capture grows its box, and the compositor may keep text rasterised at
 // the old sub-pixel offset — a diff that depends on the placeholder box the
 // markup gave the image, not on anything a visitor can see. Lazy images are
 // switched to eager so they load without scrolling (a scroll would fire the
-// reveals the motion capture is there to photograph).
-export const imagesReady = (page) => inPage(page, "images", 8000, () => { for (const i of document.images) i.loading = "eager"; return Promise.race([Promise.all([...document.images].map((i) => i.complete || new Promise((r) => { i.onload = i.onerror = r; }))), new Promise((r) => setTimeout(r, 5000))]); });
+// reveals the motion capture is there to photograph) — once the page has
+// hydrated (above), so the switch is never React's to report.
+export async function imagesReady(page) {
+  await hydrated(page);
+  return inPage(page, "images", 8000, () => { for (const i of document.images) i.loading = "eager"; return Promise.race([Promise.all([...document.images].map((i) => i.complete || new Promise((r) => { i.onload = i.onerror = r; }))), new Promise((r) => setTimeout(r, 5000))]); });
+}
 
 // Infinite CSS/WAAPI loops would be photographed at a phase that depends on
 // load timing; hold them at their first frame. Finite animations keep playing.
