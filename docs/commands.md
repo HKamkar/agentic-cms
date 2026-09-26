@@ -295,7 +295,7 @@ agentic-cms parity before && … refactor … && agentic-cms parity after && dif
 The screenshot harness: every page of the build at several widths, frozen or in motion, and a pixel diff of two captures.
 
 ```bash
-agentic-cms visual-parity <capture | compare> …
+agentic-cms visual-parity <capture | compare | clean> …
 ```
 
 #### `visual-parity capture`
@@ -359,6 +359,31 @@ Exit: `0` identical within the thresholds; `1` a difference, a size change or a 
 ```bash
 agentic-cms visual-parity compare before after --json
 agentic-cms visual-parity compare before after --pages /,/blog
+```
+
+#### `visual-parity clean`
+
+Removes old captures from .parity/visual/ — all but the newest, and every compare of a removed capture — and, with --cache, the shot cache; a capture still running is kept.
+
+```bash
+agentic-cms visual-parity clean [--keep 10] [--all] [--cache] [--dry-run]
+```
+
+| flag | what |
+|---|---|
+| `--keep <n>` | how many finished captures stay, the newest by the time they finished (default `10`) |
+| `--all` | remove every finished capture (one still running, with no capture.json and under a day old, stays) |
+| `--cache` | also empty .parity/shot-cache/, so the next capture takes every shot again |
+| `--dry-run` | list what would go and what stays; remove nothing |
+| `--json` | print the result as JSON |
+
+Exit: `0` cleaned, or listed with --dry-run; `2` usage.
+
+`--json` prints `{ removed: [label], kept: [label], bytes, cache, dryRun }`.
+
+```bash
+agentic-cms visual-parity clean --dry-run
+agentic-cms visual-parity clean --keep 4 --cache
 ```
 
 ## look & measure

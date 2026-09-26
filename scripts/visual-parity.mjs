@@ -26,6 +26,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
+import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
 import { inPool } from "./lib/pool.mjs";
 import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -314,7 +315,22 @@ async function compare(before, after) {
   process.exit(report.summary.exit);
 }
 
-if (subcommand === "capture") {
+/** The old captures and their compares out of .parity/visual/, the shot cache with --cache; --dry-run lists them. */
+function clean() {
+  const keep = flags.keep ?? 10;
+  if (!Number.isInteger(keep) || keep < 0) { console.error("visual-parity clean: --keep takes a whole number of captures, 0 or more"); process.exit(2); }
+  const plan = planClean(readEntries(ROOT), { keep, all: flags.all });
+  const dryRun = Boolean(flags["dry-run"]);
+  for (const name of plan.remove) say(`${dryRun ? "would go" : "removed"}  ${name}\n`);
+  const bytes = dryRun ? 0 : removeEntries(ROOT, plan.remove, { cache: flags.cache });
+  const cache = Boolean(flags.cache) && !dryRun;
+  if (flags.json) console.log(JSON.stringify({ removed: plan.remove, kept: plan.keep, bytes, cache, dryRun }, null, 1));
+  else say(dryRun ? `clean --dry-run: ${plan.remove.length} would go, ${plan.keep.length} stay${flags.cache ? ", and .parity/shot-cache/" : ""}; nothing removed\n` : `clean: ${plan.remove.length} removed${cache ? " and the shot cache emptied" : ""}, ${(bytes / 1048576).toFixed(1)} MB freed; ${plan.keep.length} kept\n`);
+}
+
+if (subcommand === "clean") {
+  clean();
+} else if (subcommand === "capture") {
   let root = ROOT;
   let baseline = null;
   if (flags.build) {

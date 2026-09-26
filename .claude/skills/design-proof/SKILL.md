@@ -88,7 +88,9 @@ decides whether `--motion` is part of the proof.
   photographs a copy of that build; after its `snapshot:` line the tree is
   free to build and edit.
 - Commit each proven state before the next change.
-- `.parity/` is gitignored and grows fast; delete old labels.
+- `.parity/` is gitignored and grows fast: `pnpm kit visual-parity clean`
+  (`--dry-run` first) keeps the newest captures and removes the rest with
+  their compares.
 - A baseline built for the wrong sha proves nothing: the sha is in
   `meta.json` and on the compare's first line.
 

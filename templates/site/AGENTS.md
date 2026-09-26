@@ -143,7 +143,9 @@ full set rather than a `--pages` subset to save time (`--pages` is for
 looking at one page; `--sample <n>` for a site with many posts); only a
 first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
-before the next change; `.parity/` is gitignored and grows fast.
+before the next change; `.parity/` is gitignored and grows fast
+(`pnpm kit visual-parity clean` keeps the newest captures, `--dry-run`
+first).
 
 ## Process
 
