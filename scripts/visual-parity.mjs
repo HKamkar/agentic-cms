@@ -13,9 +13,10 @@
 // of a long run — is docs/visual-parity.md; the flags are the spec in
 // lib/specs.mjs (docs/commands.md). The waits that make a page
 // deterministic, and why each exists, are lib/browser.mjs. What stays here
-// is the harness itself: the page list of the build, the motion frames and
-// the animation inventory, the interaction states located by role and text
-// through the site's src/kit.ts, and the pixel compare.
+// is the harness itself: the page list of the build (photographed from a
+// copy of it, lib/snapshot.mjs, so the tree is free while it runs), the
+// motion frames and the animation inventory, the interaction states located
+// by role and text through the site's src/kit.ts, and the pixel compare.
 import "./lib/load-ts.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -24,6 +25,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, NO_ANCHORING_CSS, PAUSE_LOOPS, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
+import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-parity"], process.argv.slice(2));
@@ -153,10 +155,10 @@ const STATES = ({ site, post, form, faq }) => [
   { page: post, width: 1440, name: "post-faq-open", act: async (p) => { const b = faqToggle(p); await b.scrollIntoViewIfNeeded(); await b.click(); return b.locator("xpath=ancestor::div[1]"); } },
 ].filter((state) => state.page);
 
-async function captureStates(context, baseUrl, dir) {
+async function captureStates(context, baseUrl, dir, root) {
   let count = 0;
   const kit = await loadKit();
-  for (const state of STATES({ site: kit.site, post: firstPost(), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
+  for (const state of STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
     const name = `${state.page === "/" ? "home" : state.page.slice(1).replace(/\//g, "__")}@${state.width}--state-${state.name}`;
     await onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
@@ -176,12 +178,12 @@ async function captureStates(context, baseUrl, dir) {
   return count;
 }
 
-async function capture(label, baseUrl, { root = ROOT, baseline = null } = {}) {
+async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = {}) {
   const started = Date.now();
   const dir = path.join(OUT, label);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha } : {}) };
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha } : {}), ...(tree !== undefined ? { tree } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
   const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : listPages(root);
   const { context, close } = await launch({ scheme, motion });
@@ -195,7 +197,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null } = {}) {
     return summary;
   };
   if (states) {
-    count = await captureStates(context, baseUrl, dir);
+    count = await captureStates(context, baseUrl, dir, root);
     await close();
     say(`\n${label}: ${count} state screenshots in .parity/visual/${label}\n`);
     finish();
@@ -262,8 +264,20 @@ if (subcommand === "capture") {
     const exec = (command, args, options) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], shell: process.platform === "win32", ...options });
     try { ({ dir: root, ...baseline } = buildRef(flags.ref, { root: ROOT, exec, exists: fs.existsSync, rm: (p) => fs.rmSync(p, { recursive: true, force: true }), log: (line) => console.error(line) })); baseline.ref = flags.ref; } catch (error) { console.error(`visual-parity capture: ${error.message}`); process.exit(2); }
   }
+  // The local build is photographed from a copy, so the tree is free while the capture runs; a --ref worktree and a served site are already apart from it.
+  const snapshotDir = path.join(ROOT, SNAPSHOTS, labels[0]);
+  fs.rmSync(snapshotDir, { recursive: true, force: true }); // a copy a capture that died left behind
+  let tree;
+  if (!flags.url && !flags.ref) {
+    let snapshot;
+    try { snapshot = snapshotBuild(ROOT, snapshotDir); } catch (error) { console.error(`visual-parity capture: ${error.message}`); process.exit(2); }
+    tree = treeState(ROOT, (command, args, options) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], ...options }));
+    root = snapshotDir;
+    const of = tree ? `HEAD ${tree.head.slice(0, 7)}${tree.dirty ? ", modified" : ""}` : "not a git checkout";
+    say(`snapshot: ${snapshot.files} files, ${(snapshot.bytes / 1048576).toFixed(1)} MB of the build (${of}) — building or editing from here on does not change this capture\n`);
+  }
   const server = flags.url ? null : await serveStatic({ root });
-  try { await capture(labels[0], flags.url || server.url, { root, baseline }); } finally { server?.close(); }
+  try { await capture(labels[0], flags.url || server.url, { root, baseline, tree }); } finally { server?.close(); fs.rmSync(snapshotDir, { recursive: true, force: true }); }
 } else {
   await compare(labels[0], labels[1]);
 }

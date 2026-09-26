@@ -1,8 +1,10 @@
 // The screenshot harness on the fixture site, through the bin: a static
 // capture and its capture.json, a motion capture with the settled frame and
-// a section's data-settle, and a compare of two builds of different heights.
+// a section's data-settle, a capture that photographs its snapshot of the
+// build while the tree changes, and a compare of two builds of different
+// heights.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
@@ -54,6 +56,33 @@ test("--settle without --motion, and two build sources at once, are usage errors
   try {
     assert.equal(run(root, ["capture", "x", "--settle", "3000"]).status, 2);
     assert.equal(run(root, ["capture", "x", "--build", "--url", "http://127.0.0.1:1"]).status, 2);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a capture photographs its snapshot of the build: an edit to public/ after the snapshot line changes nothing, and the copy goes when it finishes", { skip }, async () => {
+  const root = fixtureSite();
+  try {
+    const args = ["--widths", "800", "--pages", "/"];
+    assert.equal(run(root, ["capture", "a", ...args]).status, 0);
+    const mark = path.join(root, "public/images/mark.svg");
+    const original = fs.readFileSync(mark, "utf8");
+    const edited = original.replace(/<rect[^>]*\/>/, '<circle cx="32" cy="32" r="6" fill="currentColor"/>');
+    assert.notEqual(edited, original);
+    // b: the edit lands the moment the snapshot line is printed, before the browser has even started
+    const child = spawn(process.execPath, [BIN, "visual-parity", "capture", "b", ...args], { cwd: root });
+    let out = "";
+    const status = await new Promise((resolve) => {
+      child.stdout.on("data", (chunk) => { out += chunk; if (/^snapshot: /m.test(out) && fs.readFileSync(mark, "utf8") === original) fs.writeFileSync(mark, edited); });
+      child.on("close", resolve);
+    });
+    assert.equal(status, 0);
+    assert.match(out, /^snapshot: \d+ files, [\d.]+ MB of the build \(not a git checkout\) — building or editing from here on does not change this capture$/m);
+    assert.equal(fs.readFileSync(mark, "utf8"), edited, "the edit landed while b ran");
+    assert.equal(run(root, ["compare", "a", "b"]).status, 0, "b photographed its snapshot, not the edited tree");
+    assert.ok(!fs.existsSync(path.join(root, ".parity/snapshots/b")), "the snapshot is removed when the capture finishes");
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/b/meta.json"), "utf8")).tree, null, "the fixture is not a git checkout");
+    assert.equal(run(root, ["capture", "c", ...args]).status, 0);
+    assert.equal(run(root, ["compare", "a", "c"]).status, 1, "a capture after the edit sees it");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
