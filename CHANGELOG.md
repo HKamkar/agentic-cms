@@ -121,6 +121,12 @@ changes what a capture writes says **recapture baselines**.
   24/36/96 px, light/white/black preview an icon round needs, with no
   script of its own. `sheet` and `icons` load the lab's helpers after the
   TypeScript loader, so a checkout of the kit runs its source.
+- The fix for a dev server that fails every page with `Can't resolve
+  '@vercel/turbopack-next/internal/…'` after a production build (stop it,
+  `rm -rf .next/dev .next/cache/turbopack`, start it again) is in the site
+  template's `AGENTS.md` gotchas and the `design-options` skill, where an
+  agent restarting the server during a round reads it; it was in
+  `docs/design.md` alone.
 
 ## [0.5.1] — 2026-09-23
 
