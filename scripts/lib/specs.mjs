@@ -113,7 +113,7 @@ export const SPECS = {
         },
         examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog"],
         exit: { 0: "identical within the thresholds", 1: "a difference, a size change or a missing file", 2: "usage, a missing capture, or captures of two schemes" },
-        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in }] }",
+        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }",
       },
     },
   },

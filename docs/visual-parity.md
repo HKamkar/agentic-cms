@@ -137,12 +137,24 @@ ok       home@1440.animations.json                                              
   - `insert` / `remove` — rows appeared or vanished and nothing else
     changed (the band is empty on the shorter side).
   - `reflow` — nothing below the first differing row lines up again: the
-    change reaches the whole page (a stacking context flipping the
-    antialiasing below it, a chrome change, a font).
+    change reaches the whole page. Most often one section's height changed
+    by a fraction of a pixel, which moves every row below it by that
+    fraction and re-antialiases the rest (the `cause` line says so);
+    otherwise a stacking context flipping the antialiasing below it, a
+    chrome change, a font.
   - `width` — the widths differ: a viewport change, not a layout one.
 
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
+- `cause:` — under a `SIZE` or `CHANGED` page shot, the section behind it,
+  from the geometry a static capture writes beside each shot
+  (`<page>@<width>.sections.json`: every `[data-section]`, else the header,
+  `main`'s children and the footer, with its top and height in fractional
+  pixels): the first one in page order whose height changed, and by how
+  much — `fractional` when the change is not a whole pixel — or the first
+  whose top moved, when something above the sections changed. No section
+  measured by hand. A capture from before the kit wrote geometry has none;
+  the compare says so and names the capture to redo.
 - `MISSING`: a file only one capture has (a page added or removed, or a
   partial capture without `--pages` on the compare). With `--pages` the
   compare judges only those pages' files, on both sides, and of the before

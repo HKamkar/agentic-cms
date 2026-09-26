@@ -52,7 +52,10 @@ decides whether `--motion` is part of the proof.
      intact — the crops (`<name>.before.png`, `.after.png`) show the band;
      expected for a design change that changes a height.
    - `SIZE … reflow`, or `CHANGED` rows on every text line below one
-     section: something changed how the compositor paints the whole page —
+     section: first read the `cause:` line under it — a section whose
+     height changed by a fraction of a pixel moves everything below by that
+     fraction and repaints it; fix or accept that height. Without a cause,
+     something changed how the compositor paints the whole page —
      usually a new stacking context (`position: relative`, a `z-index`, a
      `transform`) on a section whose animated elements overflow it.
      `pnpm kit probe / --select "<the section>"` prints the stacking chain;

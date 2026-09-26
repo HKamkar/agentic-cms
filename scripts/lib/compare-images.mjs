@@ -71,6 +71,46 @@ export function rowDiff(a, b, { tolerance = TOLERANCE } = {}) {
   return { verdict, head, tail, delta, band };
 }
 
+/**
+ * The first section, in document order, whose height (else top) differs by more than 0.01 px between two captures'
+ * geometry (<page>@<width>.sections.json): { section, id, moved: "height" | "top", top, height, delta, fractional }, or
+ * null. Sections are matched by id, else by type and occurrence. A fractional delta is the usual cause of a reflow: every
+ * row below the section moves by a fraction of a pixel and re-antialiases.
+ */
+export function explainShift(before, after) {
+  const keyed = (list) => { const seen = new Map(); return list.map((s) => { const base = s.id ?? s.section; const n = seen.get(base) ?? 0; seen.set(base, n + 1); return [`${base}#${n}`, s]; }); };
+  const byKey = new Map(keyed(after));
+  for (const [key, b] of keyed(before)) {
+    const a = byKey.get(key);
+    if (!a) continue;
+    const dh = a.height - b.height, dt = a.top - b.top;
+    if (Math.abs(dh) <= 0.01 && Math.abs(dt) <= 0.01) continue;
+    const moved = Math.abs(dh) > 0.01 ? "height" : "top";
+    const delta = Math.round((moved === "height" ? dh : dt) * 1000) / 1000;
+    return { section: b.section, id: b.id, moved, top: [b.top, a.top], height: [b.height, a.height], delta, fractional: Math.abs(delta - Math.round(delta)) > 0.001 };
+  }
+  return null;
+}
+
+/** The cause as the line the compare prints under a file's line. */
+export function causeLine(cause) {
+  const name = cause.id && cause.id !== cause.section ? `${cause.section} #${cause.id}` : cause.section;
+  const d = `${cause.delta > 0 ? "+" : ""}${cause.delta.toFixed(3)} px`;
+  const what = cause.moved === "height" ? `height ${cause.height[0].toFixed(3)} → ${cause.height[1].toFixed(3)}` : `top ${cause.top[0].toFixed(3)} → ${cause.top[1].toFixed(3)}, something above it changed`;
+  return `cause: ${name} ${what} (${d}${cause.fractional ? ", fractional: every row below re-antialiased" : ""})`;
+}
+
+const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return null; } };
+/** A full-page static shot: <page>@<width>.png, the files with geometry beside them (not a menu, motion or state shot). */
+const PAGE_SHOT = /^[^@]+@\d+\.png$/;
+
+/** The cause of a page shot's difference from its geometry on both sides; undefined for a shot without geometry by kind, null when a side lacks it or nothing moved. */
+function causeOf(name, fa, fb) {
+  if (!PAGE_SHOT.test(name)) return undefined;
+  const [ga, gb] = [fa, fb].map((f) => readJson(f.replace(/\.png$/, ".sections.json")));
+  return ga && gb ? explainShift(ga, gb) : null;
+}
+
 const decode = (file) => sharp(file).raw().toBuffer({ resolveWithObject: true });
 const meta = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")); } catch { return {}; } };
 const size = (img) => `${img.info.width}x${img.info.height}`;
@@ -112,6 +152,8 @@ async function compareImage(name, fa, fb, diffDir, { threshold, thresholdMid }) 
       await crop(ib, r.band.after[0], r.band.after[1], path.join(diffDir, `${stem}.after.png`));
       entry.crops = { before: `${stem}.before.png`, after: `${stem}.after.png` };
     }
+    const cause = causeOf(name, fa, fb);
+    if (cause !== undefined) entry.cause = cause;
     return entry;
   }
   const { changed, pct, bands, diff } = compareSameSize(ia, ib);
@@ -121,6 +163,8 @@ async function compareImage(name, fa, fb, diffDir, { threshold, thresholdMid }) 
     entry.bands = bands;
     entry.diff = name;
     await sharp(diff, { raw: { width: ia.info.width, height: ia.info.height, channels: 3 } }).png().toFile(path.join(diffDir, name));
+    const cause = causeOf(name, fa, fb);
+    if (cause !== undefined) entry.cause = cause;
   }
   const where = ok ? "" : ` rows ${bands.slice(0, 6).map((b) => b.join("-")).join(", ")}${bands.length > 6 ? ` +${bands.length - 6}` : ""}`;
   entry.line = `${status(ok, "CHANGED")} ${name.padEnd(70)} ${pct.toFixed(3)}% (${changed} px)${where}${midFlight ? "  mid-flight" : ""}`;
@@ -160,5 +204,6 @@ export async function compareCapture(a, b, { before, after, diffDir, threshold, 
   const summary = { ok: count("ok"), changed: count("CHANGED"), size: count("SIZE"), missing: count("MISSING") };
   summary.exit = files.length - summary.ok ? 1 : 0;
   const mb = meta(b);
-  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, summary, files };
+  const geometry = (dir) => fs.readdirSync(dir).some((f) => f.endsWith(".sections.json"));
+  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
 }
