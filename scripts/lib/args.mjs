@@ -8,7 +8,7 @@
 //     flags: { name: { type: "number" | "string" | "boolean", default, multiple, value, choices, help } },
 //     exit: { 0: "…", 1: "…", 2: "…" }, json: "the shape --json prints",
 //     examples: ["agentic-cms … "], site: true,    // site: true — reads the site's registry (src/kit.ts); refused elsewhere
-//     subcommands: { name: spec } }                // the first positional picks one
+//     subcommands: { name: spec } }                // the first positional picks one; a subcommand may have its own
 //
 // Every wrong input answers with the right one: an unknown command, subcommand
 // or flag names the nearest one ("did you mean"), a value outside `choices`
@@ -40,14 +40,25 @@ export function suggest(word, options) {
 /** What a flag takes, for the help and the docs: its `value`, else its choices joined by |, else <n>. */
 export const flagValue = (flag) => flag.value ?? (flag.choices ? flag.choices.join("|") : "<n>");
 
-/** Parses argv against the spec: { positionals, flags, help, subcommand }; throws UsageError. */
+/** The subcommands argv names under a spec, as far as they go: "round new" for `icons round new …`; "" for none. */
+export function subcommandPath(spec, argv) {
+  const names = [];
+  for (let s = spec, i = 0; s.subcommands && s.subcommands[argv[i]]; s = s.subcommands[argv[i]], i++) names.push(argv[i]);
+  return names.join(" ");
+}
+
+/** The spec a subcommand path ("round new") leads to; the spec itself for "". */
+export const specAt = (spec, sub) => (sub ? sub.split(" ").reduce((s, name) => s.subcommands?.[name] ?? s, spec) : spec);
+
+/** Parses argv against the spec: { positionals, flags, help, subcommand } — a nested subcommand as its path, "round new"; throws UsageError. */
 export function parse(spec, argv) {
-  if (argv.includes("--help") || argv.includes("-h")) return { positionals: [], flags: {}, help: true, subcommand: spec.subcommands ? argv.find((a) => !a.startsWith("-")) : undefined };
+  if (argv.includes("--help") || argv.includes("-h")) return { positionals: [], flags: {}, help: true, subcommand: spec.subcommands ? subcommandPath(spec, argv.filter((a) => !a.startsWith("-"))) || undefined : undefined };
   if (spec.subcommands) {
     const [name, ...rest] = argv;
     if (!name) throw new UsageError(`${spec.command} needs a subcommand (${listOf(spec)}); ${helpFor(spec)}`);
     if (!spec.subcommands[name]) throw new UsageError(`${spec.command} has no subcommand ${name}${suggest(name, Object.keys(spec.subcommands))} (${listOf(spec)}); ${helpFor(spec)}`);
-    return { ...parse(spec.subcommands[name], rest), subcommand: name };
+    const inner = parse(spec.subcommands[name], rest);
+    return { ...inner, subcommand: inner.subcommand ? `${name} ${inner.subcommand}` : name };
   }
   const options = Object.fromEntries(Object.entries(spec.flags ?? {}).map(([name, flag]) => [name, { type: flag.type === "boolean" ? "boolean" : "string", multiple: Boolean(flag.multiple) }]));
   let values, positionals;
@@ -111,6 +122,6 @@ export function parseOrExit(spec, argv) {
     console.error(`${spec.command}: ${error.message}`);
     process.exit(2);
   }
-  if (parsed.help) { console.log(usageText(parsed.subcommand && spec.subcommands?.[parsed.subcommand] ? spec.subcommands[parsed.subcommand] : spec)); process.exit(0); }
+  if (parsed.help) { console.log(usageText(specAt(spec, parsed.subcommand))); process.exit(0); }
   return parsed;
 }

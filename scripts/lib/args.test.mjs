@@ -92,3 +92,20 @@ test("a variadic positional collects the rest", () => {
   assert.deepEqual(parse(files, ["a.webp", "b.webp", "--quality", "70"]).positionals, ["a.webp", "b.webp"]);
   assert.throws(() => parse(files, []), (error) => /optimize-webp needs <files\.\.\.>/.test(error.message));
 });
+
+test("a subcommand may have subcommands of its own: parsed as a path, its help found, its errors named", async () => {
+  const { parse, specAt, subcommandPath, usageText } = await import("./args.mjs");
+  const leafNew = { command: "tool round new", summary: "a new round", usage: "agentic-cms tool round new <round>", positionals: [{ name: "round", required: true }], flags: { roles: { type: "string" } }, exit: { 0: "written" }, examples: ["agentic-cms tool round new x"] };
+  const round = { command: "tool round", summary: "rounds", usage: "agentic-cms tool round <new>", subcommands: { new: leafNew } };
+  const spec = { command: "tool", summary: "a tool", subcommands: { add: { command: "tool add", summary: "adds", usage: "agentic-cms tool add", exit: { 0: "ok" }, examples: ["agentic-cms tool add"] }, round } };
+  assert.deepEqual(parse(spec, ["round", "new", "x", "--roles", "a,b"]), { positionals: ["x"], flags: { roles: "a,b" }, help: false, subcommand: "round new" });
+  assert.equal(parse(spec, ["add"]).subcommand, "add", "one level stays one name");
+  assert.equal(parse(spec, ["round", "new", "--help"]).subcommand, "round new");
+  assert.equal(subcommandPath(spec, ["round", "new", "x"]), "round new");
+  assert.equal(subcommandPath(spec, ["round", "x"]), "round");
+  assert.equal(specAt(spec, "round new"), leafNew);
+  assert.equal(specAt(spec, ""), spec);
+  assert.match(usageText(specAt(spec, "round")), /subcommands:\n {2}new {22}a new round\n\nagentic-cms tool round <subcommand> --help/);
+  assert.throws(() => parse(spec, ["round", "neww"]), /tool round has no subcommand neww — did you mean new\?/);
+  assert.throws(() => parse(spec, ["round"]), /tool round needs a subcommand \(new\)/);
+});
