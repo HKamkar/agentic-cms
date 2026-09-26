@@ -88,6 +88,13 @@ a patch under `node_modules`.
 - The dev server can miss utilities a file starts using (the CSS scan is
   cached under `.next/dev`): a class the production build has but the dev
   page lacks means `rm -rf .next/dev` and a restart, not a bug.
+- After a `pnpm build`, a restarted dev server can fail every page with
+  `Can't resolve '@vercel/turbopack-next/internal/…'` (the font loader's
+  path, typically): it is reading the caches the production build left.
+  Stop it, `rm -rf .next/dev .next/cache/turbopack`, start it again. Never
+  delete `.next` whole while an audit reads it
+  (`node_modules/agentic-cms/docs/design.md` § When the dev server will
+  not serve).
 - `pnpm build` fails a route without an `seo` block; a demo route
   (`src/app/<name>-demo/`, `pnpm kit demo clean`) is therefore removed before a branch merges — the
   guard, not an obstacle.
