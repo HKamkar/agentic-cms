@@ -1,8 +1,9 @@
 // The routes the kit writes, rendered by the example site's own dev server:
 // the lab's (lab route → /lab-demo), the design round's (demo new →
-// /hero-demo), and a route that ships an inline loop the way a section does
-// (readInlineSvg + InlineAnimation). One file, so the servers never run on
-// the checkout at once; each test writes only what it removes again.
+// /hero-demo), a route that ships an inline loop the way a section does
+// (readInlineSvg + InlineAnimation), and the harness's own preparation of a
+// page that is still hydrating. One file, so the servers never run on the
+// checkout at once; each test writes only what it removes again.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -186,4 +187,22 @@ test("InlineAnimation on the example site: waits on its first frame until in vie
     assert.equal(cleaned.status, 0, cleaned.stderr);
     assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(assets), "nothing of the test left in the checkout");
   }
+});
+
+// probe --motion (and a --motion capture) prepares a page while it may still be hydrating: next dev hydrates slowly. The
+// harness used to switch every image to loading="eager" before React had hydrated them, and React reported the attribute
+// as a hydration mismatch — the site's error, as far as anyone reading the console could tell.
+test("probe --motion on the example's dev server never trips React's hydration check: the images are touched only once the page has hydrated", { skip, timeout: 240000 }, async () => {
+  const { execFile } = await import("node:child_process");
+  const probe = (url, route, width) => new Promise((resolve) => execFile(process.execPath, [BIN, "probe", route, "--url", url, "--select", "body", "--width", String(width), "--motion"], { cwd: ROOT, encoding: "utf8", timeout: 150000 }, (error, stdout, stderr) => resolve({ status: error ? error.code ?? 1 : 0, stdout, stderr })));
+  let server;
+  try {
+    server = await devServer();
+    for (const [route, width] of [["/", 1440], ["/", 390], ["/blog", 1440]]) {
+      const r = await probe(server.url, route, width);
+      assert.equal(r.status, 0, r.stderr);
+      const mismatches = JSON.parse(r.stdout).console.filter((line) => /hydrated but some attributes/.test(line.text));
+      assert.deepEqual(mismatches, [], `${route} at ${width}`);
+    }
+  } finally { server?.stop(); }
 });

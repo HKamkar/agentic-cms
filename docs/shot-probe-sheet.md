@@ -15,7 +15,9 @@ is prepared the way the screenshot harness prepares one
 state under reduced motion, one scroll-through, every image loaded — so a
 `shot` shows a section the way a static capture would. `--motion` leaves the
 animations to play instead, for a picture or a measurement of a reveal
-mid-flight.
+mid-flight; either way the images are touched only once the page has
+hydrated, so a dev server's console shows the site's errors, not the
+harness's.
 
 ## `shot` — a picture with its box
 

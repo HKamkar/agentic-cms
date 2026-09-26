@@ -7,7 +7,7 @@ import fs from "node:fs";
 import http from "node:http";
 import { test } from "node:test";
 import zlib from "node:zlib";
-import { chromePath, launch, listPages, prepare, revealed, serveStatic, settle, withPage } from "../lib/browser.mjs";
+import { chromePath, hydrated, imagesReady, launch, listPages, prepare, revealed, serveStatic, settle, withPage } from "../lib/browser.mjs";
 import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
@@ -83,4 +83,28 @@ test("the static preparation holds an inline SMIL loop at its data-rest, paused"
 
 test("chromePath names a file that exists", { skip }, () => {
   assert.ok(fs.existsSync(chrome), chrome);
+});
+
+// React marks each element it hydrates with a "__reactFiber$…" key; the page below plays a Next app that hydrates 300 ms
+// after load, with one image inside markup React inserted as a string (never hydrated) and one image of its own.
+const HYDRATING = `<!doctype html><html><body><main><img id="own" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="1" height="1"><div id="inserted"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="1" height="1"></div></main>
+<script>self.__next_f = []; setTimeout(() => { document.getElementById("inserted")["__reactProps$t"] = { dangerouslySetInnerHTML: { __html: "…" } }; for (const el of document.querySelectorAll("main, #own")) el["__reactFiber$t"] = {}; }, 300);</script></body></html>`;
+
+test("imagesReady waits for React to hydrate its images before it switches them to eager; a page that is not a Next app passes at once", { skip }, async () => {
+  const { context, close } = await launch({ motion: true });
+  try {
+    const page = await context.newPage();
+    await page.setContent(HYDRATING);
+    const before = await page.evaluate(() => performance.now());
+    const ready = imagesReady(page);
+    await page.waitForTimeout(120);
+    assert.equal(await page.evaluate(() => document.getElementById("own").getAttribute("loading")), null, "not touched before hydration");
+    await ready;
+    const after = await page.evaluate(() => performance.now());
+    assert.ok(after - before >= 250, `waited for hydration: ${Math.round(after - before)} ms`);
+    assert.equal(await page.evaluate(() => document.getElementById("own").getAttribute("loading")), "eager", "switched once hydrated");
+    const plain = await context.newPage();
+    await plain.setContent('<!doctype html><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">');
+    assert.equal(await hydrated(plain), true, "no Next app: nothing to wait for");
+  } finally { await close(); }
 });

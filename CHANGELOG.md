@@ -4,6 +4,23 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `imagesReady` waits for hydration before it switches lazy images to
+  `loading="eager"`: it waits until React owns every image it will own (each
+  `<img>` carries React's fiber key, or sits in markup React inserted as a
+  string and never hydrates), then switches and waits for them as before.
+  `--motion` captures and `probe --motion` / `shot --motion` switched the
+  images right after the fonts, before anything waited for hydration, and
+  against `next dev` React's development build reported the attribute as a
+  hydration mismatch ("A tree hydrated but some attributes of the server
+  rendered HTML didn't match the client properties") — an error the site
+  never had. Every caller is covered (motion and static captures, `shot`,
+  `probe`, `icons audit`, `lab render`, `sheet`); a page that is not a Next
+  app passes at once, and one that never hydrates falls through after 10 s.
+  No shot changes: static captures and motion settled frames compare
+  identical before and after.
+
 ## [0.5.2] — 2026-09-26
 
 - `agentic-cms assemble` packages a standalone build for a Node host:
