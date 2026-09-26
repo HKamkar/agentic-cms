@@ -27,6 +27,15 @@ changes what a capture writes says **recapture baselines**.
   and `icons audit`). The same shots, faster: the example's static set 66.6
   s to 44.3 s (82/82 identical), its states 12.8 s to 9.9 s (8/8), a
   consumer site's six pages 98.4 s to 76.7 s (50/50), every shot taken.
+- `visual-parity proof`: a whole proof in one command — for the static pass,
+  and `--motion`, `--states` or `--all`, the baseline of a commit (`--ref`,
+  `develop` by default, built once), the tree as it stands (`--build` builds
+  it first) and the compare, as the harness's own commands with `--json`.
+  One line per pass (the compare's counts, each side's time and cache
+  reuse), one exit: 0 identical, 1 on any difference or a failed capture.
+  The capture options pass through (`--scheme`, `--pages` or `--sample`,
+  `--jobs`, `--fresh`, `--third-party`). The guide, the README and
+  `design-proof` show it beside the three commands.
 - Codex finds the path-scoped rules. Claude Code loads `.claude/rules/*.md`
   by their `paths` frontmatter; Codex reads `AGENTS.md` and nothing under
   `.claude/`, so it never saw them. `AGENTS.md` now carries a scoped-rules

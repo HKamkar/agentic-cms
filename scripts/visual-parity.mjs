@@ -27,6 +27,7 @@ import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_IN
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
+import { passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
 import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -46,7 +47,7 @@ const motion = Boolean(flags.motion);
 // The theme follows prefers-color-scheme (and a stored choice, absent in a fresh browser context), so a scheme is a capture option.
 const scheme = flags.scheme ?? "light";
 const states = Boolean(flags.states);
-if (motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
+if (subcommand === "capture" && motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
 const MOTION_WIDTHS = [1440, 390];
 const MOTION_FRAMES_MS = [150, 500];
 const widths = (flags.widths ?? (motion ? MOTION_WIDTHS : DEFAULT_WIDTHS).join(",")).split(",").map(Number);
@@ -331,8 +332,36 @@ function clean() {
   else say(dryRun ? `clean --dry-run: ${plan.remove.length} would go, ${plan.keep.length} stay${flags.cache ? ", and .parity/shot-cache/" : ""}; nothing removed\n` : `clean: ${plan.remove.length} removed${cache ? " and the shot cache emptied" : ""}, ${(bytes / 1048576).toFixed(1)} MB freed; ${plan.keep.length} kept\n`);
 }
 
+/** A whole proof: for each pass, the baseline of --ref, the tree as it stands and the compare, as the harness's own commands; one summary, one exit. */
+async function proof() {
+  const label = labels[0] ?? "proof";
+  const opt = (name) => (flags[name] === undefined || flags[name] === false ? [] : flags[name] === true ? [`--${name}`] : [`--${name}`, String(flags[name])]);
+  const steps = plan({ label, ref: flags.ref ?? "develop", passes: passesOf(flags), build: flags.build, shared: ["scheme", "jobs", "fresh", "third-party"].flatMap(opt), pages: opt("pages"), sample: opt("sample") });
+  const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
+  // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
+  const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });
+  const result = await runProof(steps, { run, log: (step) => console.error(`\nproof: ${step.pass} — ${step.step === "compare" ? "the compare" : `${step.step}: ${step.label}`}`) });
+  if (flags.json) console.log(JSON.stringify({ label, ref: flags.ref ?? "develop", ...result }, null, 1));
+  else printProof(label, result);
+  process.exitCode = result.exit;
+}
+
+/** The proof's summary: a line per pass (the compare's counts, each side's time and reuse), then the verdict. */
+function printProof(label, { passes, exit, failed }) {
+  const side = (c) => (c ? `${c.label} ${c.seconds} s${c.reused?.shots ? `, ${c.reused.shots} of ${c.reused.of} reused` : ""}` : "—");
+  console.log(`\nproof ${label} against ${flags.ref ?? "develop"}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
+  for (const p of passes) {
+    const s = p.report?.summary;
+    console.log(`  ${p.pass.padEnd(7)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
+  }
+  if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);
+  else console.log(exit ? `proof: a difference — the diffs are in .parity/visual/<before>-vs-<after>, the lines above` : "proof: identical within the thresholds, every pass");
+}
+
 if (subcommand === "clean") {
   clean();
+} else if (subcommand === "proof") {
+  await proof();
 } else if (subcommand === "capture") {
   let root = ROOT;
   let baseline = null;

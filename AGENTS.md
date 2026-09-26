@@ -274,16 +274,18 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 The contract — modes, file names, how to read a compare, the waits and why —
 is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
-- `pnpm kit visual-parity capture <label>` renders every prerendered
-  page of the current build at eight widths and `compare <before> <after>`
-  diffs them; `--scheme dark` renders the dark mode (a fresh browser context
-  has no stored choice, so the default capture is light), `--states`
-  photographs hover, focus, checked and open, `--motion` plays animations
-  (only worth running where something animates). `--pages /,/blog` limits a
-  capture to the pages you are looking at — pass the same `--pages` to the
-  compare; `--sample <n>` takes n pages of each template (the posts) and the
-  compare leaves the rest out. The page list comes from the build itself,
-  so a new route is captured without touching the script.
+- `pnpm kit visual-parity capture <label>` renders every prerendered page of
+  the current build at eight widths and `compare <before> <after>` diffs
+  them (`visual-parity proof` runs the baseline, the after capture and the
+  compare of each pass in one, with one exit); `--scheme dark` renders the
+  dark mode (a fresh browser context has no stored choice, so the default
+  capture is light), `--states` photographs hover, focus, checked and open,
+  `--motion` plays animations (only worth running where something animates).
+  `--pages /,/blog` limits a capture to the pages you are looking at — pass
+  the same `--pages` to the compare; `--sample <n>` takes n pages of each
+  template (the posts) and the compare leaves the rest out. The page list
+  comes from the build itself, so a new route is captured without touching
+  the script.
 - A capture copies every page-width whose build files are unchanged from
   `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
   one, two for `--motion`), so a proof's second capture takes the changed
