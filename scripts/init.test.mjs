@@ -99,3 +99,33 @@ test("a site's own rule that predates the manifest is kept on the first --agent-
   const forced = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, force: true, ...quiet }).map((f) => [f.file, f.status]));
   assert.equal(forced[".claude/rules/styling.md"], "updated", "--force is the way to take the kit's");
 });
+
+test("--agent-files keeps AGENTS.md's scoped-rules table as the site's rules read; --check flags it stale or missing, and an AGENTS.md past what Codex reads", () => {
+  const target = tmp();
+  scaffold(target, { kitRoot: KIT, version: "0.5.5", force: false, ...quiet });
+  const status = (report) => Object.fromEntries(report.map((f) => [f.file, f.status]));
+  const check = () => status(agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: true, ...quiet }));
+  assert.equal(check()["AGENTS.md (rules table)"], "ok", "a new site's AGENTS.md carries the table");
+  assert.equal(check()["AGENTS.md (size)"], "ok");
+  assert.match(read(target, "AGENTS.md"), /^\| `src\/\*\*\/\*\.tsx`, `src\/\*\*\/\*\.css` \| \[Styling\]\(\.claude\/rules\/styling\.md\) \|$/m);
+  // the site widens a rule's scope: its edit is kept, and the table follows the rule
+  const seo = path.join(target, ".claude/rules/seo.md");
+  fs.writeFileSync(seo, fs.readFileSync(seo, "utf8").replace('  - "content/pages/**"', '  - "content/pages/**"\n  - "content/landing/**"'));
+  assert.equal(check()["AGENTS.md (rules table)"], "stale");
+  const written = status(agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: false, ...quiet }));
+  assert.equal(written[".claude/rules/seo.md"], "kept");
+  assert.equal(written["AGENTS.md (rules table)"], "updated");
+  assert.match(read(target, "AGENTS.md"), /`content\/landing\/\*\*` \| \[SEO\]/);
+  // an AGENTS.md without the table gets one before its first section, the rest of it untouched
+  fs.writeFileSync(path.join(target, "AGENTS.md"), "# Our site\n\nOur own rules.\n\n## Styling\n\n- ours\n");
+  assert.equal(check()["AGENTS.md (rules table)"], "missing");
+  assert.equal(status(agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: false, ...quiet }))["AGENTS.md (rules table)"], "created");
+  const agents = read(target, "AGENTS.md");
+  assert.ok(agents.startsWith("# Our site\n\nOur own rules.\n\n<!-- rules-table:start -->\n## Scoped rules for Claude Code and Codex\n"));
+  assert.ok(agents.endsWith("<!-- rules-table:end -->\n\n## Styling\n\n- ours\n"));
+  // past the 32 KiB Codex reads by default
+  fs.appendFileSync(path.join(target, "AGENTS.md"), `\n${"x".repeat(33 * 1024)}\n`);
+  const size = agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: true, ...quiet }).find((f) => f.file === "AGENTS.md (size)");
+  assert.equal(size.status, "too big");
+  assert.ok(size.bytes > 32 * 1024);
+});

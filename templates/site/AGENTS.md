@@ -47,6 +47,27 @@ a patch under `node_modules`.
   a change done; `pnpm kit visual-parity` before a merge that touches
   `src/`, styles or images.
 
+<!-- rules-table:start -->
+## Scoped rules for Claude Code and Codex
+
+Before editing or reviewing a file, read and follow **every** rule below
+whose paths match it: `**` spans directories, and matches add up (a post
+needs its content, blog and SEO rules). Claude Code loads these files
+itself through their `paths` frontmatter; Codex does not, so open each
+matching file before the edit, and again when the task reaches other
+paths. The table is written from the rules' frontmatter by
+`agentic-cms init --agent-files`: a scope changes in its rule, never here.
+
+| Paths | Read and follow |
+| --- | --- |
+| `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog](.claude/rules/blog-engine.md) |
+| `content/**`, `src/kit.ts`, `src/kit.test.ts`, `src/components/sections/schemas.ts`, `src/components/sections/render.tsx` | [Content engine](.claude/rules/content-engine.md) |
+| `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
+| `src/components/ui/form/**`, `src/config/forms.ts` | [Forms](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/config/site.ts`, `src/kit.ts`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
+| `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
+<!-- rules-table:end -->
+
 ## Styling
 
 - Utilities for layout, spacing, type, colour, visibility and hover/focus; a
@@ -108,7 +129,8 @@ a patch under `node_modules`.
 
 The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
-on; a capture photographs a copy of the build, so after its `snapshot:`
+on (`pnpm kit visual-parity proof [--motion] [--states]` runs baseline,
+after and compare in one); a capture photographs a copy of the build, so after its `snapshot:`
 line the tree is free, but build the exact tree you mean to prove; a
 static or settled frame never jitters, a mid-flight one may (re-run once
 with `--fresh`: an unchanged page's shots are otherwise copied from the
@@ -122,7 +144,9 @@ full set rather than a `--pages` subset to save time (`--pages` is for
 looking at one page; `--sample <n>` for a site with many posts); only a
 first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
-before the next change; `.parity/` is gitignored and grows fast.
+before the next change; `.parity/` is gitignored and grows fast
+(`pnpm kit visual-parity clean` keeps the newest captures, `--dry-run`
+first).
 
 ## Process
 

@@ -66,6 +66,27 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
+<!-- rules-table:start -->
+## Scoped rules for Claude Code and Codex
+
+Before editing or reviewing a file, read and follow **every** rule below
+whose paths match it: `**` spans directories, and matches add up (a post
+needs its content, blog and SEO rules). Claude Code loads these files
+itself through their `paths` frontmatter; Codex does not, so open each
+matching file before the edit, and again when the task reaches other
+paths. The table is written from the rules' frontmatter by
+`pnpm docs:rules`: a scope changes in its rule, never here.
+
+| Paths | Read and follow |
+| --- | --- |
+| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
+| `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
+| `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
+| `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts` | [Form engine](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/config/site.ts`, `src/lib/seo/**`, `src/kit.ts`, `scripts/check-seo.mjs`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
+| `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
+<!-- rules-table:end -->
+
 ## Styling
 
 The invariants; the values, tables and examples are in `STANDARD.md`.
@@ -193,12 +214,12 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   or a command that opens a page changed; `pnpm hygiene` before every pull
   request (`tools/hygiene.mjs`: no one site's name outside the README's
   showcase, no machine paths or addresses, no captures, pictures or scratch
-  files committed, the two skills trees identical, the changelog and
-  `docs/commands.md` current). `pnpm lint` ignores `.claude/worktrees/`, where
-  agent worktrees are checked out. CI (`.github/workflows/verify.yml`) runs
-  the same on every pull request and push to `develop` and `main`, plus the
-  pack smoke on `main`. No Prettier; match the existing style (double
-  quotes, semicolons, trailing commas).
+  files committed, the two skills trees identical, the changelog,
+  `docs/commands.md` and the scoped-rules tables current). `pnpm lint`
+  ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
+  (`.github/workflows/verify.yml`) runs the same on every pull request and
+  push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;
+  match the existing style (double quotes, semicolons, trailing commas).
 - The command line's contract is `scripts/lib/specs.mjs`: one spec per
   command (its flags, defaults, positionals, exit codes, the JSON it
   prints); `scripts/lib/args.mjs` parses strictly from it (an unknown flag
@@ -253,21 +274,23 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 The contract — modes, file names, how to read a compare, the waits and why —
 is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
-- `pnpm kit visual-parity capture <label>` renders every prerendered
-  page of the current build at eight widths and `compare <before> <after>`
-  diffs them; `--scheme dark` renders the dark mode (a fresh browser context
-  has no stored choice, so the default capture is light), `--states`
-  photographs hover, focus, checked and open, `--motion` plays animations
-  (only worth running where something animates). `--pages /,/blog` limits a
-  capture to the pages you are looking at — pass the same `--pages` to the
-  compare; `--sample <n>` takes n pages of each template (the posts) and the
-  compare leaves the rest out. The page list comes from the build itself,
-  so a new route is captured without touching the script.
+- `pnpm kit visual-parity capture <label>` renders every prerendered page of
+  the current build at eight widths and `compare <before> <after>` diffs
+  them (`visual-parity proof` runs the baseline, the after capture and the
+  compare of each pass in one, with one exit); `--scheme dark` renders the
+  dark mode (a fresh browser context has no stored choice, so the default
+  capture is light), `--states` photographs hover, focus, checked and open,
+  `--motion` plays animations (only worth running where something animates).
+  `--pages /,/blog` limits a capture to the pages you are looking at — pass
+  the same `--pages` to the compare; `--sample <n>` takes n pages of each
+  template (the posts) and the compare leaves the rest out. The page list
+  comes from the build itself, so a new route is captured without touching
+  the script.
 - A capture copies every page-width whose build files are unchanged from
   `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
   one, two for `--motion`), so a proof's second capture takes the changed
   pages alone and a repeated baseline takes seconds; the example's static
-  set is about a minute from nothing. Capture the full set, not a `--pages`
+  set is 44 s from nothing on four cores. Capture the full set, not a `--pages`
   subset to save time — the cache already skips what did not change;
   `--fresh` retakes everything. Only a first capture of a large site is
   worth running in the background, its log under `.parity/<label>.log`.
@@ -292,7 +315,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 - Commit each proven state before starting the next change. A working tree
   that mixes a proven change with an unproven one has to be split by hand
   before either can be committed.
-- `.parity/` is gitignored and grows fast; delete old labels.
+- `.parity/` is gitignored and grows fast: `pnpm kit visual-parity clean`
+  keeps the newest captures (10, `--keep`), removes the rest with their
+  compares and never a capture still running; `--cache` empties the shot
+  cache, `--dry-run` lists first.
 - A reference build for side-by-side checks is a worktree
   (`git worktree add ../<name> <sha>`) with its own
   `pnpm install --frozen-lockfile --prefer-offline` (a symlinked
@@ -335,8 +361,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   config, field primitives, backend factory) and `src/lib/seo/README.md`
   (page blocks, head and structured data, the build-time audit); the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
-  loads their invariants in Claude Code when those paths are edited; keep the READMEs,
-  `STANDARD.md`, `VOICE.md`, the rules and the code in step.
+  loads their invariants in Claude Code when those paths are edited, and the
+  scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it
+  from the rules' frontmatter); keep the READMEs, `STANDARD.md`, `VOICE.md`,
+  the rules and the code in step.
 - Refactors of existing pages change no pixels and prove it with
   `agentic-cms visual-parity` (see Styling and the harness section); one that
   also leaves the markup alone proves that with `agentic-cms parity`

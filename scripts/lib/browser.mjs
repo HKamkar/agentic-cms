@@ -107,8 +107,15 @@ export function servedFile(root, pathname, headers = {}) {
   return candidates.find((f) => f && fs.existsSync(f) && fs.statSync(f).isFile()) ?? null;
 }
 
-/** Serves <root>/.next (the prerendered pages, their RSC payloads and prefetch segments, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
-export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) {
+// Held third parties: an analytics tag, a chat widget's script, a beacon is not the page's look, costs a
+// capture its network and its timing, and can move a frame. The page is served with a Content-Security-Policy
+// that lets scripts and connections (fetch, XHR, beacons, sockets, event streams) come from the page's own
+// origin alone; images, fonts, stylesheets and frames are left alone, since they are the page's pixels. A
+// header, not request interception: interception switches the browser's HTTP cache off.
+export const HOLD_THIRD_PARTY = "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src 'self'";
+
+/** Serves <root>/.next (the prerendered pages, their RSC payloads and prefetch segments, the static chunks) and <root>/public on 127.0.0.1, a page with HOLD_THIRD_PARTY when `thirdParty` is "hold"; { url, close }. */
+export function serveStatic({ root = process.cwd(), requireBuild = true, thirdParty = "allow" } = {}) {
   const app = path.join(root, ".next/server/app");
   if (requireBuild && !fs.existsSync(app)) throw new Error("no production build: run `pnpm build` first (or pass --url)");
   const cache = new Map();
@@ -116,7 +123,8 @@ export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) 
     const file = servedFile(root, decodeURIComponent(new URL(req.url, "http://x").pathname), req.headers);
     if (!file) { res.writeHead(req.headers["next-router-segment-prefetch"] ? 204 : 404); return res.end(); }
     const page = file.startsWith(app + path.sep);
-    res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": page ? "no-store" : "max-age=3600" });
+    const held = thirdParty === "hold" && file.endsWith(".html") ? { "content-security-policy": HOLD_THIRD_PARTY } : {};
+    res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": page ? "no-store" : "max-age=3600", ...held });
     res.end(gzipped(cache, file));
   });
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
@@ -161,6 +169,12 @@ export function listPages(root = process.cwd()) {
 }
 
 // ---- making a page deterministic ---------------------------------------------
+// A <style> into the page's head, as page.addStyleTag() puts one there — and waiting, as it does, for the
+// sheet's load — without its race against the page's console: addStyleTag rejects when any Content-Security-
+// Policy error is logged while it runs, so a third party's script that HOLD_THIRD_PARTY blocked at that moment
+// failed the harness's own, allowed, style (measured on a real site's analytics tag).
+export const addStyle = (page, css) => inPage(page, "a style", 10000, (css) => new Promise((resolve, reject) => { const style = document.createElement("style"); style.appendChild(document.createTextNode(css)); style.onload = resolve; style.onerror = reject; document.head.appendChild(style); }), css);
+
 export const FREEZE_CSS = `*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`;
 // A lazy image that loads above the viewport makes scroll anchoring nudge
 // scrollY by the image's growth, which depends on the placeholder box the
@@ -216,6 +230,26 @@ export const revealed = (page) => page.waitForFunction((pattern) => [...document
 export const STEP_FRAMES = 8;
 export const frames = (page, count) => inPage(page, `${count} animation frames`, 10000, (count) => new Promise((resolve) => { let seen = 0; const tick = () => (++seen >= count ? resolve() : requestAnimationFrame(tick)); requestAnimationFrame(tick); }), count);
 
+// A scroll step is done when what it set off has run: an observer's callback, a reveal's class or style, a
+// lazy section mounting. Counted in frames like every wait here, from two, and done once the page has not
+// changed — no DOM mutation — for two frames in a row; never more than the eight every step used to wait,
+// so a busy page gets them all and a quiet one is not held (eight a step was most of a short page's time).
+export const QUIET = { min: 2, still: 2, max: STEP_FRAMES };
+/** Animation frames until the page has been still (no mutation) for `still` in a row, from `min` to `max`; the frames it took. */
+export const quiet = (page, { min, still, max } = QUIET) => inPage(page, "a quiet page", 10000, ({ min, still, max }) => new Promise((resolve) => {
+  let seen = 0, calm = 0, changed = false;
+  const watch = new MutationObserver(() => { changed = true; });
+  watch.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+  const tick = () => {
+    seen++;
+    calm = changed ? 0 : calm + 1;
+    changed = false;
+    if (seen >= max || (seen >= min && calm >= still)) { watch.disconnect(); resolve(seen); return; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}), { min, still, max });
+
 // The scroll-through only has to reach every scroll-into-view observer, not
 // to paint: while it runs every element is hidden — visibility, so layout,
 // the observers and the page's scripts are untouched — and a heavy page's
@@ -231,9 +265,9 @@ export async function settle(page) {
   // it is scrolled through, and a height read once at the start stops the pass short of the footer.
   const height = () => page.evaluate(() => document.documentElement.scrollHeight);
   await page.evaluate(hidePaint, PAINTLESS);
-  for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await frames(page, STEP_FRAMES); }
+  for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await quiet(page); }
   await page.evaluate((id) => { document.getElementById(id)?.remove(); window.scrollTo(0, 0); }, PAINTLESS);
-  await frames(page, STEP_FRAMES);
+  await quiet(page);
   await sequencesRan(page);
   await imagesReady(page);
   // what arrived is decoded and painted: counted in frames, like every other wait here, where it was 400 ms
@@ -406,14 +440,14 @@ export function resolveTarget(target, { base }) {
 /** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through, SMIL at its rest), or the motion one (images, loops held). */
 export async function prepare(page, { motion = false } = {}) {
   await fontsReady(page);
-  await page.addStyleTag({ content: NO_ANCHORING_CSS });
+  await addStyle(page, NO_ANCHORING_CSS);
   if (motion) {
     await imagesReady(page);
     await page.waitForTimeout(600);
     await page.evaluate(PAUSE_LOOPS);
     return;
   }
-  await page.addStyleTag({ content: FREEZE_CSS });
+  await addStyle(page, FREEZE_CSS);
   await revealed(page);
   await settle(page);
   await page.evaluate(HOLD_SMIL, { rest: true });

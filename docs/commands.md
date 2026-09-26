@@ -295,7 +295,7 @@ agentic-cms parity before && … refactor … && agentic-cms parity after && dif
 The screenshot harness: every page of the build at several widths, frozen or in motion, and a pixel diff of two captures.
 
 ```bash
-agentic-cms visual-parity <capture | compare> …
+agentic-cms visual-parity <capture | compare | proof | clean> …
 ```
 
 #### `visual-parity capture`
@@ -320,6 +320,7 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--pages /a,/b` | only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here |
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--sample <n>` | a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare |
+| `--third-party hold|allow` | other origins' scripts and connections (analytics, beacons, widgets) on a build the harness serves: held back by the page's Content-Security-Policy, or allowed; their images, fonts and stylesheets load either way; a --url site is captured as it serves itself (one of `hold`, `allow`) (default `hold`) |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
@@ -359,6 +360,66 @@ Exit: `0` identical within the thresholds; `1` a difference, a size change or a 
 ```bash
 agentic-cms visual-parity compare before after --json
 agentic-cms visual-parity compare before after --pages /,/blog
+```
+
+#### `visual-parity proof`
+
+A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
+
+```bash
+agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow]
+```
+
+- `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
+
+| flag | what |
+|---|---|
+| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha) (default `develop`) |
+| `--motion` | add the --motion pass |
+| `--states` | add the --states pass |
+| `--all` | all three passes: static, --motion and --states |
+| `--build` | run the site's `pnpm build` before the first after capture |
+| `--scheme light|dark` | prefers-color-scheme for every capture (one of `light`, `dark`) (default `light`) |
+| `--pages /a,/b` | only these routes, on every capture and compare |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample) |
+| `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
+| `--fresh` | take every shot again, reusing none (capture --fresh) |
+| `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
+| `--json` | print the proof as JSON: each pass's captures and compare report |
+
+Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, or captures of two schemes.
+
+`--json` prints `{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }`.
+
+```bash
+agentic-cms visual-parity proof
+agentic-cms visual-parity proof nav-fix --states --build
+agentic-cms visual-parity proof --all --ref main --json
+```
+
+#### `visual-parity clean`
+
+Removes old captures from .parity/visual/ — all but the newest, and every compare of a removed capture — and, with --cache, the shot cache; a capture still running is kept.
+
+```bash
+agentic-cms visual-parity clean [--keep 10] [--all] [--cache] [--dry-run]
+```
+
+| flag | what |
+|---|---|
+| `--keep <n>` | how many finished captures stay, the newest by the time they finished (default `10`) |
+| `--all` | remove every finished capture (one still running, with no capture.json and under a day old, stays) |
+| `--cache` | also empty .parity/shot-cache/, so the next capture takes every shot again |
+| `--dry-run` | list what would go and what stays; remove nothing |
+| `--json` | print the result as JSON |
+
+Exit: `0` cleaned, or listed with --dry-run; `2` usage.
+
+`--json` prints `{ removed: [label], kept: [label], bytes, cache, dryRun }`.
+
+```bash
+agentic-cms visual-parity clean --dry-run
+agentic-cms visual-parity clean --keep 4 --cache
 ```
 
 ## look & measure
@@ -888,14 +949,14 @@ agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/) and the design skills (.claude/skills/, .agents/skills/); a file the site edited is kept |
-| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one), missing — and exit 1 on any drift; write nothing |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
+| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
 | `--force` | overwrite files that exist (package.json is always merged, never overwritten) |
 | `--json` | print the result as JSON |
 
 Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage.
 
-`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status }] }`.
+`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }`.
 
 ```bash
 agentic-cms init .

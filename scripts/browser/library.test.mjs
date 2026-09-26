@@ -10,7 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import zlib from "node:zlib";
 import sharp from "sharp";
-import { chromePath, hydrated, imagesReady, launch, listPages, prepare, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
+import { QUIET, chromePath, hydrated, imagesReady, launch, listPages, prepare, quiet, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
 import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
@@ -166,4 +166,57 @@ test("snap takes the pixels Playwright's screenshot takes: the full page, a clip
       assert.ok(a.data.equals(b.data), `${name}: the same pixels`);
     }
   } finally { await close(); server.close(); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(out, { recursive: true, force: true }); }
+});
+
+test("a page served with thirdParty: hold runs no other origin's script and sends it no beacon, but shows its image; allow lets all three through", { skip }, async () => {
+  const hits = [];
+  const other = http.createServer((req, res) => {
+    hits.push(req.url);
+    if (req.url === "/t.js") { res.writeHead(200, { "content-type": "text/javascript" }); return res.end("window.thirdPartyRan = true;"); }
+    if (req.url === "/i.svg") { res.writeHead(200, { "content-type": "image/svg+xml" }); return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'); }
+    res.writeHead(204); res.end();
+  });
+  await new Promise((resolve) => other.listen(0, "127.0.0.1", resolve));
+  const third = `http://127.0.0.1:${other.address().port}`;
+  const root = fixtureSite();
+  addPage(root, "/tracked", `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Tracked</title><script src="${third}/t.js"></script></head><body><img id="pic" src="${third}/i.svg" width="10" height="10" alt=""><script>window.ownRan = true; navigator.sendBeacon("${third}/beacon", "x"); fetch("${third}/fetch").catch(() => {});</script></body></html>`);
+  const { context, close } = await launch({});
+  try {
+    for (const thirdParty of ["hold", "allow"]) {
+      hits.length = 0;
+      const server = await serveStatic({ root, thirdParty });
+      try {
+        const seen = await withPage(context, 800, server.url + "/tracked", async (page) => {
+          await page.waitForTimeout(500);
+          return page.evaluate(() => ({ own: Boolean(window.ownRan), third: Boolean(window.thirdPartyRan), image: document.getElementById("pic").naturalWidth }));
+        });
+        assert.equal(seen.own, true, `${thirdParty}: the page's own inline script runs`);
+        assert.equal(seen.image, 10, `${thirdParty}: the other origin's image is part of the page`);
+        if (thirdParty === "hold") {
+          assert.equal(seen.third, false, "the other origin's script is held");
+          assert.deepEqual(hits, ["/i.svg"], "nothing but the image reached the other origin");
+        } else {
+          assert.equal(seen.third, true);
+          assert.deepEqual([...hits].sort(), ["/beacon", "/fetch", "/i.svg", "/t.js"]);
+        }
+        const asset = await fetch(server.url + "/images/mark.svg");
+        assert.equal(asset.headers.get("content-security-policy"), null, "the policy is the page's alone");
+      } finally { server.close(); }
+    }
+  } finally { await close(); other.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("quiet waits for a page to stop changing: a still page two frames, a page busy for five frames past them, one that never stops the cap", { skip }, async () => {
+  const { context, close } = await launch({});
+  try {
+    const page = await context.newPage();
+    await page.setContent("<!doctype html><p id=p>0</p>");
+    assert.equal(await quiet(page), QUIET.min, "nothing changes: the minimum");
+    // five frames of changes, then still: it waits them out, then two still frames
+    await page.evaluate(() => { let n = 0; const step = () => { document.getElementById("p").textContent = String(++n); if (n < 5) requestAnimationFrame(step); }; requestAnimationFrame(step); });
+    const busy = await quiet(page);
+    assert.ok(busy > QUIET.min && busy < QUIET.max, `busy for five frames: ${busy}`);
+    await page.evaluate(() => { const step = () => { document.getElementById("p").textContent += "."; requestAnimationFrame(step); }; requestAnimationFrame(step); });
+    assert.equal(await quiet(page), QUIET.max, "a page that never settles gets the eight frames a step always had");
+  } finally { await close(); }
 });

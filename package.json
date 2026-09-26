@@ -1,6 +1,6 @@
 {
   "name": "agentic-cms",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "A simple CMS whose editor is an AI agent: content as files in a Next.js repo, validated at build time; the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
   "type": "module",
@@ -93,6 +93,7 @@
     "test:pack": "node tools/pack-smoke.mjs",
     "hygiene": "node tools/hygiene.mjs",
     "docs:commands": "node tools/commands-doc.mjs",
+    "docs:rules": "node tools/rules-table.mjs",
     "skills:sync": "node tools/skills-sync.mjs",
     "content:check": "node bin/agentic-cms.mjs check",
     "content:lint": "node bin/agentic-cms.mjs lint",

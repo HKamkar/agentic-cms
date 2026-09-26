@@ -91,3 +91,51 @@ test("a family inside a family: icons round lists its three actions, each has it
   assert.equal(wrong.status, 2);
   assert.match(wrong.stderr, /icons: icons round has no subcommand publsh — did you mean publish\? \(new, publish, retire\)/);
 });
+
+test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB is named with its size and exits 1", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--json"]).status, 0);
+    const clean = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, /agent files as the kit ships them/);
+    fs.appendFileSync(path.join(site, "AGENTS.md"), `\n${"x".repeat(33 * 1024)}\n`);
+    const big = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(big.status, 1);
+    assert.match(big.stderr, /^too big {3}AGENTS\.md \(size\) — \d+ bytes, Codex reads 32768$/m);
+    assert.match(big.stdout, /too big: AGENTS\.md is past what Codex reads/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("visual-parity clean keeps the newest captures, takes the compares of the ones it removes, leaves a running capture, and --dry-run removes nothing", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "parity-clean-cli-"));
+  const put = (file, hoursAgo) => { const full = path.join(dir, ".parity/visual", file); fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, "{}"); const t = new Date(Date.now() - hoursAgo * 3600e3); fs.utimesSync(full, t, t); };
+  try {
+    for (const [label, hours] of [["old", 30], ["mid", 20], ["new", 1]]) { put(`${label}/meta.json`, hours); put(`${label}/capture.json`, hours); }
+    put("running/meta.json", 0.1);
+    put("old-vs-new/report.json", 1);
+    put("mid-vs-new/report.json", 1);
+    const dry = run(["visual-parity", "clean", "--keep", "1", "--dry-run", "--json"], dir);
+    assert.equal(dry.status, 0, dry.stderr);
+    assert.deepEqual(JSON.parse(dry.stdout).removed, ["mid", "mid-vs-new", "old", "old-vs-new"]);
+    assert.ok(fs.existsSync(path.join(dir, ".parity/visual/old")), "--dry-run removes nothing");
+    const done = run(["visual-parity", "clean", "--keep", "1"], dir);
+    assert.equal(done.status, 0, done.stderr);
+    assert.match(done.stdout, /clean: 4 removed, [\d.]+ MB freed; 2 kept/);
+    assert.deepEqual(fs.readdirSync(path.join(dir, ".parity/visual")).sort(), ["new", "running"]);
+    assert.equal(run(["visual-parity", "clean", "--keep", "-1"], dir).status, 2);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("visual-parity proof: its help names the passes and the ref; a wrong choice or a wrong flag is a usage error", () => {
+  const help = run(["visual-parity", "proof", "--help"]);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--ref <git ref>/);
+  assert.match(help.stdout, /--motion/);
+  assert.match(help.stdout, /--all/);
+  assert.equal(run(["visual-parity", "proof", "--scheme", "sepia"]).status, 2);
+  const wrong = run(["visual-parity", "proof", "--motoin"]);
+  assert.equal(wrong.status, 2);
+  assert.match(wrong.stderr, /did you mean --motion\?/);
+});

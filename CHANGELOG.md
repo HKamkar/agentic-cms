@@ -4,6 +4,59 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.5.5] — 2026-09-26
+
+- Third parties held back during a capture. On a build the harness serves,
+  each page carries a Content-Security-Policy that lets scripts and
+  connections (fetch, XHR, beacons, sockets) come from its own origin alone;
+  other origins' images, fonts, stylesheets and frames load as ever.
+  Analytics and widgets no longer cost a capture network and timing (a
+  consumer site's six pages, 86 s to 81 s, 50/50 identical). A header, not
+  request interception, which would switch the HTTP cache off.
+  `--third-party allow` turns it off; `meta.json` records it; the shot cache
+  keeps the two apart. **Recapture baselines** for a site whose third-party
+  script draws on the page (a chat bubble, a consent banner from another
+  origin), or pass `--third-party allow`. The harness adds its styles with
+  its own `addStyle` in place of Playwright's `addStyleTag`, which fails
+  when any CSP error is logged while it runs.
+- The static scroll-through steps on as soon as the page is quiet. Each 600
+  px step waited eight animation frames whatever the page did; it now waits
+  until the page has not changed (no DOM mutation) for two frames in a row —
+  two at least, never more than the eight it had — so a busy section still
+  gets them all (`quiet()` in the harness's library; also `shot`, `probe`
+  and `icons audit`). The same shots, faster: the example's static set 66.6
+  s to 44.3 s (82/82 identical), its states 12.8 s to 9.9 s (8/8), a
+  consumer site's six pages 98.4 s to 76.7 s (50/50), every shot taken.
+- `visual-parity proof`: a whole proof in one command — for the static pass,
+  and `--motion`, `--states` or `--all`, the baseline of a commit (`--ref`,
+  `develop` by default, built once), the tree as it stands (`--build` builds
+  it first) and the compare, as the harness's own commands with `--json`.
+  One line per pass (the compare's counts, each side's time and cache
+  reuse), one exit: 0 identical, 1 on any difference or a failed capture.
+  The capture options pass through (`--scheme`, `--pages` or `--sample`,
+  `--jobs`, `--fresh`, `--third-party`). The guide, the README and
+  `design-proof` show it beside the three commands.
+- Codex finds the path-scoped rules. Claude Code loads `.claude/rules/*.md`
+  by their `paths` frontmatter; Codex reads `AGENTS.md` and nothing under
+  `.claude/`, so it never saw them. `AGENTS.md` now carries a scoped-rules
+  table, one row per rule (its paths, a link), written from the rules' own
+  frontmatter between two `rules-table` comment markers: `agentic-cms init
+  --agent-files` writes it into a site's `AGENTS.md` — the one block of that
+  file the kit rewrites, from the site's rules as they stand, edits included
+  — and `--check` reports it `stale` or `missing`, and `AGENTS.md` `too big`
+  past the 32 KiB Codex reads by default. The kit's own `AGENTS.md` and the
+  site template carry it too (`pnpm docs:rules`; `pnpm hygiene` and the
+  tests fail on a stale table, a kit `AGENTS.md` over 32 KiB or a template
+  over 16 KiB). `docs/init.md`, `docs/skills.md`, `docs/design.md` and the
+  README say how each tool loads the rules and skills.
+- `visual-parity clean`: old captures out of `.parity/visual/` — all but the
+  newest finished ones (10; `--keep <n>`, or `--all`), with every compare of
+  a removed capture — and, with `--cache`, the shot cache; a capture still
+  running (no `capture.json`, under a day old) is kept, `--dry-run` lists
+  first, and nothing outside `.parity/` is removed. The kit's and the site
+  template's `AGENTS.md`, `design-proof` and `docs/visual-parity.md` name it where they said to
+  delete old labels by hand.
+
 ## [0.5.4] — 2026-09-26
 
 - A proof's rules follow the faster harness: the kit's and the site

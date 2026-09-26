@@ -14,6 +14,23 @@ pnpm kit visual-parity capture after --build          # the site's build first, 
 pnpm kit visual-parity compare before after --json    # exit 1 on any difference; the report as JSON
 ```
 
+The same in one command, after the change is built:
+
+```bash
+pnpm kit visual-parity proof                          # baseline of develop, the tree as it stands, the compare
+pnpm kit visual-parity proof nav-fix --states --build # the states pass too; build the tree first
+pnpm kit visual-parity proof --all --ref main         # static, --motion and --states against main
+```
+
+`proof` runs the three steps of each pass as the commands above (static
+always; `--motion`, `--states` or `--all` add theirs), the `--ref` build
+done once for all of them, and ends with one line per pass — the compare's
+counts, each side's time and how much the shot cache reused — and one exit:
+`0` when every pass is identical, `1` on any difference or a failed capture.
+Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
+so a pass that differs is read like any compare. `--json` prints every
+pass's captures and report.
+
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should
@@ -61,6 +78,23 @@ Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
 without them and an after capture of a tree that still has one list the
 same pages.
 
+## Third parties held back
+
+An analytics tag, a chat widget's script, a beacon: none of them is the
+page's look, all of them cost a capture network and timing, and any of them
+can move a frame. On a build the harness serves, each page comes with a
+Content-Security-Policy that lets scripts and connections (fetch, XHR,
+beacons, sockets, event streams) come from the page's own origin alone:
+`script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src
+'self'`. Images, fonts, stylesheets and frames from other origins load as
+ever, since they are the page's pixels. It is a header, not request
+interception, which would switch the browser's HTTP cache off. A site whose
+third-party script draws on the page — a chat bubble, a consent banner
+loaded from another origin — loses it from its shots; `--third-party allow`
+keeps it (a capture records the setting in `meta.json`, and the shot cache
+never mixes the two). A `--url` site is served by its own server and
+captured as it serves itself.
+
 ## Unchanged shots are reused
 
 A shot is a function of the files its page loads from the build, of the
@@ -83,7 +117,7 @@ the harness's own sources, the browser, the scheme, the motion settings or
 capture reuses nothing. `--fresh` takes every shot again and refreshes the
 cache: to prove a frame deterministic, or whenever a copied shot is in
 doubt. Four entries are kept per page-width, the least recently used going
-first; delete `.parity/shot-cache/` to empty it.
+first; `visual-parity clean --cache` empties it.
 
 ## Several browsers at once
 
@@ -239,7 +273,10 @@ A static shot is taken only when the page has proved itself: fonts ready
 than a hang); every reveal at its end state, which is the trace hydration
 leaves under reduced motion; a scroll-through whose steps are counted in the
 renderer's animation frames rather than milliseconds, so a loaded machine
-slows the capture instead of photographing a reveal before it ran; every
+slows the capture instead of photographing a reveal before it ran — each
+600 px step done once the page has not changed (no DOM mutation) for two
+frames in a row, two frames at least and never more than eight, so a busy
+section gets the eight a step always had and a quiet one is not held; every
 image loaded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
@@ -270,7 +307,7 @@ falls through after 10 s.
   `.parity/shot-cache/`, and several browsers work at once, so the second
   capture of a proof takes the changed pages alone (on the example, one post
   edited: 18.7 s for 80 page-widths; the whole static set from nothing,
-  about a minute on four cores). `--pages` is for looking at one page while
+  44 s on four cores). `--pages` is for looking at one page while
   iterating. Only a first capture of a large site is worth the background,
   with its output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before
@@ -303,4 +340,9 @@ falls through after 10 s.
   section.
 - Commit each proven state before starting the next change; a working tree
   that mixes a proven change with an unproven one has to be split by hand.
-- `.parity/` grows by hundreds of megabytes per full set; delete old labels.
+- `.parity/` grows by hundreds of megabytes per full set. `visual-parity
+  clean` keeps the newest finished captures (10; `--keep <n>`, or `--all`),
+  removes the rest and every compare of a removed capture, and never touches
+  a capture still running (no `capture.json` yet, under a day old); `--cache`
+  also empties `.parity/shot-cache/`, `--dry-run` lists first. It removes
+  nothing outside `.parity/`.

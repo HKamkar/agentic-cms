@@ -214,11 +214,13 @@ captures pixel by pixel:
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling worktree and captured
 pnpm kit visual-parity capture after --build          # this tree, built and copied first, so it is free while the capture runs
 pnpm kit visual-parity compare before after           # exit 1 on any difference, one line per file
+pnpm kit visual-parity proof --states                 # or all of it in one: baseline, after, compare, per pass
 ```
 
 The rendering is made deterministic before a shot is taken: reduced
 motion, frozen transitions, every reveal at its end state, every image
-loaded, every inline SVG animation held at its rest frame. `--motion` plays
+loaded, every inline SVG animation held at its rest frame, other origins'
+scripts and beacons (analytics, widgets) held back. `--motion` plays
 the animations and photographs each scroll step mid-flight and settled,
 with an inventory of every animation; `--states` photographs hover, focus,
 checked and open. A compare line says what changed and where: `SIZE …
@@ -230,8 +232,8 @@ are the same bytes as when it was last photographed is copied from the
 cache, so the after capture takes the changed pages alone and a baseline
 taken again is seconds; several browsers work at once (`--jobs`), and a
 site with many posts can photograph a few of each template (`--sample`).
-On the example, the whole static set is about a minute from nothing and
-one edited post is 18 seconds. `--fresh` retakes everything.
+On the example, the whole static set is 44 seconds from nothing on four
+cores and one edited post is 18. `--fresh` retakes everything.
 [docs/visual-parity.md](docs/visual-parity.md) is the contract.
 
 ## The wireframe you replace
@@ -259,7 +261,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.5.4`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.5.5`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -274,7 +276,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.4      # allowBuilds below, first
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.5      # allowBuilds below, first
 pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
 pnpm install && pnpm dev
 ```
@@ -289,8 +291,9 @@ allowBuilds:
 ```
 
 Either way the site carries, from the first session and with nothing
-installed, what an agent needs to design it: the rules (`AGENTS.md`,
-`.claude/rules/`), the design skills (`.claude/skills/`, `.agents/skills/`
+installed, what an agent needs to design it: the rules (`AGENTS.md`, and
+`.claude/rules/`, which Claude Code loads by path and Codex finds through
+`AGENTS.md`'s scoped-rules table), the design skills (`.claude/skills/`, `.agents/skills/`
 — `design`, `design-options`, `design-measure`, `design-icons`,
 `design-graphics`, `design-proof`) and the commands they call. [docs/init.md](docs/init.md) is what `init` writes and
 what comes next; [docs/design.md](docs/design.md) is the loop.

@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { agentFiles, scaffold } from "./lib/init.mjs";
+import { CODEX_LIMIT } from "./lib/rules-table.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { positionals: [dir = "."], flags } = parseOrExit(SPECS.init, process.argv.slice(2));
@@ -22,13 +23,14 @@ if (flags["agent-files"]) {
   const report = agentFiles(target, { kitRoot, version, check: flags.check, force: flags.force, log });
   const drift = report.filter((f) => f.status !== "ok");
   if (flags.check) {
-    for (const f of drift) console.error(`${f.status.padEnd(9)} ${f.file}`);
+    for (const f of drift) console.error(`${f.status.padEnd(9)} ${f.file}${f.status === "too big" ? ` — ${f.bytes} bytes, Codex reads ${CODEX_LIMIT}` : ""}`);
     if (flags.json) console.log(JSON.stringify({ version, files: report }, null, 1));
-    else console.log(drift.length ? `init: ${drift.length} agent file(s) drifted — modified: the site edited it (kept); stale: the kit has a newer one (run agentic-cms init --agent-files); missing: run agentic-cms init --agent-files` : `init: ${report.length} agent files as the kit ships them`);
+    else console.log(drift.length ? `init: ${drift.length} agent file(s) drifted — modified: the site edited it (kept); stale: the kit has a newer one, or the rules changed since the table was written (run agentic-cms init --agent-files); missing: run agentic-cms init --agent-files; too big: AGENTS.md is past what Codex reads, so move procedures into linked docs` : `init: ${report.length} agent files as the kit ships them`);
     process.exit(drift.length ? 1 : 0);
   }
   if (flags.json) console.log(JSON.stringify({ version, files: report }, null, 1));
   else console.log(`init: agent files — ${["created", "updated", "kept", "ok"].map((s) => `${report.filter((f) => f.status === s).length} ${s}`).join(", ")}`);
+  for (const f of report.filter((entry) => entry.status === "too big")) console.error(`init: AGENTS.md is ${f.bytes} bytes, past the ${CODEX_LIMIT} Codex reads by default — move detailed procedures into linked docs`);
 } else {
   if (flags.check) { console.error("init: --check goes with --agent-files"); process.exit(2); }
   const result = scaffold(target, { kitRoot, version, force: flags.force, log });

@@ -8,10 +8,14 @@
 // package's source. Existing files are kept unless forced; package.json is
 // merged. A manifest (.agentic-cms.json) records the hash of every agent
 // file as written, so `init --agent-files --check` can tell a site's own
-// edit (never clobbered) from a file the kit has since updated.
+// edit (never clobbered) from a file the kit has since updated. The site's
+// AGENTS.md is its own, but for one block: the scoped-rules table Codex
+// needs to find .claude/rules/ (lib/rules-table.mjs), written from the
+// site's rules as they stand, and measured against Codex's 32 KiB.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
 
 /** The example, copied as it is. */
 export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
@@ -127,6 +131,22 @@ export function agentFiles(target, { kitRoot, version, check = false, force = fa
     report.push({ file, status: written });
     next.files[file] = current;
   }
+  report.push(...agentsMd(target, { check, log, result }));
   if (!check) writeManifest(target, next);
   return report;
+}
+
+/** The site's AGENTS.md: its scoped-rules table as the site's rules now read (written, or with `check` reported ok | stale | missing) and its size against what Codex reads. */
+function agentsMd(target, { check, log, result }) {
+  const file = path.join(target, "AGENTS.md");
+  const rules = readRules(path.join(target, ".claude/rules"));
+  if (!fs.existsSync(file) || !rules.length) return [];
+  const placed = placeBlock(fs.readFileSync(file, "utf8"), rulesBlock(rules));
+  const table = "AGENTS.md (rules table)";
+  const written = placed.status === "inserted" ? "created" : "updated";
+  const status = placed.status === "ok" ? "ok" : check ? (placed.status === "inserted" ? "missing" : "stale") : written;
+  if (!check && placed.status !== "ok") { fs.writeFileSync(file, placed.text); result[written].push(table); log(`${written}  ${table}`); }
+  // measured as --agent-files leaves it: with the table in
+  const { bytes, over } = codexSize(placed.text);
+  return [{ file: table, status }, { file: "AGENTS.md (size)", status: over ? "too big" : "ok", bytes }];
 }

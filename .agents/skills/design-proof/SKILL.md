@@ -42,6 +42,12 @@ decides whether `--motion` is part of the proof.
    pnpm kit visual-parity compare before after --json
    ```
 
+   Or steps 1 and 2 in one, once the change is built:
+   `pnpm kit visual-parity proof [--motion] [--states] [--ref <base>]` —
+   each pass's baseline, after capture and compare, one summary, exit 1 on
+   any difference; its captures are `proof-before` / `proof-after`
+   (`-motion`, `-states`), read like any compare in step 3.
+
    Capture the full set, not a `--pages` subset to save time: a page whose
    build files did not change is copied from `.parity/shot-cache/` rather
    than taken again, and several browsers work at once (`--jobs`), so the
@@ -88,7 +94,13 @@ decides whether `--motion` is part of the proof.
   photographs a copy of that build; after its `snapshot:` line the tree is
   free to build and edit.
 - Commit each proven state before the next change.
-- `.parity/` is gitignored and grows fast; delete old labels.
+- `.parity/` is gitignored and grows fast: `pnpm kit visual-parity clean`
+  (`--dry-run` first) keeps the newest captures and removes the rest with
+  their compares.
+- Other origins' scripts and beacons are held back on a build the harness
+  serves (analytics, a chat widget); their images and fonts still load. A
+  site whose look includes a third-party script's drawing (a chat bubble, a
+  consent banner) captures with `--third-party allow`, on both sides.
 - A baseline built for the wrong sha proves nothing: the sha is in
   `meta.json` and on the compare's first line.
 

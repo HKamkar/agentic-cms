@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, addStyle, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { AUDIT_PAGE, auditToSheet, byFile } from "./lib/icons-audit.mjs";
 import { renderFamily } from "./lib/icons-family.mjs";
 import { updateIcons } from "./lib/icons-source.mjs";
@@ -82,8 +82,8 @@ if (subcommand === "add" || subcommand === "remove") {
     for (const route of pages) {
       const found = await withPage(context, flags.width, base + route, async (page) => {
         await fontsReady(page);
-        await page.addStyleTag({ content: NO_ANCHORING_CSS });
-        await page.addStyleTag({ content: FREEZE_CSS });
+        await addStyle(page, NO_ANCHORING_CSS);
+        await addStyle(page, FREEZE_CSS);
         await revealed(page);
         await settle(page);
         await page.evaluate(HOLD_SMIL, { rest: true });
