@@ -47,14 +47,10 @@ export function commandsMarkdown(specs) {
   return lines.join("\n");
 }
 
-function section(spec) {
-  const lines = [];
-  {
-    if (!spec.subcommands) { lines.push(...leaf(spec, 3)); return lines; }
-    lines.push(`### ${code(spec.command)}`, "", sentence(spec.summary), "", "```bash", spec.usage, "```", "");
-    for (const sub of Object.values(spec.subcommands)) lines.push(...leaf(sub, 4));
-  }
-  return lines;
+/** A command's section: a leaf, or a family heading and its subcommands one level down (a subcommand may be a family of its own). */
+function section(spec, level = 3) {
+  if (!spec.subcommands) return leaf(spec, level);
+  return [`${"#".repeat(level)} ${code(spec.command)}`, "", sentence(spec.summary), "", "```bash", spec.usage, "```", "", ...Object.values(spec.subcommands).flatMap((sub) => section(sub, level + 1))];
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

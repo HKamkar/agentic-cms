@@ -24,11 +24,16 @@ const attrs = (tag: string): Record<string, string> => Object.fromEntries([...ta
 const walkSvg = (p: string): string[] => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).sort().flatMap((f) => walkSvg(path.join(p, f))) : p.endsWith(".svg") ? [p] : []);
 const relative = (root: string, file: string): string => path.relative(root, file).split(path.sep).join("/");
 
-/** Every scene as id → file: the lab's own by name, `extra` files and folders (walked for .svg) by their path under root without the extension. A missing extra path throws. */
+/** Where icon rounds live in the lab (`agentic-cms icons round`): a folder per round, kept by `lab clean`. */
+export const ROUNDS_DIR = `${LAB_DIR}/rounds`;
+
+/** Every scene as id → file: the lab's own by name, an icon round's as rounds/<round>/<name>, `extra` files and folders (walked for .svg) by their path under root without the extension. A missing extra path throws. */
 export function listScenes(root: string, { extra = [] }: { extra?: string[] } = {}): Map<string, string> {
   const scenes = new Map<string, string>();
   const lab = path.join(root, LAB_DIR);
   if (fs.existsSync(lab)) for (const f of fs.readdirSync(lab).sort()) if (f.endsWith(".svg")) scenes.set(f.slice(0, -4), path.join(lab, f));
+  const rounds = path.join(root, ROUNDS_DIR);
+  if (fs.existsSync(rounds)) for (const file of walkSvg(rounds)) scenes.set(relative(lab, file).replace(/\.svg$/, ""), file);
   for (const p of extra) {
     const full = path.resolve(root, p);
     if (!fs.existsSync(full)) throw new Error(`${p}: no such file or folder`);

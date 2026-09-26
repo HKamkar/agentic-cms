@@ -15,7 +15,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
-const { LAB_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
+const { LAB_DIR, ROUNDS_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
 const { startLabServer } = await import("./lib/lab-server.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.lab, process.argv.slice(2));
@@ -60,7 +60,14 @@ if (subcommand === "new") {
 } else if (subcommand === "clean") {
   const removed = [], kept = [];
   const lab = path.join(root, LAB_DIR);
-  if (fs.existsSync(lab)) { fs.rmSync(lab, { recursive: true, force: true }); removed.push(LAB_DIR); }
+  // An icon round is work that spans sessions (agentic-cms icons round): it stays, and goes with `icons round retire`.
+  const rounds = path.join(root, ROUNDS_DIR);
+  const roundNames = fs.existsSync(rounds) ? fs.readdirSync(rounds).filter((r) => fs.statSync(path.join(rounds, r)).isDirectory()).sort() : [];
+  if (fs.existsSync(lab) && !roundNames.length) { fs.rmSync(lab, { recursive: true, force: true }); removed.push(LAB_DIR); }
+  else if (fs.existsSync(lab)) {
+    for (const entry of fs.readdirSync(lab).filter((e) => e !== "rounds").sort()) { fs.rmSync(path.join(lab, entry), { recursive: true, force: true }); removed.push(`${LAB_DIR}/${entry}`); }
+    kept.push(...roundNames.map((r) => `${ROUNDS_DIR}/${r}`));
+  }
   const route = path.join(root, ROUTE_FILE);
   // Only the kit's route goes: a site's own page at that path is left and named.
   if (fs.existsSync(route)) {
@@ -72,5 +79,8 @@ if (subcommand === "new") {
   const stale = fs.existsSync(route) ? null : removeStaleTypes(root, ROUTE_DIR);
   if (stale) removed.push(stale);
   if (flags.json) console.log(JSON.stringify({ removed, kept }, null, 1));
-  else console.log(`${removed.length ? `${removed.join(" and ")} removed` : "nothing to remove"}${kept.length ? `; ${kept.join(", ")} kept (not the kit's route: it does not import agentic-cms/lab)` : ""}`);
+  else {
+    const why = (file) => (file.startsWith(ROUNDS_DIR) ? `${file} kept (an icon round: agentic-cms icons round retire ${path.basename(file)})` : `${file} kept (not the kit's route: it does not import agentic-cms/lab)`);
+    console.log(`${removed.length ? `${removed.join(" and ")} removed` : "nothing to remove"}${kept.length ? `; ${kept.map(why).join("; ")}` : ""}`);
+  }
 }

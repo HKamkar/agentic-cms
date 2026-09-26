@@ -8,7 +8,7 @@
 // family; a wrong command names the nearest one; a command that reads the
 // site refuses to run outside a site's root.
 import fs from "node:fs";
-import { suggest, usageText } from "../scripts/lib/args.mjs";
+import { specAt, subcommandPath, suggest, usageText } from "../scripts/lib/args.mjs";
 import { SPECS } from "../scripts/lib/specs.mjs";
 
 const [command, ...rest] = process.argv.slice(2);
@@ -43,8 +43,7 @@ if (!spec) {
   process.exit(2);
 }
 if (rest.includes("--help") || rest.includes("-h")) {
-  const sub = spec.subcommands && rest.find((a) => !a.startsWith("-"));
-  console.log(usageText(sub && spec.subcommands[sub] ? spec.subcommands[sub] : spec));
+  console.log(usageText(specAt(spec, subcommandPath(spec, rest.filter((a) => !a.startsWith("-"))))));
   process.exit(0);
 }
 // A command that loads the site's registry (site: true) runs in the site's root: src/kit.ts is its mark.

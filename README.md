@@ -301,7 +301,7 @@ pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked
-pnpm kit icons <add|remove|family|audit>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory
+pnpm kit icons <add|remove|family|audit|round>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory, a design round for its own
 pnpm kit lab <new|serve|route|render|clean>   # the design canvas: SVG scenes on the site's tokens, on a phone, and as a throwaway route on the site's theme; rendered to the files a page ships; removed after
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
 ```

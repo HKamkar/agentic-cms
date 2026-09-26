@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { LAB_DIR, animates, followsTheme, isSceneName, listScenes, namespaceIds, readTrustedSvg, sceneDuration, sceneMeta, svgMarkup, tagRoot } from "./scenes.ts";
+import { LAB_DIR, ROUNDS_DIR, animates, followsTheme, isSceneName, listScenes, namespaceIds, readTrustedSvg, sceneDuration, sceneMeta, svgMarkup, tagRoot } from "./scenes.ts";
 
 test("listScenes: the lab's files by name, extra files and folders by path without the extension, a missing path named", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "scenes-"));
@@ -78,4 +78,12 @@ test("readTrustedSvg: a file under the root, outside node_modules, without code 
   assert.throws(() => readTrustedSvg(root, "../elsewhere.svg"), /only an SVG the site's repository owns/);
   assert.throws(() => readTrustedSvg(root, "public/images/ok.png"), /not an \.svg file/);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("listScenes: an icon round's scenes by rounds/<round>/<name>, beside the lab's own", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "scenes-rounds-"));
+  try {
+    for (const file of [`${LAB_DIR}/spin.svg`, `${ROUNDS_DIR}/modules/graph-A.svg`, `${ROUNDS_DIR}/modules/round.yaml`]) { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), "<svg/>"); }
+    assert.deepEqual([...listScenes(root).keys()], ["spin", "rounds/modules/graph-A"]);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

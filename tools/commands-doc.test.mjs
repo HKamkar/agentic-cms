@@ -5,11 +5,15 @@ import { commandsMarkdown, END, START } from "./commands-doc.mjs";
 import { flagValue } from "../scripts/lib/args.mjs";
 import { SPECS } from "../scripts/lib/specs.mjs";
 
+
+/** The commands that run: a spec without subcommands, else its subcommands' leaves, however deep. */
+const leavesOf = (spec) => (spec.subcommands ? Object.values(spec.subcommands).flatMap(leavesOf) : [spec]);
+
 test("the generated block documents every command, subcommand, flag and exit code of the specs", () => {
   const md = commandsMarkdown(SPECS);
   for (const spec of Object.values(SPECS)) {
     assert.match(md, new RegExp(`^### \`${spec.command.replace(/[-]/g, "\\-")}\``, "m"));
-    const leaves = spec.subcommands ? Object.values(spec.subcommands) : [spec];
+    const leaves = leavesOf(spec);
     for (const leaf of leaves) {
       for (const [name, flag] of Object.entries(leaf.flags ?? {})) assert.ok(md.includes(`\`--${name}${flag.type === "boolean" ? "" : ` ${flagValue(flag)}`}\``), `${leaf.command} --${name}`);
       for (const example of leaf.examples ?? []) assert.ok(md.includes(example), `${leaf.command} example`);

@@ -326,8 +326,10 @@ pnpm kit lab clean          # removes .parity/lab and src/app/lab-demo; git stat
 ```
 
 What stays is what a render wrote under `public/images/` (and, for an
-inline icon, `src/config/icons/<name>.svg` with its `ICONS` entry). `lab
-clean` deletes everything under `.parity/lab`, so the picked artwork's
+inline icon, `src/config/icons/<name>.svg` with its `ICONS` entry), and an
+icon round in progress (`.parity/lab/rounds/<round>/`, named in the output;
+`icons round retire` removes it — [icons.md](icons.md) § A round). `lab
+clean` deletes everything else under `.parity/lab`, so the picked artwork's
 editable source goes into the tree before it: a raster's render already
 copies its scene beside it; an `.svg` render resolves the tokens, so the
 scene goes beside it as `<name>.source.svg` when its `var()`s matter; a

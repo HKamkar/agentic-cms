@@ -3,9 +3,10 @@
 // (src/config/icons.json, the ids; src/config/icons.ts, generated from the
 // sets the site installs — Lucide for line icons, Simple Icons for other
 // companies' marks — with each set's licence in the header), `family`
-// renders a family of marks from primitives in a spec, and `audit` lists
+// renders a family of marks from primitives in a spec, `audit` lists
 // every icon on the built pages beside the copy it sits with, as JSON and
-// as a sheet. docs/icons.md is the guide.
+// as a sheet, and `round` runs a design round for a set of the site's own
+// icons in the lab (lib/icons-round.mjs). docs/icons.md is the guide.
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +15,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { AUDIT_PAGE, auditToSheet, byFile } from "./lib/icons-audit.mjs";
 import { renderFamily } from "./lib/icons-family.mjs";
-import { readIconSource, renderIconMap } from "./lib/icons-source.mjs";
+import { updateIcons } from "./lib/icons-source.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
@@ -26,26 +27,12 @@ const root = process.cwd();
 const fail = (message, code = 2) => { console.error(`icons ${subcommand}: ${message}`); process.exit(code); };
 
 if (subcommand === "add" || subcommand === "remove") {
-  const manifestFile = path.resolve(root, flags.manifest);
-  const mapFile = manifestFile.replace(/\.json$/, ".ts");
-  const current = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, "utf8")) : [];
-  if (!Array.isArray(current)) fail(`${flags.manifest} is not a list of ids`);
-  const ids = new Set(current);
-  const changed = [];
-  for (const id of positionals) {
-    if (subcommand === "add") { if (!ids.has(id)) { ids.add(id); changed.push(id); } }
-    else if (ids.delete(id)) changed.push(id);
-  }
-  const sorted = [...ids].sort();
-  let entries;
-  const iconsDir = path.join(path.relative(root, path.dirname(manifestFile)), "icons");
-  try { entries = sorted.map((id) => readIconSource(id, root, { iconsDir })); } catch (error) { fail(error.message); }
-  fs.mkdirSync(path.dirname(manifestFile), { recursive: true });
-  fs.writeFileSync(manifestFile, JSON.stringify(sorted, null, 1) + "\n");
-  try { fs.writeFileSync(mapFile, renderIconMap(entries, { site: root })); } catch (error) { fail(error.message); }
-  const summary = { manifest: relative(root, manifestFile), map: relative(root, mapFile), ids: sorted, [subcommand === "add" ? "added" : "removed"]: changed };
+  let result;
+  try { result = updateIcons(root, positionals, { manifest: flags.manifest, remove: subcommand === "remove" }); } catch (error) { fail(error.message); }
+  const { changed, ...rest } = result;
+  const summary = { ...rest, [subcommand === "add" ? "added" : "removed"]: changed };
   if (flags.json) console.log(JSON.stringify(summary, null, 1));
-  else console.log(`icons ${subcommand}: ${changed.length ? changed.join(", ") : "nothing to change"}; ${sorted.length} icon(s) in ${summary.manifest}, ${summary.map} regenerated`);
+  else console.log(`icons ${subcommand}: ${changed.length ? changed.join(", ") : "nothing to change"}; ${summary.ids.length} icon(s) in ${summary.manifest}, ${summary.map} regenerated`);
 } else if (subcommand === "family") {
   const specFile = path.resolve(root, positionals[0]);
   if (!fs.existsSync(specFile)) fail(`${positionals[0]}: no such file`);
@@ -69,6 +56,21 @@ if (subcommand === "add" || subcommand === "remove") {
   }
   if (flags.json) console.log(JSON.stringify({ marks: files.size, written: drift }, null, 1));
   else console.log(`icons family: ${files.size} marks, ${drift.length} written`);
+} else if (subcommand.startsWith("round ")) {
+  // lib/icons-round.mjs reads agentic-cms/lab: imported here, after the loader
+  const { newRound, publishRound, retireRound } = await import("./lib/icons-round.mjs");
+  const action = subcommand.slice("round ".length);
+  const round = positionals[0];
+  let report;
+  try {
+    if (action === "new") report = newRound(root, { round, roles: (flags.roles ?? "").split(",").map((r) => r.trim()).filter(Boolean), candidates: flags.candidates, kind: flags.kind, sizes: flags.sizes.split(",").map(Number) });
+    else if (action === "publish") report = await publishRound(root, round, flags.pick, { to: flags.to, scheme: flags.scheme });
+    else report = retireRound(root, round, { dryRun: flags["dry-run"], force: flags.force });
+  } catch (error) { fail(error.message); }
+  if (flags.json) console.log(JSON.stringify(report, null, 1));
+  else if (action === "new") console.log(`icons round new: ${report.scenes.length} scenes in ${report.dir} — draw each into a candidate; the owner looks with pnpm kit lab serve --sizes ${flags.sizes} or pnpm kit sheet ${report.sheet} and picks a letter per role; then icons round publish ${round} --pick role=letter,…`);
+  else if (action === "publish") console.log(report.published.map((p) => `icons round publish: ${p.role}=${p.letter} → ${p.files.join(", ")}`).join("\n"));
+  else console.log(`${report.dryRun ? "would remove" : "removed"}: ${report.removed.join(", ")}${report.kept.length ? `; kept: ${report.kept.join(", ")}` : ""}`);
 } else {
   // audit
   const server = flags.url ? null : await serveStatic({ root });

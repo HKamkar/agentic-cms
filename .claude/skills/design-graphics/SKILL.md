@@ -144,7 +144,8 @@ already stated. For anything that moves, `references/svg-motion.md`.
    design change with its own commit; the wireframe's own pages place none
    (`STANDARD.md` §7).
 7. **Keep the source, prove, close.** `lab clean` deletes `.parity/lab`
-   and whatever else was left there, so the picked artwork's editable
+   and whatever else was left there — all but an icon round in progress,
+   which `icons round retire` removes — so the picked artwork's editable
    source goes into the tree first: `lab render` copies a raster's scene
    beside it; an `.svg` render resolves the tokens, so the scene goes
    beside it as `<name>.source.svg` when its `var()`s or `currentColor`
