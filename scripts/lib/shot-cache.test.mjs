@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { KEEP, SHOTS, digester, filesOf, harnessDigest, lookup, recordDeps, reuse, settingsKey, store } from "./shot-cache.mjs";
+import { CACHE_DIR, KEEP, digester, filesOf, harnessDigest, lookup, recordDeps, reuse, settingsKey, store } from "./shot-cache.mjs";
 
 // A build as the harness serves it: a served path maps to a file under the root.
 function build(files) {
@@ -78,10 +78,10 @@ test(`at most ${KEEP} entries per page-width, the least recently used going firs
   for (let i = 0; i < KEEP + 2; i++) {
     fs.writeFileSync(path.join(site, "app.js"), `js ${i}`);
     store(site, key, "home@390", recordDeps(["/app.js"], digester(resolverOf(site), null), null), capture, ["home@390.png"]);
-    const entries = fs.readdirSync(path.join(site, SHOTS, key, "home@390"));
-    for (const [n, e] of entries.entries()) fs.utimesSync(path.join(site, SHOTS, key, "home@390", e, "deps.json"), new Date(Date.now() - 1000 * (entries.length - n)), new Date(Date.now() - 1000 * (entries.length - n)));
+    const entries = fs.readdirSync(path.join(site, CACHE_DIR, key, "home@390"));
+    for (const [n, e] of entries.entries()) fs.utimesSync(path.join(site, CACHE_DIR, key, "home@390", e, "deps.json"), new Date(Date.now() - 1000 * (entries.length - n)), new Date(Date.now() - 1000 * (entries.length - n)));
   }
-  assert.equal(fs.readdirSync(path.join(site, SHOTS, key, "home@390")).length, KEEP);
+  assert.equal(fs.readdirSync(path.join(site, CACHE_DIR, key, "home@390")).length, KEEP);
   const hit = lookup(site, key, "home@390", digester(resolverOf(site), null), null);
   assert.ok(hit, "the latest state is kept");
   fs.rmSync(path.join(hit.dir, "home@390.png"));

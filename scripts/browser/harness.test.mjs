@@ -90,7 +90,7 @@ test("a capture photographs its snapshot of the build: an edit to public/ after 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("an unchanged page-width is copied from .parity/shots, a changed one taken again, and --fresh takes them all", { skip }, () => {
+test("an unchanged page-width is copied from .parity/shot-cache, a changed one taken again, and --fresh takes them all", { skip }, () => {
   const root = fixtureSite();
   const capture = (label, ...more) => { const r = run(root, ["capture", label, "--widths", "800", "--json", ...more]); assert.equal(r.status, 0, r.stderr); return { summary: JSON.parse(r.stdout), stdout: r.stdout, stderr: r.stderr }; };
   try {
@@ -98,7 +98,7 @@ test("an unchanged page-width is copied from .parity/shots, a changed one taken 
     const b = capture("b");
     assert.deepEqual(b.summary.reused, { shots: 2, of: 2 });
     assert.equal(b.summary.timings.taken, 0, "nothing was taken, so nothing was timed");
-    assert.match(b.stderr, /b: 2 screenshots in \.parity\/visual\/b \(2 of 2 page-widths reused from \.parity\/shots/);
+    assert.match(b.stderr, /b: 2 screenshots in \.parity\/visual\/b \(2 of 2 page-widths reused from \.parity\/shot-cache/);
     assert.deepEqual(files(root, "b").filter((f) => f !== "capture.json"), files(root, "a").filter((f) => f !== "capture.json"));
     assert.equal(run(root, ["compare", "a", "b"]).status, 0);
     const mark = path.join(root, "public/images/mark.svg");
@@ -109,7 +109,8 @@ test("an unchanged page-width is copied from .parity/shots, a changed one taken 
     const report = JSON.parse(run(root, ["compare", "a", "c", "--json"]).stdout);
     assert.deepEqual(report.files.filter((f) => f.status !== "ok").map((f) => f.name), ["home@800.png"]);
     assert.deepEqual(capture("d", "--fresh").summary.reused, { shots: 0, of: 2 });
-    assert.ok(fs.readdirSync(path.join(root, ".parity/shots")).length > 0);
+    assert.ok(fs.readdirSync(path.join(root, ".parity/shot-cache")).length > 0);
+    assert.ok(!fs.existsSync(path.join(root, ".parity/shots")), "the cache keeps out of the folder `agentic-cms shot` writes to");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

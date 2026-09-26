@@ -6,6 +6,14 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- A proof's rules follow the faster harness: the kit's and the site
+  template's `AGENTS.md`, the `design-proof` skill, `docs/visual-parity.md`
+  and the README say to capture the full set rather than a `--pages` subset
+  to save time (the cache skips what did not change; `--pages` is for
+  looking at one page), and that only a first capture of a large site needs
+  running in the background. The shot cache has a folder of its own,
+  `.parity/shot-cache/`, apart from `.parity/shots/`, where `agentic-cms
+  shot` writes.
 - `visual-parity capture --sample <n>`: a static capture of the first n
   pages of each template (a dynamic route such as `/blog-post/[slug]`, as
   the build's prerender manifest names it; never a catch-all), in route
@@ -21,7 +29,7 @@ changes what a capture writes says **recapture baselines**.
   to 85 s (50/50), with a 4-core machine.
 - Unchanged shots are reused. After every page-width (or state) a capture
   records the build files the page requested, with their digests, under
-  `.parity/shots/`; a later capture of any build — a `--ref` baseline, the
+  `.parity/shot-cache/`; a later capture of any build — a `--ref` baseline, the
   working tree — copies those shots when every one of the files has the same
   bytes (the build id masked), and says how many it reused (`capture.json`:
   `reused`). Only the build is an input; the harness's own sources, the
