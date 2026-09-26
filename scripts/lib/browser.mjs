@@ -203,6 +203,37 @@ export const imagesReady = (page) => inPage(page, "images", 8000, () => { for (c
 // load timing; hold them at their first frame. Finite animations keep playing.
 export const PAUSE_LOOPS = () => { for (const a of document.getAnimations()) { if (a.effect?.getTiming().iterations === Infinity && a.playState !== "paused") { a.pause(); a.currentTime = 0; } } };
 
+// SMIL is not in document.getAnimations(): neither FREEZE_CSS nor PAUSE_LOOPS
+// reaches an inline <svg>'s <animate>, whose clock would be photographed at a
+// time that depends on load timing. Each outermost inline svg that animates
+// is paused and set here: at its data-rest (seconds; the frame a
+// reduced-motion reader sees) when `rest` and it declares one, else `at`
+// seconds into its cycle (data-duration). An animated SVG in an <img> is its
+// own document, out of reach — it is photographed as it runs. (In-page
+// functions travel as source, so each spells its selector out.)
+export const HOLD_SMIL = ({ at = 0, rest = false } = {}) => {
+  let held = 0;
+  for (const svg of document.querySelectorAll("svg")) {
+    if (svg.parentElement?.closest("svg") || !svg.querySelector("animate, animateTransform, animateMotion, set")) continue;
+    const duration = Number(svg.dataset.duration) || 0;
+    svg.pauseAnimations();
+    svg.setCurrentTime(rest && svg.dataset.rest !== undefined ? Number(svg.dataset.rest) : duration ? at % duration : at);
+    held++;
+  }
+  return held;
+};
+
+// The inline SMIL loops of a page, for the animation inventory: one entry per
+// outermost animated svg with its cycle (data-duration, else its longest
+// animation), its rest and its box on the page, so a loop removed or retimed
+// is a difference even when the frames agree.
+export const SMIL_INVENTORY = () => [...document.querySelectorAll("svg")].filter((svg) => !svg.parentElement?.closest("svg") && svg.querySelector("animate, animateTransform, animateMotion, set")).map((svg) => {
+  let duration = Number(svg.dataset.duration) || 0;
+  if (!duration) for (const a of svg.querySelectorAll("animate, animateTransform, animateMotion, set")) { try { const d = a.getSimpleDuration(); if (Number.isFinite(d)) duration = Math.max(duration, d); } catch { /* an indefinite duration */ } }
+  const r = svg.getBoundingClientRect();
+  return { type: "smil", duration, rest: svg.dataset.rest === undefined ? null : Number(svg.dataset.rest), target: { tag: "svg", top: Math.round(r.top + scrollY), left: Math.round(r.left + scrollX), w: Math.round(r.width), h: Math.round(r.height) } };
+});
+
 // One page per shot, opened, prepared, photographed and closed here so that a
 // stalled page can simply be reloaded (`onceMore`) — the closing is in the
 // finally so a failed attempt does not leave its page behind.
@@ -223,7 +254,7 @@ export function resolveTarget(target, { base }) {
   return base.replace(/\/$/, "") + target;
 }
 
-/** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through), or the motion one (images, loops held). */
+/** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through, SMIL at its rest), or the motion one (images, loops held). */
 export async function prepare(page, { motion = false } = {}) {
   await fontsReady(page);
   await page.addStyleTag({ content: NO_ANCHORING_CSS });
@@ -236,6 +267,7 @@ export async function prepare(page, { motion = false } = {}) {
   await page.addStyleTag({ content: FREEZE_CSS });
   await revealed(page);
   await settle(page);
+  await page.evaluate(HOLD_SMIL, { rest: true });
 }
 
 /** The elements a command works on (a command takes .nth(index) or all): the matches of a selector, the sections (article, [data-section]) holding the headings that match a regex, or — with both — the selector's matches inside that section. */

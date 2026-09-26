@@ -61,8 +61,11 @@ same pages.
 767 and 390 (`home@767--menu.png`, viewport only). The rendering is made
 deterministic: `prefers-reduced-motion` (the reveal library snaps to its
 end state), every CSS animation and transition disabled, infinite loops
-held at their first frame, scroll anchoring off, every image loaded before
-the shot. Scroll-linked effects are captured at the top of the page after
+held at their first frame, every inline SVG's SMIL clock paused at its
+`data-rest` (seconds; else 0), scroll anchoring off, every image loaded
+before the shot. SMIL is not a CSS or Web Animation, so nothing else stops
+it; an animated SVG shown through an `<img>` is its own document and out of
+reach — it is photographed as it runs. Scroll-linked effects are captured at the top of the page after
 one scroll-through, so the shot shows every section revealed.
 
 **`--motion`** plays the animations for real: with every image loaded up
@@ -78,12 +81,17 @@ compared like the animation inventory. The settled frame is compared with
 `--threshold`; the 150 and 500 ms frames catch an element mid-flight and
 jitter by a few frames between runs, so they are compared with the looser
 `--threshold-mid` (20 %) — a missing or wrong animation is far more than
-that. Alongside the frames, every CSS transition, CSS animation and Web
-Animation that starts during the scroll-through is recorded with its timing
-and its target's position (`<page>@<width>.animations.json`) and compared
-exactly, which catches a retimed or missing animation even when the frames
-happen to agree. Motion mode covers every page of the build and its first
-post.
+that. An inline SVG's SMIL clock, which the browser runs apart from every
+other animation, is paused and set before each frame to that frame's own
+time since the step (0.15 s, 0.5 s, modulo its `data-duration`), and for the
+settled frame to its `data-rest` — so a loop is photographed at the same
+moment in every run, never at whenever the shot happened. Alongside the
+frames, every CSS transition, CSS animation and Web Animation that starts
+during the scroll-through is recorded with its timing and its target's
+position (`<page>@<width>.animations.json`), and so is every inline SMIL
+loop (`type: "smil"`, its cycle, its rest, its box), and compared exactly,
+which catches a retimed or missing animation even when the frames happen to
+agree. Motion mode covers every page of the build and its first post.
 
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a

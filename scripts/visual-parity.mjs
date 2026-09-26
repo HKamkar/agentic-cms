@@ -22,7 +22,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, NO_ANCHORING_CSS, PAUSE_LOOPS, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -69,7 +69,9 @@ const motionPages = (root = ROOT) => {
 // geometry, which transforms do not move, since the element is already
 // mid-flight when the event arrives). Compared as data, so it is immune to
 // frame jitter: a missing, extra or retimed animation is a diff even when the
-// screenshots happen to agree.
+// screenshots happen to agree. The inline SMIL loops, which the browser does
+// not report as animations, join them from SMIL_INVENTORY.
+const byPlace = (a, b) => (a.target?.top ?? 0) - (b.target?.top ?? 0) || JSON.stringify(a).localeCompare(JSON.stringify(b));
 async function recordAnimations(page) {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("DOM.enable");
@@ -92,8 +94,7 @@ async function recordAnimations(page) {
   return async () => {
     await page.waitForTimeout(200);
     await cdp.detach().catch(() => {});
-    const key = (r) => JSON.stringify(r);
-    return records.filter((r) => r.iterations !== Infinity).sort((a, b) => (a.target?.top ?? 0) - (b.target?.top ?? 0) || key(a).localeCompare(key(b)));
+    return records.filter((r) => r.iterations !== Infinity);
   };
 }
 
@@ -116,12 +117,14 @@ async function captureMotion(page, dir, name) {
     for (const [ms, tag] of [...MOTION_FRAMES_MS.map((ms) => [ms, String(ms)]), [settled, "settled"]]) {
       await page.waitForTimeout(Math.max(0, ms - (Date.now() - t0)));
       await page.evaluate(PAUSE_LOOPS);
+      // a SMIL clock is set to the frame's own time since the step (the settled frame to its data-rest), never to when the shot happened to run
+      await page.evaluate(HOLD_SMIL, { at: ms / 1000, rest: tag === "settled" });
       await page.screenshot({ path: path.join(dir, `${name}--s${String(i).padStart(2, "0")}-${tag}.png`), fullPage: false });
       count++;
     }
     steps.push({ step: i, y, waited: settled, declared });
   }
-  const animations = await finishRecording();
+  const animations = [...await finishRecording(), ...await page.evaluate(SMIL_INVENTORY)].sort(byPlace);
   fs.writeFileSync(path.join(dir, `${name}.animations.json`), JSON.stringify(animations, null, 1));
   fs.writeFileSync(path.join(dir, `${name}.settle.json`), JSON.stringify(steps, null, 1));
   return count;
@@ -165,6 +168,7 @@ async function captureStates(context, baseUrl, dir, root) {
       await fontsReady(page);
       await revealed(page);
       await settle(page);
+      await page.evaluate(HOLD_SMIL, { rest: true });
       const target = await state.act(page);
       await page.waitForTimeout(800);
       const box = await target.boundingBox();
@@ -218,6 +222,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
         await page.addStyleTag({ content: FREEZE_CSS });
         await revealed(page);
         await settle(page);
+        await page.evaluate(HOLD_SMIL, { rest: true });
         await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
         if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
         await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();

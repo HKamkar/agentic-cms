@@ -85,7 +85,10 @@ for every scene.
   where they start, and the hold as a flat segment of `keyTimes` inside the
   cycle — a `begin` offset drifts over repeats. `keySplines` with
   `calcMode="spline"` count one fewer than `keyTimes`. `data-duration` on
-  the root is the cycle the lab and `lab render` read.
+  the root is the cycle the lab and `lab render` read; `data-rest` (in
+  seconds) is the frame a reduced-motion reader sees, and where the
+  screenshot harness holds an inline SMIL clock in a static capture and a
+  motion capture's settled frame — pick a frame where the picture is whole.
 - The boundary is the most common flaw: the last frame of a cycle and the
   first of the next are the same picture, with no jump, pop or blink of a
   part that was hidden a frame early.

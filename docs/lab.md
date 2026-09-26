@@ -23,8 +23,11 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   component's contract (the 24 grid, `stroke="currentColor"`, width 1.6,
   round caps — what `icons add file:<name>` will read), `mark` the 64 grid
   of the icon families, `loop` a CSS `@keyframes` on `transform` with the
-  `prefers-reduced-motion` rule, one SMIL `<animate>`, and `data-duration`
-  (one cycle, in seconds). The templates draw the wireframe's crossed box in
+  `prefers-reduced-motion` rule, one SMIL `<animate>`, `data-rest` (the
+  time, in seconds, of the frame a reduced-motion reader and a static
+  capture see — the screenshot harness holds an inline SMIL clock there)
+  and `data-duration` (one cycle, in seconds). The templates draw the
+  wireframe's crossed box in
   `currentColor` and carry no colour, font or easing of any site.
 - **`lab serve`** shows every scene on the site's own tokens — read from the
   `@theme` block of `src/app/globals.css`, so no build is needed and a

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
-import { fixtureSite } from "../fixtures/site.mjs";
+import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -83,6 +83,30 @@ test("a capture photographs its snapshot of the build: an edit to public/ after 
     assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/b/meta.json"), "utf8")).tree, null, "the fixture is not a git checkout");
     assert.equal(run(root, ["capture", "c", ...args]).status, 0);
     assert.equal(run(root, ["compare", "a", "c"]).status, 1, "a capture after the edit sees it");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("an inline SMIL loop is held: two static captures agree, two motion captures agree frame for frame, and the inventory lists it", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    addPage(root, "/loop", LOOP_PAGE);
+    const args = ["--widths", "800", "--pages", "/loop"];
+    for (const label of ["s1", "s2"]) assert.equal(run(root, ["capture", label, ...args]).status, 0);
+    assert.equal(run(root, ["compare", "s1", "s2"]).status, 0, "static: the loop at its data-rest in both");
+    for (const label of ["m1", "m2"]) assert.equal(run(root, ["capture", label, "--motion", ...args]).status, 0);
+    const r = run(root, ["compare", "m1", "m2", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    const report = JSON.parse(r.stdout);
+    for (const frame of ["loop@800--s00-150.png", "loop@800--s00-500.png", "loop@800--s00-settled.png"]) {
+      const entry = report.files.find((f) => f.name === frame);
+      assert.equal(entry?.changedPixels, 0, `${frame}: the SMIL clock set to the frame's own time`);
+    }
+    const inventory = JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/m1/loop@800.animations.json"), "utf8"));
+    const smil = inventory.filter((a) => a.type === "smil");
+    assert.equal(smil.length, 1);
+    assert.equal(smil[0].duration, 2);
+    assert.equal(smil[0].rest, 1.2);
+    assert.deepEqual([smil[0].target.w, smil[0].target.h], [200, 100]);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
