@@ -127,6 +127,25 @@ changes what a capture writes says **recapture baselines**.
   template's `AGENTS.md` gotchas and the `design-options` skill, where an
   agent restarting the server during a round reads it; it was in
   `docs/design.md` alone.
+- `icons round new | publish | retire`: a design round for a set of the
+  site's own icons, kept in the lab across sessions
+  (`.parity/lab/rounds/<round>/`). `new` writes a scene per role and letter
+  from the lab's `icon` or `mark` template, the round's record
+  (`round.yaml`) and a sheet spec — a row per role, each letter at the
+  round's sizes on paper, white and black — for `agentic-cms sheet`; the
+  lab lists the round's scenes (`lab serve`, the lab route), and `lab
+  clean` now keeps a round in progress and names it. `publish --pick
+  role=letter,…` renders each pick where a page takes it — an icon as
+  `src/config/icons/<role>.svg` with the icon map regenerated, a mark as
+  `public/images/icons/<role>.svg` resolved for one scheme with its source
+  beside it — and records it. `retire` removes the round and keeps
+  everything it published; a round with nothing published needs
+  `--force`, and `--dry-run` shows the lists. A consumer site built each
+  round by hand: a generator, gallery rows, publish and retire steps, and
+  preview scripts. The command line's contract takes a subcommand with
+  subcommands of its own for it (parse, `--help`, `docs/commands.md`); the
+  icon manifest update is a function (`updateIcons`) `icons add` and
+  `publish` share.
 
 ## [0.5.1] — 2026-09-23
 

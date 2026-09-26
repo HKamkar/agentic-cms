@@ -127,8 +127,10 @@ against `fixtures/` by `pnpm test:browser`.
   `simple-icons` (installed by the site; the kit ships no icon data);
   `icons family <spec>` renders a family of marks from primitives;
   `icons audit` inventories every icon on the built pages beside its copy,
-  as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
-  `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
+  as JSON and a sheet; `icons round new|publish|retire` runs a design round
+  for a set of the site's own icons in the lab (`docs/icons.md`;
+  `lib/icons-source.mjs`, `lib/icons-family.mjs`, `lib/icons-audit.mjs`,
+  `lib/icons-round.mjs`).
 - `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
   [--candidates 2]` scaffolds the design round's throwaway route,
   `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the

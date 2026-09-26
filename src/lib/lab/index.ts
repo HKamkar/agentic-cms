@@ -8,4 +8,4 @@ export { LabScenes, type LabScenesProps } from "./LabScenes.ts";
 export { LabStudy, type Ground, type LabStudyProps } from "./LabStudy.ts";
 export { LabTimeline, type LabTimelineProps } from "./LabTimeline.ts";
 export { TIMELINE_CSS, mountTimeline, timelineControlsHtml, timelineScript, type Timeline, type TimelineOptions } from "./timeline.ts";
-export { LAB_COMMENT, LAB_DIR, animates, followsTheme, isSceneName, listScenes, namespaceIds, readTrustedSvg, sceneDuration, sceneMeta, svgMarkup, tagRoot, type SceneMeta } from "./scenes.ts";
+export { LAB_COMMENT, LAB_DIR, ROUNDS_DIR, animates, followsTheme, isSceneName, listScenes, namespaceIds, readTrustedSvg, sceneDuration, sceneMeta, svgMarkup, tagRoot, type SceneMeta } from "./scenes.ts";

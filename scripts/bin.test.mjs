@@ -60,3 +60,15 @@ test("assemble runs in any folder and, without a standalone build, says how to m
     assert.match(run(["assemble", "--chek"], dir).stderr, /did you mean --check\?/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("a family inside a family: icons round lists its three actions, each has its help, a wrong one is named", () => {
+  const family = run(["icons", "round", "--help"]);
+  assert.equal(family.status, 0);
+  assert.match(family.stdout, /^agentic-cms icons round <new \| publish \| retire> …\n/);
+  assert.match(family.stdout, /\n {2}new {22}writes \.parity\/lab\/rounds\/<round>\//);
+  assert.match(run(["icons", "round", "publish", "--help"]).stdout, /^agentic-cms icons round publish <round> --pick <role=letter,…>/);
+  assert.match(run(["icons", "--help"]).stdout, /\n {2}round {20}a design round for a set of icons/);
+  const wrong = run(["icons", "round", "publsh", "x"]);
+  assert.equal(wrong.status, 2);
+  assert.match(wrong.stderr, /icons: icons round has no subcommand publsh — did you mean publish\? \(new, publish, retire\)/);
+});

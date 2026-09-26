@@ -3,9 +3,10 @@
 // (src/config/icons.json, the ids; src/config/icons.ts, generated from the
 // sets the site installs — Lucide for line icons, Simple Icons for other
 // companies' marks — with each set's licence in the header), `family`
-// renders a family of marks from primitives in a spec, and `audit` lists
+// renders a family of marks from primitives in a spec, `audit` lists
 // every icon on the built pages beside the copy it sits with, as JSON and
-// as a sheet. docs/icons.md is the guide.
+// as a sheet, and `round` runs a design round for a set of the site's own
+// icons in the lab (lib/icons-round.mjs). docs/icons.md is the guide.
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -55,6 +56,21 @@ if (subcommand === "add" || subcommand === "remove") {
   }
   if (flags.json) console.log(JSON.stringify({ marks: files.size, written: drift }, null, 1));
   else console.log(`icons family: ${files.size} marks, ${drift.length} written`);
+} else if (subcommand.startsWith("round ")) {
+  // lib/icons-round.mjs reads agentic-cms/lab: imported here, after the loader
+  const { newRound, publishRound, retireRound } = await import("./lib/icons-round.mjs");
+  const action = subcommand.slice("round ".length);
+  const round = positionals[0];
+  let report;
+  try {
+    if (action === "new") report = newRound(root, { round, roles: (flags.roles ?? "").split(",").map((r) => r.trim()).filter(Boolean), candidates: flags.candidates, kind: flags.kind, sizes: flags.sizes.split(",").map(Number) });
+    else if (action === "publish") report = await publishRound(root, round, flags.pick, { to: flags.to, scheme: flags.scheme });
+    else report = retireRound(root, round, { dryRun: flags["dry-run"], force: flags.force });
+  } catch (error) { fail(error.message); }
+  if (flags.json) console.log(JSON.stringify(report, null, 1));
+  else if (action === "new") console.log(`icons round new: ${report.scenes.length} scenes in ${report.dir} — draw each into a candidate; the owner looks with pnpm kit lab serve --sizes ${flags.sizes} or pnpm kit sheet ${report.sheet} and picks a letter per role; then icons round publish ${round} --pick role=letter,…`);
+  else if (action === "publish") console.log(report.published.map((p) => `icons round publish: ${p.role}=${p.letter} → ${p.files.join(", ")}`).join("\n"));
+  else console.log(`${report.dryRun ? "would remove" : "removed"}: ${report.removed.join(", ")}${report.kept.length ? `; kept: ${report.kept.join(", ")}` : ""}`);
 } else {
   // audit
   const server = flags.url ? null : await serveStatic({ root });

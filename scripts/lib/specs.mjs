@@ -221,8 +221,8 @@ export const SPECS = {
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
   },
   icons: {
-    command: "icons", script: "icons", group: "icons", summary: "the site's icons: a map of Lucide and Simple Icons paths kept from a manifest, a family of marks rendered from primitives, an audit of every icon on the built pages",
-    usage: "agentic-cms icons <add | remove | family | audit> …",
+    command: "icons", script: "icons", group: "icons", summary: "the site's icons: a map of Lucide and Simple Icons paths kept from a manifest, a family of marks rendered from primitives, an audit of every icon on the built pages, and a design round for a set of the site's own",
+    usage: "agentic-cms icons <add | remove | family | audit | round> …",
     subcommands: {
       add: {
         command: "icons add", summary: "adds ids (lucide:<name>, si:<slug>, file:<name>) to src/config/icons.json and regenerates src/config/icons.ts from the sets the site installs and its own drawings under src/config/icons/; an id already there is a no-op, so this also regenerates",
@@ -268,6 +268,54 @@ export const SPECS = {
         examples: ["agentic-cms icons audit                    # after next build; .parity/icons/audit.png and .json", "agentic-cms icons audit --pages /,/about --json"],
         exit: { 0: "written", 2: "no build, or no browser" },
         json: "{ pages, count, icons: [{ page, kind, src, width, height, renderedWidth, renderedHeight, color, alt, section, heading, copy, selector }], files: { src: { uses, pages } }, sheet }",
+      },
+      round: {
+        command: "icons round", summary: "a design round for a set of icons, kept in the lab across sessions: scenes per role and letter to draw, a sheet of every candidate at its sizes on its grounds, the picks published where a page takes them, the round retired",
+        usage: "agentic-cms icons round <new | publish | retire> …",
+        subcommands: {
+          new: {
+            command: "icons round new", summary: "writes .parity/lab/rounds/<round>/: a scene per role and letter from the lab's icon or mark template to draw into a candidate, the round's record (round.yaml) and a sheet spec (sheet.yaml: a row per role, a cell per letter × size × ground on paper, white and black) for `agentic-cms sheet`; `lab serve` shows the scenes too, and `lab clean` leaves the round",
+            usage: "agentic-cms icons round new <round> --roles <role,role> [--candidates 3] [--kind icon|mark] [--sizes 24,36,96] [--json]",
+            positionals: [{ name: "round", required: true, help: "the round's name: lowercase letters, digits and hyphens" }],
+            flags: {
+              roles: { type: "string", value: "<role,role>", help: "the icons the round draws, one per role; a role becomes the published file's name" },
+              candidates: { type: "number", default: 3, help: "letters per role, A onward (1 to 8)" },
+              kind: { type: "string", default: "icon", choices: ["icon", "mark"], help: "icon: the Icon component's 24 grid in currentColor, published as inline Icon data; mark: the 64 grid, published as a file under public/" },
+              sizes: { type: "string", default: "24,36,96", value: "px,px", help: "the sizes the sheet shows each candidate at: the sizes it ships at" },
+              json: { type: "boolean", help: "print { round, dir, kind, scenes, sheet }" },
+            },
+            examples: ["agentic-cms icons round new modules --roles retrieval,graph,query", "agentic-cms icons round new plans --roles private,cloud --kind mark --sizes 48,96 --candidates 4"],
+            exit: { 0: "written", 2: "a bad name, role, count, kind or size; a round that exists; or usage" },
+            json: "{ round, dir, kind, scenes, sheet }",
+          },
+          publish: {
+            command: "icons round publish", summary: "renders each pick where a page takes it — an icon as src/config/icons/<role>.svg and the icon map regenerated (icons add file:<role>), a mark as <to>/<role>.svg with its source beside it (<role>.source.svg) — and records the picks and the files in the round",
+            usage: "agentic-cms icons round publish <round> --pick <role=letter,…> [--to public/images/icons] [--scheme light|dark] [--json]",
+            positionals: [{ name: "round", required: true, help: "the round" }],
+            flags: {
+              pick: { type: "string", value: "<role=letter,…>", help: "the owner's pick per role: retrieval=B,graph=A" },
+              to: { type: "string", default: "public/images/icons", value: "<dir>", help: "where a mark's file and its source go" },
+              scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "the scheme a mark's file resolves the tokens for" },
+              json: { type: "boolean", help: "print { round, published: [{ role, letter, files }] }" },
+            },
+            examples: ["agentic-cms icons round publish modules --pick retrieval=B,graph=A,query=C"],
+            exit: { 0: "published", 2: "no such round, a role or letter it does not have, an icon that is not flat shapes, or usage" },
+            json: "{ round, published: [{ role, letter, files }] }",
+          },
+          retire: {
+            command: "icons round retire", summary: "removes the round's folder — its scenes, record and sheet — never what it published; a round with nothing published is kept unless --force",
+            usage: "agentic-cms icons round retire <round> [--dry-run] [--force] [--json]",
+            positionals: [{ name: "round", required: true, help: "the round" }],
+            flags: {
+              "dry-run": dryRun,
+              force: { type: "boolean", help: "retire a round with nothing published" },
+              json: { type: "boolean", help: "print { removed, kept, dryRun? }" },
+            },
+            examples: ["agentic-cms icons round retire modules", "agentic-cms icons round retire modules --dry-run"],
+            exit: { 0: "removed (or would be, with --dry-run)", 2: "no such round, nothing published without --force, or usage" },
+            json: "{ removed, kept, dryRun? }",
+          },
+        },
       },
     },
   },
@@ -332,7 +380,7 @@ export const SPECS = {
         json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }",
       },
       clean: {
-        command: "lab clean", summary: "removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
+        command: "lab clean", summary: "removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays", summary: "removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
         usage: "agentic-cms lab clean [--json]",
         flags: { json: { type: "boolean", help: "print { removed: [paths], kept: [paths] }" } },
         examples: ["agentic-cms lab clean"],
