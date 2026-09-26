@@ -33,6 +33,24 @@ test("the fixture site is served like a build: pages, RSC-less routes, public as
   } finally { server.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("a prefetch segment is answered from <page>.segments, and a segment the build lacks with 204, never with the whole payload", { skip }, async () => {
+  const root = fixtureSite();
+  const app = path.join(root, ".next/server/app");
+  for (const [file, text] of [["index.segments/_tree.segment.rsc", "the home tree"], ["about.segments/$oc$slug/__PAGE__.segment.rsc", "the about page segment"], ["index.rsc", "the whole home payload"]]) { fs.mkdirSync(path.dirname(path.join(app, file)), { recursive: true }); fs.writeFileSync(path.join(app, file), text); }
+  const server = await serveStatic({ root });
+  const prefetch = (route, segment) => fetch(server.url + route + "?_rsc=x", { headers: { rsc: "1", "next-router-prefetch": "1", "next-router-segment-prefetch": segment } });
+  try {
+    const tree = await prefetch("/", "/_tree");
+    assert.equal(tree.status, 200);
+    assert.equal(tree.headers.get("content-type"), "text/x-component");
+    assert.equal(await tree.text(), "the home tree");
+    assert.equal(await (await prefetch("/about", "/$oc$slug/__PAGE__")).text(), "the about page segment");
+    assert.equal((await prefetch("/about", "/_tree")).status, 204, "a segment the build lacks: nothing to prefetch");
+    assert.equal((await prefetch("/", "/../../index")).status, 204, "no way out of the segments folder");
+    assert.equal(await (await fetch(server.url + "/?_rsc=x", { headers: { rsc: "1" } })).text(), "the whole home payload", "a plain RSC request still gets the page's payload");
+  } finally { server.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("a raw response is gzipped; a page is marked no-store, an asset may be cached for the run, and a changed file is served changed", { skip }, async () => {
   const root = fixtureSite();
   const server = await serveStatic({ root });
