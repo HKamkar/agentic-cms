@@ -51,6 +51,10 @@ if (spec.site && !fs.existsSync("src/kit.ts")) {
   console.error(`agentic-cms ${command}: no src/kit.ts here — run it in the site's root (where package.json, src/kit.ts and content/ are)${fs.existsSync("package.json") ? "" : "; to start a site here, agentic-cms init ."}`);
   process.exit(2);
 }
+// The scripts print and then process.exit(), which drops whatever a pipe has not
+// taken yet (a --json report read through a pipe ended at 64 KB): on a pipe,
+// stdout and stderr write synchronously, as they already do to a file or a terminal.
+for (const stream of [process.stdout, process.stderr]) stream._handle?.setBlocking?.(true);
 // The scripts read their own arguments from process.argv.slice(2).
 process.argv.splice(2, 1);
 await import(`../scripts/${spec.script}.mjs`);

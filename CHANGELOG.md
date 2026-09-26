@@ -9,16 +9,23 @@ changes what a capture writes says **recapture baselines**.
 - Captures are faster, with the same pixels. A static shot, a `--motion`
   frame, a `--states` crop and the menu shot are one DevTools screenshot
   with the renderer's fast PNG encoding, sized, clipped and with the caret
-  hidden as Playwright's own; the static scroll-through (also `shot`, `probe` and `icons audit`)
-  runs with every element `visibility: hidden`, so nothing is painted until
-  the page is back at the top, and counts its last wait in frames instead of
-  a fixed 400 ms; the build's server compresses each file once per run and
-  lets the browser keep a non-page file for the run. `capture.json` gains
-  `timings` (the shots taken, their total and mean, the five slowest). No
-  shot changes: static, `--states` and settled frames compare identical
-  before and after on the example and on a consumer site.
+  hidden as Playwright's own; the static scroll-through (also `shot`,
+  `probe` and `icons audit`) runs with every element `visibility: hidden`,
+  so nothing is painted until the page is back at the top, and counts its
+  last wait in frames instead of a fixed 400 ms; the build's server
+  compresses each file once per run and lets the browser keep a non-page
+  file for the run. `capture.json` gains `timings` (the shots taken, their
+  total and mean, the five slowest). No shot changes: static, `--states` and
+  settled frames compare identical before and after on the example and on a
+  consumer site.
 - `docs/visual-parity.md`: `compare --pages` judges the named routes on both
   sides (the guide still said only the after capture's files).
+- A `--json` report read through a pipe arrives whole. The commands print
+  and then exit, and on a pipe the exit dropped whatever the reader had not
+  taken yet: `visual-parity compare --json | …` ended at 64 KB, mid-document
+  (`report.json` was always complete). The command line now writes stdout
+  and stderr synchronously on a pipe, as it already did to a file or a
+  terminal — every command at once.
 
 ## [0.5.3] — 2026-09-26
 
