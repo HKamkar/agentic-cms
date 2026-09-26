@@ -113,8 +113,28 @@ pnpm kit sheet .parity/icons.yaml            # .parity/sheets/sector-icons.png a
 A cell is one of `file` (an SVG file, inlined), `svg` (inline markup),
 `html` (any markup — the site's compiled stylesheets are linked when a build
 exists, so utilities and tokens are the site's own) or `img` (a served path,
-from the build or `--url`). The first row is by convention "now": what is
-there today, beside the alternatives. `--json` prints the file and the rows.
+from the build or `--url`). A cell may carry its own `size` and `ground`
+(`{ background, color }`: the ground and the ink a `currentColor` drawing
+takes). Every inline SVG's ids are made its cell's own, so one file shown at
+three sizes never borrows another copy's mask, clip path or gradient. The
+first row is by convention "now": what is there today, beside the
+alternatives. `--json` prints the file and the rows.
+
+A set of SVG files at the sizes they ship and on the grounds they sit on is
+one `files:` row — a folder (walked for `.svg`) or a list — which becomes one
+row per file, a cell per size and ground:
+
+```yaml
+name: icon round
+rows:
+  - label: study
+    files: .parity/lab/rounds/modules
+    sizes: [24, 36, 96]
+    grounds:
+      - { background: "var(--color-paper)", color: "var(--color-ink)" }
+      - { background: "#fff", color: "#000" }
+      - { background: "#000", color: "#fff", label: black }
+```
 
 A sheet is for static candidates. A component with motion or hover — a
 footer, a menu — is judged on a throwaway demo route on the dev server

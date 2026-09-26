@@ -111,6 +111,16 @@ changes what a capture writes says **recapture baselines**.
   (`svgMarkup`, `tagRoot`, `namespaceIds`) and `readTrustedSvg` moved to
   `src/lib/svg.ts` and `svg-read.ts`; `agentic-cms/lab` re-exports them.
   `docs/lab.md` § Inline is the guide.
+- `sheet` makes every inline SVG's ids its cell's own (`namespaceIds`): one
+  file shown at three sizes on one sheet borrowed the first copy's mask,
+  as a consumer site's hand-made preview did — the kit's sheet had the
+  same flaw, and `icons audit`'s sheet with it. A cell may carry its own
+  `size` and `ground` (`{ background, color }`, the ink a `currentColor`
+  drawing takes), and a `files:` row — a folder walked for `.svg`, or a
+  list — becomes one row per file with a cell per `sizes` × `grounds`: the
+  24/36/96 px, light/white/black preview an icon round needs, with no
+  script of its own. `sheet` and `icons` load the lab's helpers after the
+  TypeScript loader, so a checkout of the kit runs its source.
 
 ## [0.5.1] — 2026-09-23
 

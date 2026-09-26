@@ -171,7 +171,7 @@ export const SPECS = {
   sheet: {
     command: "sheet", script: "sheet", group: "look & measure", summary: "a candidate sheet from a spec — rows lettered, cells at the real size on the real background — rendered to one picture for a pick by row",
     usage: "agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] [--json]",
-    positionals: [{ name: "spec", required: true, help: "the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img }] }] }" }],
+    positionals: [{ name: "spec", required: true, help: "the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img, size?, ground?: { background, color } }] } | { label, note, files: <dir | [files]>, sizes, grounds }] }" }],
     flags: {
       url: { type: "string", value: "<base>", help: "serve img: cells and the site's stylesheets from a served site instead of the build" },
       out: { type: "string", value: "<png>", help: "default .parity/sheets/<name>.png" },

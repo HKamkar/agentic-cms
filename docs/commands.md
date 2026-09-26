@@ -446,7 +446,7 @@ A candidate sheet from a spec — rows lettered, cells at the real size on the r
 agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] [--json]
 ```
 
-- `<spec>` — the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img }] }] }
+- `<spec>` — the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img, size?, ground?: { background, color } }] } | { label, note, files: <dir | [files]>, sizes, grounds }] }
 
 | flag | what |
 |---|---|
