@@ -38,8 +38,8 @@ const TEMPLATES = {
   <path d="M0 0L64 64M64 0L0 64" stroke="currentColor"/>
 </svg>
 `,
-  loop: (name) => `<!-- agentic-cms lab: loop; transform and opacity only, the reduced-motion rule in every CSS loop, SMIL (<animate>) for what ships as an <img>, data-duration one cycle in seconds -->
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" data-duration="2">
+  loop: (name) => `<!-- agentic-cms lab: loop; transform and opacity only, the reduced-motion rule in every CSS loop, SMIL (<animate>) for what ships as an <img>, data-duration one cycle in seconds, data-rest the frame a reduced-motion reader and a static capture see -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" data-duration="2" data-rest="0">
   <style>
     @keyframes ${name}-turn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .${name}-turn { animation: ${name}-turn 2s linear infinite; transform-box: fill-box; transform-origin: center; }

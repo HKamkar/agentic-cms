@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, NO_ANCHORING_CSS, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { AUDIT_PAGE, auditToSheet, byFile } from "./lib/icons-audit.mjs";
 import { renderFamily } from "./lib/icons-family.mjs";
 import { readIconSource, renderIconMap } from "./lib/icons-source.mjs";
@@ -81,6 +81,7 @@ if (subcommand === "add" || subcommand === "remove") {
         await page.addStyleTag({ content: FREEZE_CSS });
         await revealed(page);
         await settle(page);
+        await page.evaluate(HOLD_SMIL, { rest: true });
         return page.evaluate(AUDIT_PAGE, flags.max);
       });
       icons.push(...found.map((i) => ({ page: route, ...i })));

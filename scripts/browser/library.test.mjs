@@ -7,8 +7,8 @@ import fs from "node:fs";
 import http from "node:http";
 import { test } from "node:test";
 import zlib from "node:zlib";
-import { chromePath, launch, listPages, revealed, serveStatic, settle, withPage } from "../lib/browser.mjs";
-import { fixtureSite } from "../fixtures/site.mjs";
+import { chromePath, launch, listPages, prepare, revealed, serveStatic, settle, withPage } from "../lib/browser.mjs";
+import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
 const skip = chrome ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -62,6 +62,22 @@ test("without reduced motion the reveals play, so a fresh page still has them at
   try {
     const last = await withPage(context, 1440, server.url + "/", (page) => page.evaluate(() => getComputedStyle(document.querySelector("#third .card")).opacity));
     assert.equal(last, "0");
+  } finally { await close(); server.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the static preparation holds an inline SMIL loop at its data-rest, paused", { skip }, async () => {
+  const root = fixtureSite();
+  addPage(root, "/loop", LOOP_PAGE);
+  const server = await serveStatic({ root });
+  const { context, close } = await launch({ scheme: "light", motion: false });
+  try {
+    const [paused, time] = await withPage(context, 800, server.url + "/loop", async (page) => {
+      await prepare(page);
+      await page.waitForTimeout(300);
+      return page.evaluate(() => { const svg = document.querySelector("svg"); return [svg.animationsPaused(), svg.getCurrentTime()]; });
+    });
+    assert.equal(paused, true);
+    assert.ok(Math.abs(time - 1.2) < 1e-6, `at ${time}`);
   } finally { await close(); server.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 

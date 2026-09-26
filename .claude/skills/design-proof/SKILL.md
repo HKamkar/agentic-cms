@@ -59,7 +59,10 @@ decides whether `--motion` is part of the proof.
      keep the utility to the breakpoint that needs it.
    - `CHANGED` on a mid-flight motion frame (`--s03-500`, 20–30 %): timing
      jitter is possible; re-run the after capture once, and identical on the
-     re-run is accepted. A settled or static frame never jitters.
+     re-run is accepted. A settled or static frame never jitters (an inline
+     SMIL loop is held at its `data-rest` there, and at each frame's own
+     time mid-flight; a loop that still differs lacks `data-rest` or ships
+     as an `<img>`, which no capture can hold).
    - A settled motion frame that keeps differing where a sequence runs long:
      the section declares `data-settle="<ms>"` (`STANDARD.md` §7).
    - `MISSING`: a page appeared or disappeared, or the compare lacks the

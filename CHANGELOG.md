@@ -42,6 +42,19 @@ changes what a capture writes says **recapture baselines**.
   audit used to be reused silently the next time. An unstamped sibling is
   removed as a worktree before the prune, where deleting it first made the
   next `git worktree add` fail ("missing but already registered").
+- The harness holds inline SMIL, which no CSS rule and no Web Animation
+  pause reaches: a static capture (and `shot`, `probe`, `icons audit`, the
+  `--states` shots) pauses every inline SVG's clock at its `data-rest`
+  (seconds; else 0), and a `--motion` capture sets it before each frame to
+  that frame's own time since the scroll step (0.15 s, 0.5 s, modulo
+  `data-duration`) and the settled frame to its `data-rest` — a loop's
+  frames no longer differ by the milliseconds a shot happened at, which
+  forced re-runs. `data-rest` is the kit's convention for the frame a
+  reduced-motion reader sees; the lab's `loop` template carries it. The
+  animation inventory lists every inline SMIL loop (`type: "smil"`, its
+  cycle, rest and box). An animated SVG in an `<img>` is out of reach and
+  photographed as it runs. **Recapture baselines**: a static shot of a page
+  with inline SMIL and every `.animations.json` of one change.
 
 ## [0.5.1] — 2026-09-23
 
