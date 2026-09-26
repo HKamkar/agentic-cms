@@ -116,6 +116,12 @@ against `fixtures/` by `pnpm test:browser`.
   of `site.url`) and exits 1 naming each file; the last step of a build on
   a site that renders its address through `EmailLink` and tokens
   (`docs/email.md`).
+- `assemble` — `pnpm kit assemble [--check] [--json]` (`assemble.mjs`,
+  `lib/assemble.mjs`) copies `public/` and `.next/static` into a standalone
+  build's package (`.next/standalone`, or its `relativeAppDir`) — into its
+  folders, never as them — and checks every file there by size and hash;
+  exit 1 naming each missing, different or nested file. The last step of a
+  standalone site's build (`docs/deploy.md`).
 - `icons` — `pnpm kit icons add|remove <id>…` keeps the site's icon
   manifest and generates `src/config/icons.ts` from `lucide-static` and
   `simple-icons` (installed by the site; the kit ships no icon data);

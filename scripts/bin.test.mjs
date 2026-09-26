@@ -49,3 +49,14 @@ test("a command that reads the site refuses to run outside a site's root, with t
     assert.match(run(["optimize-webp", "nope.webp"], dir).stderr, /nope\.webp: no such file or folder/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("assemble runs in any folder and, without a standalone build, says how to make one", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "no-standalone-"));
+  try {
+    const r = run(["assemble"], dir);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /^assemble: no standalone build \(no server\.js under \.next\/standalone\) — set output: "standalone" in next\.config and run next build first\n$/);
+    assert.equal(run(["assemble", "--chek"], dir).status, 2, "a wrong flag is a usage error");
+    assert.match(run(["assemble", "--chek"], dir).stderr, /did you mean --check\?/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

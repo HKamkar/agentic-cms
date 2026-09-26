@@ -23,6 +23,9 @@ rules for an agent working on the code.
   files a page ships; removed when done.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
+- [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
+  `assemble` as the build's last step, the copy that nests and the check
+  that catches it.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.
 
 The engines' contracts live next to their code and ship with the package:

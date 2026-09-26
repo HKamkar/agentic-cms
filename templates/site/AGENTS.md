@@ -91,6 +91,11 @@ a patch under `node_modules`.
 - `pnpm build` fails a route without an `seo` block; a demo route
   (`src/app/<name>-demo/`, `pnpm kit demo clean`) is therefore removed before a branch merges — the
   guard, not an obstacle.
+- A Node server host (`output: "standalone"`) is packaged by `pnpm kit
+  assemble` as the build's last step, never by a hand-written `cp`: a copy
+  that names `.next/standalone/public` as its target nests inside it once
+  the file trace has made that folder, and every image 404s on the server
+  (`node_modules/agentic-cms/docs/deploy.md`).
 
 ## Parity harness and long runs
 

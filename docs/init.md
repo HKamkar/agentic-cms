@@ -60,7 +60,7 @@ is never overwritten unless `--force`; each file prints `created`,
    claim rules the lint enforces.
 4. Replace the content: `content/README.md` is the door.
 5. `pnpm content:lint` until clean, `pnpm build`, then the host of your
-   choice.
+   choice (a Node server: [deploy.md](deploy.md)).
 
 ## After a kit upgrade
 
