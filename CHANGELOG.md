@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.2] — 2026-09-26
 
 - `agentic-cms assemble` packages a standalone build for a Node host:
   `public/` and `.next/static` copied into `.next/standalone` (or its
