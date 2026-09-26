@@ -9,7 +9,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const SNAPSHOTS = ".parity/snapshots";
-const PARTS = [".next/server/app", ".next/static", "public"];
+// the prerender manifest names each page's template, which --sample reads
+const PARTS = [".next/server/app", ".next/static", "public", ".next/prerender-manifest.json"];
 
 /** The build id Next wrote into <root>/.next/BUILD_ID, or null. */
 export const buildId = (root) => { try { return fs.readFileSync(path.join(root, ".next/BUILD_ID"), "utf8").trim(); } catch { return null; } };

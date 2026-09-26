@@ -129,6 +129,29 @@ export const DEMO_ROUTE = /^\/[a-z0-9][a-z0-9-]*-demo(\/|$)/;
 export const capturePages = (routes, only = []) => (only.length ? only : routes.filter((route) => !DEMO_ROUTE.test(route)));
 
 /** Every route the build prerendered (from .next/server/app/**\/*.html), sorted; "/" for the index. */
+// A template's pages: the routes a build generated from one dynamic route (/blog-post/[slug]), as its prerender
+// manifest names them. A catch-all ([...x], [[...x]]) is no template — its pages are the site's own, each of its
+// own design — so its routes are never sampled; nor is anything when the manifest is absent.
+export function templatesOf(root) {
+  let manifest;
+  try { manifest = JSON.parse(fs.readFileSync(path.join(root, ".next/prerender-manifest.json"), "utf8")); } catch { return new Map(); }
+  const templates = new Map();
+  for (const [route, { srcRoute }] of Object.entries(manifest.routes ?? {})) if (srcRoute?.includes("[") && !srcRoute.includes("...")) templates.set(route, srcRoute);
+  return templates;
+}
+
+/** The first `n` routes of each template, in route order, with every route that is no template's; { pages, skipped }. */
+export function sampleRoutes(routes, templates, n) {
+  const seen = new Map(), pages = [], skipped = [];
+  for (const route of [...routes].sort()) {
+    const template = templates.get(route);
+    if (!template) { pages.push(route); continue; }
+    seen.set(template, (seen.get(template) ?? 0) + 1);
+    (seen.get(template) <= n ? pages : skipped).push(route);
+  }
+  return { pages, skipped };
+}
+
 export function listPages(root = process.cwd()) {
   const app = path.join(root, ".next/server/app");
   const pages = [];

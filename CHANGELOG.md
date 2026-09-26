@@ -6,6 +6,12 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `visual-parity capture --sample <n>`: a static capture of the first n
+  pages of each template (a dynamic route such as `/blog-post/[slug]`, as
+  the build's prerender manifest names it; never a catch-all), in route
+  order, and of every page that is no template's. The routes left out are
+  listed in `meta.json`, and a compare leaves out a page either capture
+  skipped. Off by default; the snapshot now carries the prerender manifest.
 - `visual-parity capture --jobs <n>`: several browsers at once, each taking
   the next page-width (or state). The default is every core but one, four at
   most, for a static or `--states` capture, and two for `--motion`, whose

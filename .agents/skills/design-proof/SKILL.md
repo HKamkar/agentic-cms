@@ -42,7 +42,10 @@ decides whether `--motion` is part of the proof.
    ```
 
    `--pages /a,/b` on both while iterating on one page; the full set once
-   before the merge.
+   before the merge. A page whose build files did not change is copied from
+   `.parity/shots` rather than taken again, so the second capture of a proof
+   takes the changed pages alone; a site with many pages of one template
+   (posts) can pass `--sample <n>` to both captures to photograph n of them.
 3. **Read the report** (`report.json`, or the lines):
    - `ok` everywhere: a refactor proved. Say so with the counts.
    - `CHANGED` on the pages the change touches, `rows` inside the changed
