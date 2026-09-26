@@ -2,7 +2,7 @@
 // loads from the build (its HTML, chunks, stylesheets, fonts and images), of
 // the harness that takes them, the browser and the capture's settings. After
 // each page-width (or state) the harness records the build files the page
-// requested and their digests; a later capture of any build — a --ref
+// requested and their digests (.parity/shot-cache/); a later capture of any build — a --ref
 // baseline, the working tree — whose files for that page are the same bytes
 // copies those shots instead of taking them again. Two builds of one source
 // differ only in the build id, so it is masked before a file is digested. A
@@ -12,7 +12,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const SHOTS = ".parity/shots";
+// its own folder: .parity/shots is where `agentic-cms shot` writes the pictures a person asked for
+export const CACHE_DIR = ".parity/shot-cache";
 /** Entries kept per page-width: the baseline's, the change's and two earlier states, so alternating proofs keep hitting. */
 export const KEEP = 4;
 const MASK = "\0BUILD_ID\0";
@@ -49,7 +50,7 @@ const entriesOf = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).map((d) => 
 /** The stored entry of `name` whose every recorded file has the same digest in this build, or null. */
 export function lookup(root, key, name, digestOf, buildId) {
   const unmask = (p) => (buildId ? p.split(MASK).join(buildId) : p);
-  for (const entry of entriesOf(path.join(root, SHOTS, key, name))) {
+  for (const entry of entriesOf(path.join(root, CACHE_DIR, key, name))) {
     const { deps, files } = JSON.parse(fs.readFileSync(path.join(entry, "deps.json"), "utf8"));
     if (Object.entries(deps).every(([p, digest]) => digestOf(unmask(p)) === digest) && files.every((f) => fs.existsSync(path.join(entry, f)))) return { dir: entry, files };
   }
@@ -65,7 +66,7 @@ export function reuse(entry, into) {
 
 /** Stores the shots `files` (in `from`) of `name` under their dependencies, and keeps the KEEP most recent entries of it. */
 export function store(root, key, name, deps, from, files) {
-  const base = path.join(root, SHOTS, key, name);
+  const base = path.join(root, CACHE_DIR, key, name);
   const entry = path.join(base, sha(JSON.stringify(deps)).slice(0, 16));
   fs.rmSync(entry, { recursive: true, force: true });
   fs.mkdirSync(entry, { recursive: true });

@@ -67,7 +67,7 @@ A shot is a function of the files its page loads from the build, of the
 harness, the browser and the capture's settings. So after every page-width
 (every state, with `--states`) a capture records the build files the page
 requested — its HTML, chunks, stylesheets, fonts and images — with a digest
-of each, under `.parity/shots/`, and a later capture of any build copies
+of each, under `.parity/shot-cache/`, and a later capture of any build copies
 that page-width's shots instead of taking them when every one of those files
 has the same bytes. The build id is masked first: two builds of one source
 differ in it alone. In a proof that is most of the pages: a `--ref` baseline
@@ -83,7 +83,7 @@ the harness's own sources, the browser, the scheme, the motion settings or
 capture reuses nothing. `--fresh` takes every shot again and refreshes the
 cache: to prove a frame deterministic, or whenever a copied shot is in
 doubt. Four entries are kept per page-width, the least recently used going
-first; delete `.parity/shots/` to empty it.
+first; delete `.parity/shot-cache/` to empty it.
 
 ## Several browsers at once
 
@@ -265,12 +265,14 @@ falls through after 10 s.
 
 ## Traps a long run meets
 
-- A full set (static, `--motion` and `--states` over every page at every
-  width) takes tens of minutes the first time; after that a capture copies
-  every page-width whose build files did not change. Use `--pages` for the pages a step touches
-  and the full set once per pull request. Run a long capture in the
-  background with its output in a log (`.parity/<label>.log`) and read the
-  tail, not the log.
+- Capture the full set, not a `--pages` subset to save time: every
+  page-width whose build files did not change is copied from
+  `.parity/shot-cache/`, and several browsers work at once, so the second
+  capture of a proof takes the changed pages alone (on the example, one post
+  edited: 18.7 s for 80 page-widths; the whole static set from nothing,
+  about a minute on four cores). `--pages` is for looking at one page while
+  iterating. Only a first capture of a large site is worth the background,
+  with its output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before
   the browser starts: once it prints `snapshot:`, building, editing
   `public/` or moving assets no longer reaches it. Still build the exact
@@ -286,7 +288,7 @@ falls through after 10 s.
   misses it), and print its `git log -1` first.
 - A mid-flight motion frame (a 500 ms frame at 20–30 %) can differ by timing
   jitter: re-run it once with `--fresh` (without it an unchanged page's
-  frames are copied from `.parity/shots`, which proves nothing about
+  frames are copied from `.parity/shot-cache`, which proves nothing about
   jitter), and identical on the re-run means accepted. A
   settled frame or a static shot never jitters — that is a real difference.
   A sequence that runs longer than two seconds after its section enters is

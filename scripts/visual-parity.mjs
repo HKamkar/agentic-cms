@@ -237,7 +237,7 @@ function shotCacheFor({ browser, root, baseUrl, build, kit }) {
   const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
   return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
 }
-const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shots: every build file they load is unchanged)` : "");
+const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shot-cache: every build file they load is unchanged)` : "");
 
 /** The routes a capture photographs, and those --sample leaves out of it. */
 function pagesOf(root) {

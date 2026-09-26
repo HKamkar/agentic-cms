@@ -321,7 +321,7 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--sample <n>` | a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
-| `--fresh` | take every shot again: reuse none from .parity/shots, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
+| `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
 Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
