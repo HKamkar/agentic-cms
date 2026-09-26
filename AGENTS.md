@@ -259,7 +259,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   has no stored choice, so the default capture is light), `--states`
   photographs hover, focus, checked and open, `--motion` plays animations
   (only worth running where something animates). `--pages /,/blog` limits a
-  capture — pass the same `--pages` to the compare. The page list comes from
+  capture — pass the same `--pages` to the compare; `--sample <n>` takes n
+  pages of each template (the posts) and the compare leaves the rest out.
+  An unchanged page is copied from `.parity/shots`, and `--jobs` runs
+  several browsers, so a full set is minutes. The page list comes from
   the build itself, so a new route is captured without touching the script.
 - Static captures run with `prefers-reduced-motion`; `--motion` runs without
   it. A full set of the current site's routes takes minutes, not the tens of

@@ -23,7 +23,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, servedFile, serveStatic, settle, snap, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { inPool } from "./lib/pool.mjs";
@@ -57,6 +57,10 @@ const onlyPages = (flags.pages ?? "").split(",").filter(Boolean);
 // cores); --motion frames are timed in milliseconds, and two browsers keep a loaded machine from moving them.
 const JOBS = flags.jobs ?? Math.max(1, Math.min(motion ? 2 : 4, os.availableParallelism() - 1));
 if (!Number.isInteger(JOBS) || JOBS < 1) { console.error("visual-parity capture: --jobs takes a whole number of browsers, 1 or more"); process.exit(2); }
+if (subcommand === "capture" && flags.sample !== undefined) {
+  if (!Number.isInteger(flags.sample) || flags.sample < 1) { console.error("visual-parity capture: --sample takes a whole number of pages per template, 1 or more"); process.exit(2); }
+  if (motion || states || onlyPages.length) { console.error("visual-parity capture: --sample is for a static capture of the build's pages (--motion already takes one post; --pages names its own)"); process.exit(2); }
+}
 const settleMs = flags.settle ?? 2000;
 if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
 if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
@@ -235,14 +239,24 @@ function shotCacheFor({ browser, root, baseUrl, build, kit }) {
 }
 const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shots: every build file they load is unchanged)` : "");
 
+/** The routes a capture photographs, and those --sample leaves out of it. */
+function pagesOf(root) {
+  if (states) return { pages: [], skipped: [] };
+  if (onlyPages.length) return { pages: onlyPages, skipped: [] };
+  if (motion) return { pages: motionPages(root), skipped: [] };
+  const all = capturePages(listPages(root));
+  return flags.sample ? sampleRoutes(all, templatesOf(root), flags.sample) : { pages: all, skipped: [] };
+}
+
 async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, build = null } = {}) {
   const started = Date.now();
   const dir = path.join(OUT, label);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}) };
+  const { pages, skipped } = pagesOf(root);
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
-  const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : capturePages(listPages(root));
+  if (skipped.length) say(`sample: the first ${flags.sample} of each template's pages; ${skipped.length} left out (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? ", …" : ""})\n`);
   const kit = states ? await loadKit() : null;
   // the first browser names the version the cache is keyed on and is the pool's first worker; the others are launched as the pool needs them
   const first = await launch({ scheme, motion });
@@ -289,6 +303,7 @@ async function compare(before, after) {
   const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages });
   const out = flags.json ? console.error : console.log;
   if (report.baseline) out(`baseline: ${report.baseline.ref ?? ""} ${report.baseline.sha ?? ""}`.trim());
+  if (report.sampledOut) out(`sampled: ${report.sampledOut.length} page(s) left out by --sample on one side or both, not judged`);
   for (const file of report.files) { out(file.line); if (file.cause) out(`         ${causeLine(file.cause)}`); }
   const lacking = [[before, report.geometry.before], [after, report.geometry.after]].filter(([, has]) => !has).map(([label]) => label);
   if (lacking.length && report.files.some((f) => f.cause === null)) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);

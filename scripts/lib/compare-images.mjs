@@ -193,7 +193,10 @@ export async function compareCapture(a, b, { before, after, diffDir, threshold, 
   fs.rmSync(diffDir, { recursive: true, force: true });
   fs.mkdirSync(diffDir, { recursive: true });
   const isResult = (f) => f.endsWith(".png") || f.endsWith(".animations.json") || f.endsWith(".settle.json");
-  const names = judged(fs.readdirSync(a).filter(isResult), fs.readdirSync(b).filter(isResult), pages).sort();
+  // a page either capture left out by --sample is not missing from the other: it was not photographed on purpose
+  const sampledOut = [...new Set([...(meta(a).sample?.skipped ?? []), ...(meta(b).sample?.skipped ?? [])])].sort();
+  const unsampled = new Set(sampledOut.map(routeName));
+  const names = judged(fs.readdirSync(a).filter(isResult), fs.readdirSync(b).filter(isResult), pages).filter((f) => !unsampled.has(f.slice(0, f.indexOf("@")))).sort();
   const files = [];
   for (const name of names) {
     const fa = path.join(a, name), fb = path.join(b, name);
@@ -205,5 +208,5 @@ export async function compareCapture(a, b, { before, after, diffDir, threshold, 
   summary.exit = files.length - summary.ok ? 1 : 0;
   const mb = meta(b);
   const geometry = (dir) => fs.readdirSync(dir).some((f) => f.endsWith(".sections.json"));
-  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
+  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, sampledOut: sampledOut.length ? sampledOut : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
 }

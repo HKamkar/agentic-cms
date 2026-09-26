@@ -132,6 +132,26 @@ test("--jobs: one browser and three take the same shots, and the summary says ho
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("--sample 1 photographs one page of each template, lists the rest, and the compare leaves them out; with --motion or --pages it is a usage error", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    for (const slug of ["a", "b"]) addPage(root, `/blog-post/${slug}`, fs.readFileSync(path.join(root, ".next/server/app/about.html"), "utf8"));
+    const routes = { "/": null, "/about": null, "/blog-post/a": "/blog-post/[slug]", "/blog-post/b": "/blog-post/[slug]" };
+    fs.writeFileSync(path.join(root, ".next/prerender-manifest.json"), JSON.stringify({ routes: Object.fromEntries(Object.entries(routes).map(([route, srcRoute]) => [route, { srcRoute }])) }));
+    const r = run(root, ["capture", "s", "--sample", "1", "--widths", "800", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(JSON.parse(r.stdout).pages, ["/", "/about", "/blog-post/a"], "read from the snapshot, which carries the manifest");
+    assert.match(r.stderr, /sample: the first 1 of each template's pages; 1 left out \(\/blog-post\/b\)/);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/s/meta.json"), "utf8")).sample, { n: 1, skipped: ["/blog-post/b"] });
+    assert.equal(run(root, ["capture", "all", "--widths", "800"]).status, 0);
+    const compared = run(root, ["compare", "all", "s"]);
+    assert.equal(compared.status, 0, compared.stdout);
+    assert.match(compared.stdout, /sampled: 1 page\(s\) left out by --sample on one side or both, not judged/);
+    for (const bad of [["--motion"], ["--pages", "/"], ["--states"]]) assert.equal(run(root, ["capture", "x", "--sample", "1", ...bad]).status, 2, bad.join(" "));
+    assert.match(run(root, ["capture", "x", "--sample", "0"]).stderr, /--sample takes a whole number of pages per template/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("an inline SMIL loop is held: two static captures agree, two motion captures agree frame for frame, and the inventory lists it", { skip }, () => {
   const root = fixtureSite();
   try {

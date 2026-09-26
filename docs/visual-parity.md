@@ -96,6 +96,21 @@ the page-widths in order); `capture.json` records it. The shots are the same
 whichever browser takes them; the one thing parallel runs were ever seen to
 move is a single channel value by one, which a compare's threshold absorbs.
 
+## A template's pages, sampled
+
+A site with many pages of one template — fifty posts from
+`/blog-post/[slug]` — proves a change to that template on a few of them as
+well as on all. `--sample <n>` photographs the first n routes of each
+template in route order, as the build's prerender manifest names the
+templates, and every page that is no template's. A catch-all
+(`/[[...slug]]`, `/docs/[...rest]`) is never sampled: its pages are the
+site's own, each of its own design. The routes left out are printed and
+listed in `meta.json` (`sample: { n, skipped }`), and a compare leaves out a
+page either capture skipped, so a baseline that sampled `/blog-post/b` and an
+after capture of a build with one more post do not report each other's
+posts `MISSING`. Static captures only: `--motion` already takes one post,
+and `--pages` names its own. Off by default.
+
 ## Three modes
 
 **Static** (the default) photographs every page at eight widths — 1920,
