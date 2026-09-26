@@ -50,6 +50,12 @@ removed, and the sha and the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
 
+The build (a snapshot or a `--ref` sibling) is served the way Next's own
+server serves it: the pages, their RSC payloads and the per-segment prefetch
+files (`<page>.segments/`) the router asks for when a link comes into view,
+the static chunks and `public/`. A prefetch answered with the wrong file is
+asked again at every frame, which is load a capture does not need.
+
 Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
 `/lab-demo`) out of its pages unless `--pages` names one, so a baseline
 without them and an after capture of a tree that still has one list the

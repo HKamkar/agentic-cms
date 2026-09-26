@@ -91,7 +91,13 @@ function gzipped(cache, file) {
   return body;
 }
 
-/** Serves <root>/.next (the prerendered pages, their RSC payloads, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
+// Next 16's router prefetches a link one segment at a time (Next-Router-Segment-Prefetch: /_tree, then the
+// page's own segments), and the build keeps each under <page>.segments/<segment>.segment.rsc. The whole payload
+// is no answer to that: a router given it asked again at every frame, some 660 requests in one scroll-through of
+// a real page. A segment the build lacks is answered 204, nothing to prefetch.
+const segmentFile = (app, route, segment) => (segment.includes("..") ? null : path.join(app, `${route}.segments`, `${segment}.segment.rsc`));
+
+/** Serves <root>/.next (the prerendered pages, their RSC payloads and prefetch segments, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
 export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) {
   const app = path.join(root, ".next/server/app");
   if (requireBuild && !fs.existsSync(app)) throw new Error("no production build: run `pnpm build` first (or pass --url)");
@@ -101,9 +107,10 @@ export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) 
     const route = p === "/" ? "index" : p.replace(/\/$/, "");
     // the client router prefetches links as RSC payloads; answer them so it stops asking
     const ext = req.headers.rsc === "1" ? ".rsc" : ".html";
-    const candidates = [p.startsWith("/_next/static/") && path.join(root, ".next/static", p.slice(14)), path.join(root, "public", p), path.join(app, `${route}${ext}`)];
+    const segment = req.headers["next-router-segment-prefetch"];
+    const candidates = segment ? [segmentFile(app, route, segment)] : [p.startsWith("/_next/static/") && path.join(root, ".next/static", p.slice(14)), path.join(root, "public", p), path.join(app, `${route}${ext}`)];
     const file = candidates.find((f) => f && fs.existsSync(f) && fs.statSync(f).isFile());
-    if (!file) { res.writeHead(404); return res.end(); }
+    if (!file) { res.writeHead(segment ? 204 : 404); return res.end(); }
     const page = file.startsWith(app + path.sep);
     res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": page ? "no-store" : "max-age=3600" });
     res.end(gzipped(cache, file));
