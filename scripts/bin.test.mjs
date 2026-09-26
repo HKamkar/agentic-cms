@@ -127,3 +127,15 @@ test("visual-parity clean keeps the newest captures, takes the compares of the o
     assert.equal(run(["visual-parity", "clean", "--keep", "-1"], dir).status, 2);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("visual-parity proof: its help names the passes and the ref; a wrong choice or a wrong flag is a usage error", () => {
+  const help = run(["visual-parity", "proof", "--help"]);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--ref <git ref>/);
+  assert.match(help.stdout, /--motion/);
+  assert.match(help.stdout, /--all/);
+  assert.equal(run(["visual-parity", "proof", "--scheme", "sepia"]).status, 2);
+  const wrong = run(["visual-parity", "proof", "--motoin"]);
+  assert.equal(wrong.status, 2);
+  assert.match(wrong.stderr, /did you mean --motion\?/);
+});

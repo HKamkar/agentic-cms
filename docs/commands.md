@@ -295,7 +295,7 @@ agentic-cms parity before && … refactor … && agentic-cms parity after && dif
 The screenshot harness: every page of the build at several widths, frozen or in motion, and a pixel diff of two captures.
 
 ```bash
-agentic-cms visual-parity <capture | compare | clean> …
+agentic-cms visual-parity <capture | compare | proof | clean> …
 ```
 
 #### `visual-parity capture`
@@ -360,6 +360,41 @@ Exit: `0` identical within the thresholds; `1` a difference, a size change or a 
 ```bash
 agentic-cms visual-parity compare before after --json
 agentic-cms visual-parity compare before after --pages /,/blog
+```
+
+#### `visual-parity proof`
+
+A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
+
+```bash
+agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow]
+```
+
+- `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
+
+| flag | what |
+|---|---|
+| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha) (default `develop`) |
+| `--motion` | add the --motion pass |
+| `--states` | add the --states pass |
+| `--all` | all three passes: static, --motion and --states |
+| `--build` | run the site's `pnpm build` before the first after capture |
+| `--scheme light|dark` | prefers-color-scheme for every capture (one of `light`, `dark`) (default `light`) |
+| `--pages /a,/b` | only these routes, on every capture and compare |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample) |
+| `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
+| `--fresh` | take every shot again, reusing none (capture --fresh) |
+| `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
+| `--json` | print the proof as JSON: each pass's captures and compare report |
+
+Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, or captures of two schemes.
+
+`--json` prints `{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }`.
+
+```bash
+agentic-cms visual-parity proof
+agentic-cms visual-parity proof nav-fix --states --build
+agentic-cms visual-parity proof --all --ref main --json
 ```
 
 #### `visual-parity clean`

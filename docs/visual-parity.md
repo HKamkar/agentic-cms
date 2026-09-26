@@ -14,6 +14,23 @@ pnpm kit visual-parity capture after --build          # the site's build first, 
 pnpm kit visual-parity compare before after --json    # exit 1 on any difference; the report as JSON
 ```
 
+The same in one command, after the change is built:
+
+```bash
+pnpm kit visual-parity proof                          # baseline of develop, the tree as it stands, the compare
+pnpm kit visual-parity proof nav-fix --states --build # the states pass too; build the tree first
+pnpm kit visual-parity proof --all --ref main         # static, --motion and --states against main
+```
+
+`proof` runs the three steps of each pass as the commands above (static
+always; `--motion`, `--states` or `--all` add theirs), the `--ref` build
+done once for all of them, and ends with one line per pass — the compare's
+counts, each side's time and how much the shot cache reused — and one exit:
+`0` when every pass is identical, `1` on any difference or a failed capture.
+Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
+so a pass that differs is read like any compare. `--json` prints every
+pass's captures and report.
+
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should

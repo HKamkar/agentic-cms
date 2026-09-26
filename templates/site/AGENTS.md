@@ -129,7 +129,8 @@ paths. The table is written from the rules' frontmatter by
 
 The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
-on; a capture photographs a copy of the build, so after its `snapshot:`
+on (`pnpm kit visual-parity proof [--motion] [--states]` runs baseline,
+after and compare in one); a capture photographs a copy of the build, so after its `snapshot:`
 line the tree is free, but build the exact tree you mean to prove; a
 static or settled frame never jitters, a mid-flight one may (re-run once
 with `--fresh`: an unchanged page's shots are otherwise copied from the

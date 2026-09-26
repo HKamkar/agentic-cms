@@ -79,7 +79,7 @@ export const SPECS = {
   },
   "visual-parity": {
     command: "visual-parity", script: "visual-parity", group: "proof", summary: "the screenshot harness: every page of the build at several widths, frozen or in motion, and a pixel diff of two captures",
-    usage: "agentic-cms visual-parity <capture | compare | clean> …",
+    usage: "agentic-cms visual-parity <capture | compare | proof | clean> …",
     subcommands: {
       capture: {
         command: "visual-parity capture", summary: "screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed",
@@ -118,6 +118,28 @@ export const SPECS = {
         examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog"],
         exit: { 0: "identical within the thresholds", 1: "a difference, a size change or a missing file", 2: "usage, a missing capture, or captures of two schemes" },
         json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }",
+      },
+      proof: {
+        command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference",
+        usage: "agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow]",
+        positionals: [{ name: "label", help: "the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof" }],
+        flags: {
+          ref: { type: "string", value: "<git ref>", default: "develop", help: "the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha)" },
+          motion: { type: "boolean", help: "add the --motion pass" },
+          states: { type: "boolean", help: "add the --states pass" },
+          all: { type: "boolean", help: "all three passes: static, --motion and --states" },
+          build: { type: "boolean", help: "run the site's `pnpm build` before the first after capture" },
+          scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme for every capture" },
+          pages: { type: "string", value: "/a,/b", help: "only these routes, on every capture and compare" },
+          sample: { type: "number", value: "<n>", help: "the static pass photographs the first n pages of each template (capture --sample)" },
+          jobs: { type: "number", value: "<n>", help: "browsers at once, for every capture (capture --jobs)" },
+          fresh: { type: "boolean", help: "take every shot again, reusing none (capture --fresh)" },
+          "third-party": { type: "string", choices: ["hold", "allow"], help: "other origins' scripts and connections on every capture (capture --third-party)" },
+          json: { type: "boolean", help: "print the proof as JSON: each pass's captures and compare report" },
+        },
+        examples: ["agentic-cms visual-parity proof", "agentic-cms visual-parity proof nav-fix --states --build", "agentic-cms visual-parity proof --all --ref main --json"],
+        exit: { 0: "every pass identical within the thresholds", 1: "a difference in any pass, or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, or captures of two schemes" },
+        json: "{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }",
       },
       clean: {
         command: "visual-parity clean", summary: "removes old captures from .parity/visual/ — all but the newest, and every compare of a removed capture — and, with --cache, the shot cache; a capture still running is kept",

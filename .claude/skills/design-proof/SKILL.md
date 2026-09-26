@@ -42,6 +42,12 @@ decides whether `--motion` is part of the proof.
    pnpm kit visual-parity compare before after --json
    ```
 
+   Or steps 1 and 2 in one, once the change is built:
+   `pnpm kit visual-parity proof [--motion] [--states] [--ref <base>]` —
+   each pass's baseline, after capture and compare, one summary, exit 1 on
+   any difference; its captures are `proof-before` / `proof-after`
+   (`-motion`, `-states`), read like any compare in step 3.
+
    Capture the full set, not a `--pages` subset to save time: a page whose
    build files did not change is copied from `.parity/shot-cache/` rather
    than taken again, and several browsers work at once (`--jobs`), so the

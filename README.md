@@ -214,6 +214,7 @@ captures pixel by pixel:
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling worktree and captured
 pnpm kit visual-parity capture after --build          # this tree, built and copied first, so it is free while the capture runs
 pnpm kit visual-parity compare before after           # exit 1 on any difference, one line per file
+pnpm kit visual-parity proof --states                 # or all of it in one: baseline, after, compare, per pass
 ```
 
 The rendering is made deterministic before a shot is taken: reduced
