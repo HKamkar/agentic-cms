@@ -15,23 +15,53 @@
 //         - { label: globe, svg: "<svg …>" }            # inline SVG
 //         - { label: tag, html: "<span …>" }            # any markup
 //         - { label: mark, img: /images/x.svg }         # a served path (the build or --url)
+//         - { label: big, file: x.svg, size: 96, ground: { background: "#fff", color: "#000" } }   # a cell's own size and ground
+//     - label: icons                # one row per SVG file (a folder is walked), a cell per size × ground
+//       files: public/images/icons
+//       sizes: [24, 36, 96]
+//       grounds: [{ background: "var(--color-paper)", color: "var(--color-ink)" }, { background: "#fff", color: "#000" }, { background: "#000", color: "#fff" }]
 //
-// The site's compiled stylesheets are linked when a build exists, so tokens,
-// fonts and utilities in html: cells are the site's own.
+// A ground carries its ink: an icon drawn in currentColor takes it. Every
+// inline SVG's ids are made its cell's own, so one file at three sizes never
+// borrows another copy's mask or gradient. The site's compiled stylesheets
+// are linked when a build exists, so tokens, fonts and utilities in html:
+// cells are the site's own. This module reads agentic-cms/lab: a script
+// imports it after scripts/lib/load-ts.mjs, so a checkout of the kit reads
+// the source.
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { namespaceIds, svgMarkup } from "agentic-cms/lab";
 import { fontsReady, imagesReady, launch } from "./browser.mjs";
 
 const KINDS = ["file", "svg", "html", "img"];
 
-/** Reads and validates a spec; errors name the file and the field. */
-export function readSheetSpec(file) {
+const posix = (p) => p.split(path.sep).join("/");
+const svgFiles = (dir) => fs.readdirSync(dir).sort().flatMap((f) => { const full = path.join(dir, f); return fs.statSync(full).isDirectory() ? svgFiles(full) : f.endsWith(".svg") ? [full] : []; });
+
+/** A `files:` row as rows of cells: one row per SVG file (a folder walked), a cell per size × ground. */
+function fileRows(row, r, { root, at }) {
+  const named = Array.isArray(row.files) ? row.files : [row.files];
+  const files = named.flatMap((f) => {
+    const full = path.resolve(root, String(f));
+    if (!fs.existsSync(full)) throw new Error(`${at}: rows[${r}].files: ${f}: no such file or folder`);
+    return fs.statSync(full).isDirectory() ? svgFiles(full) : [full];
+  }).map((f) => posix(path.relative(root, f)));
+  if (!files.length) throw new Error(`${at}: rows[${r}].files: no .svg file in ${named.join(", ")}`);
+  const sizes = Array.isArray(row.sizes) && row.sizes.length ? row.sizes.map(Number) : [Number(row.size) || 48];
+  const grounds = Array.isArray(row.grounds) && row.grounds.length ? row.grounds : [null];
+  const cellsOf = (file) => sizes.flatMap((size) => grounds.map((ground) => ({ file, size, ...(ground ? { ground } : {}), label: [size, ground && (ground.label ?? ground.background ?? ground)].filter(Boolean).join(" · ") })));
+  return files.map((file) => ({ label: row.label ? `${row.label} · ${path.basename(file, ".svg")}` : file, ...(row.note ? { note: row.note } : {}), cells: cellsOf(file) }));
+}
+
+/** Reads and validates a spec; a `files:` row becomes one row per file. `root` is where file: and files: paths start (the site). Errors name the file and the field. */
+export function readSheetSpec(file, { root = process.cwd() } = {}) {
   const text = fs.readFileSync(file, "utf8");
   const spec = file.endsWith(".json") ? JSON.parse(text) : parseYaml(text);
   const at = path.basename(file);
   if (!spec || typeof spec !== "object") throw new Error(`${at}: not a sheet spec`);
-  if (!Array.isArray(spec.rows) || !spec.rows.length) throw new Error(`${at}: rows must be a list of { label, cells }`);
+  if (!Array.isArray(spec.rows) || !spec.rows.length) throw new Error(`${at}: rows must be a list of { label, cells } or { label, files, sizes, grounds }`);
+  spec.rows = spec.rows.flatMap((row, r) => (row && row.files !== undefined ? fileRows(row, r, { root, at }) : [row]));
   spec.rows.forEach((row, r) => {
     if (!row || !Array.isArray(row.cells) || !row.cells.length) throw new Error(`${at}: rows[${r}] needs a label and a list of cells`);
     row.cells.forEach((cell, c) => { if (!cell || !KINDS.some((k) => typeof cell[k] === "string")) throw new Error(`${at}: rows[${r}].cells[${c}]: a cell needs one of file, svg, html, img`); });
@@ -42,19 +72,27 @@ export function readSheetSpec(file) {
 
 /** Text for an attribute or a text node. */
 export const escape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-/** An SVG file's text as inline markup: the XML prolog and the comments dropped. */
-export const svgMarkup = (text) => text.replace(/^<\?xml[^>]*>\s*/, "").replace(/<!--[\s\S]*?-->\s*/g, "");
 const letter = (i) => String.fromCharCode(65 + i);
 
-function cellMarkup(cell, { root }) {
+/** A cell's markup; an inline SVG's ids prefixed with the cell's own (`prefix`), so copies never resolve each other's. */
+function cellMarkup(cell, { root, prefix }) {
   if (cell.file !== undefined) {
     const file = path.resolve(root, cell.file);
     if (!fs.existsSync(file)) throw new Error(`${cell.file}: no such file (cells take file:, svg:, html: or img:)`);
-    return svgMarkup(fs.readFileSync(file, "utf8"));
+    return namespaceIds(svgMarkup(fs.readFileSync(file, "utf8")), prefix);
   }
-  if (cell.svg !== undefined) return cell.svg;
+  if (cell.svg !== undefined) return namespaceIds(cell.svg, prefix);
   if (cell.html !== undefined) return cell.html;
   return `<img src="${escape(cell.img)}" alt="">`;
+}
+
+/** A cell's own size, over its row's. */
+const cellStyle = (cell) => (Number(cell.size) > 0 ? ` style="--cell: ${Number(cell.size)}px"` : "");
+/** A cell's own ground: its background, its ink (what currentColor draws in) and room around the drawing. */
+function groundStyle(cell) {
+  const ground = typeof cell.ground === "string" ? { background: cell.ground } : cell.ground;
+  if (!ground) return "";
+  return ` style="${escape([ground.background && `background: ${ground.background}`, ground.color && `color: ${ground.color}`, "padding: 12px"].filter(Boolean).join("; "))}"`;
 }
 
 /** The sheet as one HTML document. `css` are stylesheet paths to link (the site's build); the sheet's own rules win. */
@@ -62,7 +100,7 @@ export function sheetHtml(spec, { root = process.cwd(), css = [] } = {}) {
   const rows = spec.rows.map((row, r) => {
     const id = letter(r);
     // an SVG or an image fills the box; markup keeps its own size, that being the point of an html: cell
-    const cells = row.cells.map((cell, c) => `<div class="sheet-cell" data-cell="${id}${c + 1}"><div class="sheet-box${cell.html === undefined ? " sheet-fit" : ""}">${cellMarkup(cell, { root })}</div><span class="sheet-cell-label">${c + 1} ${escape(cell.label ?? "")}</span></div>`).join("");
+    const cells = row.cells.map((cell, c) => `<div class="sheet-cell" data-cell="${id}${c + 1}"${cellStyle(cell)}><div class="sheet-box${cell.html === undefined ? " sheet-fit" : ""}"${groundStyle(cell)}>${cellMarkup(cell, { root, prefix: `sheet-${id}${c + 1}` })}</div><span class="sheet-cell-label">${c + 1} ${escape(cell.label ?? "")}</span></div>`).join("");
     return `<section class="sheet-row" data-row="${id}" style="--cell: ${Number(row.size) || 48}px"><h2 class="sheet-row-label"><b>${id}</b> ${escape(row.label ?? "")}${row.note ? `<small>${escape(row.note)}</small>` : ""}</h2><div class="sheet-cells">${cells}</div></section>`;
   });
   return `<!doctype html>

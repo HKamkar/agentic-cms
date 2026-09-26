@@ -48,7 +48,10 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
 3. **Candidates on a sheet** at the real size, on the real background, the
    current icon first: `pnpm kit sheet` with `img:` cells for what is there
    and `svg:` cells (a Lucide file inlined, a generated mark) for the
-   candidates; the owner picks by row.
+   candidates; the owner picks by row. A folder of drawings at every size
+   they ship and on every ground they sit on is one `files:` row
+   (`sizes:`, `grounds:` with each ground's ink); every copy's ids are its
+   own, so no preview script of its own is needed.
 4. **Land the family**: the `add` or the `family` run, the components on the
    map or the files, the `icon` fields of the page files; `pnpm kit icons
    family <spec> --check` and `pnpm kit icons audit` again — the inventory

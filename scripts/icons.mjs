@@ -6,6 +6,7 @@
 // renders a family of marks from primitives in a spec, and `audit` lists
 // every icon on the built pages beside the copy it sits with, as JSON and
 // as a sheet. docs/icons.md is the guide.
+import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -15,8 +16,10 @@ import { AUDIT_PAGE, auditToSheet, byFile } from "./lib/icons-audit.mjs";
 import { renderFamily } from "./lib/icons-family.mjs";
 import { readIconSource, renderIconMap } from "./lib/icons-source.mjs";
 import { relative } from "./lib/page-command.mjs";
-import { renderSheet } from "./lib/sheet.mjs";
 import { SPECS } from "./lib/specs.mjs";
+
+// lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
+const { renderSheet } = await import("./lib/sheet.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.icons, process.argv.slice(2));
 const root = process.cwd();
