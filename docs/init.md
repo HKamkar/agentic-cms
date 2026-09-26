@@ -7,7 +7,7 @@ it lay the site out:
 ```bash
 mkdir my-site && cd my-site
 pnpm init                                                        # a package.json to add to
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.1           # the engine (allowBuilds below, first)
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.2           # the engine (allowBuilds below, first)
 pnpm exec agentic-cms init .                                     # the site
 pnpm install && pnpm dev
 ```
@@ -60,7 +60,7 @@ is never overwritten unless `--force`; each file prints `created`,
    claim rules the lint enforces.
 4. Replace the content: `content/README.md` is the door.
 5. `pnpm content:lint` until clean, `pnpm build`, then the host of your
-   choice.
+   choice (a Node server: [deploy.md](deploy.md)).
 
 ## After a kit upgrade
 
@@ -69,3 +69,7 @@ pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm exec agentic-cms init . --agent-files          # the new rules and skills; the site's own edits are kept
 pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit 1 on drift)
 ```
+
+Each release's own steps — the lines a site's `AGENTS.md` and its edited
+rules take by hand, the scripts to change, the baselines to recapture — are
+in [upgrading.md](upgrading.md).

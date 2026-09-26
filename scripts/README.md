@@ -116,13 +116,21 @@ against `fixtures/` by `pnpm test:browser`.
   of `site.url`) and exits 1 naming each file; the last step of a build on
   a site that renders its address through `EmailLink` and tokens
   (`docs/email.md`).
+- `assemble` — `pnpm kit assemble [--check] [--json]` (`assemble.mjs`,
+  `lib/assemble.mjs`) copies `public/` and `.next/static` into a standalone
+  build's package (`.next/standalone`, or its `relativeAppDir`) — into its
+  folders, never as them — and checks every file there by size and hash;
+  exit 1 naming each missing, different or nested file. The last step of a
+  standalone site's build (`docs/deploy.md`).
 - `icons` — `pnpm kit icons add|remove <id>…` keeps the site's icon
   manifest and generates `src/config/icons.ts` from `lucide-static` and
   `simple-icons` (installed by the site; the kit ships no icon data);
   `icons family <spec>` renders a family of marks from primitives;
   `icons audit` inventories every icon on the built pages beside its copy,
-  as JSON and a sheet (`docs/icons.md`; `lib/icons-source.mjs`,
-  `lib/icons-family.mjs`, `lib/icons-audit.mjs`).
+  as JSON and a sheet; `icons round new|publish|retire` runs a design round
+  for a set of the site's own icons in the lab (`docs/icons.md`;
+  `lib/icons-source.mjs`, `lib/icons-family.mjs`, `lib/icons-audit.mjs`,
+  `lib/icons-round.mjs`).
 - `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
   [--candidates 2]` scaffolds the design round's throwaway route,
   `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the

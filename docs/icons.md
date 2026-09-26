@@ -113,6 +113,48 @@ file (`files: { src: { uses, pages } }`), and as a sheet
 copy). A report of one template glyph is a report of the class; the audit
 is the class.
 
+## A round: `icons round`
+
+The site's own icons — a set of roles the families' primitives cannot say,
+drawn in the site's language — are designed in rounds that span sessions:
+candidates per role, the owner's pick, the pick published, the rest gone.
+
+```bash
+pnpm kit icons round new modules --roles retrieval,graph,query        # 3 letters per role, the Icon template (--kind mark: the 64 grid)
+pnpm kit lab serve --sizes 24,36,96                                    # every candidate on the site's tokens, light and dark, on a phone
+pnpm kit sheet .parity/lab/rounds/modules/sheet.yaml                   # one picture: a row per role, each letter at 24/36/96 on paper, white, black
+pnpm kit icons round publish modules --pick retrieval=B,graph=A,query=C
+pnpm kit icons round retire modules                                    # the round goes; what was published stays
+```
+
+- **`new`** writes `.parity/lab/rounds/<round>/`: a scene per role and
+  letter (`<role>-<letter>.svg`) from the lab's `icon` or `mark` template,
+  the round's record (`round.yaml`: the kind, the sizes, the grounds, the
+  letters, the roles with a note each, the picks and what was published)
+  and `sheet.yaml`. The agent draws each scene into a candidate — by hand,
+  or with a generator script of its own that writes the files. The lab
+  lists a round's scenes (`rounds/<round>/<role>-<letter>`), so `lab serve`
+  and the lab route show them; `lab clean` leaves a round alone.
+- **The look** is `lab serve` (every candidate on the site's tokens, both
+  schemes, at the sizes it ships, enlarged, on a phone) and the sheet (one
+  picture, a row per role, a cell per letter × size × ground, labelled
+  `B · 36 · black`); every copy's ids are its own, so no preview script is
+  needed. The owner picks a letter per role.
+- **`publish`** renders each pick where a page takes it: an `icon` as
+  `src/config/icons/<role>.svg` and the map regenerated (what `icons add
+  file:<role>` does), rendered with `<Icon>`; a `mark` as
+  `public/images/icons/<role>.svg` (`--to` another folder), resolved for
+  one scheme (`--scheme`), with its source beside it
+  (`<role>.source.svg`). The picks and the files go into the record.
+- **`retire`** removes the round's folder — every scene, the record, the
+  sheet — and names what it keeps: every file the round published. A round
+  with nothing published is kept unless `--force`; `--dry-run` shows the
+  lists first.
+
+A round lives in the gitignored lab, so it stays on the machine it was
+drawn on; what the site keeps is what `publish` wrote, committed with the
+page that uses it.
+
 ## In `STANDARD.md`
 
 §4 names the site's families once they exist: the reference mark, the spec

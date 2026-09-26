@@ -55,9 +55,14 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    `docs/shot-probe-sheet.md`) in the same round. A candidate that moves
    gets the lab's timeline on the route, so the owner can pause, step and
    replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
-   around a component (`docs/lab.md` § Inspecting motion). `pnpm dev`;
+   around a component — it drives the component's inline SVGs and
+   anything marked `data-lab-drive`, never the reveals around them
+   (`docs/lab.md` § Inspecting motion). `pnpm dev`;
    hand over the route's URL on the dev server (and the LAN address for a
-   phone).
+   phone). A dev server restarted after a `pnpm build` that fails every page
+   with `Can't resolve '@vercel/turbopack-next/internal/…'` is reading the
+   build's caches: stop it, `rm -rf .next/dev .next/cache/turbopack`, start
+   it again (`docs/design.md` § When the dev server will not serve).
 5. **The look and the pick.** The owner looks on desktop and phone and
    picks by letter, or edits the pick in words ("merge B and C", "no
    icons", "change the radio colour too", "better wording for that row").
@@ -98,7 +103,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
   stay the section's own.
 - The route and the losers never merge: the build's SEO audit fails a route
   without a `seo` block, which is the guard; `demo clean` is the last step
-  before the verify block.
+  before the verify block. It removes what the round created that nothing
+  else imports — candidates, their stages and card faces, the round's
+  pictures under `public/images/<name>-demo/` — so promote the winner (and
+  move its approved artwork out of that folder) first; `demo clean <name>
+  --dry-run` lists what would go and what stays, and why.
 
 ## Verify
 

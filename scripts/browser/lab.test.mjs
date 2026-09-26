@@ -75,7 +75,8 @@ test("lab render: a .svg for the dark scheme resolves currentColor and the token
     assert.deepEqual([out.file, out.still, out.source, out.format, out.width], ["public/images/home/spin.svg", "public/images/home/spin-still.svg", null, "svg", 64]);
     const svg = fs.readFileSync(path.join(root, out.file), "utf8");
     assert.match(svg, /^<!-- rendered by agentic-cms lab from \.parity\/lab\/spin\.svg/);
-    assert.doesNotMatch(svg, /currentColor|var\(|data-duration|agentic-cms lab:/);
+    assert.doesNotMatch(svg, /currentColor|var\(|agentic-cms lab:/);
+    assert.match(svg, /data-duration="2" data-rest="0"/, "the cycle and the rest stay on the root");
     assert.match(svg, /stroke="#f2f2f2"[\s\S]*<animate /);
     assert.match(out.note, /carries the dark scheme's; an <img> of it will not follow the site's theme/);
     assert.equal(json(root, ["render", "spin", "--out", "src/config/icons/spin.svg", "--json"]).note, null, "Icon data follows the theme: no note");

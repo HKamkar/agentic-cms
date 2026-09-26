@@ -52,6 +52,15 @@ fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
 run("pnpm", ["install", "--prefer-offline", "--no-frozen-lockfile"], site);
 run("pnpm", ["build"], site);
 run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+// The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
+const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
+if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) { console.error(`pack-smoke: agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`); process.exit(1); }
+// The inline-loop pieces ship: readInlineSvg runs from the installed agentic-cms/content, InlineAnimation is compiled into the ix entry.
+fs.writeFileSync(path.join(site, "public/smoke-loop.svg"), '<svg xmlns="http://www.w3.org/2000/svg" data-rest="1"><circle id="c" r="1"/><use href="#c"/></svg>');
+const inline = spawnSync(process.execPath, ["--input-type=module", "-e", 'const { readInlineSvg } = await import("agentic-cms/content"); console.log(readInlineSvg("public/smoke-loop.svg", { prefix: "smoke" }));'], { cwd: site, encoding: "utf8" });
+if (inline.status !== 0 || !/id="smoke-c"[\s\S]*href="#smoke-c"/.test(inline.stdout)) { console.error(`pack-smoke: readInlineSvg from the tarball answered ${inline.status}: ${(inline.stderr || inline.stdout).trim()}`); process.exit(1); }
+const ix = path.join(site, "node_modules/agentic-cms/dist/ix");
+if (!fs.existsSync(path.join(ix, "InlineAnimation.js")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.js"), "utf8")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.d.ts"), "utf8"))) { console.error("pack-smoke: the tarball's agentic-cms/ix lacks InlineAnimation"); process.exit(1); }
 console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
 if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
 else fs.rmSync(scratch, { recursive: true, force: true });

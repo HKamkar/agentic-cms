@@ -16,6 +16,8 @@ export const REGISTRY = "src/components/sections/render.tsx";
 export const PAGES = "content/pages";
 /** next dev's generated route types, which go on naming a removed route until dev runs again; the production build's type check reads them. */
 export const STALE_TYPES = ".next/dev/types/validator.ts";
+/** What `demo new` records beside the route, for `demo clean`: the round's base commit, what was untracked then, the component and the candidates. */
+export const MANIFEST = "demo.json";
 export const LETTERS = "ABCDEFGH";
 export const isDemoName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name);
 export const demoDir = (name) => `src/app/${name}-demo`;
@@ -86,8 +88,9 @@ const removal = (demo) => `// \`agentic-cms demo new ${demo}\`, removed with the
 // \`agentic-cms demo clean ${demo}\`; never merged — the build's SEO audit
 // fails a route without a seo block, which is the guard. An animated
 // candidate is inspected on the lab's timeline: <LabStudy file="…"> for a
-// file, <LabTimeline label="…"> around a component (agentic-cms/lab;
-// docs/lab.md § Inspecting motion).`;
+// file, <LabTimeline label="…"> around a component, which drives its inline
+// SVGs and whatever carries data-lab-drive, not the reveals around them
+// (agentic-cms/lab; docs/lab.md § Inspecting motion).`;
 
 /** The route's source: with a section, the page's copy read at render; without one, each candidate rendered with no props (a piece of the chrome, whose copy is the site's config). Lettered blocks, the current version last, inside the site's own layout. */
 export function routeSource({ demo, type, slug, component, letters, data = false }) {
@@ -154,8 +157,8 @@ ${routeBody(name, "{...props}")}`;
 
 const pascal = (name) => name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
 
-/** Writes the route and its candidates; { route, path, section, page, component, candidates, data }. Throws with the fix. */
-export function writeDemo(root, { name, type, page, count = 2, component: override }) {
+/** Writes the route, its candidates and the manifest (base: the commit the round starts from, untracked: the files git did not track then); { route, path, section, page, component, candidates, data }. Throws with the fix. */
+export function writeDemo(root, { name, type, page, count = 2, component: override, base = null, untracked = [] }) {
   if (!isDemoName(name)) throw new Error(`${name}: a demo's name is lowercase letters, digits and hyphens`);
   if (!type && !override) throw new Error(`name what the candidates are for: --section <type> for a section (the route reads the page's copy), or --component <file> for a piece of the chrome (no page copy)`);
   if (!(count >= 1 && count <= LETTERS.length)) throw new Error(`--candidates is 1 to ${LETTERS.length}, not ${count}`);
@@ -180,55 +183,124 @@ export function writeDemo(root, { name, type, page, count = 2, component: overri
   for (const c of candidates) fs.writeFileSync(path.join(root, c.file), candidateSource(source, component.name, c.letter, name));
   fs.mkdirSync(path.dirname(route), { recursive: true });
   fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data) }));
+  const manifest = { demo: name, component: component.file, base, untracked, created: candidates.map((c) => c.file) };
+  fs.writeFileSync(path.join(path.dirname(route), MANIFEST), `${JSON.stringify(manifest, null, 1)}\n`);
   return { route: demoFile(name), path: `/${name}-demo`, section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
 }
 
 const SOURCES = /\.(tsx?|mjs|js)$/;
 const walk = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).flatMap((f) => { const full = path.join(dir, f); return fs.statSync(full).isDirectory() ? walk(full) : SOURCES.test(f) ? [full] : []; }) : []);
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const MODULE_EXTENSIONS = [".tsx", ".ts", ".mjs", ".js"];
 
-/** The files under src/ that import the module: by its @/ alias or a relative path ending in its basename. */
-export function importers(root, file) {
+/** The files under src/ that import the module: by its @/ alias or a relative path ending in its basename; the `except` files do not count. */
+export function importers(root, file, except = new Set()) {
   const base = path.basename(file).replace(/\.tsx?$/, "");
   const re = new RegExp(`from "(?:${escapeRe(alias(file))}|\\.{1,2}/(?:[\\w.-]+/)*${escapeRe(base)})(?:\\.tsx?)?"`);
-  return walk(path.join(root, "src")).filter((f) => re.test(fs.readFileSync(f, "utf8"))).map((f) => rel(root, f));
+  return walk(path.join(root, "src")).map((f) => rel(root, f)).filter((f) => !except.has(f) && re.test(fs.readFileSync(path.join(root, f), "utf8")));
 }
 
-/** Removes next dev's generated route types when they still name the route; the path when it went. */
-export function removeStaleTypes(root, routeDir) {
+/** The site file a specifier names from `from` (@/ and relative ones; a package is none), site-relative, or null. */
+function resolveImport(root, from, spec) {
+  const base = spec.startsWith("@/") ? path.join(root, "src", spec.slice(2)) : spec.startsWith(".") ? path.resolve(root, path.dirname(from), spec) : null;
+  if (!base) return null;
+  const found = [base, ...MODULE_EXTENSIONS.map((e) => base + e), ...MODULE_EXTENSIONS.map((e) => path.join(base, `index${e}`))].find((f) => fs.existsSync(f) && fs.statSync(f).isFile());
+  const file = found ? rel(root, found) : null;
+  return file && !file.startsWith("..") ? file : null;
+}
+
+/** The site files a file imports as values (import and export … from, a stylesheet included; never `import type`), in source order. */
+export function importsOf(root, file) {
+  const text = fs.readFileSync(path.join(root, file), "utf8");
+  const specs = [...text.matchAll(/^\s*(?:import|export)\s+(?!type\b)(?:[^'";]*?\bfrom\s+)?["']([^"']+)["']/gm)].map((m) => m[1]);
+  return [...new Set(specs.map((spec) => resolveImport(root, file, spec)).filter(Boolean))];
+}
+
+/** The newness test of a round: a file it created, or one git added or left untracked since its base that was not untracked already when it began. */
+export function roundNewness(manifest, { added = [], untracked = [] } = {}) {
+  const fresh = new Set([...added, ...untracked]);
+  const before = new Set(manifest.untracked ?? []);
+  return (file) => manifest.created.includes(file) || (fresh.has(file) && !before.has(file));
+}
+
+/** Removes next dev's generated route types when they still name the route; the path when it went (or would go, with dryRun). */
+export function removeStaleTypes(root, routeDir, { dryRun = false } = {}) {
   const validator = path.join(root, STALE_TYPES);
-  if (fs.existsSync(validator) && fs.readFileSync(validator, "utf8").includes(routeDir)) { fs.rmSync(validator); return STALE_TYPES; }
-  return null;
+  if (!fs.existsSync(validator) || !fs.readFileSync(validator, "utf8").includes(routeDir)) return null;
+  if (!dryRun) fs.rmSync(validator);
+  return STALE_TYPES;
 }
 
-/** Removes one demo: its folder, every candidate file it alone imported (and its module.css), the stale route types. The component the candidates were copied from is never removed. { removed, kept } */
-export function removeDemo(root, name) {
-  const dir = path.join(root, demoDir(name));
-  const removed = [], kept = [];
-  if (!fs.existsSync(dir)) return { removed, kept };
+const importedBy = (file, users) => `${file} (imported by ${users.slice(0, 2).join(", ")}${users.length > 2 ? ` and ${users.length - 2} more` : ""})`;
+/** A file's module.css beside it, when nothing outside `except` imports it: [css] or []. */
+const cssOf = (root, file, except) => { const css = file.replace(/\.tsx?$/, ".module.css"); return css !== file && fs.existsSync(path.join(root, css)) && !importers(root, css, except).length ? [css] : []; };
+
+/** The files a demo of an older kit (no manifest) takes with it: the lettered candidates the route imports that nothing else does. { files, kept } */
+function candidatePlan(root, dir, inDemo) {
   const route = path.join(dir, "page.tsx");
-  // The route's value imports of components (a type import is not a file to remove).
   const imported = fs.existsSync(route) ? [...fs.readFileSync(route, "utf8").matchAll(/^import \{[^}]*\} from "@\/components\/([^"]+)";/gm)].map((m) => `src/components/${m[1]}`) : [];
-  // A candidate is <Source><Letter> beside the <Source> the route also imports: only those go, so a
-  // round never deletes the site's own component, whatever else happens to import it.
   const sources = new Set(imported);
   const isCandidate = (spec) => { const m = /^(.*)[A-H]$/.exec(spec); return Boolean(m && sources.has(m[1])); };
-  fs.rmSync(dir, { recursive: true, force: true });
-  removed.push(demoDir(name));
+  const files = [], kept = [];
   for (const spec of imported) {
     const file = [".tsx", ".ts"].map((ext) => `${spec}${ext}`).find((f) => fs.existsSync(path.join(root, f)));
     if (!file) continue;
     if (!isCandidate(spec)) { kept.push(`${file} (the component the candidates started from)`); continue; }
-    const others = importers(root, file);
-    if (others.length) { kept.push(`${file} (imported by ${others.slice(0, 2).join(", ")}${others.length > 2 ? ` and ${others.length - 2} more` : ""})`); continue; }
-    fs.rmSync(path.join(root, file));
-    removed.push(file);
-    const css = file.replace(/\.tsx?$/, ".module.css");
-    if (fs.existsSync(path.join(root, css)) && !importers(root, css).length) { fs.rmSync(path.join(root, css)); removed.push(css); }
+    const users = importers(root, file, inDemo);
+    if (users.length) { kept.push(importedBy(file, users)); continue; }
+    files.push(file, ...cssOf(root, file, new Set([...inDemo, file])));
   }
-  const stale = removeStaleTypes(root, demoDir(name));
-  if (stale) removed.push(stale);
-  return { removed, kept };
+  return { files, kept };
+}
+
+/**
+ * The files a round takes with it: from the demo folder, imports followed through the files the round created only — an
+ * existing file (the section's component, a ui piece, the kit) stops the walk, so promoted work and the rest of the app
+ * are never reached — then, until nothing changes, every file something outside the round still imports dropped (the
+ * piece the promoted section now uses stays, and what it needs). { files, kept }
+ */
+function roundPlan(root, inDemo, manifest, isNew) {
+  const found = [], seen = new Set(inDemo), queue = [...inDemo];
+  while (queue.length) for (const dep of importsOf(root, queue.shift())) { if (seen.has(dep)) continue; seen.add(dep); if (dep !== manifest.component && isNew(dep)) { found.push(dep); queue.push(dep); } }
+  const set = new Set(found), kept = [];
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const file of set) { const users = importers(root, file, new Set([...set, ...inDemo])); if (users.length) { set.delete(file); kept.push(importedBy(file, users)); changed = true; } }
+  }
+  const files = [...new Set([...set].flatMap((file) => [file, ...cssOf(root, file, new Set([...set, ...inDemo]))]))];
+  const source = manifest.component && fs.existsSync(path.join(root, manifest.component)) ? [`${manifest.component} (the component the candidates started from)`] : [];
+  return { files, kept: [...source, ...kept] };
+}
+
+const readManifest = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, MANIFEST), "utf8")); } catch { return null; } };
+/** A demo's manifest, or null (no demo, or one an older kit wrote). */
+export const demoManifest = (root, name) => readManifest(path.join(root, demoDir(name)));
+
+/**
+ * Removes one demo: its folder, what the round created that nothing else imports (its manifest says what it created and
+ * where it began; `newness` from git adds what it created since) with their module.css, the round's assets
+ * (public/images/<name>-demo/) and the stale route types. The component the candidates were copied from is never
+ * removed. With dryRun nothing is removed and the lists are what would be. { removed, kept }
+ */
+export function removeDemo(root, name, { newness = {}, dryRun = false } = {}) {
+  const dir = path.join(root, demoDir(name));
+  if (!fs.existsSync(dir)) return { removed: [], kept: [] };
+  const inDemo = new Set(walk(dir).map((f) => rel(root, f)));
+  const manifest = readManifest(dir);
+  const plan = manifest ? roundPlan(root, inDemo, manifest, roundNewness(manifest, newness)) : candidatePlan(root, dir, inDemo);
+  const assets = `public/images/${name}-demo`;
+  const removed = [demoDir(name), ...plan.files, ...(fs.existsSync(path.join(root, assets)) ? [assets] : [])];
+  if (!dryRun) for (const file of removed) fs.rmSync(path.join(root, file), { recursive: true, force: true });
+  const stale = removeStaleTypes(root, demoDir(name), { dryRun });
+  return { removed: stale ? [...removed, stale] : removed, kept: plan.kept };
+}
+
+/** Whether a demo folder is one `demo new` wrote: its manifest, or — a demo from before the manifest — the header its route starts with. A site's own gallery in a *-demo folder is not. */
+export function isKitDemo(root, name) {
+  const dir = path.join(root, demoDir(name));
+  if (fs.existsSync(path.join(dir, MANIFEST))) return true;
+  const route = path.join(dir, "page.tsx");
+  return fs.existsSync(route) && fs.readFileSync(route, "utf8").startsWith("// Throwaway demo route of the design round");
 }
 
 /** Every demo under src/app, by name. */

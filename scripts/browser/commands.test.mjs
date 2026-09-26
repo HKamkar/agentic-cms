@@ -133,6 +133,23 @@ rows:
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("sheet: a files: row renders every SVG under a folder at its sizes on its grounds, through the bin", { skip }, async () => {
+  const root = fixtureSite();
+  try {
+    fs.writeFileSync(path.join(root, "files.yaml"), `name: preview
+rows:
+  - label: mark
+    files: public/images
+    sizes: [24, 64]
+    grounds: [{ background: "#fff", color: "#000" }, { background: "#000", color: "#fff" }]
+`);
+    const out = json(root, ["sheet", "files.yaml", "--json"]);
+    assert.deepEqual(out.rows.map((r) => [r.id, r.label, r.cells]), [["A", "mark · mark", 4]]);
+    const meta = await sharp(path.join(root, out.file)).metadata();
+    assert.equal(meta.width, 2400);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("sheet: a spec error exits 2 and names the field", { skip }, () => {
   const root = fixtureSite();
   try {

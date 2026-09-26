@@ -210,9 +210,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
 - `docs/` holds the guides (`docs/README.md` is the index): the command
   line, the screenshot harness, the one-shot page commands, designing, the
-  skills, starting a site, the roadmap. A change to a command or the
-  harness updates its guide in the same pull request; `CHANGELOG.md` gets a
-  line under Unreleased.
+  skills, starting a site, deploying as a Node server, the roadmap. A
+  change to a command or the harness updates its guide in the same pull
+  request; `CHANGELOG.md` gets a line under Unreleased.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
   `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
   assert the trees identical); design work on the example starts with the
@@ -265,10 +265,12 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   it. A full set of the current site's routes takes minutes, not the tens of
   minutes a heavy design does, but still run long captures in the background
   with the log under `.parity/<label>.log` and read the tail.
-- A capture reads `.next` and `public/`: never `pnpm build`, edit `public/`
-  or move assets while one runs, and build the exact tree you will commit
-  before capturing — an edit after the build, however trivial, means the
-  capture is of a different tree.
+- A capture photographs a copy of the build and `public/`
+  (`.parity/snapshots/<label>/`), taken before the browser starts: after
+  its `snapshot:` line the tree is free to build and edit. Still build the
+  exact tree you will commit before capturing — an edit before the build,
+  however trivial, means the capture is of a different tree; `meta.json`'s
+  `tree` records the HEAD and whether it was modified.
 - Baselines come from a build of the exact commit you compare against:
   `capture <label> --ref <commit>` builds it in a sibling worktree and
   stamps the sha. When a served build stands in for a commit (`capture …

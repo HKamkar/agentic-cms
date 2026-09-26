@@ -16,6 +16,8 @@ rules for an agent working on the code.
   leans on, how a site keeps them current.
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
   writes, what comes next, what to do after a kit upgrade.
+- [upgrading.md](upgrading.md) — upgrading a site from one release to the
+  next: the tag, the agent files, and each release's own steps.
 - [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
   the site's own marks from primitives, the inventory of every icon.
 - [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
@@ -23,6 +25,9 @@ rules for an agent working on the code.
   files a page ships; removed when done.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
+- [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
+  `assemble` as the build's last step, the copy that nests and the check
+  that catches it.
 - [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.
 
 The engines' contracts live next to their code and ship with the package:

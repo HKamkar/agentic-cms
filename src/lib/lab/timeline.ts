@@ -1,12 +1,16 @@
 // The one timeline every animated preview in the kit is inspected with — the
 // lab's own page, the lab route's scenes, a demo route's studies: play /
 // pause, replay, a range over one cycle, the time and the cycle in seconds.
-// A timeline drives everything inside its root from one clock: each SVG's
-// own timeline is paused and set with setCurrentTime(), each CSS animation
-// paused and set by currentTime, each lab frame (an iframe exposing
-// window.lab) sought — so the copies of one animation at several sizes,
-// grounds and colours show the same frame, where free-running SVG timelines
-// drift (WebKit advances visible and offscreen ones differently). Two
+// A timeline drives the animation it wraps from one clock: each inline SVG's
+// own timeline is paused and set with setCurrentTime(), each CSS or Web
+// Animation of an element inside an SVG — or inside a [data-lab-drive]
+// subtree, for HTML/CSS motion — paused and set by currentTime, each lab
+// frame (an iframe exposing window.lab) sought — so the copies of one
+// animation at several sizes, grounds and colours show the same frame, where
+// free-running SVG timelines drift (WebKit advances visible and offscreen
+// ones differently). Nothing else under the root is touched: a reveal of
+// the page around it (Fx, OnView) keeps its own clock, where driving it
+// replayed the reveal every cycle and folded it flat on a scrub. Two
 // timelines on a page are independent: their own controls, their own cycle.
 // An animated SVG inside an <img> is out of reach (its document is not the
 // page's), which is why inspection uses inline copies.
@@ -53,10 +57,11 @@ export function mountTimeline(root: HTMLElement, options: TimelineOptions = {}):
   const autoplay = options.autoplay ?? !reduce;
   let span = 0, current = 0, offset = 0, startedAt = 0, readAt = 0, frame = 0, playing = false;
 
-  // What the clock drives: the outermost SVGs (their SMIL), every CSS animation under the root, every lab frame.
+  // What the clock drives: the outermost SVGs (their SMIL), the CSS and Web Animations of what is inside an SVG or a [data-lab-drive] subtree of the root, every lab frame.
   const svgs = () => [...root.querySelectorAll("svg")].filter((svg) => !svg.parentElement?.closest("svg"));
   const frames = () => [...root.querySelectorAll("iframe")].flatMap((f) => { try { const lab = (f.contentWindow as (Window & { lab?: { seek(t: number): number; duration(): number } }) | null)?.lab; return lab ? [lab] : []; } catch { return []; } });
-  const animations = () => (typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }) : []);
+  const driven = (el: Element | null | undefined) => { if (!el) return false; if (el.closest("svg")) return true; const mark = el.closest("[data-lab-drive]"); return Boolean(mark && root.contains(mark)); };
+  const animations = () => (typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }).filter((a) => driven((a.effect as KeyframeEffect | null)?.target)) : []);
 
   function measure(): number {
     let max = 0;

@@ -25,7 +25,7 @@ decides whether `--motion` is part of the proof.
    from a checkout that moved on:
 
    ```bash
-   pnpm kit visual-parity capture before --ref develop            # or the branch's base commit
+   pnpm kit visual-parity capture before --ref develop            # or the branch's base commit; its demo routes are left out
    ```
 
    (A served build standing in for a commit — `--url` — has its `git log
@@ -52,25 +52,34 @@ decides whether `--motion` is part of the proof.
      intact — the crops (`<name>.before.png`, `.after.png`) show the band;
      expected for a design change that changes a height.
    - `SIZE … reflow`, or `CHANGED` rows on every text line below one
-     section: something changed how the compositor paints the whole page —
+     section: first read the `cause:` line under it — a section whose
+     height changed by a fraction of a pixel moves everything below by that
+     fraction and repaints it; fix or accept that height. Without a cause,
+     something changed how the compositor paints the whole page —
      usually a new stacking context (`position: relative`, a `z-index`, a
      `transform`) on a section whose animated elements overflow it.
      `pnpm kit probe / --select "<the section>"` prints the stacking chain;
      keep the utility to the breakpoint that needs it.
    - `CHANGED` on a mid-flight motion frame (`--s03-500`, 20–30 %): timing
      jitter is possible; re-run the after capture once, and identical on the
-     re-run is accepted. A settled or static frame never jitters.
+     re-run is accepted. A settled or static frame never jitters (an inline
+     SMIL loop is held at its `data-rest` there, and at each frame's own
+     time mid-flight; a loop that still differs lacks `data-rest` or ships
+     as an `<img>`, which no capture can hold).
    - A settled motion frame that keeps differing where a sequence runs long:
      the section declares `data-settle="<ms>"` (`STANDARD.md` §7).
    - `MISSING`: a page appeared or disappeared, or the compare lacks the
-     `--pages` the capture had.
+     `--pages` the capture had (with it, only the named pages are judged,
+     on both sides).
 4. **Say what the proof says**, in numbers: how many files, which
    differed, the verdicts, and why each difference is the change. A design
    change is its own commit and says so.
 
 ## Traps
 
-- Never `pnpm build`, edit `public/` or move assets while a capture runs.
+- Build the exact tree you mean to prove before capturing. The capture
+  photographs a copy of that build; after its `snapshot:` line the tree is
+  free to build and edit.
 - Commit each proven state before the next change.
 - `.parity/` is gitignored and grows fast; delete old labels.
 - A baseline built for the wrong sha proves nothing: the sha is in

@@ -4,6 +4,164 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.5.2] — 2026-09-26
+
+- `agentic-cms assemble` packages a standalone build for a Node host:
+  `public/` and `.next/static` copied into `.next/standalone` (or its
+  `relativeAppDir`) — into its folders, never as them — a copy an earlier
+  step nested inside its folder removed, then every file of both checked
+  there by size and hash; exit 1 naming each missing, different or nested
+  file, `--check` to check alone, `--json`. A hand-written copy that names
+  `.next/standalone/public` as its target nests inside it once the file
+  trace has made that folder (server code read a public file while a page
+  was prerendered), and every other image 404s with nothing failing; the
+  command in the build's last step makes that impossible to ship.
+  `docs/deploy.md` is the guide (the build and preview scripts, the check
+  alone, what the host needs besides the package); the site template's
+  AGENTS.md says it.
+- A capture photographs a copy of the build, not the working tree: the
+  site's own `.next/server/app`, `.next/static` and `public/` are copied
+  into `.parity/snapshots/<label>/` before the browser starts, served and
+  listed from there, and removed when the capture ends (a copy a capture
+  that died left behind goes at the next start). The `snapshot:` line says
+  when the tree is free: a build, an asset edit or a moved file during the
+  15–40 minutes of a full set no longer silently invalidates it. A build
+  that changes during the seconds of the copy fails the capture (exit 2)
+  instead of mixing two builds. `meta.json` records the checkout it was,
+  `tree: { head, dirty }` (`null` outside git). `--ref` and `--url` were
+  already apart from the tree and are unchanged.
+- `visual-parity capture --ref` builds a commit that still has a demo
+  route: the demo routes (`src/app/<name>-demo`, never production, which
+  the build's SEO audit rejects by design) are removed from the throwaway
+  worktree before install and build, logged and recorded in `meta.json`
+  (`demosRemoved`); a baseline of a commit made mid-round no longer has to
+  be built by hand. Every capture leaves the demo routes out of its pages
+  unless `--pages` names one, so both sides of a compare list the same
+  pages. A ref sibling is reused only when its build finished (a stamp,
+  `.parity/ref-build.json`, written after it): a build that failed its
+  audit used to be reused silently the next time. An unstamped sibling is
+  removed as a worktree before the prune, where deleting it first made the
+  next `git worktree add` fail ("missing but already registered").
+- The harness holds inline SMIL, which no CSS rule and no Web Animation
+  pause reaches: a static capture (and `shot`, `probe`, `icons audit`, the
+  `--states` shots) pauses every inline SVG's clock at its `data-rest`
+  (seconds; else 0), and a `--motion` capture sets it before each frame to
+  that frame's own time since the scroll step (0.15 s, 0.5 s, modulo
+  `data-duration`) and the settled frame to its `data-rest` — a loop's
+  frames no longer differ by the milliseconds a shot happened at, which
+  forced re-runs. `data-rest` is the kit's convention for the frame a
+  reduced-motion reader sees; the lab's `loop` template carries it. The
+  animation inventory lists every inline SMIL loop (`type: "smil"`, its
+  cycle, rest and box). An animated SVG in an `<img>` is out of reach and
+  photographed as it runs. **Recapture baselines**: a static shot of a page
+  with inline SMIL and every `.animations.json` of one change.
+- `visual-parity compare --pages` judges the named pages' files on both
+  sides, and of the before capture only the widths the after capture took.
+  The value used to be read as a switch alone (judge every file of the
+  after capture), so a partial capture against a full one reported every
+  other page as `MISSING`, hundreds of lines on a motion capture; a frame
+  of a named page that one side lacks is still `MISSING`. `routeName` is
+  now the one route-to-file-name mapping the harness, `shot` and the
+  compare share.
+- `visual-parity compare` names the section behind a shift. A static
+  capture writes `<page>@<width>.sections.json` beside each full-page shot
+  (every `[data-section]`, else the header, `main`'s children and the
+  footer, with its top and height in fractional pixels), and a `SIZE` or
+  `CHANGED` page shot gets a `cause:` line — the first section whose height
+  changed and by how much, `fractional` when not a whole pixel, or the
+  first whose top moved when something above the sections changed — and
+  `cause` in `--json`. A `reflow` from a section a quarter pixel taller,
+  every row below it re-antialiased, used to be measured by hand each time.
+  A capture without geometry compares as before and the compare names it.
+  **Recapture baselines** (a new file beside every static shot).
+- A lab timeline (`mountTimeline`, `LabTimeline`) drives only the
+  animation it wraps: the inline SVGs inside it (their SMIL, and the CSS
+  and Web Animations of what is inside them), anything under a
+  `data-lab-drive` element of its own (motion made of HTML and CSS), and
+  lab frames. Wrapped around a whole section it used to drive every
+  animation under it — the kit's own reveals (`Fx`, `OnView`) too — which
+  replayed the reveal every cycle, folded it flat on a scrub and stretched
+  the cycle to the reveal's length. A candidate whose motion is HTML and
+  CSS now marks its moving part `data-lab-drive`.
+- `demo clean` removes everything a round created that nothing else uses.
+  `demo new` writes the round's manifest beside the route (`demo.json`:
+  the commit it starts from, what git did not track then, the component,
+  the candidates); `clean` walks the route's imports through the files the
+  round created only — the candidates, and whatever git says was added or
+  left untracked since the round began — so an existing file (the
+  section's component, a ui piece, the kit) stops the walk, then keeps
+  every file something outside the round still imports (the piece the
+  promoted section now uses), and removes the rest with its `module.css`,
+  the round's pictures (`public/images/<name>-demo/`) and the stale route
+  types. It lists what it keeps and why; `--dry-run` shows both lists and
+  removes nothing. It used to remove the lettered candidates alone and
+  keep a round's support files (a stage, a card face) as "the component
+  the candidates started from", for hand removal. A demo from an older kit
+  (no manifest) is cleaned as before.
+- A loop the page runs: `InlineAnimation` (`agentic-cms/ix`) puts one of
+  the site's own SMIL SVGs inline, waits on its first frame until it
+  scrolls into view, plays from the start on each entry (`useReveal`),
+  pauses off screen, and shows its `data-rest` frame under reduced motion;
+  the svg fills the box from its own style attribute, so the first paint
+  needs no site stylesheet. `readInlineSvg(file, { prefix })`
+  (`agentic-cms/content`) reads the SVG when the page is built — a file
+  the site owns, no code in it — with every id prefixed and its references
+  followed. `lab render --out x.svg` keeps `data-duration` and `data-rest`
+  on the root (it dropped `data-duration`). The SVG string helpers
+  (`svgMarkup`, `tagRoot`, `namespaceIds`) and `readTrustedSvg` moved to
+  `src/lib/svg.ts` and `svg-read.ts`; `agentic-cms/lab` re-exports them.
+  `docs/lab.md` § Inline is the guide.
+- `sheet` makes every inline SVG's ids its cell's own (`namespaceIds`): one
+  file shown at three sizes on one sheet borrowed the first copy's mask,
+  as a consumer site's hand-made preview did — the kit's sheet had the
+  same flaw, and `icons audit`'s sheet with it. A cell may carry its own
+  `size` and `ground` (`{ background, color }`, the ink a `currentColor`
+  drawing takes), and a `files:` row — a folder walked for `.svg`, or a
+  list — becomes one row per file with a cell per `sizes` × `grounds`: the
+  24/36/96 px, light/white/black preview an icon round needs, with no
+  script of its own. `sheet` and `icons` load the lab's helpers after the
+  TypeScript loader, so a checkout of the kit runs its source.
+- The fix for a dev server that fails every page with `Can't resolve
+  '@vercel/turbopack-next/internal/…'` after a production build (stop it,
+  `rm -rf .next/dev .next/cache/turbopack`, start it again) is in the site
+  template's `AGENTS.md` gotchas and the `design-options` skill, where an
+  agent restarting the server during a round reads it; it was in
+  `docs/design.md` alone.
+- `icons round new | publish | retire`: a design round for a set of the
+  site's own icons, kept in the lab across sessions
+  (`.parity/lab/rounds/<round>/`). `new` writes a scene per role and letter
+  from the lab's `icon` or `mark` template, the round's record
+  (`round.yaml`) and a sheet spec — a row per role, each letter at the
+  round's sizes on paper, white and black — for `agentic-cms sheet`; the
+  lab lists the round's scenes (`lab serve`, the lab route), and `lab
+  clean` now keeps a round in progress and names it. `publish --pick
+  role=letter,…` renders each pick where a page takes it — an icon as
+  `src/config/icons/<role>.svg` with the icon map regenerated, a mark as
+  `public/images/icons/<role>.svg` resolved for one scheme with its source
+  beside it — and records it. `retire` removes the round and keeps
+  everything it published; a round with nothing published needs
+  `--force`, and `--dry-run` shows the lists. A consumer site built each
+  round by hand: a generator, gallery rows, publish and retire steps, and
+  preview scripts. The command line's contract takes a subcommand with
+  subcommands of its own for it (parse, `--help`, `docs/commands.md`); the
+  icon manifest update is a function (`updateIcons`) `icons add` and
+  `publish` share.
+- The README says what 0.5.2 is: the design skills and the commands under
+  them (a section of its own), the proof harness (another), both hosts —
+  the example's Cloudflare Worker and a Node server with `assemble` — the
+  install at `v0.5.2`, and an upgrade section. `docs/upgrading.md` is new:
+  the steps every upgrade takes, and a site's steps from 0.5.1 to 0.5.2 —
+  the agent files and the lines a site's own `AGENTS.md` and edited rules
+  take by hand, `assemble` for a standalone host, the baselines to
+  recapture, `InlineAnimation` for a site's own inline loop, and what the
+  lab, the design round and the sheet now do.
+- `demo clean` without a name takes only the routes `demo new` wrote (its
+  manifest, or the route header of a demo from before it) and keeps a
+  site's own gallery in a `src/app/*-demo` folder — a dev-only review page
+  a site keeps on purpose — and the lab's route, naming each; either goes
+  only by its name. It used to remove every `*-demo` folder, and the
+  design-options skill's verify step runs it bare.
+
 ## [0.5.1] — 2026-09-23
 
 - `design-graphics` and its motion reference teach the join: a join is a

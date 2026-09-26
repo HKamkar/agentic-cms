@@ -88,18 +88,32 @@ a patch under `node_modules`.
 - The dev server can miss utilities a file starts using (the CSS scan is
   cached under `.next/dev`): a class the production build has but the dev
   page lacks means `rm -rf .next/dev` and a restart, not a bug.
+- After a `pnpm build`, a restarted dev server can fail every page with
+  `Can't resolve '@vercel/turbopack-next/internal/…'` (the font loader's
+  path, typically): it is reading the caches the production build left.
+  Stop it, `rm -rf .next/dev .next/cache/turbopack`, start it again. Never
+  delete `.next` whole while an audit reads it
+  (`node_modules/agentic-cms/docs/design.md` § When the dev server will
+  not serve).
 - `pnpm build` fails a route without an `seo` block; a demo route
   (`src/app/<name>-demo/`, `pnpm kit demo clean`) is therefore removed before a branch merges — the
   guard, not an obstacle.
+- A Node server host (`output: "standalone"`) is packaged by `pnpm kit
+  assemble` as the build's last step, never by a hand-written `cp`: a copy
+  that names `.next/standalone/public` as its target nests inside it once
+  the file trace has made that folder, and every image 404s on the server
+  (`node_modules/agentic-cms/docs/deploy.md`).
 
 ## Parity harness and long runs
 
 The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
-on; never build, edit `public/` or move assets while a capture runs; a
+on; a capture photographs a copy of the build, so after its `snapshot:`
+line the tree is free, but build the exact tree you mean to prove; a
 static or settled frame never jitters, a mid-flight one may (re-run once);
-a `reflow` verdict or a diff on every text line below one section means a
-stacking context flipped the compositor (`pnpm kit probe` prints the chain);
+a `reflow` verdict or a diff on every text line below one section is, per
+its `cause:` line, a section a fraction of a pixel taller, else a stacking
+context that flipped the compositor (`pnpm kit probe` prints the chain);
 long captures run in the background and are finished when
 `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast.

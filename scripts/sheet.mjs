@@ -5,19 +5,22 @@
 // owner picks by row — "B2", "the alternate" — from one image. The spec's
 // shape is the comment in lib/sheet.mjs; docs/shot-probe-sheet.md has the
 // recipe.
+import "./lib/load-ts.mjs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { serveStatic } from "./lib/browser.mjs";
 import { relative } from "./lib/page-command.mjs";
-import { buildStylesheets, readSheetSpec, renderSheet, sheetHtml } from "./lib/sheet.mjs";
 import { SPECS } from "./lib/specs.mjs";
+
+// lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
+const { buildStylesheets, readSheetSpec, renderSheet, sheetHtml } = await import("./lib/sheet.mjs");
 
 const { positionals: [specFile], flags } = parseOrExit(SPECS.sheet, process.argv.slice(2));
 const root = process.cwd();
 let spec;
 const css = flags.url ? [] : buildStylesheets(root);
 try {
-  spec = readSheetSpec(path.resolve(root, specFile));
+  spec = readSheetSpec(path.resolve(root, specFile), { root });
   sheetHtml(spec, { root, css });
 } catch (error) {
   console.error(`sheet: ${error.message}`);

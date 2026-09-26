@@ -85,7 +85,10 @@ for every scene.
   where they start, and the hold as a flat segment of `keyTimes` inside the
   cycle — a `begin` offset drifts over repeats. `keySplines` with
   `calcMode="spline"` count one fewer than `keyTimes`. `data-duration` on
-  the root is the cycle the lab and `lab render` read.
+  the root is the cycle the lab and `lab render` read; `data-rest` (in
+  seconds) is the frame a reduced-motion reader sees, and where the
+  screenshot harness holds an inline SMIL clock in a static capture and a
+  motion capture's settled frame — pick a frame where the picture is whole.
 - The boundary is the most common flaw: the last frame of a cycle and the
   first of the next are the same picture, with no jump, pop or blink of a
   part that was hidden a frame early.
@@ -114,7 +117,8 @@ for every scene.
   on a player of your own: an animated SVG inside an `<img>` cannot be
   paused or sought from the page, so the timeline drives inline copies —
   `LabStudy` for a file, `LabTimeline` around a component on a demo route
-  — and the file stays what ships and what downloads.
+  (it drives the inline SVGs and whatever carries `data-lab-drive`, not
+  the page's reveals) — and the file stays what ships and what downloads.
 - Several copies of one SVG inline on one page share one id space: a copy
   resolves the first copy's mask, clip path, gradient or `<use>` target,
   and hiding or changing that copy breaks the others. `LabStudy` and the

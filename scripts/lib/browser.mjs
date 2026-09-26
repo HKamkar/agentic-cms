@@ -97,6 +97,12 @@ export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) 
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
 }
 
+/** A design round's throwaway route (src/app/<name>-demo, the lab's /lab-demo): never production, so never photographed unless asked for by name. */
+export const DEMO_ROUTE = /^\/[a-z0-9][a-z0-9-]*-demo(\/|$)/;
+
+/** The pages a capture photographs: the routes asked for, as given; else every route of the build but the demo routes. */
+export const capturePages = (routes, only = []) => (only.length ? only : routes.filter((route) => !DEMO_ROUTE.test(route)));
+
 /** Every route the build prerendered (from .next/server/app/**\/*.html), sorted; "/" for the index. */
 export function listPages(root = process.cwd()) {
   const app = path.join(root, ".next/server/app");
@@ -197,6 +203,51 @@ export const imagesReady = (page) => inPage(page, "images", 8000, () => { for (c
 // load timing; hold them at their first frame. Finite animations keep playing.
 export const PAUSE_LOOPS = () => { for (const a of document.getAnimations()) { if (a.effect?.getTiming().iterations === Infinity && a.playState !== "paused") { a.pause(); a.currentTime = 0; } } };
 
+// SMIL is not in document.getAnimations(): neither FREEZE_CSS nor PAUSE_LOOPS
+// reaches an inline <svg>'s <animate>, whose clock would be photographed at a
+// time that depends on load timing. Each outermost inline svg that animates
+// is paused and set here: at its data-rest (seconds; the frame a
+// reduced-motion reader sees) when `rest` and it declares one, else `at`
+// seconds into its cycle (data-duration). An animated SVG in an <img> is its
+// own document, out of reach — it is photographed as it runs. (In-page
+// functions travel as source, so each spells its selector out.)
+export const HOLD_SMIL = ({ at = 0, rest = false } = {}) => {
+  let held = 0;
+  for (const svg of document.querySelectorAll("svg")) {
+    if (svg.parentElement?.closest("svg") || !svg.querySelector("animate, animateTransform, animateMotion, set")) continue;
+    const duration = Number(svg.dataset.duration) || 0;
+    svg.pauseAnimations();
+    svg.setCurrentTime(rest && svg.dataset.rest !== undefined ? Number(svg.dataset.rest) : duration ? at % duration : at);
+    held++;
+  }
+  return held;
+};
+
+// The sections of a page and where they sit, for the compare to name the one
+// behind a shift: every [data-section] (else the header, main's children and
+// the footer) with its top and height as layout gives them — fractions
+// included, since a section a quarter pixel taller moves every row below it
+// by a quarter pixel and re-antialiases the rest of the page.
+export const SECTIONS = () => {
+  const marked = [...document.querySelectorAll("[data-section]")];
+  const round = (n) => Math.round(n * 1000) / 1000;
+  return (marked.length ? marked : [...document.querySelectorAll("header, main > *, footer")]).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { id: el.id || null, section: el.dataset.section ?? el.tagName.toLowerCase(), top: round(r.top + scrollY), height: round(r.height) };
+  });
+};
+
+// The inline SMIL loops of a page, for the animation inventory: one entry per
+// outermost animated svg with its cycle (data-duration, else its longest
+// animation), its rest and its box on the page, so a loop removed or retimed
+// is a difference even when the frames agree.
+export const SMIL_INVENTORY = () => [...document.querySelectorAll("svg")].filter((svg) => !svg.parentElement?.closest("svg") && svg.querySelector("animate, animateTransform, animateMotion, set")).map((svg) => {
+  let duration = Number(svg.dataset.duration) || 0;
+  if (!duration) for (const a of svg.querySelectorAll("animate, animateTransform, animateMotion, set")) { try { const d = a.getSimpleDuration(); if (Number.isFinite(d)) duration = Math.max(duration, d); } catch { /* an indefinite duration */ } }
+  const r = svg.getBoundingClientRect();
+  return { type: "smil", duration, rest: svg.dataset.rest === undefined ? null : Number(svg.dataset.rest), target: { tag: "svg", top: Math.round(r.top + scrollY), left: Math.round(r.left + scrollX), w: Math.round(r.width), h: Math.round(r.height) } };
+});
+
 // One page per shot, opened, prepared, photographed and closed here so that a
 // stalled page can simply be reloaded (`onceMore`) — the closing is in the
 // finally so a failed attempt does not leave its page behind.
@@ -209,6 +260,12 @@ export async function withPage(context, width, url, shoot, { height = 900 } = {}
   } finally { await page.close(); }
 }
 
+/** A route's name in the files a command writes — the harness's shots, shot's picture: "/" → "home", "/blog/x" → "blog__x", a URL → its path the same way. */
+export function routeName(target) {
+  const route = /^https?:\/\//.test(target) ? new URL(target).pathname : target;
+  return route === "/" ? "home" : route.replace(/^\//, "").replace(/\/$/, "").replace(/\//g, "__") || "home";
+}
+
 // ---- the one-shot commands' helpers (shot, probe, sheet) -------------------------
 /** A route of the build ("/about") against a base, or a URL as it is. */
 export function resolveTarget(target, { base }) {
@@ -217,7 +274,7 @@ export function resolveTarget(target, { base }) {
   return base.replace(/\/$/, "") + target;
 }
 
-/** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through), or the motion one (images, loops held). */
+/** The static preparation of the harness (fonts, no anchoring, frozen, revealed, scrolled through, SMIL at its rest), or the motion one (images, loops held). */
 export async function prepare(page, { motion = false } = {}) {
   await fontsReady(page);
   await page.addStyleTag({ content: NO_ANCHORING_CSS });
@@ -230,6 +287,7 @@ export async function prepare(page, { motion = false } = {}) {
   await page.addStyleTag({ content: FREEZE_CSS });
   await revealed(page);
   await settle(page);
+  await page.evaluate(HOLD_SMIL, { rest: true });
 }
 
 /** The elements a command works on (a command takes .nth(index) or all): the matches of a selector, the sections (article, [data-section]) holding the headings that match a regex, or — with both — the selector's matches inside that section. */

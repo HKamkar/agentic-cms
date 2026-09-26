@@ -18,23 +18,39 @@ Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should
 poll). Every capture records its mode, scheme and, for a baseline, the ref
-and sha in `meta.json`; `compare` refuses two captures of different schemes
-and prints the baseline it is judging against.
+and sha in `meta.json` — for the site's own build also the checkout it was
+(`tree: { head, dirty }`, `null` outside git); `compare` refuses two
+captures of different schemes and prints the baseline it is judging
+against.
 
 ## Where the build comes from
 
 A capture photographs one build, from one of three sources: the site's own
 `.next` (the default; `--build` runs `pnpm build` first, with its output in
-`.parity/<label>.build.log` and the last lines printed on failure); a served
+`.parity/<label>.build.log` and the last lines printed on failure) — copied
+first, with `public/`, into `.parity/snapshots/<label>/` and photographed from
+there, so a build or an asset edit while the capture runs changes nothing it
+shows (the `snapshot:` line says when the tree is free; the copy is removed
+when the capture ends, and a build that changes during the seconds of the
+copy fails it); a served
 site (`--url http://host:port` — print its `git log -1` first, because a
 baseline from a checkout that had moved on proves nothing); or another commit
 (`--ref <git ref>`: the ref resolved on `origin` first, checked out as a
 detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
-the site, whose `tsconfig` would include it — installed with the lockfile as
-it was, built there, served and captured; a sibling already built for the
-same sha is reused, older ref siblings are removed, and the sha goes into
-`meta.json`). The one command replaces the worktree, install, build, port and
-kill dance a baseline used to be.
+the site, whose `tsconfig` would include it — its demo routes removed
+(`src/app/<name>-demo`: never production, and the build's SEO audit rejects
+them by design, so a commit made mid-round still builds), installed with the
+lockfile as it was, built there, served and captured; a sibling whose build
+finished for the same sha is reused (its `.parity/ref-build.json` says so —
+one whose build failed is rebuilt, never reused), older ref siblings are
+removed, and the sha and the demo routes it removed go into `meta.json`).
+The one command replaces the worktree, install, build, port and kill dance a
+baseline used to be.
+
+Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
+`/lab-demo`) out of its pages unless `--pages` names one, so a baseline
+without them and an after capture of a tree that still has one list the
+same pages.
 
 ## Three modes
 
@@ -45,8 +61,11 @@ kill dance a baseline used to be.
 767 and 390 (`home@767--menu.png`, viewport only). The rendering is made
 deterministic: `prefers-reduced-motion` (the reveal library snaps to its
 end state), every CSS animation and transition disabled, infinite loops
-held at their first frame, scroll anchoring off, every image loaded before
-the shot. Scroll-linked effects are captured at the top of the page after
+held at their first frame, every inline SVG's SMIL clock paused at its
+`data-rest` (seconds; else 0), scroll anchoring off, every image loaded
+before the shot. SMIL is not a CSS or Web Animation, so nothing else stops
+it; an animated SVG shown through an `<img>` is its own document and out of
+reach — it is photographed as it runs. Scroll-linked effects are captured at the top of the page after
 one scroll-through, so the shot shows every section revealed.
 
 **`--motion`** plays the animations for real: with every image loaded up
@@ -62,12 +81,17 @@ compared like the animation inventory. The settled frame is compared with
 `--threshold`; the 150 and 500 ms frames catch an element mid-flight and
 jitter by a few frames between runs, so they are compared with the looser
 `--threshold-mid` (20 %) — a missing or wrong animation is far more than
-that. Alongside the frames, every CSS transition, CSS animation and Web
-Animation that starts during the scroll-through is recorded with its timing
-and its target's position (`<page>@<width>.animations.json`) and compared
-exactly, which catches a retimed or missing animation even when the frames
-happen to agree. Motion mode covers every page of the build and its first
-post.
+that. An inline SVG's SMIL clock, which the browser runs apart from every
+other animation, is paused and set before each frame to that frame's own
+time since the step (0.15 s, 0.5 s, modulo its `data-duration`), and for the
+settled frame to its `data-rest` — so a loop is photographed at the same
+moment in every run, never at whenever the shot happened. Alongside the
+frames, every CSS transition, CSS animation and Web Animation that starts
+during the scroll-through is recorded with its timing and its target's
+position (`<page>@<width>.animations.json`), and so is every inline SMIL
+loop (`type: "smil"`, its cycle, its rest, its box), and compared exactly,
+which catches a retimed or missing animation even when the frames happen to
+agree. Motion mode covers every page of the build and its first post.
 
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a
@@ -113,14 +137,31 @@ ok       home@1440.animations.json                                              
   - `insert` / `remove` — rows appeared or vanished and nothing else
     changed (the band is empty on the shorter side).
   - `reflow` — nothing below the first differing row lines up again: the
-    change reaches the whole page (a stacking context flipping the
-    antialiasing below it, a chrome change, a font).
+    change reaches the whole page. Most often one section's height changed
+    by a fraction of a pixel, which moves every row below it by that
+    fraction and re-antialiases the rest (the `cause` line says so);
+    otherwise a stacking context flipping the antialiasing below it, a
+    chrome change, a font.
   - `width` — the widths differ: a viewport change, not a layout one.
 
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
+- `cause:` — under a `SIZE` or `CHANGED` page shot, the section behind it,
+  from the geometry a static capture writes beside each shot
+  (`<page>@<width>.sections.json`: every `[data-section]`, else the header,
+  `main`'s children and the footer, with its top and height in fractional
+  pixels): the first one in page order whose height changed, and by how
+  much — `fractional` when the change is not a whole pixel — or the first
+  whose top moved, when something above the sections changed. No section
+  measured by hand. A capture from before the kit wrote geometry has none;
+  the compare says so and names the capture to redo.
 - `MISSING`: a file only one capture has (a page added or removed, or a
-  partial capture without `--pages` on the compare).
+  partial capture without `--pages` on the compare). With `--pages` the
+  compare judges only those pages' files, on both sides, and of the before
+  capture only the widths the after capture took: a full capture against a
+  partial one lists no other page, and a frame of a named page that one side
+  lacks (a motion step lost because the page got shorter) is still
+  `MISSING`.
 - `.animations.json` / `.settle.json`: `CHANGED` when the inventories
   differ; the diff directory then holds the entries only one side has.
 
@@ -151,10 +192,12 @@ a stalled page.
   and the full set once per pull request. Run a long capture in the
   background with its output in a log (`.parity/<label>.log`) and read the
   tail, not the log.
-- A capture reads `.next` and `public/`: never build, edit `public/` or
-  move assets while one runs, and build the exact tree you will commit
-  before capturing — an edit after the build, however trivial, means the
-  capture is of a different tree.
+- A capture photographs a copy of the build and `public/`, taken before
+  the browser starts: once it prints `snapshot:`, building, editing
+  `public/` or moving assets no longer reaches it. Still build the exact
+  tree you will commit before capturing — an edit before the build,
+  however trivial, means the capture is of a different tree; `meta.json`'s
+  `tree` (HEAD, modified or not) says which checkout it was.
 - Baselines come from a build of the exact commit you compare against:
   `capture <label> --ref <commit>` does the worktree, the install, the build
   and the serving, and stamps the sha into the capture. If a served build

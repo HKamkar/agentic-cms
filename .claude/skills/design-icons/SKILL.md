@@ -46,9 +46,19 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
    - Every icon means the copy it sits beside; a glyph that says
      "something technical" is a template glyph.
 3. **Candidates on a sheet** at the real size, on the real background, the
-   current icon first: `pnpm kit sheet` with `img:` cells for what is there
+   current icon first. A set of the site's own icons drawn over sessions is
+   an icon round (`docs/icons.md` § A round): `pnpm kit icons round new
+   <round> --roles …` writes a scene per role and letter and the round's
+   sheet; the owner looks with `pnpm kit lab serve --sizes …` and `pnpm kit
+   sheet .parity/lab/rounds/<round>/sheet.yaml` and picks a letter per role;
+   `icons round publish <round> --pick role=letter,…` puts the picks where
+   the pages take them, `icons round retire <round>` removes the rest.
+   Otherwise: `pnpm kit sheet` with `img:` cells for what is there
    and `svg:` cells (a Lucide file inlined, a generated mark) for the
-   candidates; the owner picks by row.
+   candidates; the owner picks by row. A folder of drawings at every size
+   they ship and on every ground they sit on is one `files:` row
+   (`sizes:`, `grounds:` with each ground's ink); every copy's ids are its
+   own, so no preview script of its own is needed.
 4. **Land the family**: the `add` or the `family` run, the components on the
    map or the files, the `icon` fields of the page files; `pnpm kit icons
    family <spec> --check` and `pnpm kit icons audit` again — the inventory

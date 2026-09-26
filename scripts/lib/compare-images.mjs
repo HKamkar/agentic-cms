@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { routeName } from "./browser.mjs";
 
 const TOLERANCE = 24;
 const MID_FLIGHT = /--s\d+-(150|500)\.png$/;
@@ -70,6 +71,46 @@ export function rowDiff(a, b, { tolerance = TOLERANCE } = {}) {
   return { verdict, head, tail, delta, band };
 }
 
+/**
+ * The first section, in document order, whose height (else top) differs by more than 0.01 px between two captures'
+ * geometry (<page>@<width>.sections.json): { section, id, moved: "height" | "top", top, height, delta, fractional }, or
+ * null. Sections are matched by id, else by type and occurrence. A fractional delta is the usual cause of a reflow: every
+ * row below the section moves by a fraction of a pixel and re-antialiases.
+ */
+export function explainShift(before, after) {
+  const keyed = (list) => { const seen = new Map(); return list.map((s) => { const base = s.id ?? s.section; const n = seen.get(base) ?? 0; seen.set(base, n + 1); return [`${base}#${n}`, s]; }); };
+  const byKey = new Map(keyed(after));
+  for (const [key, b] of keyed(before)) {
+    const a = byKey.get(key);
+    if (!a) continue;
+    const dh = a.height - b.height, dt = a.top - b.top;
+    if (Math.abs(dh) <= 0.01 && Math.abs(dt) <= 0.01) continue;
+    const moved = Math.abs(dh) > 0.01 ? "height" : "top";
+    const delta = Math.round((moved === "height" ? dh : dt) * 1000) / 1000;
+    return { section: b.section, id: b.id, moved, top: [b.top, a.top], height: [b.height, a.height], delta, fractional: Math.abs(delta - Math.round(delta)) > 0.001 };
+  }
+  return null;
+}
+
+/** The cause as the line the compare prints under a file's line. */
+export function causeLine(cause) {
+  const name = cause.id && cause.id !== cause.section ? `${cause.section} #${cause.id}` : cause.section;
+  const d = `${cause.delta > 0 ? "+" : ""}${cause.delta.toFixed(3)} px`;
+  const what = cause.moved === "height" ? `height ${cause.height[0].toFixed(3)} → ${cause.height[1].toFixed(3)}` : `top ${cause.top[0].toFixed(3)} → ${cause.top[1].toFixed(3)}, something above it changed`;
+  return `cause: ${name} ${what} (${d}${cause.fractional ? ", fractional: every row below re-antialiased" : ""})`;
+}
+
+const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return null; } };
+/** A full-page static shot: <page>@<width>.png, the files with geometry beside them (not a menu, motion or state shot). */
+const PAGE_SHOT = /^[^@]+@\d+\.png$/;
+
+/** The cause of a page shot's difference from its geometry on both sides; undefined for a shot without geometry by kind, null when a side lacks it or nothing moved. */
+function causeOf(name, fa, fb) {
+  if (!PAGE_SHOT.test(name)) return undefined;
+  const [ga, gb] = [fa, fb].map((f) => readJson(f.replace(/\.png$/, ".sections.json")));
+  return ga && gb ? explainShift(ga, gb) : null;
+}
+
 const decode = (file) => sharp(file).raw().toBuffer({ resolveWithObject: true });
 const meta = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")); } catch { return {}; } };
 const size = (img) => `${img.info.width}x${img.info.height}`;
@@ -111,6 +152,8 @@ async function compareImage(name, fa, fb, diffDir, { threshold, thresholdMid }) 
       await crop(ib, r.band.after[0], r.band.after[1], path.join(diffDir, `${stem}.after.png`));
       entry.crops = { before: `${stem}.before.png`, after: `${stem}.after.png` };
     }
+    const cause = causeOf(name, fa, fb);
+    if (cause !== undefined) entry.cause = cause;
     return entry;
   }
   const { changed, pct, bands, diff } = compareSameSize(ia, ib);
@@ -120,19 +163,37 @@ async function compareImage(name, fa, fb, diffDir, { threshold, thresholdMid }) 
     entry.bands = bands;
     entry.diff = name;
     await sharp(diff, { raw: { width: ia.info.width, height: ia.info.height, channels: 3 } }).png().toFile(path.join(diffDir, name));
+    const cause = causeOf(name, fa, fb);
+    if (cause !== undefined) entry.cause = cause;
   }
   const where = ok ? "" : ` rows ${bands.slice(0, 6).map((b) => b.join("-")).join(", ")}${bands.length > 6 ? ` +${bands.length - 6}` : ""}`;
   entry.line = `${status(ok, "CHANGED")} ${name.padEnd(70)} ${pct.toFixed(3)}% (${changed} px)${where}${midFlight ? "  mid-flight" : ""}`;
   return entry;
 }
 
+/** "<page>@<width>" of a capture's file name, the shot it belongs to. */
+const shotOf = (name) => /^[^@]+@\d+/.exec(name)?.[0] ?? name;
+
+/**
+ * The files a compare judges. Without pages, every file of both captures. With --pages (a partial capture on one side or
+ * both), only the named pages' files — a full capture against a partial one is not a page of MISSING lines — and of the
+ * before capture only the page-widths the after capture took, so a frame lost at a width it did take is still MISSING.
+ */
+export function judged(before, after, pages = []) {
+  if (!pages.length) return [...new Set([...before, ...after])];
+  const wanted = new Set(pages.map(routeName));
+  const named = (f) => wanted.has(f.slice(0, f.indexOf("@")));
+  const kept = after.filter(named);
+  const shots = new Set(kept.map(shotOf));
+  return [...new Set([...kept, ...before.filter((f) => named(f) && shots.has(shotOf(f)))])];
+}
+
 /** The report of two capture directories: one entry per file (with its printed line), the summary, the baseline the after capture names. */
 export async function compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages = [] }) {
   fs.rmSync(diffDir, { recursive: true, force: true });
   fs.mkdirSync(diffDir, { recursive: true });
-  // with --pages the "after" capture is partial: judge only what it contains
   const isResult = (f) => f.endsWith(".png") || f.endsWith(".animations.json") || f.endsWith(".settle.json");
-  const names = [...new Set([...(pages.length ? [] : fs.readdirSync(a)), ...fs.readdirSync(b)].filter(isResult))].sort();
+  const names = judged(fs.readdirSync(a).filter(isResult), fs.readdirSync(b).filter(isResult), pages).sort();
   const files = [];
   for (const name of names) {
     const fa = path.join(a, name), fb = path.join(b, name);
@@ -143,5 +204,6 @@ export async function compareCapture(a, b, { before, after, diffDir, threshold, 
   const summary = { ok: count("ok"), changed: count("CHANGED"), size: count("SIZE"), missing: count("MISSING") };
   summary.exit = files.length - summary.ok ? 1 : 0;
   const mb = meta(b);
-  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, summary, files };
+  const geometry = (dir) => fs.readdirSync(dir).some((f) => f.endsWith(".sections.json"));
+  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
 }

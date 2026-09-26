@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
-import { compareCapture, compareSameSize, mergeBands, rowDiff } from "./compare-images.mjs";
+import { causeLine, compareCapture, compareSameSize, explainShift, judged, mergeBands, rowDiff } from "./compare-images.mjs";
 
 // A synthetic page: width w, every row a colour by index (so rows differ from each other), 3 channels.
 const W = 40;
@@ -101,5 +101,58 @@ test("compareCapture: two capture directories give the report, the lines and the
   assert.equal(report.baseline.sha, "abc123");
   assert.match(report.files.find((f) => f.name === "about@40.png").line, /^SIZE {5}about@40\.png +40x300 -> 40x330 \(\+30\) {2}same to row 100, tail 190 rows, band 100-110 -> 100-140: shift$/);
   assert.match(byName["blog@40.png"].line, /^CHANGED {2}blog@40\.png +0\.333% \(40 px\) rows 10-10$/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("--pages judges the named pages on both sides: the other pages of a full capture are not MISSING, a frame lost at a width the after capture took is", () => {
+  const before = ["home@40.png", "home@40--s01-500.png", "home@80.png", "about@40.png", "blog__a@40.png", "home@40.animations.json"];
+  const after = ["home@40.png", "about@40.png", "blog__a@40.png", "blog__b@40.png", "home@40.animations.json"];
+  assert.deepEqual(judged(before, after, ["/"]).sort(), ["home@40--s01-500.png", "home@40.animations.json", "home@40.png"], "home@80: a width the after capture did not take");
+  assert.deepEqual(judged(before, after, ["/blog/a", "/about"]).sort(), ["about@40.png", "blog__a@40.png"]);
+  assert.deepEqual(judged(["about@40.png"], ["home@40.png", "about@40.png", "x@40.png"], ["/about"]), ["about@40.png"], "a partial before, a full after: one page, nothing MISSING");
+  assert.equal(judged(before, after).length, 7, "without --pages: every file of both, once");
+});
+
+test("compareCapture with --pages reports only the named page, a lost frame of it as MISSING", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-pages-"));
+  const write = async (label, name) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(page(20)); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  for (const name of ["home@40.png", "home@40--s01-500.png"]) await write("a", name);
+  for (const name of ["home@40.png", "about@40.png", "blog@40.png"]) await write("b", name);
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20, pages: ["/"] });
+  assert.deepEqual(report.files.map((f) => [f.name, f.status]), [["home@40--s01-500.png", "MISSING"], ["home@40.png", "ok"]]);
+  assert.deepEqual(report.pages, ["/"]);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("explainShift names the first section whose height moved, a fraction of a pixel included; a top that moved alone points above it", () => {
+  const before = [{ id: "hero", section: "hero", top: 0, height: 812.5 }, { id: null, section: "cards", top: 812.5, height: 400 }, { id: null, section: "cards", top: 1212.5, height: 400 }];
+  const grown = [{ id: "hero", section: "hero", top: 0, height: 813.25 }, { id: null, section: "cards", top: 813.25, height: 400 }, { id: null, section: "cards", top: 1213.25, height: 400 }];
+  assert.deepEqual(explainShift(before, grown), { section: "hero", id: "hero", moved: "height", top: [0, 0], height: [812.5, 813.25], delta: 0.75, fractional: true });
+  assert.equal(causeLine(explainShift(before, grown)), "cause: hero height 812.500 → 813.250 (+0.750 px, fractional: every row below re-antialiased)");
+  const second = structuredClone(before); second[2].height = 440;
+  assert.deepEqual([explainShift(before, second).section, explainShift(before, second).delta, explainShift(before, second).fractional], ["cards", 40, false], "the second of two sections of one type, matched by occurrence");
+  const pushed = before.map((s) => ({ ...s, top: s.top + 12 }));
+  assert.equal(explainShift(before, pushed).moved, "top");
+  assert.match(causeLine(explainShift(before, pushed)), /^cause: hero top 0\.000 → 12\.000, something above it changed \(\+12\.000 px\)$/);
+  assert.equal(explainShift(before, structuredClone(before)), null);
+  assert.equal(explainShift(before, before.map((s) => ({ ...s, height: s.height + 0.004 }))), null, "within 0.01 px is layout noise");
+});
+
+test("compareCapture gives a changed page shot its cause from both captures' geometry; a shot without geometry gets null, a menu shot none", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-cause-"));
+  const write = async (label, name, rows) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(rows); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  const before = page(100), after = [...before]; after[60] = [250, 250, 250];
+  for (const name of ["home@40.png", "about@40.png", "home@40--menu.png"]) { await write("a", name, before); await write("b", name, after); }
+  const geo = (h) => JSON.stringify([{ id: "hero", section: "hero", top: 0, height: h }]);
+  fs.writeFileSync(path.join(dir, "a", "home@40.sections.json"), geo(50));
+  fs.writeFileSync(path.join(dir, "b", "home@40.sections.json"), geo(50.5));
+  fs.writeFileSync(path.join(dir, "a", "about@40.sections.json"), geo(50));
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20 });
+  const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
+  assert.equal(byName["home@40.png"].cause.delta, 0.5);
+  assert.equal(byName["about@40.png"].cause, null, "the after capture has no geometry for it");
+  assert.ok(!("cause" in byName["home@40--menu.png"]), "a menu shot has no geometry by kind");
+  assert.ok(!report.files.some((f) => f.name.endsWith(".sections.json")), "geometry annotates, it is not judged");
+  assert.deepEqual(report.geometry, { before: true, after: true });
   fs.rmSync(dir, { recursive: true, force: true });
 });

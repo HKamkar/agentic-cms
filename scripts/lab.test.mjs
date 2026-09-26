@@ -75,3 +75,14 @@ test("lab serve: --sizes applies to a scene of any width; without it a wide scen
     assert.match(bad.stderr, /--sizes: big is not a size in whole pixels/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test("lab clean keeps an icon round and names it; everything else of the lab goes", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "lab-rounds-"));
+  try {
+    for (const file of [".parity/lab/spin.svg", ".parity/lab/rounds/modules/round.yaml", ".parity/lab/rounds/modules/graph-A.svg", ".parity/lab/scratch/notes.svg"]) { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), "<svg/>"); }
+    const r = run(root, ["clean", "--json"]);
+    assert.deepEqual(JSON.parse(r.stdout), { removed: [".parity/lab/scratch", ".parity/lab/spin.svg"], kept: [".parity/lab/rounds/modules"] });
+    assert.ok(fs.existsSync(path.join(root, ".parity/lab/rounds/modules/graph-A.svg")));
+    assert.match(run(root, ["clean"]).stdout, /nothing to remove; \.parity\/lab\/rounds\/modules kept \(an icon round: agentic-cms icons round retire modules\)/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

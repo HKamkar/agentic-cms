@@ -79,8 +79,20 @@ How a section gets its design, as it runs in practice (the
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
    (`--section` and `--component` together are a section whose component
-   is not in the registry.) `demo clean` then removes the route and the
-   candidate files, never the component they were copied from.
+   is not in the registry.) `demo new` also writes the round's manifest
+   beside the route (`demo.json`: the commit the round starts from, what
+   git did not track then, the component, the candidates). Whatever the
+   round adds for its candidates — a stage, a card face, a stylesheet —
+   is ordinary files; its pictures go under `public/images/<name>-demo/`.
+   `demo clean` then removes the route, every file the round created that
+   nothing outside it imports (found from the route's imports through new
+   files only, so the section's component, the library and promoted work
+   are never reached) with its `module.css`, and the round's pictures, and
+   lists what it keeps and why; `--dry-run` shows the lists first. Promote
+   the winner before cleaning: a piece the real section imports by then
+   stays. Without a name, `demo clean` takes every route `demo new` wrote
+   and keeps a site's own gallery in a `*-demo` folder (named in its
+   output; it goes only by its name).
 5. **The look.** The owner looks on desktop and phone and picks by letter,
    or edits the pick in words: "merge B and C", "no icons", "change the
    radio colour too", "better wording for that row". Every "more" is an
@@ -134,7 +146,8 @@ one-line fix:
   `@vercel/turbopack-next/internal/…` path) right after a production
   build: `next dev` is reading caches a `next build` left behind. Stop the
   server, `rm -rf .next/dev .next/cache/turbopack`, start it again. (Do
-  not delete `.next` whole while a capture or an audit is reading it.)
+  not delete `.next` whole while an audit is reading it, or before a
+  capture has printed its `snapshot:` line.)
 - **A removed route still fails the next production build's type check**
   (`Cannot find module '../../../src/app/<name>-demo/page.js'`): `next
   dev` wrote `.next/dev/types/validator.ts` for it and the build reads it.
