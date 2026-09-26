@@ -22,7 +22,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, NO_ANCHORING_CSS, PAUSE_LOOPS, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, NO_ANCHORING_CSS, PAUSE_LOOPS, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
@@ -54,8 +54,8 @@ if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2
 if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
 const say = (line) => (flags.json ? process.stderr.write(line) : process.stdout.write(line));
 
-/** The build's own routes: every page that is not a post and not the 404, and the first post. */
-const pageRoutes = (root = ROOT) => listPages(root).filter((route) => !route.startsWith("/blog-post/") && route !== "/_not-found");
+/** The build's own routes: every page that is not a post, not the 404 and not a demo route, and the first post. */
+const pageRoutes = (root = ROOT) => capturePages(listPages(root)).filter((route) => !route.startsWith("/blog-post/") && route !== "/_not-found");
 const firstPost = (root = ROOT) => listPages(root).find((route) => route.startsWith("/blog-post/"));
 const motionPages = (root = ROOT) => {
   const post = firstPost(root);
@@ -183,9 +183,9 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
   const dir = path.join(OUT, label);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha } : {}), ...(tree !== undefined ? { tree } : {}) };
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
-  const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : listPages(root);
+  const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : capturePages(listPages(root));
   const { context, close } = await launch({ scheme, motion });
   let count = 0;
   const finish = () => {

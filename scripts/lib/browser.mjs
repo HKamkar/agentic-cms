@@ -97,6 +97,12 @@ export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) 
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
 }
 
+/** A design round's throwaway route (src/app/<name>-demo, the lab's /lab-demo): never production, so never photographed unless asked for by name. */
+export const DEMO_ROUTE = /^\/[a-z0-9][a-z0-9-]*-demo(\/|$)/;
+
+/** The pages a capture photographs: the routes asked for, as given; else every route of the build but the demo routes. */
+export const capturePages = (routes, only = []) => (only.length ? only : routes.filter((route) => !DEMO_ROUTE.test(route)));
+
 /** Every route the build prerendered (from .next/server/app/**\/*.html), sorted; "/" for the index. */
 export function listPages(root = process.cwd()) {
   const app = path.join(root, ".next/server/app");
