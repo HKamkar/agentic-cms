@@ -230,6 +230,26 @@ export const revealed = (page) => page.waitForFunction((pattern) => [...document
 export const STEP_FRAMES = 8;
 export const frames = (page, count) => inPage(page, `${count} animation frames`, 10000, (count) => new Promise((resolve) => { let seen = 0; const tick = () => (++seen >= count ? resolve() : requestAnimationFrame(tick)); requestAnimationFrame(tick); }), count);
 
+// A scroll step is done when what it set off has run: an observer's callback, a reveal's class or style, a
+// lazy section mounting. Counted in frames like every wait here, from two, and done once the page has not
+// changed — no DOM mutation — for two frames in a row; never more than the eight every step used to wait,
+// so a busy page gets them all and a quiet one is not held (eight a step was most of a short page's time).
+export const QUIET = { min: 2, still: 2, max: STEP_FRAMES };
+/** Animation frames until the page has been still (no mutation) for `still` in a row, from `min` to `max`; the frames it took. */
+export const quiet = (page, { min, still, max } = QUIET) => inPage(page, "a quiet page", 10000, ({ min, still, max }) => new Promise((resolve) => {
+  let seen = 0, calm = 0, changed = false;
+  const watch = new MutationObserver(() => { changed = true; });
+  watch.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+  const tick = () => {
+    seen++;
+    calm = changed ? 0 : calm + 1;
+    changed = false;
+    if (seen >= max || (seen >= min && calm >= still)) { watch.disconnect(); resolve(seen); return; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}), { min, still, max });
+
 // The scroll-through only has to reach every scroll-into-view observer, not
 // to paint: while it runs every element is hidden — visibility, so layout,
 // the observers and the page's scripts are untouched — and a heavy page's
@@ -245,9 +265,9 @@ export async function settle(page) {
   // it is scrolled through, and a height read once at the start stops the pass short of the footer.
   const height = () => page.evaluate(() => document.documentElement.scrollHeight);
   await page.evaluate(hidePaint, PAINTLESS);
-  for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await frames(page, STEP_FRAMES); }
+  for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await quiet(page); }
   await page.evaluate((id) => { document.getElementById(id)?.remove(); window.scrollTo(0, 0); }, PAINTLESS);
-  await frames(page, STEP_FRAMES);
+  await quiet(page);
   await sequencesRan(page);
   await imagesReady(page);
   // what arrived is decoded and painted: counted in frames, like every other wait here, where it was 400 ms

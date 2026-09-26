@@ -10,7 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import zlib from "node:zlib";
 import sharp from "sharp";
-import { chromePath, hydrated, imagesReady, launch, listPages, prepare, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
+import { QUIET, chromePath, hydrated, imagesReady, launch, listPages, prepare, quiet, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
 import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
@@ -204,4 +204,19 @@ test("a page served with thirdParty: hold runs no other origin's script and send
       } finally { server.close(); }
     }
   } finally { await close(); other.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("quiet waits for a page to stop changing: a still page two frames, a page busy for five frames past them, one that never stops the cap", { skip }, async () => {
+  const { context, close } = await launch({});
+  try {
+    const page = await context.newPage();
+    await page.setContent("<!doctype html><p id=p>0</p>");
+    assert.equal(await quiet(page), QUIET.min, "nothing changes: the minimum");
+    // five frames of changes, then still: it waits them out, then two still frames
+    await page.evaluate(() => { let n = 0; const step = () => { document.getElementById("p").textContent = String(++n); if (n < 5) requestAnimationFrame(step); }; requestAnimationFrame(step); });
+    const busy = await quiet(page);
+    assert.ok(busy > QUIET.min && busy < QUIET.max, `busy for five frames: ${busy}`);
+    await page.evaluate(() => { const step = () => { document.getElementById("p").textContent += "."; requestAnimationFrame(step); }; requestAnimationFrame(step); });
+    assert.equal(await quiet(page), QUIET.max, "a page that never settles gets the eight frames a step always had");
+  } finally { await close(); }
 });
