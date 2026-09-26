@@ -117,7 +117,8 @@ for every scene.
   on a player of your own: an animated SVG inside an `<img>` cannot be
   paused or sought from the page, so the timeline drives inline copies —
   `LabStudy` for a file, `LabTimeline` around a component on a demo route
-  — and the file stays what ships and what downloads.
+  (it drives the inline SVGs and whatever carries `data-lab-drive`, not
+  the page's reveals) — and the file stays what ships and what downloads.
 - Several copies of one SVG inline on one page share one id space: a copy
   resolves the first copy's mask, clip path, gradient or `<use>` target,
   and hiding or changing that copy breaks the others. `LabStudy` and the

@@ -74,6 +74,15 @@ changes what a capture writes says **recapture baselines**.
   every row below it re-antialiased, used to be measured by hand each time.
   A capture without geometry compares as before and the compare names it.
   **Recapture baselines** (a new file beside every static shot).
+- A lab timeline (`mountTimeline`, `LabTimeline`) drives only the
+  animation it wraps: the inline SVGs inside it (their SMIL, and the CSS
+  and Web Animations of what is inside them), anything under a
+  `data-lab-drive` element of its own (motion made of HTML and CSS), and
+  lab frames. Wrapped around a whole section it used to drive every
+  animation under it — the kit's own reveals (`Fx`, `OnView`) too — which
+  replayed the reveal every cycle, folded it flat on a scrub and stretched
+  the cycle to the reveal's length. A candidate whose motion is HTML and
+  CSS now marks its moving part `data-lab-drive`.
 
 ## [0.5.1] — 2026-09-23
 

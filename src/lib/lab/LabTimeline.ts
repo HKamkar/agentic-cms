@@ -4,9 +4,10 @@
 // markup React never touches again (the timeline owns them after mount, so
 // the server's HTML and the client's agree), the previews as children, and
 // mountTimeline() called when the element attaches and destroyed with it
-// (a callback ref with a cleanup: no ref is read during render). Everything
-// animated inside it — inline SVGs and their SMIL, CSS animations — runs on
-// its one clock; another LabTimeline on the page has its own. An <img> of
+// (a callback ref with a cleanup: no ref is read during render). The
+// animation it wraps — inline SVGs, their SMIL and CSS, and HTML/CSS motion
+// under a data-lab-drive attribute — runs on its one clock; the page's
+// reveals around it keep theirs, and another LabTimeline has its own. An <img> of
 // an animated file cannot be driven: put the SVG inline (LabStudy does). No
 // JSX: createElement, like LabScenes, so it renders under node:test too.
 import { createElement as h, useCallback, type ReactNode } from "react";

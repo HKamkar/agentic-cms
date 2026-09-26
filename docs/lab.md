@@ -127,10 +127,15 @@ round's demo route — has the same controls for it, the one timeline of
   where the range stands. The controls are labelled (the group is
   "<name>: timeline", the range "Time" with the seconds as its value
   text), keep a visible focus ring, and are 44 px tall for a finger.
-- **One clock per animation.** A timeline drives everything inside it from
-  one `requestAnimationFrame`: each inline SVG's own timeline is paused and
-  set with `setCurrentTime()`, each CSS animation paused and set by
-  `currentTime`, each lab frame sought. The copies of one animation — its
+- **One clock per animation.** A timeline drives the animation it wraps
+  from one `requestAnimationFrame`: each inline SVG's own timeline is paused
+  and set with `setCurrentTime()`, each CSS or Web Animation of an element
+  inside an SVG — or inside a `data-lab-drive` element, for motion made of
+  HTML and CSS — paused and set by `currentTime`, each lab frame sought.
+  Nothing else under it is touched: wrapped around a whole section, it
+  leaves the section's reveals (`Fx`, `OnView`) on their own clock, where
+  driving them replayed each reveal every cycle and folded it flat on a
+  scrub, and they do not count towards the cycle. The copies of one animation — its
   sizes, its colour variants, its grounds — show the same frame whether
   they are on screen or not; left to run on their own, SVG timelines
   drift (WebKit advances visible and offscreen ones differently). Two
@@ -172,8 +177,11 @@ import { LabStudy, LabTimeline } from "agentic-cms/lab";
 
 `LabStudy` reads the file, so it belongs in the route (a server
 component), not inside a client component; `LabTimeline` wraps whatever
-the route renders, and drives the inline SVG and the CSS animations
-inside it (an `<img>` inside it stays out of reach). Candidates that are
+the route renders, and drives the inline SVGs and their animations inside
+it, plus whatever carries `data-lab-drive` — a candidate whose motion is
+HTML and CSS puts the attribute on its moving part — while the page's
+reveals around them keep their own clock (an `<img>` inside it stays out
+of reach). Candidates that are
 different animations get a timeline each; the copies of one animation
 share one. The route and its studies leave with `demo clean`, like every
 candidate.

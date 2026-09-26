@@ -86,8 +86,9 @@ const removal = (demo) => `// \`agentic-cms demo new ${demo}\`, removed with the
 // \`agentic-cms demo clean ${demo}\`; never merged — the build's SEO audit
 // fails a route without a seo block, which is the guard. An animated
 // candidate is inspected on the lab's timeline: <LabStudy file="…"> for a
-// file, <LabTimeline label="…"> around a component (agentic-cms/lab;
-// docs/lab.md § Inspecting motion).`;
+// file, <LabTimeline label="…"> around a component, which drives its inline
+// SVGs and whatever carries data-lab-drive, not the reveals around them
+// (agentic-cms/lab; docs/lab.md § Inspecting motion).`;
 
 /** The route's source: with a section, the page's copy read at render; without one, each candidate rendered with no props (a piece of the chrome, whose copy is the site's config). Lettered blocks, the current version last, inside the site's own layout. */
 export function routeSource({ demo, type, slug, component, letters, data = false }) {

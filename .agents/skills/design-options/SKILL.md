@@ -55,7 +55,9 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    `docs/shot-probe-sheet.md`) in the same round. A candidate that moves
    gets the lab's timeline on the route, so the owner can pause, step and
    replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
-   around a component (`docs/lab.md` § Inspecting motion). `pnpm dev`;
+   around a component — it drives the component's inline SVGs and
+   anything marked `data-lab-drive`, never the reveals around them
+   (`docs/lab.md` § Inspecting motion). `pnpm dev`;
    hand over the route's URL on the dev server (and the LAN address for a
    phone).
 5. **The look and the pick.** The owner looks on desktop and phone and

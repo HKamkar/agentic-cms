@@ -171,3 +171,31 @@ for (const engine of ENGINES) {
     }
   });
 }
+
+// A timeline wrapped around a whole section, as a demo route may: the section's own reveal (a Web Animation the way the
+// reveal library runs one, on an element outside the SVG) must keep its clock while the timeline holds the SVG's frame.
+test("a timeline around a section drives its SVG and leaves the section's reveal running", { skip: ENGINES[0].skip, timeout: 60000 }, async () => {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>scope</title></head><body>
+<div data-lab-timeline>${String.raw`<div data-lab-controls>`}<button data-lab-play>Play</button><button data-lab-replay>Replay</button><input type="range" data-lab-time min="0" max="1.6" step="0.01" value="0"><span data-lab-readout></span></div>
+<section><h2 id="reveal">A heading the section reveals</h2>${A}</section></div>
+<script>document.getElementById("reveal").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 4000, fill: "both" });
+window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-timeline]"), { autoplay: false });</script></body></html>`;
+  const server = http.createServer((req, res) => { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(html); });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const browser = await ENGINES[0].launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    await page.evaluate(() => window.timeline.seek(0.8));
+    const first = await page.evaluate(() => ({ svg: document.querySelector("svg").getCurrentTime(), reveal: document.getElementById("reveal").getAnimations()[0] }));
+    assert.ok(Math.abs(first.svg - 0.8) < 1e-6, `the SVG held at 0.8 s: ${first.svg}`);
+    const reveal = () => page.evaluate(() => { const a = document.getElementById("reveal").getAnimations()[0]; return { time: a.currentTime, state: a.playState }; });
+    const before = await reveal();
+    await page.waitForTimeout(300);
+    const after = await reveal();
+    assert.equal(after.state, "running", "the reveal was not paused");
+    assert.ok(after.time > before.time + 100, `the reveal kept its own clock: ${before.time} → ${after.time}`);
+    const cycle = await page.evaluate(() => window.timeline.duration());
+    assert.ok(Math.abs(cycle - 1.6) < 1e-5, `the cycle is the SVG's, not the 4 s reveal's: ${cycle}`);
+  } finally { await browser.close(); server.close(); }
+});
