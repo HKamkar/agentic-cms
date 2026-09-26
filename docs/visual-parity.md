@@ -68,8 +68,8 @@ it; an animated SVG shown through an `<img>` is its own document and out of
 reach — it is photographed as it runs. Scroll-linked effects are captured at the top of the page after
 one scroll-through, so the shot shows every section revealed.
 
-**`--motion`** plays the animations for real: with every image loaded up
-front, the page is scrolled one viewport (900 px) at a time and the viewport
+**`--motion`** plays the animations for real: once the page has hydrated,
+with every image loaded up front, the page is scrolled one viewport (900 px) at a time and the viewport
 photographed 150 and 500 ms after each step (`<page>@<width>--s03-500.png`)
 and once more when it has settled (`--s03-settled.png`), at 1440 and 390 by
 default. The settled frame is taken `--settle` ms after the step (2000 by
@@ -184,6 +184,15 @@ image loaded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
 a stalled page.
+
+To load every image without scrolling, the harness switches lazy images to
+`loading="eager"` — in every mode, and in `shot` and `probe` — but only once
+React has hydrated them (each carries React's key, or sits in markup React
+inserted as a string and never hydrates). An attribute changed before that
+is one React's development build reports as a hydration mismatch, blaming the
+site; against `next dev`, whose hydrate is slow, `--motion` used to trip it.
+A page that is not a Next app passes at once, and one that never hydrates
+falls through after 10 s.
 
 ## Traps a long run meets
 
