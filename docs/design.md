@@ -121,21 +121,19 @@ what is generic leaves the section for the library in the same job; the
 route and the losers never merge — the build's SEO audit fails a route
 without a `seo` block, which is the guard.
 
-A worked example, from a site's week of rounds. The owner: "the two-offers
-card looks like a slide". Ideas: A a switch that hops the platform block
-between the two hostings, B a toggle that swaps the rows, C the comparison
-table from the deck, a row per difference. "Build all three." `pnpm kit
-demo new offers --section home-choose-us`; three candidates in the section's
-frame with the home page's copy, the current card last. The owner, on the
-phone: "B and C merged — a radio picks the offer and the table shows that
-one; no marks; the offer's colour on the thumb". Two edits on the route,
-one more look. "Make it the section's card." The card became the
+A worked example, on the example's own home page. The owner: "the service
+cards read like a list". Ideas: A a grid with a mark on each card, B a tab
+strip that shows one service at a time, C a table with a row per service.
+"Build all three." `pnpm kit demo new services --section home-service`;
+three candidates in the section's frame with the home page's copy, the
+current cards last. The owner, on the phone: "B and C merged — the tabs
+pick the service and the table shows that one; no marks". Two edits on the
+route, one more look. "Make it the section." The candidate became the
 component; its rows moved into `home.yaml` and the section's schema; the
-radio and the table left as `ui/RadioPill` and `ui/FactTable` with their
-props in the catalogue; `demo clean offers`; the verify block; the proof;
-the merge. The next round, on the closing band, went the same way and left
-`ui/GlassCard` and `ui/Meter` behind — the library grows from picks, not
-from plans.
+tab strip and the table left for `ui/` with their props in the catalogue;
+`demo clean services`; the verify block; the proof; the merge. The next
+round went the same way and left two more pieces in `ui/` — the library
+grows from picks, not from plans.
 
 ## When the dev server will not serve
 

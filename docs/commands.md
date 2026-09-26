@@ -903,7 +903,7 @@ Exit: `0` written; `2` neither --section nor --component, a bad name, a route or
 `--json` prints `{ route, path, section, page, component, candidates: [{ letter, file }], data }`.
 
 ```bash
-agentic-cms demo new offers --section home-choose-us
+agentic-cms demo new services --section home-service
 agentic-cms demo new band --section about-story --page sections-about --candidates 3
 agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props
 ```
@@ -928,8 +928,8 @@ Exit: `0` removed, or nothing to remove.
 `--json` prints `{ removed, kept, dryRun? }`.
 
 ```bash
-agentic-cms demo clean offers
-agentic-cms demo clean offers --dry-run      # what would go, and what stays and why
+agentic-cms demo clean services
+agentic-cms demo clean services --dry-run      # what would go, and what stays and why
 agentic-cms demo clean                     # every *-demo route
 ```
 
