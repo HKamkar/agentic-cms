@@ -85,6 +85,17 @@ cache: to prove a frame deterministic, or whenever a copied shot is in
 doubt. Four entries are kept per page-width, the least recently used going
 first; delete `.parity/shots/` to empty it.
 
+## Several browsers at once
+
+A capture runs several browsers, each taking the next page-width (or state)
+from one list: by default every core but one, four at most, for a static or
+`--states` capture — a shot shares nothing with the next but the build — and
+two for `--motion`, whose frames are timed in milliseconds and would drift on
+a machine loaded past that. `--jobs <n>` sets it (`--jobs 1` is one browser,
+the page-widths in order); `capture.json` records it. The shots are the same
+whichever browser takes them; the one thing parallel runs were ever seen to
+move is a single channel value by one, which a compare's threshold absorbs.
+
 ## Three modes
 
 **Static** (the default) photographs every page at eight widths — 1920,
