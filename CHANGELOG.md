@@ -146,6 +146,15 @@ changes what a capture writes says **recapture baselines**.
   subcommands of its own for it (parse, `--help`, `docs/commands.md`); the
   icon manifest update is a function (`updateIcons`) `icons add` and
   `publish` share.
+- The README says what 0.5.2 is: the design skills and the commands under
+  them (a section of its own), the proof harness (another), both hosts —
+  the example's Cloudflare Worker and a Node server with `assemble` — the
+  install at `v0.5.2`, and an upgrade section. `docs/upgrading.md` is new:
+  the steps every upgrade takes, and a site's steps from 0.5.1 to 0.5.2 —
+  the agent files and the lines a site's own `AGENTS.md` and edited rules
+  take by hand, `assemble` for a standalone host, the baselines to
+  recapture, `InlineAnimation` for a site's own inline loop, and what the
+  lab, the design round and the sheet now do.
 
 ## [0.5.1] — 2026-09-23
 
