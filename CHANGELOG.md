@@ -6,6 +6,19 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- Third parties held back during a capture. On a build the harness serves,
+  each page carries a Content-Security-Policy that lets scripts and
+  connections (fetch, XHR, beacons, sockets) come from its own origin alone;
+  other origins' images, fonts, stylesheets and frames load as ever.
+  Analytics and widgets no longer cost a capture network and timing (a
+  consumer site's six pages, 86 s to 81 s, 50/50 identical). A header, not
+  request interception, which would switch the HTTP cache off.
+  `--third-party allow` turns it off; `meta.json` records it; the shot cache
+  keeps the two apart. **Recapture baselines** for a site whose third-party
+  script draws on the page (a chat bubble, a consent banner from another
+  origin), or pass `--third-party allow`. The harness adds its styles with
+  its own `addStyle` in place of Playwright's `addStyleTag`, which fails
+  when any CSP error is logged while it runs.
 - Codex finds the path-scoped rules. Claude Code loads `.claude/rules/*.md`
   by their `paths` frontmatter; Codex reads `AGENTS.md` and nothing under
   `.claude/`, so it never saw them. `AGENTS.md` now carries a scoped-rules

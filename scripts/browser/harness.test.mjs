@@ -25,6 +25,7 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.deepEqual(summary.pages, ["/", "/about"]);
     assert.deepEqual(summary.widths, [800, 390]);
     assert.equal(summary.meta.scheme, "light");
+    assert.equal(summary.meta.thirdParty, "hold", "other origins' scripts held by default on a build the harness serves");
     assert.deepEqual(files(root, "a"), ["about@390.png", "about@390.sections.json", "about@800.png", "about@800.sections.json", "capture.json", "home@390--menu.png", "home@390.png", "home@390.sections.json", "home@800.png", "home@800.sections.json", "meta.json"]);
     assert.equal(summary.files, 9, "the shots and their section geometry; meta.json and capture.json are not counted");
     assert.equal(summary.timings.taken, 4, "one timing per page-width");
@@ -109,6 +110,7 @@ test("an unchanged page-width is copied from .parity/shot-cache, a changed one t
     const report = JSON.parse(run(root, ["compare", "a", "c", "--json"]).stdout);
     assert.deepEqual(report.files.filter((f) => f.status !== "ok").map((f) => f.name), ["home@800.png"]);
     assert.deepEqual(capture("d", "--fresh").summary.reused, { shots: 0, of: 2 });
+    assert.deepEqual(capture("e", "--third-party", "allow").summary.reused, { shots: 0, of: 2 }, "held and allowed shots are never mixed");
     assert.ok(fs.readdirSync(path.join(root, ".parity/shot-cache")).length > 0);
     assert.ok(!fs.existsSync(path.join(root, ".parity/shots")), "the cache keeps out of the folder `agentic-cms shot` writes to");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

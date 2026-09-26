@@ -61,6 +61,23 @@ Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
 without them and an after capture of a tree that still has one list the
 same pages.
 
+## Third parties held back
+
+An analytics tag, a chat widget's script, a beacon: none of them is the
+page's look, all of them cost a capture network and timing, and any of them
+can move a frame. On a build the harness serves, each page comes with a
+Content-Security-Policy that lets scripts and connections (fetch, XHR,
+beacons, sockets, event streams) come from the page's own origin alone:
+`script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; connect-src
+'self'`. Images, fonts, stylesheets and frames from other origins load as
+ever, since they are the page's pixels. It is a header, not request
+interception, which would switch the browser's HTTP cache off. A site whose
+third-party script draws on the page — a chat bubble, a consent banner
+loaded from another origin — loses it from its shots; `--third-party allow`
+keeps it (a capture records the setting in `meta.json`, and the shot cache
+never mixes the two). A `--url` site is served by its own server and
+captured as it serves itself.
+
 ## Unchanged shots are reused
 
 A shot is a function of the files its page loads from the build, of the

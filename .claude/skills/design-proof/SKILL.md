@@ -91,6 +91,10 @@ decides whether `--motion` is part of the proof.
 - `.parity/` is gitignored and grows fast: `pnpm kit visual-parity clean`
   (`--dry-run` first) keeps the newest captures and removes the rest with
   their compares.
+- Other origins' scripts and beacons are held back on a build the harness
+  serves (analytics, a chat widget); their images and fonts still load. A
+  site whose look includes a third-party script's drawing (a chat bubble, a
+  consent banner) captures with `--third-party allow`, on both sides.
 - A baseline built for the wrong sha proves nothing: the sha is in
   `meta.json` and on the compare's first line.
 
