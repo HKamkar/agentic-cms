@@ -30,6 +30,18 @@ changes what a capture writes says **recapture baselines**.
   instead of mixing two builds. `meta.json` records the checkout it was,
   `tree: { head, dirty }` (`null` outside git). `--ref` and `--url` were
   already apart from the tree and are unchanged.
+- `visual-parity capture --ref` builds a commit that still has a demo
+  route: the demo routes (`src/app/<name>-demo`, never production, which
+  the build's SEO audit rejects by design) are removed from the throwaway
+  worktree before install and build, logged and recorded in `meta.json`
+  (`demosRemoved`); a baseline of a commit made mid-round no longer has to
+  be built by hand. Every capture leaves the demo routes out of its pages
+  unless `--pages` names one, so both sides of a compare list the same
+  pages. A ref sibling is reused only when its build finished (a stamp,
+  `.parity/ref-build.json`, written after it): a build that failed its
+  audit used to be reused silently the next time. An unstamped sibling is
+  removed as a worktree before the prune, where deleting it first made the
+  next `git worktree add` fail ("missing but already registered").
 
 ## [0.5.1] — 2026-09-23
 

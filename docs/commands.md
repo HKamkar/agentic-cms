@@ -315,9 +315,9 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--scheme light|dark` | prefers-color-scheme for the capture (one of `light`, `dark`) (default `light`) |
 | `--url <base>` | capture a served site instead of serving .next (print its git log -1 first) |
 | `--build` | run the site's `pnpm build` first (log: .parity/<label>.build.log) |
-| `--ref <git ref>` | capture a baseline: that commit checked out, installed and built in a sibling directory (../<site>-ref-<sha>, reused for the same sha), served and captured |
+| `--ref <git ref>` | capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, installed, built (reused for the same sha once a build finished), served and captured |
 | `--widths w,w` | viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion) |
-| `--pages /a,/b` | only these routes (a partial capture; pass the same to compare) |
+| `--pages /a,/b` | only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here |
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 

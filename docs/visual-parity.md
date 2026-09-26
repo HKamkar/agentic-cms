@@ -37,11 +37,20 @@ site (`--url http://host:port` — print its `git log -1` first, because a
 baseline from a checkout that had moved on proves nothing); or another commit
 (`--ref <git ref>`: the ref resolved on `origin` first, checked out as a
 detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
-the site, whose `tsconfig` would include it — installed with the lockfile as
-it was, built there, served and captured; a sibling already built for the
-same sha is reused, older ref siblings are removed, and the sha goes into
-`meta.json`). The one command replaces the worktree, install, build, port and
-kill dance a baseline used to be.
+the site, whose `tsconfig` would include it — its demo routes removed
+(`src/app/<name>-demo`: never production, and the build's SEO audit rejects
+them by design, so a commit made mid-round still builds), installed with the
+lockfile as it was, built there, served and captured; a sibling whose build
+finished for the same sha is reused (its `.parity/ref-build.json` says so —
+one whose build failed is rebuilt, never reused), older ref siblings are
+removed, and the sha and the demo routes it removed go into `meta.json`).
+The one command replaces the worktree, install, build, port and kill dance a
+baseline used to be.
+
+Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
+`/lab-demo`) out of its pages unless `--pages` names one, so a baseline
+without them and an after capture of a tree that still has one list the
+same pages.
 
 ## Three modes
 

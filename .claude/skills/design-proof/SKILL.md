@@ -25,7 +25,7 @@ decides whether `--motion` is part of the proof.
    from a checkout that moved on:
 
    ```bash
-   pnpm kit visual-parity capture before --ref develop            # or the branch's base commit
+   pnpm kit visual-parity capture before --ref develop            # or the branch's base commit; its demo routes are left out
    ```
 
    (A served build standing in for a commit — `--url` — has its `git log
