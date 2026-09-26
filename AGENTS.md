@@ -216,10 +216,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   showcase, no machine paths or addresses, no captures, pictures or scratch
   files committed, the two skills trees identical, the changelog,
   `docs/commands.md` and the scoped-rules tables current). `pnpm lint`
-  ignores `.claude/worktrees/`, where agent worktrees are checked out. CI (`.github/workflows/verify.yml`) runs
-  the same on every pull request and push to `develop` and `main`, plus the
-  pack smoke on `main`. No Prettier; match the existing style (double
-  quotes, semicolons, trailing commas).
+  ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
+  (`.github/workflows/verify.yml`) runs the same on every pull request and
+  push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;
+  match the existing style (double quotes, semicolons, trailing commas).
 - The command line's contract is `scripts/lib/specs.mjs`: one spec per
   command (its flags, defaults, positionals, exit codes, the JSON it
   prints); `scripts/lib/args.mjs` parses strictly from it (an unknown flag
@@ -313,7 +313,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 - Commit each proven state before starting the next change. A working tree
   that mixes a proven change with an unproven one has to be split by hand
   before either can be committed.
-- `.parity/` is gitignored and grows fast; delete old labels.
+- `.parity/` is gitignored and grows fast: `pnpm kit visual-parity clean`
+  keeps the newest captures (10, `--keep`), removes the rest with their
+  compares and never a capture still running; `--cache` empties the shot
+  cache, `--dry-run` lists first.
 - A reference build for side-by-side checks is a worktree
   (`git worktree add ../<name> <sha>`) with its own
   `pnpm install --frozen-lockfile --prefer-offline` (a symlinked

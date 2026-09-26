@@ -19,6 +19,13 @@ changes what a capture writes says **recapture baselines**.
   tests fail on a stale table, a kit `AGENTS.md` over 32 KiB or a template
   over 16 KiB). `docs/init.md`, `docs/skills.md`, `docs/design.md` and the
   README say how each tool loads the rules and skills.
+- `visual-parity clean`: old captures out of `.parity/visual/` — all but the
+  newest finished ones (10; `--keep <n>`, or `--all`), with every compare of
+  a removed capture — and, with `--cache`, the shot cache; a capture still
+  running (no `capture.json`, under a day old) is kept, `--dry-run` lists
+  first, and nothing outside `.parity/` is removed. The kit's and the site
+  template's `AGENTS.md`, `design-proof` and `docs/visual-parity.md` name it where they said to
+  delete old labels by hand.
 
 ## [0.5.4] — 2026-09-26
 

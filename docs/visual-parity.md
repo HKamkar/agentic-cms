@@ -83,7 +83,7 @@ the harness's own sources, the browser, the scheme, the motion settings or
 capture reuses nothing. `--fresh` takes every shot again and refreshes the
 cache: to prove a frame deterministic, or whenever a copied shot is in
 doubt. Four entries are kept per page-width, the least recently used going
-first; delete `.parity/shot-cache/` to empty it.
+first; `visual-parity clean --cache` empties it.
 
 ## Several browsers at once
 
@@ -303,4 +303,9 @@ falls through after 10 s.
   section.
 - Commit each proven state before starting the next change; a working tree
   that mixes a proven change with an unproven one has to be split by hand.
-- `.parity/` grows by hundreds of megabytes per full set; delete old labels.
+- `.parity/` grows by hundreds of megabytes per full set. `visual-parity
+  clean` keeps the newest finished captures (10; `--keep <n>`, or `--all`),
+  removes the rest and every compare of a removed capture, and never touches
+  a capture still running (no `capture.json` yet, under a day old); `--cache`
+  also empties `.parity/shot-cache/`, `--dry-run` lists first. It removes
+  nothing outside `.parity/`.
