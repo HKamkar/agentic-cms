@@ -209,6 +209,17 @@ export const SPECS = {
     exit: { 0: "no address as text", 1: "an address in a served file (each named)", 2: "usage, or no build under .next" },
     json: "{ domains, scanned, hits: [{ file, addresses }] }",
   },
+  assemble: {
+    command: "assemble", script: "assemble", group: "build gates", summary: "packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there",
+    usage: "agentic-cms assemble [--check] [--json]",
+    flags: {
+      check: { type: "boolean", help: "copy nothing: only check the package against public/ and .next/static (in CI, or after a copy made by hand)" },
+      json: { type: "boolean", help: "print the report as one JSON document" },
+    },
+    examples: ["agentic-cms assemble                      # after next build: the last step of a standalone site's build", "agentic-cms assemble --check --json"],
+    exit: { 0: "the package holds every file of public/ and .next/static", 1: "a file missing or different, or a copy nested inside the folder it should fill (each named)", 2: "usage, or no standalone build (output: \"standalone\", then next build)" },
+    json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
+  },
   icons: {
     command: "icons", script: "icons", group: "icons", summary: "the site's icons: a map of Lucide and Simple Icons paths kept from a manifest, a family of marks rendered from primitives, an audit of every icon on the built pages",
     usage: "agentic-cms icons <add | remove | family | audit> …",

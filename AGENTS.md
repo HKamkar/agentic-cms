@@ -210,9 +210,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
 - `docs/` holds the guides (`docs/README.md` is the index): the command
   line, the screenshot harness, the one-shot page commands, designing, the
-  skills, starting a site, the roadmap. A change to a command or the
-  harness updates its guide in the same pull request; `CHANGELOG.md` gets a
-  line under Unreleased.
+  skills, starting a site, deploying as a Node server, the roadmap. A
+  change to a command or the harness updates its guide in the same pull
+  request; `CHANGELOG.md` gets a line under Unreleased.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
   `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
   assert the trees identical); design work on the example starts with the

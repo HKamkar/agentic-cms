@@ -4,6 +4,22 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `agentic-cms assemble` packages a standalone build for a Node host:
+  `public/` and `.next/static` copied into `.next/standalone` (or its
+  `relativeAppDir`) — into its folders, never as them — a copy an earlier
+  step nested inside its folder removed, then every file of both checked
+  there by size and hash; exit 1 naming each missing, different or nested
+  file, `--check` to check alone, `--json`. A hand-written copy that names
+  `.next/standalone/public` as its target nests inside it once the file
+  trace has made that folder (server code read a public file while a page
+  was prerendered), and every other image 404s with nothing failing; the
+  command in the build's last step makes that impossible to ship.
+  `docs/deploy.md` is the guide (the build and preview scripts, the check
+  alone, what the host needs besides the package); the site template's
+  AGENTS.md says it.
+
 ## [0.5.1] — 2026-09-23
 
 - `design-graphics` and its motion reference teach the join: a join is a

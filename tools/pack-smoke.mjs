@@ -52,6 +52,9 @@ fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
 run("pnpm", ["install", "--prefer-offline", "--no-frozen-lockfile"], site);
 run("pnpm", ["build"], site);
 run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+// The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
+const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
+if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) { console.error(`pack-smoke: agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`); process.exit(1); }
 console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
 if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
 else fs.rmSync(scratch, { recursive: true, force: true });
