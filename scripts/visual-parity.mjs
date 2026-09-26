@@ -23,7 +23,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, addStyle, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
@@ -65,6 +65,9 @@ if (subcommand === "capture" && flags.sample !== undefined) {
 const settleMs = flags.settle ?? 2000;
 if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
 if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+// Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
+// a --url site is served by its own server and captured as it serves itself.
+const THIRD_PARTY = flags["third-party"] ?? "hold";
 const say = (line) => (flags.json ? process.stderr.write(line) : process.stdout.write(line));
 
 /** The build's own routes: every page that is not a post, not the 404 and not a demo route, and the first post. */
@@ -187,7 +190,7 @@ async function captureStates(open, baseUrl, dir, { root, kit, shots }) {
   await inPool(all, { slots: JOBS, open, work: async (state, { context }) => {
     const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
     await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
-      await page.addStyleTag({ content: FREEZE_CSS });
+      await addStyle(page, FREEZE_CSS);
       await fontsReady(page);
       await revealed(page);
       await settle(page);
@@ -208,14 +211,14 @@ async function captureStates(open, baseUrl, dir, { root, kit, shots }) {
 /** A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and (the home page at the menu widths) the open menu; the number of PNGs. */
 async function shootPage(page, { dir, name, pagePath, width }) {
   await fontsReady(page);
-  await page.addStyleTag({ content: NO_ANCHORING_CSS });
+  await addStyle(page, NO_ANCHORING_CSS);
   if (motion) {
     await imagesReady(page);
     await page.waitForTimeout(600);
     await page.evaluate(PAUSE_LOOPS);
     return captureMotion(page, dir, name);
   }
-  await page.addStyleTag({ content: FREEZE_CSS });
+  await addStyle(page, FREEZE_CSS);
   await revealed(page);
   await settle(page);
   await page.evaluate(HOLD_SMIL, { rest: true });
@@ -234,7 +237,7 @@ async function shootPage(page, { dir, name, pagePath, width }) {
 const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs")];
 function shotCacheFor({ browser, root, baseUrl, build, kit }) {
   if (flags.url) return noShotCache();
-  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, ...(states ? { site: kit.site } : {}) };
+  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, thirdParty: THIRD_PARTY, ...(states ? { site: kit.site } : {}) };
   const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
   return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
 }
@@ -255,7 +258,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const { pages, skipped } = pagesOf(root);
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}) };
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}), ...(flags.url ? {} : { thirdParty: THIRD_PARTY }) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
   if (skipped.length) say(`sample: the first ${flags.sample} of each template's pages; ${skipped.length} left out (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? ", …" : ""})\n`);
   const kit = states ? await loadKit() : null;
@@ -357,7 +360,7 @@ if (subcommand === "clean") {
     const of = tree ? `HEAD ${tree.head.slice(0, 7)}${tree.dirty ? ", modified" : ""}` : "not a git checkout";
     say(`snapshot: ${snapshot.files} files, ${(snapshot.bytes / 1048576).toFixed(1)} MB of the build (${of}) — building or editing from here on does not change this capture\n`);
   }
-  const server = flags.url ? null : await serveStatic({ root });
+  const server = flags.url ? null : await serveStatic({ root, thirdParty: THIRD_PARTY });
   try { await capture(labels[0], flags.url || server.url, { root, baseline, tree, build: snapshotId ?? buildId(root) }); } finally { server?.close(); fs.rmSync(snapshotDir, { recursive: true, force: true }); }
 } else {
   await compare(labels[0], labels[1]);
