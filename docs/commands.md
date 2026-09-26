@@ -846,13 +846,13 @@ agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piec
 
 #### `demo clean`
 
-Removes the route (every src/app/*-demo without a name), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named.
+Removes the route (without a name, every route demo new wrote — a site's own *-demo folder is kept and named), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named.
 
 ```bash
 agentic-cms demo clean [name] [--dry-run] [--json]
 ```
 
-- `<name>` — the demo's name; without one, every *-demo route
+- `<name>` — the demo's name; without one, every route demo new wrote (a site's own *-demo folder only by its name)
 
 | flag | what |
 |---|---|

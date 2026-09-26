@@ -155,6 +155,12 @@ changes what a capture writes says **recapture baselines**.
   take by hand, `assemble` for a standalone host, the baselines to
   recapture, `InlineAnimation` for a site's own inline loop, and what the
   lab, the design round and the sheet now do.
+- `demo clean` without a name takes only the routes `demo new` wrote (its
+  manifest, or the route header of a demo from before it) and keeps a
+  site's own gallery in a `src/app/*-demo` folder — a dev-only review page
+  a site keeps on purpose — and the lab's route, naming each; either goes
+  only by its name. It used to remove every `*-demo` folder, and the
+  design-options skill's verify step runs it bare.
 
 ## [0.5.1] — 2026-09-23
 

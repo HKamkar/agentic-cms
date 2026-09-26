@@ -173,3 +173,20 @@ test("demo clean in a git checkout: what the round created goes with it — a st
     for (const file of ["src/components/home/Hero.tsx", "src/components/ui/CardFace.tsx", "src/components/ui/Loose.tsx", "src/components/ui/Section.tsx", "notes-before.tsx"]) assert.ok(fs.existsSync(path.join(root, file)), `${file} kept`);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test("demo clean without a name takes only the routes demo new wrote: a site's own gallery in a *-demo folder is kept and named, and goes only by its name", () => {
+  const root = site();
+  try {
+    assert.equal(run(root, ["new", "hero-card", "--section", "home-hero"]).status, 0);
+    put(root, "src/app/gallery-demo/page.demo.tsx", "export default function Gallery() { return null; }\n");
+    put(root, "src/app/lab-demo/page.tsx", 'import { LabScenes } from "agentic-cms/lab";\nexport default LabScenes;\n');
+    // a demo from before the manifest: the route demo new wrote then, and no demo.json
+    assert.equal(run(root, ["new", "old", "--component", "src/components/home/Testimonials.tsx"]).status, 0);
+    fs.rmSync(path.join(root, "src/app/old-demo/demo.json"));
+    const r = JSON.parse(run(root, ["clean", "--json"]).stdout);
+    assert.ok(r.removed.includes("src/app/hero-card-demo") && r.removed.includes("src/app/old-demo"), JSON.stringify(r.removed));
+    assert.deepEqual(r.kept.filter((k) => k.startsWith("src/app/")), ["src/app/gallery-demo (not a route demo new wrote: demo clean gallery removes it)", "src/app/lab-demo (not a route demo new wrote: demo clean lab removes it)"]);
+    assert.ok(fs.existsSync(path.join(root, "src/app/gallery-demo/page.demo.tsx")), "the site's gallery stays");
+    assert.deepEqual(JSON.parse(run(root, ["clean", "gallery", "--json"]).stdout).removed, ["src/app/gallery-demo"], "named, it goes");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

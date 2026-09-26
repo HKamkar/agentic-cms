@@ -409,9 +409,9 @@ export const SPECS = {
         json: "{ route, path, section, page, component, candidates: [{ letter, file }], data }",
       },
       clean: {
-        command: "demo clean", summary: "removes the route (every src/app/*-demo without a name), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named",
+        command: "demo clean", summary: "removes the route (without a name, every route demo new wrote — a site's own *-demo folder is kept and named), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named",
         usage: "agentic-cms demo clean [name] [--dry-run] [--json]",
-        positionals: [{ name: "name", help: "the demo's name; without one, every *-demo route" }],
+        positionals: [{ name: "name", help: "the demo's name; without one, every route demo new wrote (a site's own *-demo folder only by its name)" }],
         flags: { "dry-run": dryRun, json: { type: "boolean", help: "print { removed, kept } (and dryRun: true)" } },
         examples: ["agentic-cms demo clean offers", "agentic-cms demo clean offers --dry-run      # what would go, and what stays and why", "agentic-cms demo clean                     # every *-demo route"],
         exit: { 0: "removed, or nothing to remove" },
