@@ -4,8 +4,9 @@
 // the README's "Built on agentic-cms" section shows are the names that may
 // appear nowhere else — no machine paths or addresses, no scratch files,
 // captures or screenshots committed, the two skills trees in step, the
-// CHANGELOG carrying an entry, docs/commands.md current. Exit 1 with one
-// line per finding.
+// CHANGELOG carrying an entry, docs/commands.md current, the scoped-rules
+// tables of AGENTS.md and the site template current and both files within
+// what Codex reads (tools/rules-table.mjs). Exit 1 with one line per finding.
 //
 //   node tools/hygiene.mjs [--brand <name>]…     (pnpm hygiene; --brand adds a name to guard)
 import { execFileSync, spawnSync } from "node:child_process";
@@ -65,6 +66,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   const found = findings(root, files, { brands });
   const docs = spawnSync(process.execPath, [path.join(import.meta.dirname, "commands-doc.mjs"), "--check"], { cwd: root, encoding: "utf8" });
   if (docs.status !== 0) found.push(`docs/commands.md: ${docs.stderr.trim() || "out of date"}`);
+  const rules = spawnSync(process.execPath, [path.join(import.meta.dirname, "rules-table.mjs"), "--check"], { cwd: root, encoding: "utf8" });
+  if (rules.status !== 0) found.push(...rules.stderr.trim().split("\n").filter(Boolean));
   for (const line of found) console.error(`hygiene: ${line}`);
   console.log(found.length ? `hygiene: ${found.length} finding(s)` : `hygiene: ${files.length} tracked files, clean`);
   process.exit(found.length ? 1 : 0);

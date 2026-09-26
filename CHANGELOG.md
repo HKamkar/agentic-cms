@@ -4,6 +4,22 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- Codex finds the path-scoped rules. Claude Code loads `.claude/rules/*.md`
+  by their `paths` frontmatter; Codex reads `AGENTS.md` and nothing under
+  `.claude/`, so it never saw them. `AGENTS.md` now carries a scoped-rules
+  table, one row per rule (its paths, a link), written from the rules' own
+  frontmatter between two `rules-table` comment markers: `agentic-cms init
+  --agent-files` writes it into a site's `AGENTS.md` — the one block of that
+  file the kit rewrites, from the site's rules as they stand, edits included
+  — and `--check` reports it `stale` or `missing`, and `AGENTS.md` `too big`
+  past the 32 KiB Codex reads by default. The kit's own `AGENTS.md` and the
+  site template carry it too (`pnpm docs:rules`; `pnpm hygiene` and the
+  tests fail on a stale table, a kit `AGENTS.md` over 32 KiB or a template
+  over 16 KiB). `docs/init.md`, `docs/skills.md`, `docs/design.md` and the
+  README say how each tool loads the rules and skills.
+
 ## [0.5.4] — 2026-09-26
 
 - A proof's rules follow the faster harness: the kit's and the site

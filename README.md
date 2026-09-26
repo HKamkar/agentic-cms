@@ -289,8 +289,9 @@ allowBuilds:
 ```
 
 Either way the site carries, from the first session and with nothing
-installed, what an agent needs to design it: the rules (`AGENTS.md`,
-`.claude/rules/`), the design skills (`.claude/skills/`, `.agents/skills/`
+installed, what an agent needs to design it: the rules (`AGENTS.md`, and
+`.claude/rules/`, which Claude Code loads by path and Codex finds through
+`AGENTS.md`'s scoped-rules table), the design skills (`.claude/skills/`, `.agents/skills/`
 — `design`, `design-options`, `design-measure`, `design-icons`,
 `design-graphics`, `design-proof`) and the commands they call. [docs/init.md](docs/init.md) is what `init` writes and
 what comes next; [docs/design.md](docs/design.md) is the loop.

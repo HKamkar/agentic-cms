@@ -66,6 +66,27 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
+<!-- rules-table:start -->
+## Scoped rules for Claude Code and Codex
+
+Before editing or reviewing a file, read and follow **every** rule below
+whose paths match it: `**` spans directories, and matches add up (a post
+needs its content, blog and SEO rules). Claude Code loads these files
+itself through their `paths` frontmatter; Codex does not, so open each
+matching file before the edit, and again when the task reaches other
+paths. The table is written from the rules' frontmatter by
+`pnpm docs:rules`: a scope changes in its rule, never here.
+
+| Paths | Read and follow |
+| --- | --- |
+| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
+| `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
+| `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
+| `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts` | [Form engine](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/config/site.ts`, `src/lib/seo/**`, `src/kit.ts`, `scripts/check-seo.mjs`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
+| `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
+<!-- rules-table:end -->
+
 ## Styling
 
 The invariants; the values, tables and examples are in `STANDARD.md`.
@@ -193,9 +214,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   or a command that opens a page changed; `pnpm hygiene` before every pull
   request (`tools/hygiene.mjs`: no one site's name outside the README's
   showcase, no machine paths or addresses, no captures, pictures or scratch
-  files committed, the two skills trees identical, the changelog and
-  `docs/commands.md` current). `pnpm lint` ignores `.claude/worktrees/`, where
-  agent worktrees are checked out. CI (`.github/workflows/verify.yml`) runs
+  files committed, the two skills trees identical, the changelog,
+  `docs/commands.md` and the scoped-rules tables current). `pnpm lint`
+  ignores `.claude/worktrees/`, where agent worktrees are checked out. CI (`.github/workflows/verify.yml`) runs
   the same on every pull request and push to `develop` and `main`, plus the
   pack smoke on `main`. No Prettier; match the existing style (double
   quotes, semicolons, trailing commas).
@@ -335,8 +356,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   config, field primitives, backend factory) and `src/lib/seo/README.md`
   (page blocks, head and structured data, the build-time audit); the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
-  loads their invariants in Claude Code when those paths are edited; keep the READMEs,
-  `STANDARD.md`, `VOICE.md`, the rules and the code in step.
+  loads their invariants in Claude Code when those paths are edited, and the
+  scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it
+  from the rules' frontmatter); keep the READMEs, `STANDARD.md`, `VOICE.md`,
+  the rules and the code in step.
 - Refactors of existing pages change no pixels and prove it with
   `agentic-cms visual-parity` (see Styling and the harness section); one that
   also leaves the markup alone proves that with `agentic-cms parity`

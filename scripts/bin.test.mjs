@@ -91,3 +91,19 @@ test("a family inside a family: icons round lists its three actions, each has it
   assert.equal(wrong.status, 2);
   assert.match(wrong.stderr, /icons: icons round has no subcommand publsh — did you mean publish\? \(new, publish, retire\)/);
 });
+
+test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB is named with its size and exits 1", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--json"]).status, 0);
+    const clean = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, /agent files as the kit ships them/);
+    fs.appendFileSync(path.join(site, "AGENTS.md"), `\n${"x".repeat(33 * 1024)}\n`);
+    const big = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(big.status, 1);
+    assert.match(big.stderr, /^too big {3}AGENTS\.md \(size\) — \d+ bytes, Codex reads 32768$/m);
+    assert.match(big.stdout, /too big: AGENTS\.md is past what Codex reads/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

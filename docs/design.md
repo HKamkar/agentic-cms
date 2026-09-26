@@ -22,8 +22,9 @@ A checkout of this repo, or a site laid out by `agentic-cms init`, carries:
   ([shot-probe-sheet.md](shot-probe-sheet.md)) and `visual-parity` with
   `--ref`, `--json` and a compare that says what moved
   ([visual-parity.md](visual-parity.md)).
-- **The rules**, path-scoped (`.claude/rules/`), and `AGENTS.md`, which
-  every agent reads; `STANDARD.md`, where the design lives and where §8
+- **The rules**, path-scoped (`.claude/rules/`: Claude Code loads them by
+  path, Codex through `AGENTS.md`'s scoped-rules table), and `AGENTS.md`,
+  which every agent reads; `STANDARD.md`, where the design lives and where §8
   keeps the decisions that look like bugs on purpose.
 
 ## The loop
