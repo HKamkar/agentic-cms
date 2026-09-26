@@ -323,7 +323,7 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 
 Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop

@@ -99,7 +99,7 @@ export const SPECS = {
         },
         examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json"],
         exit: { 0: "captured", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, or no browser (playwright-core and a Chromium)" },
-        json: "{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }",
+        json: "{ label, dir, pages, widths, files, seconds, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }",
       },
       compare: {
         command: "visual-parity compare", summary: "diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/",

@@ -5,9 +5,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 import zlib from "node:zlib";
-import { chromePath, hydrated, imagesReady, launch, listPages, prepare, revealed, serveStatic, settle, withPage } from "../lib/browser.mjs";
+import sharp from "sharp";
+import { chromePath, hydrated, imagesReady, launch, listPages, prepare, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
 import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
@@ -30,14 +33,19 @@ test("the fixture site is served like a build: pages, RSC-less routes, public as
   } finally { server.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("a raw response is gzipped and marked no-store", { skip }, async () => {
+test("a raw response is gzipped; a page is marked no-store, an asset may be cached for the run, and a changed file is served changed", { skip }, async () => {
   const root = fixtureSite();
   const server = await serveStatic({ root });
+  const get = (url) => new Promise((resolve, reject) => http.get(server.url + url, (res) => { const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve({ headers: res.headers, body: zlib.gunzipSync(Buffer.concat(chunks)).toString() })); }).on("error", reject));
   try {
-    const { headers, raw } = await new Promise((resolve, reject) => http.get(server.url + "/", (res) => { const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve({ headers: res.headers, raw: Buffer.concat(chunks) })); }).on("error", reject));
-    assert.equal(headers["cache-control"], "no-store");
-    assert.equal(headers["content-encoding"], "gzip");
-    assert.match(zlib.gunzipSync(raw).toString(), /<!doctype html>/i);
+    const page = await get("/");
+    assert.equal(page.headers["cache-control"], "no-store");
+    assert.equal(page.headers["content-encoding"], "gzip");
+    assert.match(page.body, /<!doctype html>/i);
+    const asset = await get("/images/mark.svg");
+    assert.equal(asset.headers["cache-control"], "max-age=3600");
+    fs.writeFileSync(path.join(root, "public/images/mark.svg"), '<svg xmlns="http://www.w3.org/2000/svg" data-changed="1"/>');
+    assert.match((await get("/images/mark.svg")).body, /data-changed/, "the compressed copy follows the file");
   } finally { server.close(); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -107,4 +115,37 @@ test("imagesReady waits for React to hydrate its images before it switches them 
     await plain.setContent('<!doctype html><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">');
     assert.equal(await hydrated(plain), true, "no Next app: nothing to wait for");
   } finally { await close(); }
+});
+
+// A page with a focused field (the caret blinks, so a shot that did not hide it could differ) and a panel under
+// a 3D transform, taller than the viewport and scrolled, so the full page, a clip and the viewport all differ.
+const SNAP_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Snap</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } .panel { margin: 40px; padding: 24px; transform: perspective(600px) rotateX(8deg); background: #203; color: #fff; } .tall { height: 2200px; background: linear-gradient(#fff, #cde); }</style></head>
+<body><input autofocus value="a caret here"><div class="panel"><h3>A panel under a 3D transform</h3></div><div class="tall"></div></body></html>`;
+const pixels = async (file) => { const { data, info } = await sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true }); return { data, width: info.width, height: info.height }; };
+
+test("snap takes the pixels Playwright's screenshot takes: the full page, a clip of it and the scrolled viewport, the caret hidden", { skip }, async () => {
+  const root = fixtureSite();
+  addPage(root, "/snap", SNAP_PAGE);
+  const server = await serveStatic({ root });
+  const { context, close } = await launch({ scheme: "light", motion: false });
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), "snap-"));
+  try {
+    await withPage(context, 800, server.url + "/snap", async (page) => {
+      await page.focus("input");
+      const clip = { x: 20, y: 30.5, width: 400, height: 150 };
+      for (const [name, options] of [["full", { fullPage: true }], ["clip", { fullPage: true, clip }]]) {
+        await snap(page, path.join(out, `${name}-snap.png`), options);
+        await page.screenshot({ path: path.join(out, `${name}-pw.png`), ...options });
+      }
+      await page.evaluate(() => window.scrollTo(0, 300));
+      await snap(page, path.join(out, "view-snap.png"));
+      await page.screenshot({ path: path.join(out, "view-pw.png") });
+      assert.equal(await page.evaluate(() => document.querySelector("input").style.caretColor), "", "the caret is given back after the shot");
+    });
+    for (const name of ["full", "clip", "view"]) {
+      const [a, b] = await Promise.all([pixels(path.join(out, `${name}-snap.png`)), pixels(path.join(out, `${name}-pw.png`))]);
+      assert.deepEqual([a.width, a.height], [b.width, b.height], `${name}: the same size`);
+      assert.ok(a.data.equals(b.data), `${name}: the same pixels`);
+    }
+  } finally { await close(); server.close(); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(out, { recursive: true, force: true }); }
 });

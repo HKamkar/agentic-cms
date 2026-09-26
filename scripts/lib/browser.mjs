@@ -78,10 +78,24 @@ export async function launch({ scheme = "light", motion = false, width = 1440, h
 // ---- a static server for the production build --------------------------------
 export const TYPES = { ".html": "text/html; charset=utf-8", ".rsc": "text/x-component", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".json": "application/json", ".xml": "application/xml", ".txt": "text/plain" };
 
+// A capture loads the same chunks, stylesheets and images for every page at
+// every width: each file is compressed once (kept while its size and mtime
+// hold), and everything but a page and its payload may stay in the browser's
+// cache for the run — the files of one build do not change under it.
+function gzipped(cache, file) {
+  const { size, mtimeMs } = fs.statSync(file);
+  const hit = cache.get(file);
+  if (hit && hit.size === size && hit.mtimeMs === mtimeMs) return hit.body;
+  const body = zlib.gzipSync(fs.readFileSync(file));
+  cache.set(file, { size, mtimeMs, body });
+  return body;
+}
+
 /** Serves <root>/.next (the prerendered pages, their RSC payloads, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
 export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) {
   const app = path.join(root, ".next/server/app");
   if (requireBuild && !fs.existsSync(app)) throw new Error("no production build: run `pnpm build` first (or pass --url)");
+  const cache = new Map();
   const server = http.createServer((req, res) => {
     const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
     const route = p === "/" ? "index" : p.replace(/\/$/, "");
@@ -90,9 +104,9 @@ export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) 
     const candidates = [p.startsWith("/_next/static/") && path.join(root, ".next/static", p.slice(14)), path.join(root, "public", p), path.join(app, `${route}${ext}`)];
     const file = candidates.find((f) => f && fs.existsSync(f) && fs.statSync(f).isFile());
     if (!file) { res.writeHead(404); return res.end(); }
-    const body = fs.readFileSync(file);
-    res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": "no-store" });
-    res.end(zlib.gzipSync(body));
+    const page = file.startsWith(app + path.sep);
+    res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": page ? "no-store" : "max-age=3600" });
+    res.end(gzipped(cache, file));
   });
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
 }
@@ -168,17 +182,28 @@ export const revealed = (page) => page.waitForFunction((pattern) => [...document
 export const STEP_FRAMES = 8;
 export const frames = (page, count) => inPage(page, `${count} animation frames`, 10000, (count) => new Promise((resolve) => { let seen = 0; const tick = () => (++seen >= count ? resolve() : requestAnimationFrame(tick)); requestAnimationFrame(tick); }), count);
 
+// The scroll-through only has to reach every scroll-into-view observer, not
+// to paint: while it runs every element is hidden — visibility, so layout,
+// the observers and the page's scripts are untouched — and a heavy page's
+// frames cost its layout alone (measured on a real site: 1.2–2× faster at
+// desktop widths, the shot pixel-identical). The style goes before the page
+// is scrolled back to the top.
+const PAINTLESS = "agentic-cms-paintless";
+const hidePaint = (id) => { const style = document.createElement("style"); style.id = id; style.textContent = "*, *::before, *::after { visibility: hidden !important; }"; document.head.append(style); };
+
 /** One pass through the page triggers every scroll reveal and every lazy image; back to the top for the shot. */
 export async function settle(page) {
   // The height is read again at every step: lazy images take their box as they load, so a page grows while
   // it is scrolled through, and a height read once at the start stops the pass short of the footer.
   const height = () => page.evaluate(() => document.documentElement.scrollHeight);
+  await page.evaluate(hidePaint, PAINTLESS);
   for (let y = 0; y <= (await height()); y += 600) { await page.evaluate((y) => window.scrollTo(0, y), y); await frames(page, STEP_FRAMES); }
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate((id) => { document.getElementById(id)?.remove(); window.scrollTo(0, 0); }, PAINTLESS);
   await frames(page, STEP_FRAMES);
   await sequencesRan(page);
   await imagesReady(page);
-  await page.waitForTimeout(400);
+  // what arrived is decoded and painted: counted in frames, like every other wait here, where it was 400 ms
+  await frames(page, STEP_FRAMES);
 }
 
 // A site's footer hairlines (data-ix="footer-line-*", drawn only by a
@@ -272,6 +297,50 @@ export const SMIL_INVENTORY = () => [...document.querySelectorAll("svg")].filter
   const r = svg.getBoundingClientRect();
   return { type: "smil", duration, rest: svg.dataset.rest === undefined ? null : Number(svg.dataset.rest), target: { tag: "svg", top: Math.round(r.top + scrollY), left: Math.round(r.left + scrollX), w: Math.round(r.width), h: Math.round(r.height) } };
 });
+
+// The harness's screenshots go through the DevTools protocol with the encoding
+// set for speed: the same pixels as Playwright's page.screenshot() — its
+// full-page size (the largest of the body's and the root's scroll, offset
+// and client boxes), its clip trimmed to the page and never rounded, its
+// viewport shot at the visual viewport, the caret hidden as it hides it —
+// in about half the time on a tall page, the PNG larger. The caret is hidden
+// on the editable elements alone, inline, as Playwright does: a stylesheet
+// on every element restyles the whole page before the shot, and a layer
+// under a 3D transform came out rastered differently (measured on a real
+// site's motion frame).
+const PAGE_SIZE = () => { const b = document.body, d = document.documentElement; return { width: Math.max(b.scrollWidth, d.scrollWidth, b.offsetWidth, d.offsetWidth, b.clientWidth, d.clientWidth), height: Math.max(b.scrollHeight, d.scrollHeight, b.offsetHeight, d.offsetHeight, b.clientHeight, d.clientHeight) }; };
+const trimTo = (clip, size) => { const x = Math.max(0, Math.min(clip.x, size.width)), y = Math.max(0, Math.min(clip.y, size.height)); return { x, y, width: Math.max(0, Math.min(clip.x + clip.width, size.width)) - x, height: Math.max(0, Math.min(clip.y + clip.height, size.height)) - y }; };
+const HIDE_CARET = () => {
+  const roots = [];
+  const walk = (root) => { roots.push(root); for (const el of root.querySelectorAll("*")) if (el.shadowRoot) walk(el.shadowRoot); };
+  walk(document);
+  const saved = [];
+  for (const root of roots) for (const el of root.querySelectorAll("input,textarea,[contenteditable]")) { saved.push([el, el.style.getPropertyValue("caret-color"), el.style.getPropertyPriority("caret-color")]); el.style.setProperty("caret-color", "transparent", "important"); }
+  window.__agenticCmsCaret = saved;
+  return document.fonts.ready.then(() => {});
+};
+const SHOW_CARET = () => { for (const [el, value, priority] of window.__agenticCmsCaret ?? []) el.style.setProperty("caret-color", value, priority); delete window.__agenticCmsCaret; };
+
+/** A PNG of the page into `file`: the whole page (`fullPage`), a box of it in page coordinates (`fullPage` and `clip`), or the viewport. */
+export async function snap(page, file, { fullPage = false, clip = null } = {}) {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const viewport = page.viewportSize();
+    let area, beyond = false;
+    if (fullPage) {
+      const size = await page.evaluate(PAGE_SIZE);
+      area = clip ? trimTo(clip, size) : { x: 0, y: 0, ...size };
+      beyond = !(size.width <= viewport.width && size.height <= viewport.height);
+    } else {
+      const { visualViewport } = await cdp.send("Page.getLayoutMetrics");
+      area = { x: visualViewport.pageX, y: visualViewport.pageY, width: viewport.width, height: viewport.height };
+    }
+    await page.evaluate(HIDE_CARET);
+    const { data } = await cdp.send("Page.captureScreenshot", { format: "png", clip: { ...area, scale: 1 }, captureBeyondViewport: beyond, optimizeForSpeed: true });
+    await page.evaluate(SHOW_CARET);
+    fs.writeFileSync(file, Buffer.from(data, "base64"));
+  } finally { await cdp.detach().catch(() => {}); }
+}
 
 // One page per shot, opened, prepared, photographed and closed here so that a
 // stalled page can simply be reloaded (`onceMore`) — the closing is in the

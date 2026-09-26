@@ -4,6 +4,22 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- Captures are faster, with the same pixels. A static shot, a `--motion`
+  frame, a `--states` crop and the menu shot are one DevTools screenshot
+  with the renderer's fast PNG encoding, sized, clipped and with the caret
+  hidden as Playwright's own; the static scroll-through (also `shot`, `probe` and `icons audit`)
+  runs with every element `visibility: hidden`, so nothing is painted until
+  the page is back at the top, and counts its last wait in frames instead of
+  a fixed 400 ms; the build's server compresses each file once per run and
+  lets the browser keep a non-page file for the run. `capture.json` gains
+  `timings` (the shots taken, their total and mean, the five slowest). No
+  shot changes: static, `--states` and settled frames compare identical
+  before and after on the example and on a consumer site.
+- `docs/visual-parity.md`: `compare --pages` judges the named routes on both
+  sides (the guide still said only the after capture's files).
+
 ## [0.5.3] — 2026-09-26
 
 - `imagesReady` waits for hydration before it switches lazy images to
