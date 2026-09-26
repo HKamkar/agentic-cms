@@ -761,24 +761,26 @@ agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piec
 
 #### `demo clean`
 
-Removes the route (every src/app/*-demo without a name), the candidate files it alone imported (and their module.css) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a candidate another module imports is kept and named.
+Removes the route (every src/app/*-demo without a name), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named.
 
 ```bash
-agentic-cms demo clean [name] [--json]
+agentic-cms demo clean [name] [--dry-run] [--json]
 ```
 
 - `<name>` — the demo's name; without one, every *-demo route
 
 | flag | what |
 |---|---|
-| `--json` | print { removed, kept } |
+| `--dry-run` | print what would change; write nothing |
+| `--json` | print { removed, kept } (and dryRun: true) |
 
 Exit: `0` removed, or nothing to remove.
 
-`--json` prints `{ removed, kept }`.
+`--json` prints `{ removed, kept, dryRun? }`.
 
 ```bash
 agentic-cms demo clean offers
+agentic-cms demo clean offers --dry-run      # what would go, and what stays and why
 agentic-cms demo clean                     # every *-demo route
 ```
 

@@ -100,7 +100,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
   stay the section's own.
 - The route and the losers never merge: the build's SEO audit fails a route
   without a `seo` block, which is the guard; `demo clean` is the last step
-  before the verify block.
+  before the verify block. It removes what the round created that nothing
+  else imports — candidates, their stages and card faces, the round's
+  pictures under `public/images/<name>-demo/` — so promote the winner (and
+  move its approved artwork out of that folder) first; `demo clean <name>
+  --dry-run` lists what would go and what stays, and why.
 
 ## Verify
 

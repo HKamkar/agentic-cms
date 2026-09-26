@@ -83,6 +83,21 @@ changes what a capture writes says **recapture baselines**.
   replayed the reveal every cycle, folded it flat on a scrub and stretched
   the cycle to the reveal's length. A candidate whose motion is HTML and
   CSS now marks its moving part `data-lab-drive`.
+- `demo clean` removes everything a round created that nothing else uses.
+  `demo new` writes the round's manifest beside the route (`demo.json`:
+  the commit it starts from, what git did not track then, the component,
+  the candidates); `clean` walks the route's imports through the files the
+  round created only — the candidates, and whatever git says was added or
+  left untracked since the round began — so an existing file (the
+  section's component, a ui piece, the kit) stops the walk, then keeps
+  every file something outside the round still imports (the piece the
+  promoted section now uses), and removes the rest with its `module.css`,
+  the round's pictures (`public/images/<name>-demo/`) and the stale route
+  types. It lists what it keeps and why; `--dry-run` shows both lists and
+  removes nothing. It used to remove the lettered candidates alone and
+  keep a round's support files (a stage, a card face) as "the component
+  the candidates started from", for hand removal. A demo from an older kit
+  (no manifest) is cleaned as before.
 
 ## [0.5.1] — 2026-09-23
 
