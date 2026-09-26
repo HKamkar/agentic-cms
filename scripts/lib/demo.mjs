@@ -295,6 +295,14 @@ export function removeDemo(root, name, { newness = {}, dryRun = false } = {}) {
   return { removed: stale ? [...removed, stale] : removed, kept: plan.kept };
 }
 
+/** Whether a demo folder is one `demo new` wrote: its manifest, or — a demo from before the manifest — the header its route starts with. A site's own gallery in a *-demo folder is not. */
+export function isKitDemo(root, name) {
+  const dir = path.join(root, demoDir(name));
+  if (fs.existsSync(path.join(dir, MANIFEST))) return true;
+  const route = path.join(dir, "page.tsx");
+  return fs.existsSync(route) && fs.readFileSync(route, "utf8").startsWith("// Throwaway demo route of the design round");
+}
+
 /** Every demo under src/app, by name. */
 export function listDemos(root) {
   const app = path.join(root, "src/app");

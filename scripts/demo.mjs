@@ -12,7 +12,7 @@
 // route without a seo block, which is the guard.
 import { execFileSync } from "node:child_process";
 import { parseOrExit } from "./lib/args.mjs";
-import { demoManifest, listDemos, removeDemo, writeDemo } from "./lib/demo.mjs";
+import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, writeDemo } from "./lib/demo.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.demo, process.argv.slice(2));
@@ -34,9 +34,11 @@ if (subcommand === "new") {
   }
   if (report.data) console.error(`note: "${report.section}" is a withData section — the page reads a collection for it; pass that in the route too (the comment there says where)`);
 } else if (subcommand === "clean") {
-  const names = positionals[0] ? [positionals[0]] : listDemos(root);
+  // Without a name, only the routes `demo new` wrote: a site's own gallery in a *-demo folder (the lab's route too) is kept and named.
+  const found = positionals[0] ? [positionals[0]] : listDemos(root);
+  const names = positionals[0] ? found : found.filter((name) => isKitDemo(root, name));
   const dryRun = flags["dry-run"];
-  const removed = [], kept = [];
+  const removed = [], kept = found.filter((name) => !names.includes(name)).map((name) => `${demoDir(name)} (not a route demo new wrote: demo clean ${name} removes it)`);
   for (const name of names) {
     // what the round added since it began: committed since its base, or not tracked yet
     const base = demoManifest(root, name)?.base;

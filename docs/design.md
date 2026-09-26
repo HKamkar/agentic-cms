@@ -90,7 +90,9 @@ How a section gets its design, as it runs in practice (the
    are never reached) with its `module.css`, and the round's pictures, and
    lists what it keeps and why; `--dry-run` shows the lists first. Promote
    the winner before cleaning: a piece the real section imports by then
-   stays.
+   stays. Without a name, `demo clean` takes every route `demo new` wrote
+   and keeps a site's own gallery in a `*-demo` folder (named in its
+   output; it goes only by its name).
 5. **The look.** The owner looks on desktop and phone and picks by letter,
    or edits the pick in words: "merge B and C", "no icons", "change the
    radio colour too", "better wording for that row". Every "more" is an
