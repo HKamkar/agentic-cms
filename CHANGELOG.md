@@ -6,6 +6,13 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- `visual-parity capture --jobs <n>`: several browsers at once, each taking
+  the next page-width (or state). The default is every core but one, four at
+  most, for a static or `--states` capture, and two for `--motion`, whose
+  frames are timed; `capture.json` records it. The shots are the same: on
+  the example 157 s to 60 s static (82/82 identical), 199 s to 109 s motion
+  (295/295), 26 s to 12 s states (8/8), on a consumer site's six pages 173 s
+  to 85 s (50/50), with a 4-core machine.
 - Unchanged shots are reused. After every page-width (or state) a capture
   records the build files the page requested, with their digests, under
   `.parity/shots/`; a later capture of any build — a `--ref` baseline, the

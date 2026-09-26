@@ -113,6 +113,25 @@ test("an unchanged page-width is copied from .parity/shots, a changed one taken 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("--jobs: one browser and three take the same shots, and the summary says how many worked; --jobs 0 or 1.5 is a usage error", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    for (const jobs of ["1", "3"]) {
+      const r = run(root, ["capture", `j${jobs}`, "--widths", "800,390", "--jobs", jobs, "--fresh", "--json"]);
+      assert.equal(r.status, 0, r.stderr);
+      assert.equal(JSON.parse(r.stdout).jobs, Number(jobs));
+      assert.match(r.stderr, new RegExp(`j${jobs}: 5 screenshots`), "every shot counted, whichever browser took it");
+    }
+    assert.deepEqual(files(root, "j3").filter((f) => f !== "capture.json"), files(root, "j1").filter((f) => f !== "capture.json"));
+    assert.equal(run(root, ["compare", "j1", "j3"]).status, 0);
+    for (const bad of ["0", "1.5"]) {
+      const r = run(root, ["capture", "x", "--jobs", bad]);
+      assert.equal(r.status, 2);
+      assert.match(r.stderr, /--jobs takes a whole number of browsers, 1 or more/);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("an inline SMIL loop is held: two static captures agree, two motion captures agree frame for frame, and the inventory lists it", { skip }, () => {
   const root = fixtureSite();
   try {

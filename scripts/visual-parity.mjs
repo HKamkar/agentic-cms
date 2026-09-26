@@ -20,11 +20,13 @@
 import "./lib/load-ts.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, servedFile, serveStatic, settle, snap, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
+import { inPool } from "./lib/pool.mjs";
 import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
@@ -50,6 +52,11 @@ const widths = (flags.widths ?? (motion ? MOTION_WIDTHS : DEFAULT_WIDTHS).join("
 const threshold = flags.threshold ?? 0.02;
 const thresholdMid = flags["threshold-mid"] ?? 20;
 const onlyPages = (flags.pages ?? "").split(",").filter(Boolean);
+// Browsers at work at once, each with its own page-widths. A static or --states shot shares nothing with the
+// next but the build, so every core but one works (four at most: past that the renderers compete for the same
+// cores); --motion frames are timed in milliseconds, and two browsers keep a loaded machine from moving them.
+const JOBS = flags.jobs ?? Math.max(1, Math.min(motion ? 2 : 4, os.availableParallelism() - 1));
+if (!Number.isInteger(JOBS) || JOBS < 1) { console.error("visual-parity capture: --jobs takes a whole number of browsers, 1 or more"); process.exit(2); }
 const settleMs = flags.settle ?? 2000;
 if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
 if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
@@ -169,9 +176,10 @@ function timingSummary() {
   return { taken: timings.length, seconds: s(total), mean: timings.length ? s(total / timings.length) : 0, slowest: [...timings].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, ms]) => ({ name, seconds: s(ms) })) };
 }
 
-async function captureStates(context, baseUrl, dir, { root, kit, shots }) {
+async function captureStates(open, baseUrl, dir, { root, kit, shots }) {
   let count = 0;
-  for (const state of STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
+  const all = STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") });
+  await inPool(all, { slots: JOBS, open, work: async (state, { context }) => {
     const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
     await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
@@ -188,7 +196,7 @@ async function captureStates(context, baseUrl, dir, { root, kit, shots }) {
     }, { before: watch }))));
     count++;
     say(`${state.name} `);
-  }
+  } });
   return count;
 }
 
@@ -236,33 +244,38 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
   const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : capturePages(listPages(root));
   const kit = states ? await loadKit() : null;
-  const { browser, context, close } = await launch({ scheme, motion });
-  const shots = shotCacheFor({ browser, root, baseUrl, build, kit });
+  // the first browser names the version the cache is keyed on and is the pool's first worker; the others are launched as the pool needs them
+  const first = await launch({ scheme, motion });
+  const shots = shotCacheFor({ browser: first.browser, root, baseUrl, build, kit });
+  let firstUsed = false;
+  const open = (index) => (index === 0 ? ((firstUsed = true), first) : launch({ scheme, motion }));
   let count = 0;
   const finish = () => {
     const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
     const reused = shots.counts ? { shots: shots.counts.reused, of: shots.counts.reused + shots.counts.taken } : null;
-    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, reused, timings: timingSummary(), meta };
+    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, jobs: JOBS, reused, timings: timingSummary(), meta };
     // written last: its presence is the sign that the capture finished (the directory is wiped at the start)
     fs.writeFileSync(path.join(dir, "capture.json"), JSON.stringify(summary, null, 1));
     if (flags.json) console.log(JSON.stringify(summary, null, 1));
     return summary;
   };
   if (states) {
-    count = await captureStates(context, baseUrl, dir, { root, kit, shots });
-    await close();
+    count = await captureStates(open, baseUrl, dir, { root, kit, shots });
+    if (!firstUsed) await first.close();
     say(`\n${label}: ${count} state screenshots in .parity/visual/${label}${reusedNote(shots.counts, "states")}\n`);
     finish();
     return;
   }
-  for (const pagePath of pages) {
-    for (const width of widths) {
-      const name = `${routeName(pagePath)}@${width}`;
-      count += await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))));
-    }
-    say(`${pagePath} `);
-  }
-  await close();
+  const tasks = pages.flatMap((pagePath) => widths.map((width) => ({ pagePath, width, name: `${routeName(pagePath)}@${width}` })));
+  const left = new Map(pages.map((pagePath) => [pagePath, widths.length]));
+  await inPool(tasks, { slots: JOBS, open, work: async ({ pagePath, width, name }, { context }) => {
+    // taken before it is added: `count += await …` reads count first, and two workers would lose each other's shots
+    const taken = await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))));
+    count += taken;
+    left.set(pagePath, left.get(pagePath) - 1);
+    if (!left.get(pagePath)) say(`${pagePath} `);
+  } });
+  if (!firstUsed) await first.close();
   say(`\n${label}: ${count} screenshots in .parity/visual/${label}${reusedNote(shots.counts, "page-widths")}\n`);
   finish();
 }
