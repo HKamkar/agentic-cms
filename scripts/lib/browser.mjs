@@ -97,20 +97,24 @@ function gzipped(cache, file) {
 // a real page. A segment the build lacks is answered 204, nothing to prefetch.
 const segmentFile = (app, route, segment) => (segment.includes("..") ? null : path.join(app, `${route}.segments`, `${segment}.segment.rsc`));
 
+/** The build file a request for `pathname` (with these headers) is answered with, or null: a static chunk, a public file, a prerendered page or its RSC payload, or a prefetch segment. */
+export function servedFile(root, pathname, headers = {}) {
+  const app = path.join(root, ".next/server/app");
+  const route = pathname === "/" ? "index" : pathname.replace(/\/$/, "");
+  const segment = headers["next-router-segment-prefetch"];
+  // the client router prefetches links as RSC payloads; answer them so it stops asking
+  const candidates = segment ? [segmentFile(app, route, segment)] : [pathname.startsWith("/_next/static/") && path.join(root, ".next/static", pathname.slice(14)), path.join(root, "public", pathname), path.join(app, `${route}${headers.rsc === "1" ? ".rsc" : ".html"}`)];
+  return candidates.find((f) => f && fs.existsSync(f) && fs.statSync(f).isFile()) ?? null;
+}
+
 /** Serves <root>/.next (the prerendered pages, their RSC payloads and prefetch segments, the static chunks) and <root>/public on 127.0.0.1; { url, close }. */
 export function serveStatic({ root = process.cwd(), requireBuild = true } = {}) {
   const app = path.join(root, ".next/server/app");
   if (requireBuild && !fs.existsSync(app)) throw new Error("no production build: run `pnpm build` first (or pass --url)");
   const cache = new Map();
   const server = http.createServer((req, res) => {
-    const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
-    const route = p === "/" ? "index" : p.replace(/\/$/, "");
-    // the client router prefetches links as RSC payloads; answer them so it stops asking
-    const ext = req.headers.rsc === "1" ? ".rsc" : ".html";
-    const segment = req.headers["next-router-segment-prefetch"];
-    const candidates = segment ? [segmentFile(app, route, segment)] : [p.startsWith("/_next/static/") && path.join(root, ".next/static", p.slice(14)), path.join(root, "public", p), path.join(app, `${route}${ext}`)];
-    const file = candidates.find((f) => f && fs.existsSync(f) && fs.statSync(f).isFile());
-    if (!file) { res.writeHead(segment ? 204 : 404); return res.end(); }
+    const file = servedFile(root, decodeURIComponent(new URL(req.url, "http://x").pathname), req.headers);
+    if (!file) { res.writeHead(req.headers["next-router-segment-prefetch"] ? 204 : 404); return res.end(); }
     const page = file.startsWith(app + path.sep);
     res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream", "content-encoding": "gzip", "cache-control": page ? "no-store" : "max-age=3600" });
     res.end(gzipped(cache, file));
@@ -352,9 +356,10 @@ export async function snap(page, file, { fullPage = false, clip = null } = {}) {
 // One page per shot, opened, prepared, photographed and closed here so that a
 // stalled page can simply be reloaded (`onceMore`) — the closing is in the
 // finally so a failed attempt does not leave its page behind.
-export async function withPage(context, width, url, shoot, { height = 900 } = {}) {
+export async function withPage(context, width, url, shoot, { height = 900, before } = {}) {
   const page = await context.newPage();
   try {
+    before?.(page);
     await page.setViewportSize({ width, height });
     await page.goto(url, { waitUntil: "load" });
     return await shoot(page);

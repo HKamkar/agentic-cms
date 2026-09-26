@@ -22,10 +22,11 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, serveStatic, settle, snap, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, servedFile, serveStatic, settle, snap, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
-import { SNAPSHOTS, snapshotBuild, treeState } from "./lib/snapshot.mjs";
+import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
+import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-parity"], process.argv.slice(2));
@@ -168,12 +169,11 @@ function timingSummary() {
   return { taken: timings.length, seconds: s(total), mean: timings.length ? s(total / timings.length) : 0, slowest: [...timings].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, ms]) => ({ name, seconds: s(ms) })) };
 }
 
-async function captureStates(context, baseUrl, dir, root) {
+async function captureStates(context, baseUrl, dir, { root, kit, shots }) {
   let count = 0;
-  const kit = await loadKit();
   for (const state of STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") })) {
     const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
-    await timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
+    await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await page.addStyleTag({ content: FREEZE_CSS });
       await fontsReady(page);
       await revealed(page);
@@ -185,14 +185,49 @@ async function captureStates(context, baseUrl, dir, root) {
       const scrollY = await page.evaluate(() => window.scrollY);
       const pad = 24;
       await snap(page, path.join(dir, `${name}.png`), { fullPage: true, clip: { x: Math.max(0, box.x - pad), y: Math.max(0, box.y + scrollY - pad), width: box.width + 2 * pad, height: box.height + 2 * pad } });
-    })));
+    }, { before: watch }))));
     count++;
     say(`${state.name} `);
   }
   return count;
 }
 
-async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = {}) {
+/** A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and (the home page at the menu widths) the open menu; the number of PNGs. */
+async function shootPage(page, { dir, name, pagePath, width }) {
+  await fontsReady(page);
+  await page.addStyleTag({ content: NO_ANCHORING_CSS });
+  if (motion) {
+    await imagesReady(page);
+    await page.waitForTimeout(600);
+    await page.evaluate(PAUSE_LOOPS);
+    return captureMotion(page, dir, name);
+  }
+  await page.addStyleTag({ content: FREEZE_CSS });
+  await revealed(page);
+  await settle(page);
+  await page.evaluate(HOLD_SMIL, { rest: true });
+  await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
+  fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
+  if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
+  await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
+  await page.waitForTimeout(600);
+  await snap(page, path.join(dir, `${name}--menu.png`));
+  return 2;
+}
+
+// What decides a shot besides the page's own files: the harness's sources (this file and the browser library),
+// the browser's version and the capture's settings — for --states also the site's config, whose labels the
+// states look for. A served --url site has no files of ours to digest, so nothing is reused there.
+const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs")];
+function shotCacheFor({ browser, root, baseUrl, build, kit }) {
+  if (flags.url) return noShotCache();
+  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, ...(states ? { site: kit.site } : {}) };
+  const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
+  return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
+}
+const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shots: every build file they load is unchanged)` : "");
+
+async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, build = null } = {}) {
   const started = Date.now();
   const dir = path.join(OUT, label);
   fs.rmSync(dir, { recursive: true, force: true });
@@ -200,52 +235,35 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree } = 
   const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
   const pages = states ? [] : onlyPages.length ? onlyPages : motion ? motionPages(root) : capturePages(listPages(root));
-  const { context, close } = await launch({ scheme, motion });
+  const kit = states ? await loadKit() : null;
+  const { browser, context, close } = await launch({ scheme, motion });
+  const shots = shotCacheFor({ browser, root, baseUrl, build, kit });
   let count = 0;
   const finish = () => {
     const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
-    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, timings: timingSummary(), meta };
+    const reused = shots.counts ? { shots: shots.counts.reused, of: shots.counts.reused + shots.counts.taken } : null;
+    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, reused, timings: timingSummary(), meta };
     // written last: its presence is the sign that the capture finished (the directory is wiped at the start)
     fs.writeFileSync(path.join(dir, "capture.json"), JSON.stringify(summary, null, 1));
     if (flags.json) console.log(JSON.stringify(summary, null, 1));
     return summary;
   };
   if (states) {
-    count = await captureStates(context, baseUrl, dir, root);
+    count = await captureStates(context, baseUrl, dir, { root, kit, shots });
     await close();
-    say(`\n${label}: ${count} state screenshots in .parity/visual/${label}\n`);
+    say(`\n${label}: ${count} state screenshots in .parity/visual/${label}${reusedNote(shots.counts, "states")}\n`);
     finish();
     return;
   }
   for (const pagePath of pages) {
     for (const width of widths) {
       const name = `${routeName(pagePath)}@${width}`;
-      count += await timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, async (page) => {
-        await fontsReady(page);
-        await page.addStyleTag({ content: NO_ANCHORING_CSS });
-        if (motion) {
-          await imagesReady(page);
-          await page.waitForTimeout(600);
-          await page.evaluate(PAUSE_LOOPS);
-          return captureMotion(page, dir, name);
-        }
-        await page.addStyleTag({ content: FREEZE_CSS });
-        await revealed(page);
-        await settle(page);
-        await page.evaluate(HOLD_SMIL, { rest: true });
-        await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
-        fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
-        if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
-        await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
-        await page.waitForTimeout(600);
-        await snap(page, path.join(dir, `${name}--menu.png`));
-        return 2;
-      })));
+      count += await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))));
     }
     say(`${pagePath} `);
   }
   await close();
-  say(`\n${label}: ${count} screenshots in .parity/visual/${label}\n`);
+  say(`\n${label}: ${count} screenshots in .parity/visual/${label}${reusedNote(shots.counts, "page-widths")}\n`);
   finish();
 }
 
@@ -285,17 +303,18 @@ if (subcommand === "capture") {
   // The local build is photographed from a copy, so the tree is free while the capture runs; a --ref worktree and a served site are already apart from it.
   const snapshotDir = path.join(ROOT, SNAPSHOTS, labels[0]);
   fs.rmSync(snapshotDir, { recursive: true, force: true }); // a copy a capture that died left behind
-  let tree;
+  let tree, snapshotId;
   if (!flags.url && !flags.ref) {
     let snapshot;
     try { snapshot = snapshotBuild(ROOT, snapshotDir); } catch (error) { console.error(`visual-parity capture: ${error.message}`); process.exit(2); }
     tree = treeState(ROOT, (command, args, options) => execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], ...options }));
     root = snapshotDir;
+    snapshotId = snapshot.buildId; // the id of the build that was copied: the checkout may be rebuilt while the capture runs
     const of = tree ? `HEAD ${tree.head.slice(0, 7)}${tree.dirty ? ", modified" : ""}` : "not a git checkout";
     say(`snapshot: ${snapshot.files} files, ${(snapshot.bytes / 1048576).toFixed(1)} MB of the build (${of}) — building or editing from here on does not change this capture\n`);
   }
   const server = flags.url ? null : await serveStatic({ root });
-  try { await capture(labels[0], flags.url || server.url, { root, baseline, tree }); } finally { server?.close(); fs.rmSync(snapshotDir, { recursive: true, force: true }); }
+  try { await capture(labels[0], flags.url || server.url, { root, baseline, tree, build: snapshotId ?? buildId(root) }); } finally { server?.close(); fs.rmSync(snapshotDir, { recursive: true, force: true }); }
 } else {
   await compare(labels[0], labels[1]);
 }

@@ -11,7 +11,8 @@ import path from "node:path";
 export const SNAPSHOTS = ".parity/snapshots";
 const PARTS = [".next/server/app", ".next/static", "public"];
 
-const buildId = (root) => { try { return fs.readFileSync(path.join(root, ".next/BUILD_ID"), "utf8").trim(); } catch { return null; } };
+/** The build id Next wrote into <root>/.next/BUILD_ID, or null. */
+export const buildId = (root) => { try { return fs.readFileSync(path.join(root, ".next/BUILD_ID"), "utf8").trim(); } catch { return null; } };
 const walk = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)])) : []);
 
 /** Copies the build and public/ of root into dest; { dir, files, bytes }. Throws with the fix when there is no build, or when the build changed during the copy. */
@@ -25,7 +26,7 @@ export function snapshotBuild(root, dest) {
     throw new Error("the build changed while it was being copied: let it finish, then capture again");
   }
   const files = walk(dest);
-  return { dir: dest, files: files.length, bytes: files.reduce((sum, f) => sum + fs.statSync(f).size, 0) };
+  return { dir: dest, files: files.length, bytes: files.reduce((sum, f) => sum + fs.statSync(f).size, 0), buildId: before };
 }
 
 /** The checkout a capture photographs: { head, dirty } from git, or null outside a git checkout. The shell is injected so a test needs no git. */

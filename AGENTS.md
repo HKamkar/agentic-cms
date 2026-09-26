@@ -278,7 +278,9 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 - Static and settled (2000 ms) frames never jitter — a difference there is
   real. Only mid-flight `--motion` frames can differ by timing jitter, which
   matters again once a fork puts the `ix/` library back to work: re-run such
-  a frame once, and identical on the re-run means accepted.
+  a frame once with `--fresh` (an unchanged page's shots are otherwise
+  copied from `.parity/shots`, the same frame again), and identical on the
+  re-run means accepted.
 - Commit each proven state before starting the next change. A working tree
   that mixes a proven change with an unproven one has to be split by hand
   before either can be committed.
