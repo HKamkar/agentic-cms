@@ -108,7 +108,7 @@ export const SPECS = {
         flags: {
           threshold: { type: "number", default: 0.02, help: "percent of pixels a static or settled frame may differ by" },
           "threshold-mid": { type: "number", default: 20, help: "the same for the mid-flight motion frames (150 and 500 ms)" },
-          pages: { type: "string", value: "/a,/b", help: "judge only the after capture's files (a partial capture)" },
+          pages: { type: "string", value: "/a,/b", help: "judge only these routes' files, on both sides, at the widths the after capture took (a partial capture)" },
           json: { type: "boolean", help: "print the report as JSON (also written as report.json in the diff directory)" },
         },
         examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog"],

@@ -346,7 +346,7 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 |---|---|
 | `--threshold <n>` | percent of pixels a static or settled frame may differ by (default `0.02`) |
 | `--threshold-mid <n>` | the same for the mid-flight motion frames (150 and 500 ms) (default `20`) |
-| `--pages /a,/b` | judge only the after capture's files (a partial capture) |
+| `--pages /a,/b` | judge only these routes' files, on both sides, at the widths the after capture took (a partial capture) |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
 Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, or captures of two schemes.
