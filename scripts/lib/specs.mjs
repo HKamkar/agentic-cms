@@ -83,7 +83,7 @@ export const SPECS = {
     subcommands: {
       capture: {
         command: "visual-parity capture", summary: "screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed",
-        usage: "agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b]",
+        usage: "agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh]",
         positionals: [{ name: "label", required: true, help: "the capture's name under .parity/visual/" }],
         flags: {
           motion: { type: "boolean", help: "play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation" },
@@ -95,11 +95,14 @@ export const SPECS = {
           widths: { type: "string", value: "w,w", help: "viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion)" },
           pages: { type: "string", value: "/a,/b", help: "only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here" },
           settle: { type: "number", default: 2000, help: "with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle=\"<ms>\" raises it while that element is in view" },
+          sample: { type: "number", value: "<n>", help: "a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare" },
+          jobs: { type: "number", value: "<n>", help: "browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed" },
+          fresh: { type: "boolean", help: "take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same)" },
           json: { type: "boolean", help: "print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished)" },
         },
         examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json"],
         exit: { 0: "captured", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, or no browser (playwright-core and a Chromium)" },
-        json: "{ label, dir, pages, widths, files, seconds, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }",
+        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped } } }",
       },
       compare: {
         command: "visual-parity compare", summary: "diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/",

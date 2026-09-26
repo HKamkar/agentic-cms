@@ -110,12 +110,18 @@ The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
 on; a capture photographs a copy of the build, so after its `snapshot:`
 line the tree is free, but build the exact tree you mean to prove; a
-static or settled frame never jitters, a mid-flight one may (re-run once);
+static or settled frame never jitters, a mid-flight one may (re-run once
+with `--fresh`: an unchanged page's shots are otherwise copied from the
+cache, the same frame again);
 a `reflow` verdict or a diff on every text line below one section is, per
 its `cause:` line, a section a fraction of a pixel taller, else a stacking
 context that flipped the compositor (`pnpm kit probe` prints the chain);
-long captures run in the background and are finished when
-`.parity/visual/<label>/capture.json` exists; commit each proven state
+a capture copies every page-width whose build files are unchanged from
+`.parity/shot-cache/` and runs several browsers (`--jobs`), so capture the
+full set rather than a `--pages` subset to save time (`--pages` is for
+looking at one page; `--sample <n>` for a site with many posts); only a
+first capture of a large site needs the background, and it is finished
+when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast.
 
 ## Process

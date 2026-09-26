@@ -4,6 +4,67 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.5.4] — 2026-09-26
+
+- A proof's rules follow the faster harness: the kit's and the site
+  template's `AGENTS.md`, the `design-proof` skill, `docs/visual-parity.md`
+  and the README say to capture the full set rather than a `--pages` subset
+  to save time (the cache skips what did not change; `--pages` is for
+  looking at one page), and that only a first capture of a large site needs
+  running in the background. The shot cache has a folder of its own,
+  `.parity/shot-cache/`, apart from `.parity/shots/`, where `agentic-cms
+  shot` writes.
+- `visual-parity capture --sample <n>`: a static capture of the first n
+  pages of each template (a dynamic route such as `/blog-post/[slug]`, as
+  the build's prerender manifest names it; never a catch-all), in route
+  order, and of every page that is no template's. The routes left out are
+  listed in `meta.json`, and a compare leaves out a page either capture
+  skipped. Off by default; the snapshot now carries the prerender manifest.
+- `visual-parity capture --jobs <n>`: several browsers at once, each taking
+  the next page-width (or state). The default is every core but one, four at
+  most, for a static or `--states` capture, and two for `--motion`, whose
+  frames are timed; `capture.json` records it. The shots are the same: on
+  the example 157 s to 60 s static (82/82 identical), 199 s to 109 s motion
+  (295/295), 26 s to 12 s states (8/8), on a consumer site's six pages 173 s
+  to 85 s (50/50), with a 4-core machine.
+- Unchanged shots are reused. After every page-width (or state) a capture
+  records the build files the page requested, with their digests, under
+  `.parity/shot-cache/`; a later capture of any build — a `--ref` baseline, the
+  working tree — copies those shots when every one of the files has the same
+  bytes (the build id masked), and says how many it reused (`capture.json`:
+  `reused`). Only the build is an input; the harness's own sources, the
+  browser, the scheme and the motion settings are part of the key, and a
+  `--url` capture reuses nothing. `--fresh` takes every shot again, so the
+  rules that say to re-run a jittery frame now say `--fresh` (the kit's and
+  the site template's `AGENTS.md`, `design-proof`, `design-graphics`).
+- The harness's server answers Next 16's segment prefetches from the build's
+  `<page>.segments/` files. It answered them with the page's whole RSC
+  payload, which the router rejects and asks for again at every frame: about
+  660 requests in one scroll-through of a real site's page, now one per
+  link. No shot changes: static, `--states` and motion frames compare
+  identical on the example and on a consumer site, apart from a home page
+  whose own 6 s timer runs from mount.
+- Captures are faster, with the same pixels. A static shot, a `--motion`
+  frame, a `--states` crop and the menu shot are one DevTools screenshot
+  with the renderer's fast PNG encoding, sized, clipped and with the caret
+  hidden as Playwright's own; the static scroll-through (also `shot`,
+  `probe` and `icons audit`) runs with every element `visibility: hidden`,
+  so nothing is painted until the page is back at the top, and counts its
+  last wait in frames instead of a fixed 400 ms; the build's server
+  compresses each file once per run and lets the browser keep a non-page
+  file for the run. `capture.json` gains `timings` (the shots taken, their
+  total and mean, the five slowest). No shot changes: static, `--states` and
+  settled frames compare identical before and after on the example and on a
+  consumer site.
+- `docs/visual-parity.md`: `compare --pages` judges the named routes on both
+  sides (the guide still said only the after capture's files).
+- A `--json` report read through a pipe arrives whole. The commands print
+  and then exit, and on a pipe the exit dropped whatever the reader had not
+  taken yet: `visual-parity compare --json | …` ended at 64 KB, mid-document
+  (`report.json` was always complete). The command line now writes stdout
+  and stderr synchronously on a pipe, as it already did to a file or a
+  terminal — every command at once.
+
 ## [0.5.3] — 2026-09-26
 
 - `imagesReady` waits for hydration before it switches lazy images to

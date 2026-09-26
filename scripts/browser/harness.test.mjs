@@ -27,6 +27,8 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.equal(summary.meta.scheme, "light");
     assert.deepEqual(files(root, "a"), ["about@390.png", "about@390.sections.json", "about@800.png", "about@800.sections.json", "capture.json", "home@390--menu.png", "home@390.png", "home@390.sections.json", "home@800.png", "home@800.sections.json", "meta.json"]);
     assert.equal(summary.files, 9, "the shots and their section geometry; meta.json and capture.json are not counted");
+    assert.equal(summary.timings.taken, 4, "one timing per page-width");
+    assert.ok(summary.timings.seconds > 0 && summary.timings.slowest.length === 4 && summary.timings.slowest[0].name.includes("@"), "the slowest page-widths, named");
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/a/home@800.sections.json"), "utf8")).map((s) => s.section), ["hero", "second", "third"]);
     assert.match(r.stderr, /a: 5 screenshots/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -69,8 +71,9 @@ test("a capture photographs its snapshot of the build: an edit to public/ after 
     const original = fs.readFileSync(mark, "utf8");
     const edited = original.replace(/<rect[^>]*\/>/, '<circle cx="32" cy="32" r="6" fill="currentColor"/>');
     assert.notEqual(edited, original);
-    // b: the edit lands the moment the snapshot line is printed, before the browser has even started
-    const child = spawn(process.execPath, [BIN, "visual-parity", "capture", "b", ...args], { cwd: root });
+    // b: the edit lands the moment the snapshot line is printed, before the browser has even started; --fresh, or b
+    // would copy a's shots (its snapshot's files are a's) and finish before the edit could matter
+    const child = spawn(process.execPath, [BIN, "visual-parity", "capture", "b", ...args, "--fresh"], { cwd: root });
     let out = "";
     const status = await new Promise((resolve) => {
       child.stdout.on("data", (chunk) => { out += chunk; if (/^snapshot: /m.test(out) && fs.readFileSync(mark, "utf8") === original) fs.writeFileSync(mark, edited); });
@@ -87,14 +90,78 @@ test("a capture photographs its snapshot of the build: an edit to public/ after 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("an unchanged page-width is copied from .parity/shot-cache, a changed one taken again, and --fresh takes them all", { skip }, () => {
+  const root = fixtureSite();
+  const capture = (label, ...more) => { const r = run(root, ["capture", label, "--widths", "800", "--json", ...more]); assert.equal(r.status, 0, r.stderr); return { summary: JSON.parse(r.stdout), stdout: r.stdout, stderr: r.stderr }; };
+  try {
+    assert.deepEqual(capture("a").summary.reused, { shots: 0, of: 2 }, "the first capture has nothing to reuse");
+    const b = capture("b");
+    assert.deepEqual(b.summary.reused, { shots: 2, of: 2 });
+    assert.equal(b.summary.timings.taken, 0, "nothing was taken, so nothing was timed");
+    assert.match(b.stderr, /b: 2 screenshots in \.parity\/visual\/b \(2 of 2 page-widths reused from \.parity\/shot-cache/);
+    assert.deepEqual(files(root, "b").filter((f) => f !== "capture.json"), files(root, "a").filter((f) => f !== "capture.json"));
+    assert.equal(run(root, ["compare", "a", "b"]).status, 0);
+    const mark = path.join(root, "public/images/mark.svg");
+    fs.writeFileSync(mark, fs.readFileSync(mark, "utf8").replace(/<rect[^>]*\/>/, '<circle cx="32" cy="32" r="6" fill="currentColor"/>'));
+    const c = capture("c");
+    assert.deepEqual(c.summary.reused, { shots: 1, of: 2 }, "about is reused; home, which shows the mark, is taken again");
+    assert.deepEqual(c.summary.timings.slowest.map((t) => t.name), ["home@800"]);
+    const report = JSON.parse(run(root, ["compare", "a", "c", "--json"]).stdout);
+    assert.deepEqual(report.files.filter((f) => f.status !== "ok").map((f) => f.name), ["home@800.png"]);
+    assert.deepEqual(capture("d", "--fresh").summary.reused, { shots: 0, of: 2 });
+    assert.ok(fs.readdirSync(path.join(root, ".parity/shot-cache")).length > 0);
+    assert.ok(!fs.existsSync(path.join(root, ".parity/shots")), "the cache keeps out of the folder `agentic-cms shot` writes to");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("--jobs: one browser and three take the same shots, and the summary says how many worked; --jobs 0 or 1.5 is a usage error", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    for (const jobs of ["1", "3"]) {
+      const r = run(root, ["capture", `j${jobs}`, "--widths", "800,390", "--jobs", jobs, "--fresh", "--json"]);
+      assert.equal(r.status, 0, r.stderr);
+      assert.equal(JSON.parse(r.stdout).jobs, Number(jobs));
+      assert.match(r.stderr, new RegExp(`j${jobs}: 5 screenshots`), "every shot counted, whichever browser took it");
+    }
+    assert.deepEqual(files(root, "j3").filter((f) => f !== "capture.json"), files(root, "j1").filter((f) => f !== "capture.json"));
+    assert.equal(run(root, ["compare", "j1", "j3"]).status, 0);
+    for (const bad of ["0", "1.5"]) {
+      const r = run(root, ["capture", "x", "--jobs", bad]);
+      assert.equal(r.status, 2);
+      assert.match(r.stderr, /--jobs takes a whole number of browsers, 1 or more/);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("--sample 1 photographs one page of each template, lists the rest, and the compare leaves them out; with --motion or --pages it is a usage error", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    for (const slug of ["a", "b"]) addPage(root, `/blog-post/${slug}`, fs.readFileSync(path.join(root, ".next/server/app/about.html"), "utf8"));
+    const routes = { "/": null, "/about": null, "/blog-post/a": "/blog-post/[slug]", "/blog-post/b": "/blog-post/[slug]" };
+    fs.writeFileSync(path.join(root, ".next/prerender-manifest.json"), JSON.stringify({ routes: Object.fromEntries(Object.entries(routes).map(([route, srcRoute]) => [route, { srcRoute }])) }));
+    const r = run(root, ["capture", "s", "--sample", "1", "--widths", "800", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(JSON.parse(r.stdout).pages, ["/", "/about", "/blog-post/a"], "read from the snapshot, which carries the manifest");
+    assert.match(r.stderr, /sample: the first 1 of each template's pages; 1 left out \(\/blog-post\/b\)/);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/s/meta.json"), "utf8")).sample, { n: 1, skipped: ["/blog-post/b"] });
+    assert.equal(run(root, ["capture", "all", "--widths", "800"]).status, 0);
+    const compared = run(root, ["compare", "all", "s"]);
+    assert.equal(compared.status, 0, compared.stdout);
+    assert.match(compared.stdout, /sampled: 1 page\(s\) left out by --sample on one side or both, not judged/);
+    for (const bad of [["--motion"], ["--pages", "/"], ["--states"]]) assert.equal(run(root, ["capture", "x", "--sample", "1", ...bad]).status, 2, bad.join(" "));
+    assert.match(run(root, ["capture", "x", "--sample", "0"]).stderr, /--sample takes a whole number of pages per template/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("an inline SMIL loop is held: two static captures agree, two motion captures agree frame for frame, and the inventory lists it", { skip }, () => {
   const root = fixtureSite();
   try {
     addPage(root, "/loop", LOOP_PAGE);
     const args = ["--widths", "800", "--pages", "/loop"];
-    for (const label of ["s1", "s2"]) assert.equal(run(root, ["capture", label, ...args]).status, 0);
+    // --fresh: the second of each pair takes its shots again, which is what is being proved deterministic
+    for (const label of ["s1", "s2"]) assert.equal(run(root, ["capture", label, ...args, "--fresh"]).status, 0);
     assert.equal(run(root, ["compare", "s1", "s2"]).status, 0, "static: the loop at its data-rest in both");
-    for (const label of ["m1", "m2"]) assert.equal(run(root, ["capture", label, "--motion", ...args]).status, 0);
+    for (const label of ["m1", "m2"]) assert.equal(run(root, ["capture", label, "--motion", ...args, "--fresh"]).status, 0);
     const r = run(root, ["compare", "m1", "m2", "--json"]);
     assert.equal(r.status, 0, r.stderr);
     const report = JSON.parse(r.stdout);

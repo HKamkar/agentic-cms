@@ -17,7 +17,10 @@ pnpm kit visual-parity compare before after --json    # exit 1 on any difference
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
 the capture finished, which is what a script waiting on a long run should
-poll). Every capture records its mode, scheme and, for a baseline, the ref
+poll), with how long it took: `seconds` for the whole run and `timings`
+for its shots — how many page-widths (or states) it took, their total and
+mean, and the five slowest, which is where to look when a run is slow.
+Every capture records its mode, scheme and, for a baseline, the ref
 and sha in `meta.json` — for the site's own build also the checkout it was
 (`tree: { head, dirty }`, `null` outside git); `compare` refuses two
 captures of different schemes and prints the baseline it is judging
@@ -47,10 +50,66 @@ removed, and the sha and the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
 
+The build (a snapshot or a `--ref` sibling) is served the way Next's own
+server serves it: the pages, their RSC payloads and the per-segment prefetch
+files (`<page>.segments/`) the router asks for when a link comes into view,
+the static chunks and `public/`. A prefetch answered with the wrong file is
+asked again at every frame, which is load a capture does not need.
+
 Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
 `/lab-demo`) out of its pages unless `--pages` names one, so a baseline
 without them and an after capture of a tree that still has one list the
 same pages.
+
+## Unchanged shots are reused
+
+A shot is a function of the files its page loads from the build, of the
+harness, the browser and the capture's settings. So after every page-width
+(every state, with `--states`) a capture records the build files the page
+requested — its HTML, chunks, stylesheets, fonts and images — with a digest
+of each, under `.parity/shot-cache/`, and a later capture of any build copies
+that page-width's shots instead of taking them when every one of those files
+has the same bytes. The build id is masked first: two builds of one source
+differ in it alone. In a proof that is most of the pages: a `--ref` baseline
+and the after capture share every page the change did not touch, and a
+baseline taken again, or a capture repeated after a fix elsewhere, copies
+what it already has. The line under the capture says how many were reused,
+and `capture.json` has `reused: { shots, of }`.
+
+Only the build is an input: a third-party script or image, an analytics
+beacon, is not; nor is a router prefetch, which shows nothing. A change to
+the harness's own sources, the browser, the scheme, the motion settings or
+(for `--states`) the site's config starts from nothing, and a `--url`
+capture reuses nothing. `--fresh` takes every shot again and refreshes the
+cache: to prove a frame deterministic, or whenever a copied shot is in
+doubt. Four entries are kept per page-width, the least recently used going
+first; delete `.parity/shot-cache/` to empty it.
+
+## Several browsers at once
+
+A capture runs several browsers, each taking the next page-width (or state)
+from one list: by default every core but one, four at most, for a static or
+`--states` capture — a shot shares nothing with the next but the build — and
+two for `--motion`, whose frames are timed in milliseconds and would drift on
+a machine loaded past that. `--jobs <n>` sets it (`--jobs 1` is one browser,
+the page-widths in order); `capture.json` records it. The shots are the same
+whichever browser takes them; the one thing parallel runs were ever seen to
+move is a single channel value by one, which a compare's threshold absorbs.
+
+## A template's pages, sampled
+
+A site with many pages of one template — fifty posts from
+`/blog-post/[slug]` — proves a change to that template on a few of them as
+well as on all. `--sample <n>` photographs the first n routes of each
+template in route order, as the build's prerender manifest names the
+templates, and every page that is no template's. A catch-all
+(`/[[...slug]]`, `/docs/[...rest]`) is never sampled: its pages are the
+site's own, each of its own design. The routes left out are printed and
+listed in `meta.json` (`sample: { n, skipped }`), and a compare leaves out a
+page either capture skipped, so a baseline that sampled `/blog-post/b` and an
+after capture of a build with one more post do not report each other's
+posts `MISSING`. Static captures only: `--motion` already takes one post,
+and `--pages` names its own. Off by default.
 
 ## Three modes
 
@@ -105,7 +164,8 @@ with a margin, at 1440 (`home@1440--state-cta-hover.png`).
 `--url <base>` captures a served site instead of the build under `.next`
 (print its `git log -1` first: a baseline from a checkout that had moved on
 proves nothing). `--pages /a,/b` captures only those routes; pass the same
-`--pages` to `compare`, which then judges only the after capture's files.
+`--pages` to `compare`, which then judges only those routes' files, on both
+sides.
 
 ## Reading a compare
 
@@ -185,6 +245,15 @@ image loaded; and, on a site whose footer hairlines are drawn by a sequence
 is reloaded once; a second stall fails the capture — no shot is ever taken of
 a stalled page.
 
+The scroll-through exists to run what entering the view runs — reveals,
+lazy images, observers — so it runs with every element `visibility:
+hidden`: layout, scrolling and intersection observers behave as ever, and
+nothing is painted until the page is back at the top, which on a long page
+at a desktop width is most of the scroll-through's time. The shot is one
+DevTools screenshot at the page's full size with the renderer's fast PNG
+encoding: the pixels Playwright's full-page screenshot takes, in half the
+time. The same scroll-through serves `shot`, `probe` and `icons audit`.
+
 To load every image without scrolling, the harness switches lazy images to
 `loading="eager"` — in every mode, and in `shot` and `probe` — but only once
 React has hydrated them (each carries React's key, or sits in markup React
@@ -196,11 +265,14 @@ falls through after 10 s.
 
 ## Traps a long run meets
 
-- A full set (static, `--motion` and `--states` over every page at every
-  width) takes tens of minutes. Use `--pages` for the pages a step touches
-  and the full set once per pull request. Run a long capture in the
-  background with its output in a log (`.parity/<label>.log`) and read the
-  tail, not the log.
+- Capture the full set, not a `--pages` subset to save time: every
+  page-width whose build files did not change is copied from
+  `.parity/shot-cache/`, and several browsers work at once, so the second
+  capture of a proof takes the changed pages alone (on the example, one post
+  edited: 18.7 s for 80 page-widths; the whole static set from nothing,
+  about a minute on four cores). `--pages` is for looking at one page while
+  iterating. Only a first capture of a large site is worth the background,
+  with its output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before
   the browser starts: once it prints `snapshot:`, building, editing
   `public/` or moving assets no longer reaches it. Still build the exact
@@ -215,7 +287,9 @@ falls through after 10 s.
   pid (a standalone Next server renames itself, so a pattern on the path
   misses it), and print its `git log -1` first.
 - A mid-flight motion frame (a 500 ms frame at 20–30 %) can differ by timing
-  jitter: re-run it once, and identical on the re-run means accepted. A
+  jitter: re-run it once with `--fresh` (without it an unchanged page's
+  frames are copied from `.parity/shot-cache`, which proves nothing about
+  jitter), and identical on the re-run means accepted. A
   settled frame or a static shot never jitters — that is a real difference.
   A sequence that runs longer than two seconds after its section enters is
   not settled at the default: the section declares `data-settle="<ms>"`

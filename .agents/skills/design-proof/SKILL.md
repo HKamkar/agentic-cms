@@ -31,7 +31,8 @@ decides whether `--motion` is part of the proof.
    (A served build standing in for a commit — `--url` — has its `git log
    -1` printed first.) With reveals in use, also `--motion`; with hover,
    focus, checked or open states touched, also `--states`; with a dark
-   theme, `--scheme dark`. A long run goes in the background; the capture is
+   theme, `--scheme dark`. Only a first capture of a large site needs the
+   background (every later one copies the unchanged pages); a capture is
    finished when `.parity/visual/<label>/capture.json` exists.
 2. **The change**, built exactly as it will be committed (`pnpm build`;
    nothing edited after it), then:
@@ -41,8 +42,13 @@ decides whether `--motion` is part of the proof.
    pnpm kit visual-parity compare before after --json
    ```
 
-   `--pages /a,/b` on both while iterating on one page; the full set once
-   before the merge.
+   Capture the full set, not a `--pages` subset to save time: a page whose
+   build files did not change is copied from `.parity/shot-cache/` rather
+   than taken again, and several browsers work at once (`--jobs`), so the
+   second capture of a proof takes the changed pages alone. `--pages /a,/b`
+   is for looking at one page while iterating; a site with many pages of
+   one template (posts) can pass `--sample <n>` to both captures to
+   photograph n of them.
 3. **Read the report** (`report.json`, or the lines):
    - `ok` everywhere: a refactor proved. Say so with the counts.
    - `CHANGED` on the pages the change touches, `rows` inside the changed
@@ -61,8 +67,9 @@ decides whether `--motion` is part of the proof.
      `pnpm kit probe / --select "<the section>"` prints the stacking chain;
      keep the utility to the breakpoint that needs it.
    - `CHANGED` on a mid-flight motion frame (`--s03-500`, 20–30 %): timing
-     jitter is possible; re-run the after capture once, and identical on the
-     re-run is accepted. A settled or static frame never jitters (an inline
+     jitter is possible; re-run the after capture once with `--fresh` (else
+     an unchanged page is copied from `.parity/shot-cache`, the same frame
+     again), and identical on the re-run is accepted. A settled or static frame never jitters (an inline
      SMIL loop is held at its `data-rest` there, and at each frame's own
      time mid-flight; a loop that still differs lacks `data-rest` or ships
      as an `<img>`, which no capture can hold).

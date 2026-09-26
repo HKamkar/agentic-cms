@@ -259,12 +259,20 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   has no stored choice, so the default capture is light), `--states`
   photographs hover, focus, checked and open, `--motion` plays animations
   (only worth running where something animates). `--pages /,/blog` limits a
-  capture — pass the same `--pages` to the compare. The page list comes from
-  the build itself, so a new route is captured without touching the script.
+  capture to the pages you are looking at — pass the same `--pages` to the
+  compare; `--sample <n>` takes n pages of each template (the posts) and the
+  compare leaves the rest out. The page list comes from the build itself,
+  so a new route is captured without touching the script.
+- A capture copies every page-width whose build files are unchanged from
+  `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
+  one, two for `--motion`), so a proof's second capture takes the changed
+  pages alone and a repeated baseline takes seconds; the example's static
+  set is about a minute from nothing. Capture the full set, not a `--pages`
+  subset to save time — the cache already skips what did not change;
+  `--fresh` retakes everything. Only a first capture of a large site is
+  worth running in the background, its log under `.parity/<label>.log`.
 - Static captures run with `prefers-reduced-motion`; `--motion` runs without
-  it. A full set of the current site's routes takes minutes, not the tens of
-  minutes a heavy design does, but still run long captures in the background
-  with the log under `.parity/<label>.log` and read the tail.
+  it.
 - A capture photographs a copy of the build and `public/`
   (`.parity/snapshots/<label>/`), taken before the browser starts: after
   its `snapshot:` line the tree is free to build and edit. Still build the
@@ -278,7 +286,9 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 - Static and settled (2000 ms) frames never jitter — a difference there is
   real. Only mid-flight `--motion` frames can differ by timing jitter, which
   matters again once a fork puts the `ix/` library back to work: re-run such
-  a frame once, and identical on the re-run means accepted.
+  a frame once with `--fresh` (an unchanged page's shots are otherwise
+  copied from `.parity/shot-cache`, the same frame again), and identical on the
+  re-run means accepted.
 - Commit each proven state before starting the next change. A working tree
   that mixes a proven change with an unproven one has to be split by hand
   before either can be committed.

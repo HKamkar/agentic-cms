@@ -224,6 +224,14 @@ with an inventory of every animation; `--states` photographs hover, focus,
 checked and open. A compare line says what changed and where: `SIZE …
 shift` when one section grew and pushed the page down, and a `cause:` line
 naming the section and its height change, down to a fraction of a pixel.
+
+A proof costs what the change touched. Every page-width whose build files
+are the same bytes as when it was last photographed is copied from the
+cache, so the after capture takes the changed pages alone and a baseline
+taken again is seconds; several browsers work at once (`--jobs`), and a
+site with many posts can photograph a few of each template (`--sample`).
+On the example, the whole static set is about a minute from nothing and
+one edited post is 18 seconds. `--fresh` retakes everything.
 [docs/visual-parity.md](docs/visual-parity.md) is the contract.
 
 ## The wireframe you replace
@@ -251,7 +259,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.5.3`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.5.4`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -266,7 +274,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.3      # allowBuilds below, first
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.4      # allowBuilds below, first
 pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
 pnpm install && pnpm dev
 ```
@@ -382,7 +390,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
   harmless.
 - `agentic-cms visual-parity` screenshots every page at eight widths, in
   either colour scheme, and diffs two captures pixel by pixel: the proof for
-  a refactor that must not move anything.
+  a refactor that must not move anything. Unchanged pages come from its
+  cache and several browsers work at once, so a proof takes minutes.
 
 ## Going live
 

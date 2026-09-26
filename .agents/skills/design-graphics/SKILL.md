@@ -153,7 +153,7 @@ already stated. For anything that moves, `references/svg-motion.md`.
    outside `public/` with the command that regenerates the scene in its
    first comment. Then `design-proof` (a `<picture>` loop is still under
    the harness's reduced motion; a `<video>` is not — re-run that frame
-   once); `pnpm kit lab clean` (the lab and the route; a route left in the
+   once, with `--fresh`); `pnpm kit lab clean` (the lab and the route; a route left in the
    tree fails the build's SEO audit, on purpose); `git status` shows
    nothing of the lab, only the files a page ships, their sources and, for
    an icon, its source under `src/config/icons/`. Record the family, the

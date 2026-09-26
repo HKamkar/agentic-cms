@@ -124,6 +124,20 @@ test("compareCapture with --pages reports only the named page, a lost frame of i
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test("a page one capture left out by --sample is not judged; a page missing for another reason still is", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-sample-"));
+  const write = async (label, name) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(page(20)); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  // the before capture sampled one post of two; the after capture, of a build with a third post, sampled one of three
+  for (const name of ["home@40.png", "blog-post__a@40.png"]) await write("a", name);
+  for (const name of ["home@40.png", "blog-post__a@40.png", "blog-post__b@40.png", "about@40.png"]) await write("b", name);
+  fs.writeFileSync(path.join(dir, "a", "meta.json"), JSON.stringify({ scheme: "light", sample: { n: 1, skipped: ["/blog-post/b"] } }));
+  fs.writeFileSync(path.join(dir, "b", "meta.json"), JSON.stringify({ scheme: "light", sample: { n: 1, skipped: ["/blog-post/c"] } }));
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20 });
+  assert.deepEqual(report.files.map((f) => [f.name, f.status]), [["about@40.png", "MISSING"], ["blog-post__a@40.png", "ok"], ["home@40.png", "ok"]]);
+  assert.deepEqual(report.sampledOut, ["/blog-post/b", "/blog-post/c"]);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test("explainShift names the first section whose height moved, a fraction of a pixel included; a top that moved alone points above it", () => {
   const before = [{ id: "hero", section: "hero", top: 0, height: 812.5 }, { id: null, section: "cards", top: 812.5, height: 400 }, { id: null, section: "cards", top: 1212.5, height: 400 }];
   const grown = [{ id: "hero", section: "hero", top: 0, height: 813.25 }, { id: null, section: "cards", top: 813.25, height: 400 }, { id: null, section: "cards", top: 1213.25, height: 400 }];
