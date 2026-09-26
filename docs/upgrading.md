@@ -18,6 +18,41 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.5.4 → 0.5.5
+
+Codex finds the rules, and the harness is faster and quieter. The tag and
+the agent files:
+
+```bash
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.5 && pnpm install
+pnpm exec agentic-cms init . --agent-files
+```
+
+- **The scoped-rules table.** `--agent-files` now writes one block into
+  the site's `AGENTS.md`: "Scoped rules for Claude Code and Codex", a row
+  per rule of the site's `.claude/rules/` as they stand (its own edits
+  included), put before the first `##` section and found by its markers
+  wherever the site moves it; the rest of the file stays the site's. Codex
+  reads `AGENTS.md` and nothing under `.claude/`, so this is how it finds
+  the rules. `--check` reports the table `stale` or `missing`, and
+  `AGENTS.md` `too big` past the 32 KiB Codex reads by default: a site near
+  that moves procedures into linked docs (the table is a few hundred bytes
+  a rule).
+- **The `design-proof` skill** updates. The site template's `AGENTS.md`
+  gained two clauses a site's own takes by hand: `pnpm kit visual-parity
+  proof [--motion] [--states]` runs the baseline, the after capture and the
+  compare in one; `pnpm kit visual-parity clean` keeps the newest captures
+  (`--dry-run` first).
+- **Third parties held back.** A capture of a build the harness serves
+  holds other origins' scripts and connections (analytics, widgets,
+  beacons); their images, fonts and stylesheets still load. A site whose
+  look includes a third-party script's drawing — a chat bubble, a consent
+  banner from another origin — recaptures its baselines, or captures with
+  `--third-party allow` on both sides.
+- **Everything else changes no shot:** the scroll-through steps on when the
+  page is quiet (the same shots, faster), and `visual-parity proof` and
+  `clean` are new. Baselines stay, unless the line above applies.
+
 ## 0.5.3 → 0.5.4
 
 Faster captures; nothing a site has to change. Take the tag and the agent

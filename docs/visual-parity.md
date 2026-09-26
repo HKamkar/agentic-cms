@@ -307,7 +307,7 @@ falls through after 10 s.
   `.parity/shot-cache/`, and several browsers work at once, so the second
   capture of a proof takes the changed pages alone (on the example, one post
   edited: 18.7 s for 80 page-widths; the whole static set from nothing,
-  about a minute on four cores). `--pages` is for looking at one page while
+  44 s on four cores). `--pages` is for looking at one page while
   iterating. Only a first capture of a large site is worth the background,
   with its output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before

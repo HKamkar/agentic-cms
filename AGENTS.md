@@ -290,7 +290,7 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
   one, two for `--motion`), so a proof's second capture takes the changed
   pages alone and a repeated baseline takes seconds; the example's static
-  set is about a minute from nothing. Capture the full set, not a `--pages`
+  set is 44 s from nothing on four cores. Capture the full set, not a `--pages`
   subset to save time — the cache already skips what did not change;
   `--fresh` retakes everything. Only a first capture of a large site is
   worth running in the background, its log under `.parity/<label>.log`.

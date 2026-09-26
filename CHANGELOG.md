@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.5] — 2026-09-26
 
 - Third parties held back during a capture. On a build the harness serves,
   each page carries a Content-Security-Policy that lets scripts and
