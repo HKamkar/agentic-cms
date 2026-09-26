@@ -243,7 +243,7 @@ shared component goes into it in the same commit. In short:
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `Fx`, `OnView`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
+| Motion | `Fx`, `OnView`, `InlineAnimation`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 

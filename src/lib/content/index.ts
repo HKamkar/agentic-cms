@@ -12,6 +12,7 @@ import { readCollection, readEntry } from "./read.ts";
 export { ContentError, formatPath, type ContentIssue } from "./errors.ts";
 export { defineCollection, lookup, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
 export { readCollection, readEntry, slugsOf, sourceOf } from "./read.ts";
+export { readInlineSvg } from "./inline-svg.ts";
 export { text, optional, dateOnly, isoTimestamp, ref } from "./schema.ts";
 export {
   createCollections,

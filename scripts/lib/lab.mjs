@@ -92,12 +92,11 @@ export function siteTokens(root) {
   return fs.existsSync(file) ? readThemeTokens(fs.readFileSync(file, "utf8")) : {};
 }
 
-/** The scene as a standalone file for one scheme: var(--color-*) and currentColor replaced by the given hex values, light-dark() reduced to that side, the lab comment and data-duration dropped. */
+/** The scene as a standalone file for one scheme: var(--color-*) and currentColor replaced by the given hex values, light-dark() reduced to that side, the lab comment dropped; data-duration and data-rest kept, for a page that puts the file inline (InlineAnimation) and for the screenshot harness. */
 export function resolveTokens(svg, { colors = {}, current, scheme = "light" }) {
   const side = scheme === "dark" ? 2 : 1;
   return svg
     .replace(LAB_COMMENT, "")
-    .replace(/\s+data-duration="[^"]*"/, "")
     .replace(/light-dark\(\s*([^,()]+?)\s*,\s*([^()]+?)\s*\)/g, (m, light, dark) => (side === 2 ? dark : light))
     .replace(/var\(\s*(--color-[\w-]+)\s*(?:,\s*([^()]*(?:\([^()]*\))?[^()]*))?\)/g, (m, name, fallback) => colors[name] ?? fallback?.trim() ?? m)
     .replace(/currentColor/g, current ?? colors["--color-ink"] ?? "currentColor");

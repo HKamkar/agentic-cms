@@ -1,7 +1,8 @@
 // The routes the kit writes, rendered by the example site's own dev server:
-// the lab's (lab route → /lab-demo) and the design round's (demo new →
-// /hero-demo). One file, so the two servers never run on the checkout at
-// once; each test writes only what it removes again.
+// the lab's (lab route → /lab-demo), the design round's (demo new →
+// /hero-demo), and a route that ships an inline loop the way a section does
+// (readInlineSvg + InlineAnimation). One file, so the servers never run on
+// the checkout at once; each test writes only what it removes again.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -114,5 +115,75 @@ test("demo new: /hero-demo on the example site — A, B and the current hero wit
     const cleaned = demo("clean", "hero", "--json");
     assert.equal(cleaned.status, 0, cleaned.stderr);
     assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroB.tsx")), "nothing of the round left in the checkout");
+  }
+});
+
+// A section's inline loop, the way a site ships one: the SVG read at build (readInlineSvg, agentic-cms/content) and
+// played by InlineAnimation (agentic-cms/ix), below the fold. Removed by demo clean (the route, the round's pictures).
+const LOOP = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-duration="2" data-rest="1.5"><defs><clipPath id="frame"><rect width="200" height="100"/></clipPath></defs><g clip-path="url(#frame)"><circle cx="20" cy="50" r="15"><animate attributeName="cx" values="20;180;20" dur="2s" repeatCount="indefinite"/></circle></g></svg>`;
+const INLINE_ROUTE = `import { readInlineSvg } from "agentic-cms/content";
+import { InlineAnimation } from "agentic-cms/ix";
+
+export const metadata = { robots: { index: false } };
+
+export default function InlineTestDemo() {
+  const markup = readInlineSvg("public/images/inline-test-demo/loop.svg", { prefix: "inline-test" });
+  return (
+    <>
+      <div style={{ height: "2400px" }} />
+      <InlineAnimation markup={markup} className="inline-test-box" />
+      <div style={{ height: "2400px" }} />
+    </>
+  );
+}
+`;
+
+test("InlineAnimation on the example site: waits on its first frame until in view, plays in view, pauses off screen, rests under reduced motion", { skip, timeout: 180000 }, async () => {
+  const routeDir = path.join(ROOT, "src/app/inline-test-demo");
+  const assets = path.join(ROOT, "public/images/inline-test-demo");
+  assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(assets), "no inline-test demo in the checkout before the test");
+  fs.mkdirSync(routeDir, { recursive: true });
+  fs.mkdirSync(assets, { recursive: true });
+  fs.writeFileSync(path.join(routeDir, "page.tsx"), INLINE_ROUTE);
+  fs.writeFileSync(path.join(assets, "loop.svg"), LOOP);
+  let server, browser;
+  try {
+    server = await devServer();
+    const { chromium } = await import("playwright-core");
+    browser = await chromium.launch({ executablePath: chromePath(), args: ["--no-sandbox"] });
+    const clock = (page) => page.evaluate(() => { const svg = document.querySelector(".inline-test-box svg"); return { paused: svg.animationsPaused(), time: svg.getCurrentTime(), fills: getComputedStyle(svg).width === getComputedStyle(svg.parentElement).width, clip: svg.querySelector("clipPath").id }; });
+    const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    await page.goto(`${server.url}/inline-test-demo`, { waitUntil: "load", timeout: 120000 });
+    await page.waitForFunction(() => document.querySelector(".inline-test-box svg")?.animationsPaused(), null, { timeout: 60000 });
+    await page.waitForTimeout(500);
+    const waiting = await clock(page);
+    assert.deepEqual([waiting.paused, waiting.time], [true, 0], "below the fold: on its first frame");
+    assert.ok(waiting.fills, "the svg fills its box from its own style");
+    assert.equal(waiting.clip, "inline-test-frame", "its ids are its own");
+    await page.locator(".inline-test-box").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(700);
+    const playing = await clock(page);
+    assert.equal(playing.paused, false, "in view: it plays");
+    assert.ok(playing.time > 0.2 && playing.time < 1.5, `from the start of the cycle: ${playing.time}`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    const away = await clock(page);
+    assert.equal(away.paused, true, "off screen: paused");
+    const reduced = await browser.newPage({ viewport: { width: 1100, height: 900 }, reducedMotion: "reduce" });
+    await reduced.goto(`${server.url}/inline-test-demo`, { waitUntil: "load", timeout: 120000 });
+    await reduced.waitForFunction(() => Math.abs((document.querySelector(".inline-test-box svg")?.getCurrentTime() ?? 0) - 1.5) < 1e-3, null, { timeout: 60000 });
+    await reduced.locator(".inline-test-box").scrollIntoViewIfNeeded();
+    await reduced.waitForTimeout(500);
+    const resting = await clock(reduced);
+    assert.deepEqual([resting.paused, Math.round(resting.time * 1000) / 1000], [true, 1.5], "reduced motion: its data-rest frame, still");
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    server?.stop();
+    const cleaned = demo("clean", "inline-test", "--json");
+    assert.equal(cleaned.status, 0, cleaned.stderr);
+    assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(assets), "nothing of the test left in the checkout");
   }
 });

@@ -231,13 +231,16 @@ the scene's clock is set frame by frame, never read from the wall.
 | a line icon used across pages | inline `Icon` data from the scene (`icons add file:<name>`) | none | follows the toggle |
 | an illustration, a diagram, a mark | `<img src="….svg">` — `--out x.svg`, the tokens resolved for one scheme | none | one scheme, so it must read on both grounds |
 | a short 2D loop, flat | the animated `.svg` as an `<img>` inside a `<picture>` with its still | none (the browser's image pipeline) | one scheme |
+| a loop that should start when it is seen, stop off screen and rest for reduced motion | the `.svg` inline: `readInlineSvg` at build, `InlineAnimation` on the page (below) | the page runs its SMIL clock | one scheme (tokens resolved), or the page's own when the scene is used as drawn |
 | a loop that must be zero-compute, or is shaded | an animated `.webp` (`--animate`) in the same `<picture>` | none | one scheme |
 | a big hero loop | a `.webm` in `<video muted autoplay loop playsinline poster="…-still.webp">` | none | — |
 | an OG image | a static 1200×630 JPEG, as always | | |
 
 - **`.svg`** needs no browser: `currentColor` and `var(--color-*)` become
   the hex of `--scheme` (read from the site's tokens), `light-dark()` keeps
-  that side, the animation is kept. Nothing inside an `<img>` follows the
+  that side, the animation is kept, and so are `data-duration` and
+  `data-rest` on the root (a page that puts the file inline, and the
+  screenshot harness, read them). Nothing inside an `<img>` follows the
   site's theme toggle, so an asset that must follow it is `Icon` data; a
   render of a scene drawn in the page's ink into `public/` says so in a
   `note` line (on the example's dark page such a file is black on black).
@@ -277,6 +280,44 @@ needs its `poster` and is never held still by the harness: re-run such a
 frame once, as a motion frame. The wireframe's own pages place none of this
 (`STANDARD.md` §7); on a site, a loop is a design change with its own
 commit and its own proof.
+
+## Inline — a loop the page runs
+
+An `<img>` runs its SVG on a clock of its own: it plays from load, off
+screen too, and cannot rest for a reader who prefers reduced motion. A loop
+that should start when it is seen ships inline instead, in two pieces:
+
+```tsx
+// src/components/sections/render.tsx — read when the page is built, never at request time
+import { readInlineSvg } from "agentic-cms/content";
+"platform-benefits": withData(PlatformBenefits, () => ({ loop: readInlineSvg("public/images/platform/loop.svg", { prefix: "benefits" }) })),
+
+// the section — a client component from agentic-cms/ix
+import { InlineAnimation } from "agentic-cms/ix";
+<InlineAnimation markup={loop} className="aspect-[5/4] w-full" />
+```
+
+- **`readInlineSvg(file, { prefix })`** (`agentic-cms/content`, server code
+  and build time) reads an SVG the site owns — a path under its root,
+  outside `node_modules`; one that carries a script, an event handler or a
+  `javascript:` URL is refused — drops its prolog and comments, and
+  prefixes every id (references follow), so two drawings on one page never
+  resolve each other's masks or gradients. On a standalone Node host the
+  file stays in `public/`, which `agentic-cms assemble` copies into the
+  package whatever the build's file trace did with it
+  ([deploy.md](deploy.md)).
+- **`InlineAnimation`** (`agentic-cms/ix`) puts the markup in an
+  `aria-hidden` box that the svg fills. It waits on its first frame until
+  the box scrolls into view, plays from the start on each entry (once it
+  has left the viewport entirely, as the reveals do; `offset` is how far
+  in, in percent), pauses off screen, and shows the frame at `data-rest`
+  to a reader who prefers reduced motion — the frame the screenshot
+  harness holds too. A scene carries `data-duration` and `data-rest` on its
+  root (the `loop` template has both; `lab render` keeps them).
+- The file is the scene rendered for one scheme (`--out x.svg`), or the
+  scene itself when it should paint in the page's ink and tokens — inline,
+  `currentColor` and `var(--color-*)` follow the page, which an `<img>`
+  never does.
 
 ## Close
 

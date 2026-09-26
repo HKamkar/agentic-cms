@@ -61,7 +61,8 @@ test("the templates: one per kind, a valid root with a size, on the kit's contra
 test("resolveTokens writes one scheme's hex into the file; stripAnimation leaves a still", () => {
   const svg = `<!-- agentic-cms lab: loop; a note -->\n<svg viewBox="0 0 8 8" data-duration="2"><style>@keyframes x-turn { from { transform: rotate(0) } to { transform: rotate(1turn) } } .x { animation: x-turn 2s linear infinite; transform-box: fill-box; } @media (prefers-reduced-motion: reduce) { .x { animation: none; } }</style><rect class="x" fill="var(--color-fill, none)" stroke="currentColor"/><circle fill="light-dark(#111, #eee)"><animate attributeName="cx" values="0;8" dur="2s" repeatCount="indefinite"/></circle><path stroke="var(--color-muted)"/></svg>`;
   const dark = resolveTokens(svg, { colors: { "--color-fill": "#2a2a2a", "--color-ink": "#f2f2f2" }, scheme: "dark" });
-  assert.doesNotMatch(dark, /agentic-cms lab|data-duration|currentColor|light-dark/);
+  assert.doesNotMatch(dark, /agentic-cms lab|currentColor|light-dark/);
+  assert.match(dark, /data-duration="2"/, "the cycle stays on the root, for a page that puts the file inline and for the harness");
   assert.match(dark, /fill="#2a2a2a" stroke="#f2f2f2"/);
   assert.match(dark, /fill="#eee"/);
   assert.match(dark, /stroke="var\(--color-muted\)"/, "a token the page could not resolve is left alone");

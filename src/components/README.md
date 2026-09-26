@@ -193,6 +193,7 @@ wants reveals only has to render `<Fx>` (`STANDARD.md` §7).
 
 | Export | What it is | Use |
 |---|---|---|
+| `InlineAnimation` | One of the site's own SMIL loops, inline: on its first frame until in view, played from the start on each entry, paused off screen, at its `data-rest` under reduced motion | `<InlineAnimation markup={readInlineSvg("public/images/…/loop.svg", { prefix: "…" })} className="aspect-[5/4] w-full" />` — the markup read when the page is built (`agentic-cms/content`); `docs/lab.md` § Inline. |
 | `Fx` | The scroll-into-view reveal: 1000 ms, ease-out-quart, 100 px travel, replayed on every entry | `<Fx preset="slideInLeft" delay={200} offset={12} mq="main" as="li" className="…">` — presets `slideInBottom` (default), `slideInTop/Left/Right`, the four corners, `growIn`, `fadeIn`. `as="link"` renders `next/link`. |
 | `OnView` | A custom action list on scroll-into-view | `<OnView as="section" mq="main" build={(root) => [[ix("card-2"), { y: "0%" }, { duration: 0.5, ease: ease("ease") }], …]}>` — Motion's `animate()` sequence format, resolved inside the element. Under reduced motion the sequence completes at once, so elements still land where it leaves them. |
 | `ease(name)` | The easing table | `ease("ease")`, `easeIn/Out/InOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`, `linear`. |
