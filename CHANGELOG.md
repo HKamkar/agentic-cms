@@ -6,6 +6,16 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- Unchanged shots are reused. After every page-width (or state) a capture
+  records the build files the page requested, with their digests, under
+  `.parity/shots/`; a later capture of any build — a `--ref` baseline, the
+  working tree — copies those shots when every one of the files has the same
+  bytes (the build id masked), and says how many it reused (`capture.json`:
+  `reused`). Only the build is an input; the harness's own sources, the
+  browser, the scheme and the motion settings are part of the key, and a
+  `--url` capture reuses nothing. `--fresh` takes every shot again, so the
+  rules that say to re-run a jittery frame now say `--fresh` (the kit's and
+  the site template's `AGENTS.md`, `design-proof`, `design-graphics`).
 - The harness's server answers Next 16's segment prefetches from the build's
   `<page>.segments/` files. It answered them with the page's whole RSC
   payload, which the router rejects and asks for again at every frame: about

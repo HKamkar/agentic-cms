@@ -303,7 +303,7 @@ agentic-cms visual-parity <capture | compare> …
 Screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed.
 
 ```bash
-agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b]
+agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b] [--fresh]
 ```
 
 - `<label>` — the capture's name under .parity/visual/
@@ -319,11 +319,12 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--widths w,w` | viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion) |
 | `--pages /a,/b` | only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here |
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
+| `--fresh` | take every shot again: reuse none from .parity/shots, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
 Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop

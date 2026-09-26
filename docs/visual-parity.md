@@ -61,6 +61,30 @@ Whatever the source, a capture leaves the demo routes (`/<name>-demo`,
 without them and an after capture of a tree that still has one list the
 same pages.
 
+## Unchanged shots are reused
+
+A shot is a function of the files its page loads from the build, of the
+harness, the browser and the capture's settings. So after every page-width
+(every state, with `--states`) a capture records the build files the page
+requested — its HTML, chunks, stylesheets, fonts and images — with a digest
+of each, under `.parity/shots/`, and a later capture of any build copies
+that page-width's shots instead of taking them when every one of those files
+has the same bytes. The build id is masked first: two builds of one source
+differ in it alone. In a proof that is most of the pages: a `--ref` baseline
+and the after capture share every page the change did not touch, and a
+baseline taken again, or a capture repeated after a fix elsewhere, copies
+what it already has. The line under the capture says how many were reused,
+and `capture.json` has `reused: { shots, of }`.
+
+Only the build is an input: a third-party script or image, an analytics
+beacon, is not; nor is a router prefetch, which shows nothing. A change to
+the harness's own sources, the browser, the scheme, the motion settings or
+(for `--states`) the site's config starts from nothing, and a `--url`
+capture reuses nothing. `--fresh` takes every shot again and refreshes the
+cache: to prove a frame deterministic, or whenever a copied shot is in
+doubt. Four entries are kept per page-width, the least recently used going
+first; delete `.parity/shots/` to empty it.
+
 ## Three modes
 
 **Static** (the default) photographs every page at eight widths — 1920,
@@ -216,7 +240,8 @@ falls through after 10 s.
 ## Traps a long run meets
 
 - A full set (static, `--motion` and `--states` over every page at every
-  width) takes tens of minutes. Use `--pages` for the pages a step touches
+  width) takes tens of minutes the first time; after that a capture copies
+  every page-width whose build files did not change. Use `--pages` for the pages a step touches
   and the full set once per pull request. Run a long capture in the
   background with its output in a log (`.parity/<label>.log`) and read the
   tail, not the log.
@@ -234,7 +259,9 @@ falls through after 10 s.
   pid (a standalone Next server renames itself, so a pattern on the path
   misses it), and print its `git log -1` first.
 - A mid-flight motion frame (a 500 ms frame at 20–30 %) can differ by timing
-  jitter: re-run it once, and identical on the re-run means accepted. A
+  jitter: re-run it once with `--fresh` (without it an unchanged page's
+  frames are copied from `.parity/shots`, which proves nothing about
+  jitter), and identical on the re-run means accepted. A
   settled frame or a static shot never jitters — that is a real difference.
   A sequence that runs longer than two seconds after its section enters is
   not settled at the default: the section declares `data-settle="<ms>"`
