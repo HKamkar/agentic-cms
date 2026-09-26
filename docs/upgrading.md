@@ -18,6 +18,16 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.5.2 → 0.5.3
+
+A fix, nothing to change beyond the tag. The screenshot harness waited for
+nothing before it switched images to `loading="eager"` in motion mode, and
+against a dev server React reported that as a hydration mismatch — the
+site's error, as far as a console could tell. It now waits until the page
+has hydrated, in every mode and in `shot` and `probe`. No shot changes, so
+baselines stay. A site on 0.5.1 takes the steps below, which apply to 0.5.3
+unchanged.
+
 ## 0.5.1 → 0.5.2
 
 What a site changes, in the order worth doing it. Everything not listed

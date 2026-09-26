@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.5.3] — 2026-09-26
 
 - `imagesReady` waits for hydration before it switches lazy images to
   `loading="eager"`: it waits until React owns every image it will own (each
