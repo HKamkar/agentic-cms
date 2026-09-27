@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.6.0] — 2026-09-27
 
 - Forms that deliver: the `endpoint` backend. A form whose backend is
   `{ kind: "endpoint", url: "/api/forms/<id>" }` posts its values as JSON
