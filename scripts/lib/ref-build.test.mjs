@@ -83,6 +83,23 @@ test("a sha or a local ref that origin does not have resolves as given; a ref no
   assert.throws(() => buildRef("nope", { root, ...none.io, log: () => {} }), /nope: not a commit, branch or tag of this repository or its origin/);
 });
 
+test("HEAD, @ and a revision expression resolve in this checkout, never as origin/<ref> (origin/HEAD is the remote's default branch)", () => {
+  const MAIN = "f".repeat(40);
+  for (const ref of ["HEAD", "@", "HEAD~2", "HEAD^", "main~1", "@{-1}"]) {
+    const r = recorder({ answers: { [`git rev-parse --verify origin/${ref}^{commit}`]: MAIN, [`git rev-parse --verify ${ref}^{commit}`]: `${SHA}\n` } });
+    assert.equal(buildRef(ref, { root, ...r.io, log: () => {} }).sha, SHA, ref);
+    assert.ok(!r.keys().some((key) => key.includes(`origin/${ref}`)), `${ref} is never looked up on origin`);
+  }
+});
+
+test("a branch name still means the branch as pushed; a full sha falls through origin to this checkout", () => {
+  const LOCAL = "e".repeat(40);
+  const pushed = recorder({ answers: { "git rev-parse --verify origin/develop^{commit}": SHA, "git rev-parse --verify develop^{commit}": LOCAL } });
+  assert.equal(buildRef("develop", { root, ...pushed.io, log: () => {} }).sha, SHA);
+  const sha = recorder({ answers: { [`git rev-parse --verify origin/${SHA}^{commit}`]: new Error("unknown revision"), [`git rev-parse --verify ${SHA}^{commit}`]: SHA } });
+  assert.equal(buildRef(SHA, { root, ...sha.io, log: () => {} }).sha, SHA);
+});
+
 test("a stamped sibling for the same sha is reused; older ref siblings are removed when a new one is made", () => {
   const dir = "/work/site-ref-0123456789ab";
   const reuse = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, existing: [dir, `${dir}/.next/server/app`], files: { [`${dir}/.parity/ref-build.json`]: JSON.stringify({ sha: SHA, demos: ["/hero-demo"] }) } });

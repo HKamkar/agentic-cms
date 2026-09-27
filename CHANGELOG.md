@@ -43,6 +43,12 @@ changes what a capture writes says **recapture baselines**.
   `FieldWrap`, `FieldRow`, `Form` and `FormShell` take the new options. A
   definition that uses none of them renders the same markup, so baselines
   stay.
+- `visual-parity capture --ref HEAD` (and `proof --ref HEAD`) builds the
+  checked-out commit. It resolved every ref on `origin` first, so `HEAD`
+  became `origin/HEAD`, the remote's default branch, and the baseline was
+  silently another commit; `HEAD~2`, `main^` and `@{-1}` likewise. Only a
+  branch name is looked up on `origin` first now (`develop` is still the
+  branch as pushed); anything else resolves in the checkout.
 
 ## [0.6.0] — 2026-09-27
 
