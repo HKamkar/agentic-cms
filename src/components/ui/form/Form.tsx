@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { cx } from "agentic-cms/cx";
-import { createFormBackend, fieldId, fieldsOf, isRow, type FieldDefinition, type FormDefinition, type FormValues } from "agentic-cms/forms";
+import { createFormBackend, fieldId, fieldsOf, isRow, TRAP_FIELD, type FieldDefinition, type FormDefinition, type FormValues, type SubmitContext } from "agentic-cms/forms";
 import { CheckboxGroup } from "./CheckboxGroup";
 import { FieldRow } from "./FieldRow";
 import { FormShell, type FormState } from "./FormShell";
@@ -18,12 +18,14 @@ import { TextField } from "./TextField";
 export function Form({ definition }: { definition: FormDefinition }) {
   const [state, setState] = useState<FormState>("idle");
   const backend = useMemo(() => createFormBackend(definition.backend), [definition.backend]);
+  const shownAt = useShownAt();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (state === "submitting") return;
     setState("submitting");
-    const result = await backend.submit(definition, readValues(definition, new FormData(event.currentTarget)));
+    const data = new FormData(event.currentTarget);
+    const result = await backend.submit(definition, readValues(definition, data), readContext(data, shownAt.current)).catch(() => ({ ok: false }));
     setState(result.ok ? "done" : "fail");
   }
 
@@ -48,6 +50,7 @@ export function Form({ definition }: { definition: FormDefinition }) {
             <Field key={item.name} form={definition} field={item} />
           ),
         )}
+        {definition.backend.kind === "endpoint" && <Trap />}
         <SubmitButton label={definition.submit.label} waitLabel={definition.submit.waitLabel} submitting={state === "submitting"} />
       </form>
     </FormShell>
@@ -67,6 +70,33 @@ function Field({ form, field }: { form: FormDefinition; field: FieldDefinition }
     case "checkboxes":
       return <CheckboxGroup id={id} field={field} />;
   }
+}
+
+/**
+ * The endpoint's honeypot (agentic-cms/forms TRAP_FIELD): out of sight, out
+ * of the tab order and out of the accessibility tree, so only a bot fills it.
+ * Absolutely placed, so the form's gaps do not change.
+ */
+function Trap() {
+  return (
+    <div aria-hidden="true" className="absolute left-[-9999px] size-px overflow-hidden">
+      <input type="text" name={TRAP_FIELD} tabIndex={-1} autoComplete="off" defaultValue="" />
+    </div>
+  );
+}
+
+/** When the form appeared, for the endpoint's time-to-submit check: set after mount, so the prerendered page holds no clock. */
+function useShownAt() {
+  const shownAt = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    shownAt.current = performance.now();
+  }, []);
+  return shownAt;
+}
+
+function readContext(data: FormData, shownAt: number | undefined): SubmitContext {
+  const trap = data.get(TRAP_FIELD);
+  return { trap: typeof trap === "string" ? trap : undefined, elapsedMs: shownAt === undefined ? undefined : Math.round(performance.now() - shownAt) };
 }
 
 /** FormData → values by field; checkbox groups always read as arrays. */
