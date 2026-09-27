@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## Unreleased
+## [0.6.1] — 2026-09-27
 
 - Every ordinary form item, from config. Beside `text`, `email`, `tel`,
   `textarea` and `checkboxes`, a form definition now has `url`, `number`
