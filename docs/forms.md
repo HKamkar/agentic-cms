@@ -14,6 +14,37 @@ lines in the site. So the choice of service is a site's, made in its
 environment, and changing it later touches no form. The contract — every
 status, the wire format, the signature — is `src/lib/forms/README.md`.
 
+## What a form can ask
+
+A form is a definition in `src/config/forms.ts`; every item is config, so a
+new landing-page form is an entry there and no component code. The items
+(the contract, with an example of every one, is `src/lib/forms/README.md`):
+
+| Item | For |
+|---|---|
+| `text`, `email`, `tel`, `url` | a line of text; `minLength`, `maxLength`, `pattern`, `inputMode` |
+| `number`, `date` | a quantity (`min`, `max`, `step`), a day (`min`, `max`) |
+| `textarea` | a message; `rows`, `minLength`, `maxLength` |
+| `select`, `radios` | one choice of several; a select's `placeholder` makes `required` mean a real choice |
+| `checkboxes` | any of several |
+| `checkbox` | one box: consent (its label may end in a link to the privacy notice) or an opt-in |
+| `hidden` | a fixed value the submission carries: a campaign, an offer, a variant of the form |
+| `{ row: [...] }`, `{ note }`, `{ group }` | two fields side by side; a line of text with a link; a fieldset with a legend |
+
+Every field takes a `hint`, and where the control has them `autocomplete`,
+a default value and `fromQuery`: a link to `/sections/contact?topic=design`
+chooses that option of a field with `fromQuery: "topic"`, read in the
+browser after hydration, so the page stays prerendered. A form that mixes
+required and optional fields sets `optionalMarker` (`"(optional)"`), shown
+after each optional field's label. `{email}` in a message is the address
+(`messages.email`) as a link.
+
+Every one of them validates natively in the browser and again on the
+server, never stricter (`rules.ts`), and reads the same on both backends:
+the mailto body shows each option's label, the wire format each value.
+Not in the set, with the reasons in the contract: file upload, conditional
+fields, multi-step forms, a multiple select, password, range and colour.
+
 ## Switching a form over
 
 1. **The form.** In `src/config/forms.ts`, set its backend to the route:
@@ -157,8 +188,10 @@ its URL alone: keep `FORM_WEBHOOK_URL` as secret as the secret.
   the page, which the cookie notice would have to name.
 - **Failures.** A provider that is down or answers an error makes the route
   answer 502, and the visitor sees the form's error message — which should
-  say how else to reach the site. The server log names the form and the
-  submission's `id`, never what was written.
+  say how else to reach the site: "Please email us directly at {email}."
+  with `messages.email` set renders the address as a link, a token on a site
+  that guards it ([email.md](email.md)). The server log names the form and
+  the submission's `id`, never what was written.
 
 ## Checking it
 

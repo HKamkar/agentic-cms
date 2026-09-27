@@ -1,6 +1,6 @@
 import type { FormBackend, SubmitResult } from "../backend.ts";
 import { resolveRecipient } from "../email-token.ts";
-import { fieldsOf, type FormDefinition, type FormValues } from "../types.ts";
+import { fieldLabel, fieldsOf, type FieldDefinition, type FormDefinition, type FormValues } from "../types.ts";
 
 /**
  * Zero-infrastructure fallback: opens the visitor's mail client with the
@@ -16,12 +16,22 @@ export class MailtoBackend implements FormBackend {
   }
 
   async submit(form: FormDefinition, values: FormValues): Promise<SubmitResult> {
-    const lines = fieldsOf(form).map((field) => `${field.label}: ${formatValue(values[field.name])}`);
     const subject = encodeURIComponent(this.config.subject ?? form.name);
-    const body = encodeURIComponent(lines.join("\n"));
+    const body = encodeURIComponent(mailtoBody(form, values));
     window.location.assign(`mailto:${resolveRecipient(this.config.to)}?subject=${subject}&body=${body}`);
     return { ok: true };
   }
 }
 
-const formatValue = (value: string | string[] | undefined) => (Array.isArray(value) ? value.join(", ") : (value ?? ""));
+/** One line per field, as the visitor was asked: its label, and an option's label rather than its value. */
+export function mailtoBody(form: FormDefinition, values: FormValues): string {
+  return fieldsOf(form)
+    .map((field) => `${fieldLabel(field)}: ${shownValue(field, values[field.name])}`)
+    .join("\n");
+}
+
+function shownValue(field: FieldDefinition, value: string | string[] | undefined): string {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  const labelOf = (choice: string) => ("options" in field ? field.options.find((option) => option.value === choice)?.label : undefined) ?? choice;
+  return values.map(labelOf).join(", ");
+}

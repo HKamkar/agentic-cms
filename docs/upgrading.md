@@ -18,6 +18,61 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.6.0 → 0.6.1
+
+Every ordinary form item: `url`, `number`, `date`, `select`, `radios`, one
+`checkbox`, `hidden`, notes and groups, hints, prefill from the URL, the
+optional marker and `{email}` in a message (the contract is
+`src/lib/forms/README.md`, the overview [forms.md](forms.md)). Nothing
+changes until a form uses them. The tag and the agent files:
+
+```bash
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.6.1 && pnpm install
+pnpm exec agentic-cms init . --agent-files
+```
+
+- **The form rule.** `.claude/rules/form-engine.md` gains the new field
+  types and the `{email}` token; a site that edited its copy
+  (`--agent-files` says `modified`) takes the two changed lines by hand.
+- **An unchanged form stays pixel-identical.** A definition that uses
+  none of the new options renders the same markup with the new primitives
+  as with the old, on either backend, so baselines stay; prove the copy
+  below with `visual-parity proof`. One thing reads differently: a `mailto`
+  body now shows an option's label where it showed its value (the same text
+  when they are equal, as in the example).
+- **What a site with its own `src/components/ui/form/` copies from the
+  kit** (under `node_modules/agentic-cms/src/components/ui/form/`; a site
+  that restyled a primitive keeps its classes and takes the new props):
+  - the new primitives: `NumberField.tsx`, `DateField.tsx`, `Select.tsx`,
+    `RadioGroup.tsx`, `Checkbox.tsx`, `Choice.tsx`, `FormNote.tsx`,
+    `FieldGroup.tsx`, `Hint.tsx`, `Marker.tsx`;
+  - the changed ones: `TextField.tsx` (`url`, `minLength`, `pattern`,
+    `inputMode`, `autoComplete`, `defaultValue`, the hint), `TextArea.tsx`
+    (`rows`, `minLength`), `CheckboxGroup.tsx` (`Choice`, the hint, the
+    marker, the defaults), `FieldWrap.tsx` (the hint and the marker) and
+    `FieldRow.tsx` (`RowAlign`, which keeps a row's controls level when one
+    of them has a hint);
+  - in `Form.tsx`: `Items` (rows, notes and groups, and the marker), the new
+    `case`s in `Field()`, `usePrefill` with the `ref` on the `<form>`, and
+    `readFormValues` from `agentic-cms/forms` in place of the local
+    `readValues`, which goes;
+  - in `FormShell.tsx`: `Message`, which renders `{email}` through
+    `EmailLink` with `messageParts`, and the `messages` prop typed as
+    `FormDefinition["messages"]`.
+- **A new type waits for its primitive.** A site's `Field()` without the
+  type's `case` renders nothing for it — silently — and an endpoint form
+  then refuses every submission that leaves a required one empty. Copy a
+  type's primitive and its `case` before a definition uses it; `optionalMarker`,
+  `hint`, notes, groups and `{email}` likewise need the files above.
+- **Code over a definition** sees wider unions: `FormItem` holds notes and
+  groups too (read fields with `fieldsOf`, which looks inside groups and
+  rows), and `FieldDefinition` switches get the new types; `tsc` names each
+  place. The wire format is still version 1.
+- **The address in a message.** Write `{email}` in `messages.success` or
+  `messages.error` and set `messages.email` (from the server-only module
+  that holds the address, on a site that guards it); `withEmailToken`
+  encodes it for any backend, and `guard-email` checks the build.
+
 ## 0.5.5 → 0.6.0
 
 Forms can deliver: the `endpoint` backend, one route and a sink the site
