@@ -63,7 +63,7 @@ paths. The table is written from the rules' frontmatter by
 | `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog](.claude/rules/blog-engine.md) |
 | `content/**`, `src/kit.ts`, `src/kit.test.ts`, `src/components/sections/schemas.ts`, `src/components/sections/render.tsx` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
-| `src/components/ui/form/**`, `src/config/forms.ts` | [Forms](.claude/rules/form-engine.md) |
+| `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Forms](.claude/rules/form-engine.md) |
 | `src/app/**`, `src/config/site.ts`, `src/kit.ts`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->
