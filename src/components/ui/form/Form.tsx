@@ -62,7 +62,7 @@ function Items({ form, items, marker }: { form: FormDefinition; items: FormItem[
   return items.map((item, i) => {
     if (isRow(item))
       return (
-        <FieldRow key={i}>
+        <FieldRow key={i} align={item.row.some((field) => field.type !== "hidden" && Boolean(field.hint))}>
           {item.row.map((field) => (
             <Field key={field.name} form={form} field={field} marker={marker} />
           ))}
