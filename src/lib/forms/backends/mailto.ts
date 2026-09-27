@@ -9,7 +9,11 @@ import { fieldsOf, type FormDefinition, type FormValues } from "../types.ts";
  * recipient may be a token (withEmailToken); it is resolved here, at submit.
  */
 export class MailtoBackend implements FormBackend {
-  constructor(private readonly config: { to: string; subject?: string }) {}
+  private readonly config: { to: string; subject?: string };
+
+  constructor(config: { to: string; subject?: string }) {
+    this.config = config;
+  }
 
   async submit(form: FormDefinition, values: FormValues): Promise<SubmitResult> {
     const lines = fieldsOf(form).map((field) => `${field.label}: ${formatValue(values[field.name])}`);

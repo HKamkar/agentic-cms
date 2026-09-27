@@ -72,5 +72,10 @@ failed.
 - **A trace root above the site** (`outputFileTracingRoot`, a monorepo).
   Here the app sits at `.next/standalone/<relativeAppDir>`, as
   `.next/required-server-files.json` names it; `assemble` follows it.
+- **The form endpoint's destination.** A site whose forms post to its
+  route sets `FORM_WEBHOOK_URL` and `FORM_WEBHOOK_SECRET` as the host's app
+  settings, on every slot or environment that serves the site; without
+  them the route answers 503 and the form shows its error message
+  ([forms.md](forms.md)).
 - **The server renames itself `next-server`.** Find a stale one by the
   port it holds (`ss -ltnp`), not by a pattern on its path.

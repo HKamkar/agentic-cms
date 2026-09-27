@@ -5,8 +5,9 @@
 // dependency, lays the site out with `agentic-cms init` from that install,
 // installs its dependencies and runs its build — the content lint, the
 // field-table check, next build and the SEO audit — through the installed
-// command line; then checks the agent files are as shipped and the tarball's
-// size. Exit 1 on the first failure.
+// command line; then checks the agent files are as shipped, the installed
+// entries a build does not run (the inline loop, the form endpoint's server
+// half) and the tarball's size. Exit 1 on the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -61,6 +62,15 @@ const inline = spawnSync(process.execPath, ["--input-type=module", "-e", 'const 
 if (inline.status !== 0 || !/id="smoke-c"[\s\S]*href="#smoke-c"/.test(inline.stdout)) { console.error(`pack-smoke: readInlineSvg from the tarball answered ${inline.status}: ${(inline.stderr || inline.stdout).trim()}`); process.exit(1); }
 const ix = path.join(site, "node_modules/agentic-cms/dist/ix");
 if (!fs.existsSync(path.join(ix, "InlineAnimation.js")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.js"), "utf8")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.d.ts"), "utf8"))) { console.error("pack-smoke: the tarball's agentic-cms/ix lacks InlineAnimation"); process.exit(1); }
+// The form endpoint's server half ships: agentic-cms/forms/server, installed, validates a Request and hands it to a sink.
+const FORMS_SMOKE = `const { createFormHandler } = await import("agentic-cms/forms/server");
+const received = [];
+const form = { id: "f", name: "F", items: [{ type: "email", name: "email", label: "E-mail", required: true }], submit: { label: "s", waitLabel: "w" }, messages: { success: "y", error: "n" }, backend: { kind: "endpoint", url: "/api/forms/f" } };
+const handle = createFormHandler({ forms: { f: form }, sink: { deliver: async (submission) => { received.push(submission); } } });
+const response = await handle(new Request("https://acme.example/api/forms/f", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ values: { email: "hello@acme.example" } }) }), "f");
+console.log(response.status, received.length, received[0]?.version);`;
+const formsServer = spawnSync(process.execPath, ["--input-type=module", "-e", FORMS_SMOKE], { cwd: site, encoding: "utf8" });
+if (formsServer.status !== 0 || formsServer.stdout.trim() !== "200 1 1") { console.error(`pack-smoke: agentic-cms/forms/server from the tarball answered ${formsServer.status}: ${(formsServer.stderr || formsServer.stdout).trim()}`); process.exit(1); }
 console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
 if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
 else fs.rmSync(scratch, { recursive: true, force: true });

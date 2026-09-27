@@ -4,6 +4,40 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.6.0] — 2026-09-27
+
+- Forms that deliver: the `endpoint` backend. A form whose backend is
+  `{ kind: "endpoint", url: "/api/forms/<id>" }` posts its values as JSON
+  to the site's one dynamic route, `src/app/api/forms/[id]/route.ts`; every
+  page stays prerendered. The new subpath `agentic-cms/forms/server` is the
+  route's work: `createFormHandler` takes JSON only, caps the body, limits
+  each form and address (in memory, best effort), repeats the browser's
+  checks against the definition — never stricter — answers a filled
+  honeypot or a form sent within 1.5 s with a success and drops it, then
+  hands the submission, in wire format version 1 (with an `id` a receiver
+  de-duplicates on, and the page's UTM tags), to a sink. The kit names no
+  provider: its two sinks are a signed webhook (HMAC-SHA256 over the
+  timestamp and the body, `verifyFormSignature` for the receiver; no
+  redirects followed) and a development log, and a provider's API is a
+  `FormSink` the site writes. The example ships the route and
+  `src/config/form-delivery.ts`, which reads `FORM_WEBHOOK_URL` and
+  `FORM_WEBHOOK_SECRET` per request (a log in development without one, a
+  503 in production); its contact form stays on `mailto`. The guide is
+  `docs/forms.md`, the contract `src/lib/forms/README.md`.
+- `FormBackend.submit(form, values, context?)`: the optional `context`
+  carries the honeypot's content and the time the form was on screen;
+  backends that ignore it are unchanged. `<Form>` renders the honeypot
+  (`TRAP_FIELD`) and sends the time for endpoint forms only, so a `mailto`
+  form's markup is unchanged and nothing needs recapturing, and a backend
+  that throws now ends in the form's error message instead of its wait
+  label. `MailtoBackend` loses its parameter property, which Node's type
+  stripping refuses.
+- The form rules (`form-engine.md`, the kit's and the site template's) cover
+  the route and `form-delivery.ts`; the stale "the site is static … the
+  Worker" rule is gone, and the roadmap's "a form backend stays a site's"
+  is now the provider alone. `pnpm test:pack` runs the installed
+  `agentic-cms/forms/server` on a Request.
+
 ## [0.5.5] — 2026-09-26
 
 - Third parties held back during a capture. On a build the harness serves,
@@ -95,8 +129,8 @@ changes what a capture writes says **recapture baselines**.
   payload, which the router rejects and asks for again at every frame: about
   660 requests in one scroll-through of a real site's page, now one per
   link. No shot changes: static, `--states` and motion frames compare
-  identical on the example and on a consumer site, apart from a home page
-  whose own 6 s timer runs from mount.
+  identical on the example and on a consumer site, apart from a section
+  driven by its own timer.
 - Captures are faster, with the same pixels. A static shot, a `--motion`
   frame, a `--states` crop and the menu shot are one DevTools screenshot
   with the renderer's fast PNG encoding, sized, clipped and with the caret

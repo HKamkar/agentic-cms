@@ -7,7 +7,7 @@ it lay the site out:
 ```bash
 mkdir my-site && cd my-site
 pnpm init                                                        # a package.json to add to
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.5.5           # the engine (allowBuilds below, first)
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.6.0           # the engine (allowBuilds below, first)
 pnpm exec agentic-cms init .                                     # the site
 pnpm install && pnpm dev
 ```
@@ -60,7 +60,10 @@ is never overwritten unless `--force`; each file prints `created`,
 3. `content/VOICE.md` from `content/_templates/VOICE.md`: the voice and
    claim rules the lint enforces.
 4. Replace the content: `content/README.md` is the door.
-5. `pnpm content:lint` until clean, `pnpm build`, then the host of your
+5. Where the contact form delivers: it ships on `mailto`; the endpoint
+   sends it to a webhook or a provider of your choosing
+   ([forms.md](forms.md)).
+6. `pnpm content:lint` until clean, `pnpm build`, then the host of your
    choice (a Node server: [deploy.md](deploy.md)).
 
 ## After a kit upgrade

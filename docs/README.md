@@ -23,6 +23,9 @@ rules for an agent working on the code.
 - [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
   scenes on the site's tokens, light and dark, on a phone; rendered to the
   files a page ships; removed when done.
+- [forms.md](forms.md) — forms that deliver: the endpoint route, where
+  submissions go (a webhook, a provider's API as a sink), the environment
+  per host, receiving and verifying the webhook, spam and limits.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
 - [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
