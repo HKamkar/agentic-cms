@@ -1,7 +1,7 @@
 // What a sink receives: version 1 of the wire format, the same for every
 // sink and every provider. A receiver keys on `version`; `id` lets it drop a
 // submission it already has (a visitor who resends after a slow answer).
-import { fieldsOf, type FormDefinition, type FormValues } from "../types.ts";
+import { fieldLabel, fieldsOf, type FormDefinition, type FormValues } from "../types.ts";
 
 const UTM_KEYS = ["source", "medium", "campaign", "term", "content"] as const;
 const MAX_URL = 2048;
@@ -33,7 +33,7 @@ export function buildSubmission(form: FormDefinition, values: FormValues, from: 
     id: crypto.randomUUID(),
     form: { id: form.id, name: form.name },
     submittedAt: new Date().toISOString(),
-    fields: fieldsOf(form).map((field) => ({ name: field.name, label: field.label, value: values[field.name] ?? "" })),
+    fields: fieldsOf(form).map((field) => ({ name: field.name, label: fieldLabel(field), value: values[field.name] ?? "" })),
     values,
     page: { url, referrer: httpUrl(from.referrer), utm: utmOf(url) },
   };

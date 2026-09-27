@@ -4,6 +4,52 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.6.1] — 2026-09-27
+
+- Every ordinary form item, from config. Beside `text`, `email`, `tel`,
+  `textarea` and `checkboxes`, a form definition now has `url`, `number`
+  (`min`, `max`, `step`), `date` (`min`, `max`), `select` (a placeholder as
+  the empty first option, so `required` means a real choice), `radios` (a
+  fieldset and legend), one `checkbox` for consent or an opt-in (its label
+  may end in a link, which opens in a new tab and never ticks the box) and
+  `hidden` (the server keeps the definition's value). Text-like inputs take
+  `minLength`, `pattern` and `inputMode`, a textarea `rows` and
+  `minLength`; every field `hint` (joined by `aria-describedby`) and, where
+  HTML has them, `autocomplete`, a default value and `fromQuery`, a prefill
+  from a URL search parameter read after hydration and taken only when the
+  field would accept it. Items that are not fields: a `note` with a link,
+  and a `group`, a fieldset with a legend. `optionalMarker` on a definition
+  marks the fields that are not required. File upload, conditional fields,
+  multi-step forms, a multiple select, password, range and colour stay out,
+  with the reasons in `src/lib/forms/README.md`.
+- The server checks every type after the HTML standard and never stricter:
+  the URL parser, the float syntax and the step base, the date string, the
+  pattern anchored and compiled with the `v` flag. One module
+  (`rules.ts`, `acceptValue`) holds the rules for the server and the
+  prefill. The wire format stays version 1; `fields[].label` of a checkbox
+  ends in its link's text.
+- `readFormValues()`, `queryValues()`, `applyValues()` and
+  `prefillFromQuery()` in `agentic-cms/forms`: a site's `Form.tsx` reads
+  and prefills its values with them instead of a copy of its own per type.
+- `{email}` in a form's messages is `messages.email`, for either backend:
+  `withEmailToken()` encodes it, `messageParts()` splits the message and the
+  example's `FormShell` renders the address through `EmailLink`, so it never
+  crosses to the browser as text.
+- The mailto body shows an option's label where it showed its value
+  (`mailtoBody()`).
+- The example's form primitives: `NumberField`, `DateField`, `Select` (a
+  drawn chevron), `RadioGroup`, `Checkbox`, `Choice`, `FormNote`,
+  `FieldGroup`, `Hint`, `Marker`; `TextField`, `TextArea`, `CheckboxGroup`,
+  `FieldWrap`, `FieldRow`, `Form` and `FormShell` take the new options. A
+  definition that uses none of them renders the same markup, so baselines
+  stay.
+- `visual-parity capture --ref HEAD` (and `proof --ref HEAD`) builds the
+  checked-out commit. It resolved every ref on `origin` first, so `HEAD`
+  became `origin/HEAD`, the remote's default branch, and the baseline was
+  silently another commit; `HEAD~2`, `main^` and `@{-1}` likewise. Only a
+  branch name is looked up on `origin` first now (`develop` is still the
+  branch as pushed); anything else resolves in the checkout.
+
 ## [0.6.0] — 2026-09-27
 
 - Forms that deliver: the `endpoint` backend. A form whose backend is

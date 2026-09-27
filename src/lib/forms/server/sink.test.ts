@@ -26,6 +26,14 @@ test("the wire format: version, id, the fields with their labels, the page and i
   assert.ok(!Number.isNaN(Date.parse(submission.submittedAt)));
 });
 
+test("the wire format's fields: out of groups, in order, a checkbox labelled with its link, values as sent", () => {
+  const grouped: FormDefinition = { ...form, items: [{ note: "Not a field" }, { group: "Optional", items: [{ type: "checkbox", name: "terms", label: "I agree to the", link: { label: "terms", href: "/terms" }, value: "yes" }] }, { type: "select", name: "size", label: "Size", options: [{ value: "l", label: "Large" }] }] };
+  assert.deepEqual(buildSubmission(grouped, { terms: "yes", size: "l" }).fields, [
+    { name: "terms", label: "I agree to the terms", value: "yes" },
+    { name: "size", label: "Size", value: "l" },
+  ]);
+});
+
 test("the webhook posts the submission signed, and the signature verifies", async () => {
   const { calls, fetcher } = fakeFetch();
   await createFormSink({ kind: "webhook", url: "https://hooks.example/in", secret: "s3cret", headers: { Authorization: "Bearer k" } }, fetcher).deliver(submission);

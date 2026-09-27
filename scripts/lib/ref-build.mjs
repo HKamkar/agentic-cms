@@ -1,6 +1,6 @@
-// A baseline build of another commit for `visual-parity capture --ref`: the
-// ref resolved on origin first (a branch name means the branch as pushed),
-// checked out as a detached worktree in a sibling directory of the site —
+// A baseline build of another commit for `visual-parity capture --ref`: a
+// branch name resolved on origin first (the branch as pushed), anything else
+// — HEAD, a sha, HEAD~2 — in this checkout, checked out as a detached worktree in a sibling directory of the site —
 // never inside it, where the site's tsconfig would include it — its demo
 // routes removed (a design round's src/app/<name>-demo, never production,
 // which the build's SEO audit rejects by design), installed with the
@@ -24,8 +24,17 @@ export const refDirectory = (root, sha) => path.join(path.dirname(root), `${path
 
 const git = (exec, root, args) => String(exec("git", args, { cwd: root })).trim();
 
+/**
+ * Whether a ref can be a branch name, the one kind that means something else
+ * on origin. HEAD and @ are this checkout's (origin/HEAD is the remote's
+ * default branch), and so is a revision expression — HEAD~2, main^, @{-1},
+ * a range, a path — which no branch name can spell. A sha passes and falls
+ * through origin to this checkout.
+ */
+const branchLike = (ref) => ref !== "HEAD" && ref !== "@" && !ref.startsWith("-") && !/[~^:?*[\\\s]|\.\.|@\{/.test(ref);
+
 function resolve(exec, root, ref) {
-  for (const candidate of [`origin/${ref}`, ref]) {
+  for (const candidate of branchLike(ref) ? [`origin/${ref}`, ref] : [ref]) {
     try { const sha = git(exec, root, ["rev-parse", "--verify", `${candidate}^{commit}`]); if (/^[0-9a-f]{40}$/.test(sha)) return sha; } catch { /* the next candidate */ }
   }
   throw new Error(`${ref}: not a commit, branch or tag of this repository or its origin`);

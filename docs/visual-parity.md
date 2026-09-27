@@ -55,8 +55,9 @@ when the capture ends, and a build that changes during the seconds of the
 copy fails it); a served
 site (`--url http://host:port` — print its `git log -1` first, because a
 baseline from a checkout that had moved on proves nothing); or another commit
-(`--ref <git ref>`: the ref resolved on `origin` first, checked out as a
-detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
+(`--ref <git ref>`: a branch name resolved on `origin` first, so `develop` is
+the branch as pushed, and `HEAD`, a sha or `HEAD~2` in this checkout; checked
+out as a detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
 the site, whose `tsconfig` would include it — its demo routes removed
 (`src/app/<name>-demo`: never production, and the build's SEO audit rejects
 them by design, so a commit made mid-round still builds), installed with the
