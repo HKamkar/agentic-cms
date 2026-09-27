@@ -173,13 +173,22 @@ definition schema, adding a form, a field type, a backend or a sink — is
 
 | Component | What it is |
 |---|---|
-| `Form` | `"use client"`. Renders the definition's items, validates natively (`required`, `type="email"`), submits to the backend and holds the `idle / submitting / done / fail` state. For an `endpoint` form it also renders the honeypot (`TRAP_FIELD`, `aria-hidden`, out of the tab order and of the flow) and sends the time the form was on screen. |
-| `FormShell` | The form plus its two messages: the success box (`role="status"`, `bg-fill`) replaces the form, the error box (`role="alert"`) appears under it. |
-| `FieldRow` | Two fields side by side; they wrap below 480 px. |
-| `FieldWrap` | A real `<label for>` above its control. |
-| `TextField` | `text`, `email` and `tel` inputs (`control` plus `h-10`). |
-| `TextArea` | The multi-line control (`control` plus `min-h-40 resize-y`). |
+| `Form` | `"use client"`. Renders the definition's items (fields, rows, notes, groups; a `case` per field type in `Field()`, a hidden field as a bare input), validates natively (the controls' own attributes), prefills from the URL after hydration (`prefillFromQuery`), reads the values (`readFormValues`), submits to the backend and holds the `idle / submitting / done / fail` state. For an `endpoint` form it also renders the honeypot (`TRAP_FIELD`, `aria-hidden`, out of the tab order and of the flow) and sends the time the form was on screen. |
+| `FormShell` | The form plus its two messages: the success box (`role="status"`, `bg-fill`) replaces the form, the error box (`role="alert"`) appears under it. `{email}` in a message is `EmailLink` (`messageParts`). |
+| `FieldRow` | Two fields side by side; they wrap below 480 px. When one has a hint, both put their control at the bottom (the `RowAlign` context), so the controls stay level. |
+| `FieldWrap` | A real `<label for>` above its control, the optional marker inside it, the hint between them. |
+| `Hint` | Help text under a label (`text-muted`), its id in the control's `aria-describedby`. |
+| `Marker` | The form's `optionalMarker` after a label, inside it (`text-muted`). |
+| `TextField` | `text`, `email`, `tel` and `url` inputs (`control` plus `h-10`). |
+| `NumberField`, `DateField` | The number and date inputs (`control` plus `h-10`); the browser's own spinner and date picker. |
+| `TextArea` | The multi-line control (`control` plus `min-h-40 resize-y`; `rows` set the height instead of the minimum). |
+| `Select` | One choice from a list: `control` plus `appearance-none`, a drawn chevron (`Icon`, `aria-hidden`, clicks pass through), the placeholder an empty first option shown muted. |
+| `RadioGroup` | A `<fieldset>` whose `<legend>` is the question, the radios in a wrapping row. |
 | `CheckboxGroup` | A `role="group"` labelled by its title, with the browser's own checkboxes tinted `accent-ink`. |
+| `Checkbox` | One box for consent or an opt-in; its label may end in a link, which opens in a new tab and never ticks it. |
+| `Choice` | A radio or a checkbox with its label beside it (`size-4 accent-ink`), for the two groups. |
+| `FormNote` | A line of text inside the form with a link at its end. |
+| `FieldGroup` | A `<fieldset>` with a `<legend>` (`text-h4 font-semibold`) around fields, rows and notes. |
 | `SubmitButton` | A real `<button type="submit">` wearing `buttonClass("solid")`, disabled and relabelled while the submission is in flight. |
 | `field.ts` | `control` — the shared control string: `block w-full border border-ink bg-paper px-3 py-2 placeholder:text-muted`. |
 

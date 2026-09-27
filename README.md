@@ -340,8 +340,9 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 A new kind of section is a copy schema, a component and a registry entry
 (`src/components/sections/`). A collection of your own is a schema and a
 definition returned from `createKit`'s `collections` option
-(`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`;
-it delivers by `mailto`, or through the site's one dynamic route to a
+(`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`
+(every ordinary field type, notes and groups, a prefill from the URL); it
+delivers by `mailto`, or through the site's one dynamic route to a
 webhook or a provider of the site's choosing ([docs/forms.md](docs/forms.md)).
 ## Upgrading
 
