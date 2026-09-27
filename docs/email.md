@@ -53,7 +53,9 @@ import { withEmailToken } from "agentic-cms/forms";
 
 A `mailto` form's recipient crosses to the client as a token; the mailto
 backend resolves it at submit (`resolveRecipient`), a plain address as it
-is. Other backends are untouched.
+is. Other backends are untouched. An `endpoint` form carries no recipient
+to the browser at all: its destination is in the server's environment
+([forms.md](forms.md)).
 
 ## The address itself
 

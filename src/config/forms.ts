@@ -45,7 +45,9 @@ export const forms = {
       success: "Thank you. Your message has reached Acme; the person who reads that mailbox replies.",
       error: `Something went wrong. Please email us directly at ${site.email}.`,
     },
-    // Until a form service is chosen this opens the visitor's mail client.
+    // Opens the visitor's mail client: nothing to run. To deliver instead, set
+    // { kind: "endpoint", url: "/api/forms/contact" } and a destination in the
+    // environment (src/config/form-delivery.ts, docs/forms.md).
     backend: { kind: "mailto", to: site.email, subject: "Contact form" },
   },
 } satisfies Record<string, FormDefinition>;

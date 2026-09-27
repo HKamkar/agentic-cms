@@ -165,13 +165,15 @@ markdown.
 
 Forms are `FormDefinition`s in `src/config/forms.ts`, rendered by `<Form
 definition={forms.x} />` through a field-type registry and delivered by the
-backend the definition names (`createFormBackend()`). The full contract —
-the definition schema, adding a form, a field type or a backend — is
-**`src/lib/forms/README.md`**.
+backend the definition names (`createFormBackend()`): `mailto`, or
+`endpoint`, which posts to the site's route (`src/app/api/forms/[id]`) and
+on to the sink `src/config/form-delivery.ts` picks. The full contract — the
+definition schema, adding a form, a field type, a backend or a sink — is
+**`src/lib/forms/README.md`**; switching a site over, `docs/forms.md`.
 
 | Component | What it is |
 |---|---|
-| `Form` | `"use client"`. Renders the definition's items, validates natively (`required`, `type="email"`), submits to the backend and holds the `idle / submitting / done / fail` state. |
+| `Form` | `"use client"`. Renders the definition's items, validates natively (`required`, `type="email"`), submits to the backend and holds the `idle / submitting / done / fail` state. For an `endpoint` form it also renders the honeypot (`TRAP_FIELD`, `aria-hidden`, out of the tab order and of the flow) and sends the time the form was on screen. |
 | `FormShell` | The form plus its two messages: the success box (`role="status"`, `bg-fill`) replaces the form, the error box (`role="alert"`) appears under it. |
 | `FieldRow` | Two fields side by side; they wrap below 480 px. |
 | `FieldWrap` | A real `<label for>` above its control. |
@@ -243,12 +245,6 @@ registry resolves for the section through `withData()` (`UseCaseCards` →
 `kit.content.getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
 `getFaq()`; `BlogIndex` → `kit.blog.getAllPosts()`), and the section keeps
 its presentation by position.
-
-## Not built yet
-
-| Item | Needed by | Plan |
-|---|---|---|
-| A form backend for a real service (POST to Formspree / Web3Forms / Basin / a Worker route) | the contact form, which runs on the `mailto` backend | Add the `kind`, the class and the factory case in `src/lib/forms/backends/`; pick the service first |
 
 ## Building a new page
 

@@ -18,6 +18,49 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.5.5 → 0.6.0
+
+Forms can deliver: the `endpoint` backend, one route and a sink the site
+chooses ([forms.md](forms.md)). Nothing changes until a form switches. The
+tag and the agent files:
+
+```bash
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.6.0 && pnpm install
+pnpm exec agentic-cms init . --agent-files
+```
+
+- **The form rule.** `.claude/rules/form-engine.md` now covers
+  `src/config/form-delivery.ts` and `src/app/api/forms/**` and drops "the
+  site is static: backends run in the browser". A site that edited its copy
+  (`--agent-files` says `modified`) takes the new paths and lines by hand;
+  `AGENTS.md`'s scoped-rules table follows the rule's paths.
+- **A `mailto` form is untouched**: same markup, same behaviour, baselines
+  stay.
+- **Code that reads a backend's fields** narrows first: `FormBackendConfig`
+  is a union now, so `definition.backend.to` needs `backend.kind ===
+  "mailto"` before it (`tsc` names each place; a test is the usual one).
+  `FormBackend.submit` gains an optional third argument; a backend of the
+  site's that ignores it needs no change.
+- **To deliver through the endpoint**, take from the kit what `init` wrote
+  only into new sites (it never overwrites a site's files; the sources are
+  under `node_modules/agentic-cms/`):
+  - `src/app/api/forms/[id]/route.ts` and `src/config/form-delivery.ts`, as
+    they are;
+  - the `FORM_WEBHOOK_URL` and `FORM_WEBHOOK_SECRET` lines of
+    `.env.example`;
+  - in `src/components/ui/form/Form.tsx`: `Trap`, `useShownAt`,
+    `readContext`, the `{definition.backend.kind === "endpoint" && <Trap />}`
+    line before the submit button and the `.catch` on `backend.submit`. A
+    site with a restyled `Form.tsx` keeps its markup and adds these; the
+    trap is absolutely placed, so the form's layout does not move (prove it
+    with `visual-parity`).
+
+  Then switch the form's backend, set the variables on the host (every
+  slot or environment; [deploy.md](deploy.md)), and update the privacy
+  notice ([forms.md](forms.md), "Switching a form over"). A site that
+  switches before copying `Form.tsx` still delivers, without the spam
+  screen.
+
 ## 0.5.4 → 0.5.5
 
 Codex finds the rules, and the harness is faster and quieter. The tag and

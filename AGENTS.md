@@ -82,7 +82,7 @@ paths. The table is written from the rules' frontmatter by
 | `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
-| `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts` | [Form engine](.claude/rules/form-engine.md) |
+| `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
 | `src/app/**`, `src/config/site.ts`, `src/lib/seo/**`, `src/kit.ts`, `scripts/check-seo.mjs`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->
@@ -159,7 +159,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - The Worker is static-only by configuration: everything is prerendered and
   served from the static-assets cache (`open-next.config.ts`); there is no
   filesystem at request time. Adding `revalidate`, on-demand revalidation or
-  request-time reads means switching to the R2 incremental cache first.
+  request-time reads means switching to the R2 incremental cache first. The
+  one route that runs at request time is the form endpoint,
+  `POST /api/forms/[id]` (`src/lib/forms/README.md`), which reads neither
+  the cache nor a file; its destination comes from the environment
+  (`src/config/form-delivery.ts`), never from `forms.ts`.
 - `next start` and `wrangler dev` straight after `next build` return 500s —
   the asset cache is empty. Only `pnpm preview`, `pnpm run deploy` and
   `pnpm upload` populate it. ~40 "Failed to copy node_modules/…" lines during

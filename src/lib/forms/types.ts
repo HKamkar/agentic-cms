@@ -19,8 +19,13 @@ export type FieldDefinition = TextField | TextAreaField | CheckboxGroupField;
 export type FormRow = { row: FieldDefinition[] };
 export type FormItem = FieldDefinition | FormRow;
 
-/** Where a submission goes. One implementation per `kind` in ./backends. */
-export type FormBackendConfig = { kind: "mailto"; to: string; subject?: string };
+/**
+ * Where a submission goes. One implementation per `kind` in ./backends:
+ * `mailto` opens the visitor's mail client; `endpoint` posts to a route of
+ * the site, where agentic-cms/forms/server validates it and hands it to the
+ * site's sink (README.md, "The endpoint").
+ */
+export type FormBackendConfig = { kind: "mailto"; to: string; subject?: string } | { kind: "endpoint"; url: string };
 
 export type FormDefinition = {
   /** DOM id of the <form>; also prefixes the field ids. */
@@ -35,6 +40,16 @@ export type FormDefinition = {
 
 /** Submitted values keyed by field name; checkbox groups submit an array. */
 export type FormValues = Record<string, string | string[]>;
+
+/** The JSON the endpoint backend posts and agentic-cms/forms/server reads: the values, the two spam signals, where the form was sent from. */
+export type EndpointPayload = { values: FormValues; trap?: string; elapsedMs?: number; page?: string; referrer?: string };
+
+/**
+ * The name of the honeypot input a site's <Form> renders for an endpoint
+ * form: out of sight and out of the tab order, so a person leaves it empty
+ * and a naive bot fills it. Meaningless on purpose, so no browser autofills it.
+ */
+export const TRAP_FIELD = "_hp";
 
 export const isRow = (item: FormItem): item is FormRow => "row" in item;
 

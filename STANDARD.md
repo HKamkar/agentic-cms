@@ -471,8 +471,10 @@ hand-write head tags.
   `content/pages/<slug>.yaml` (the SEO contract, `src/lib/seo/README.md`; the
   section types and their fields, `src/lib/content/README.md`).
 - **Forms**: definitions in `src/config/forms.ts`, rendered by `<Form>`; the
-  engine, the field types and the backend factory are
-  `src/lib/forms/README.md`.
+  engine, the field types, the backends and the endpoint's server half are
+  `src/lib/forms/README.md`; where endpoint forms deliver is
+  `src/config/form-delivery.ts`, read from the environment
+  ([docs/forms.md](docs/forms.md)).
 - **Content**: files under `content/`, one collection each, read and validated
   at build time by the content engine (`src/lib/content/README.md`; the door for
   editing is `content/README.md`, the templates are `content/_templates/`):
