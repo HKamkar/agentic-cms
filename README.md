@@ -340,7 +340,9 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 A new kind of section is a copy schema, a component and a registry entry
 (`src/components/sections/`). A collection of your own is a schema and a
 definition returned from `createKit`'s `collections` option
-(`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`.
+(`src/lib/content/README.md`). A new form is an entry in `src/config/forms.ts`;
+it delivers by `mailto`, or through the site's one dynamic route to a
+webhook or a provider of the site's choosing ([docs/forms.md](docs/forms.md)).
 ## Upgrading
 
 A site pins the package by tag. An upgrade is the new tag, `pnpm install`,
@@ -386,7 +388,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
   webfont, no external data.
 - `light-dark()` wants a current browser (Chromium 123+, Safari 17.5+,
   Firefox 120+).
-- The Worker is static-only: OpenNext's static-assets cache serves the
+- The Worker is static-only but for the form route (`/api/forms/[id]`):
+  OpenNext's static-assets cache serves the
   prerendered pages, and only `preview`, `deploy` and `upload` populate it, so
   `wrangler dev` straight after `next build` returns 500s. The ~40 "Failed to
   copy node_modules/…" lines during the OpenNext build are an OpenNext bug and
@@ -398,8 +401,11 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
 
 ## Going live
 
-1. Pick a form service for the contact form; it ships on the `mailto`
-   backend (`src/config/forms.ts`, `src/lib/forms/README.md`).
+1. Decide where the contact form delivers. It ships on the `mailto`
+   backend; switching it to `endpoint` and setting `FORM_WEBHOOK_URL` (or a
+   sink of the site's for a provider's API) delivers it
+   ([docs/forms.md](docs/forms.md)), and the privacy notice then names the
+   provider.
 2. If the site replaces an existing one, recreate its redirects before the
    DNS change (on the Worker, or in `next.config`'s `redirects()` on a Node
    server). A public URL never changes without one.
@@ -421,15 +427,17 @@ content/editorial/           calendar.md, backlog.md, and workshop.yaml when mar
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
 .claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
 templates/site/              what init writes into a site: AGENTS.md, the rules, the config; templates/lab-demo/ the lab's route
-src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/, ix/, components/, lab/, email, cx, createKit
+src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
+src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
+src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
 bin/, scripts/               the command line: lint, check, status, docs, seo, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, icons.md, lab.md, email.md, roadmap.md
+docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, forms.md, icons.md, lab.md, email.md, roadmap.md
 ```
 
 MIT licensed.
