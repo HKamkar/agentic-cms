@@ -102,7 +102,7 @@ is stored is the seed's to close, below.
 
 Every browser the harness launches starts with empty storage: a first
 visit. A site that renders something until a choice is in `localStorage` —
-a consent banner fixed at the viewport's corner, a notice, a "what's new"
+a consent banner fixed over the page, a notice, a "what's new"
 card — shows it on every full-page shot and in every `--states` crop it
 overlaps, and whatever lies under it can no longer be proved. A seed writes
 the choice in first: keys and values put into the page's `localStorage`

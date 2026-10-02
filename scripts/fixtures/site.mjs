@@ -25,8 +25,8 @@ export const LOOP_PAGE = `<!doctype html><html lang="en"><head><meta charset="ut
 
 // A page that shows a banner until a choice is stored, the way a consent banner does: its first inline
 // <head> script reads localStorage.consent (and sessionStorage.tab), notes what it found and, finding no
-// record, marks <html> so a 240×64 box shows fixed at the viewport's bottom left, over the page's text,
-// with a 16 px close icon (an inline svg) in it.
+// record, marks <html> so a fixed 240×64 box shows over the page's text, with a 16 px close icon (an
+// inline svg) in it.
 export const BANNER = { width: 240, height: 64 };
 export const CONSENT_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <script>window.__seenAtHead = { consent: localStorage.getItem("consent"), tab: sessionStorage.getItem("tab") }; if (!window.__seenAtHead.consent) document.documentElement.dataset.banner = "shown";</script>
