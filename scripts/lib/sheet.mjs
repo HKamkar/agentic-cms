@@ -135,9 +135,9 @@ export function buildStylesheets(root) {
 }
 
 /** Renders a spec to a picture: the sheet served at <base>/__sheet.html (so img: cells and the site's stylesheets resolve), a short viewport so the full-page shot is the sheet's own height; { file, width, height }. */
-export async function renderSheet(spec, { root = process.cwd(), base, out, scale = 2, scheme = "light", width = 1200, css } = {}) {
+export async function renderSheet(spec, { root = process.cwd(), base, out, scale = 2, scheme = "light", width = 1200, css, seed = null } = {}) {
   const html = sheetHtml(spec, { root, css: css ?? buildStylesheets(root) });
-  const { context, close } = await launch({ scheme, width, height: 200, scale });
+  const { context, close } = await launch({ scheme, width, height: 200, scale, seed });
   try {
     const page = await context.newPage();
     await page.route(`${base}/__sheet.html`, (route) => route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html }));

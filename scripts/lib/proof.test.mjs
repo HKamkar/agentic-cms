@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { labelOf, passesOf, plan, runProof } from "./proof.mjs";
+import { forwarded, labelOf, passesOf, plan, runProof } from "./proof.mjs";
 
 test("the passes: static alone by default, motion and states when asked, all three with all", () => {
   assert.deepEqual(passesOf({}), ["static"]);
@@ -22,6 +22,13 @@ test("the plan: per pass, the baseline of the ref, the after capture, the compar
   ]);
   assert.deepEqual(plan().map((s) => s.args[1]), ["proof-before", "proof-after", "proof-before"], "defaults: label proof, ref develop, the static pass");
   assert.equal(plan()[0].args[3], "develop");
+});
+
+test("the proof's flags forwarded to its captures: a value after its flag, a repeatable one per value, a boolean as itself, nothing for one not given", () => {
+  const flags = { scheme: "dark", jobs: 2, fresh: false, "no-storage": true, storage: ["consent={\"at\":\"{now}\"}", "theme=dark"], "session-storage": [], pages: undefined };
+  assert.deepEqual(forwarded(flags, ["scheme", "jobs", "fresh", "storage", "session-storage", "no-storage", "pages"]), ["--scheme", "dark", "--jobs", "2", "--storage", "consent={\"at\":\"{now}\"}", "--storage", "theme=dark", "--no-storage"]);
+  const steps = plan({ shared: forwarded(flags, ["storage"]) });
+  assert.deepEqual(steps.filter((s) => s.step !== "compare").map((s) => s.args.slice(-5, -1)), [["--storage", "consent={\"at\":\"{now}\"}", "--storage", "theme=dark"], ["--storage", "consent={\"at\":\"{now}\"}", "--storage", "theme=dark"]], "the seed on both sides");
 });
 
 const capture = (label) => ({ status: 0, stdout: JSON.stringify({ label, files: 3 }) });

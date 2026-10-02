@@ -27,11 +27,12 @@ import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_IN
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
-import { passesOf, plan, runProof } from "./lib/proof.mjs";
+import { forwarded, passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
 import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { SITE_SEED, sameSeed, seedLine, seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-parity"], process.argv.slice(2));
 
@@ -69,6 +70,9 @@ if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.er
 // Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
 // a --url site is served by its own server and captured as it serves itself.
 const THIRD_PARTY = flags["third-party"] ?? "hold";
+// The visitor's choice every page of a capture starts from (lib/storage-seed.mjs): resolved once, here in the
+// tree, so a --ref baseline built elsewhere is seeded like the tree and every page sees one {now}.
+const seed = subcommand === "capture" ? await seedOrExit(flags, "visual-parity capture") : null;
 const say = (line) => (flags.json ? process.stderr.write(line) : process.stdout.write(line));
 
 /** The build's own routes: every page that is not a post, not the 404 and not a demo route, and the first post. */
@@ -232,13 +236,13 @@ async function shootPage(page, { dir, name, pagePath, width }) {
   return 2;
 }
 
-// What decides a shot besides the page's own files: the harness's sources (this file and the browser library),
-// the browser's version and the capture's settings — for --states also the site's config, whose labels the
-// states look for. A served --url site has no files of ours to digest, so nothing is reused there.
-const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs")];
+// What decides a shot besides the page's own files: the harness's sources (this file, the browser library and
+// the seed), the browser's version and the capture's settings — the seed's templates among them, never the time
+// {now} became — for --states also the site's config, whose labels the states look for. A served --url site has no files of ours to digest, so nothing is reused there.
+const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs"), path.join(import.meta.dirname, "lib/storage-seed.mjs")];
 function shotCacheFor({ browser, root, baseUrl, build, kit }) {
   if (flags.url) return noShotCache();
-  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, thirdParty: THIRD_PARTY, ...(states ? { site: kit.site } : {}) };
+  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
   const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
   return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
 }
@@ -259,15 +263,16 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const { pages, skipped } = pagesOf(root);
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}), ...(flags.url ? {} : { thirdParty: THIRD_PARTY }) };
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}), ...(flags.url ? {} : { thirdParty: THIRD_PARTY }), ...(seed ? { seed: seedRecord(seed) } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
+  if (seed) say(`seed: ${seedLine(seed.templates)}\n`);
   if (skipped.length) say(`sample: the first ${flags.sample} of each template's pages; ${skipped.length} left out (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? ", …" : ""})\n`);
   const kit = states ? await loadKit() : null;
   // the first browser names the version the cache is keyed on and is the pool's first worker; the others are launched as the pool needs them
-  const first = await launch({ scheme, motion });
+  const first = await launch({ scheme, motion, seed });
   const shots = shotCacheFor({ browser: first.browser, root, baseUrl, build, kit });
   let firstUsed = false;
-  const open = (index) => (index === 0 ? ((firstUsed = true), first) : launch({ scheme, motion }));
+  const open = (index) => (index === 0 ? ((firstUsed = true), first) : launch({ scheme, motion, seed }));
   let count = 0;
   const finish = () => {
     const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
@@ -305,9 +310,15 @@ async function compare(before, after) {
   for (const [label, dir] of [[before, a], [after, b]]) if (!fs.existsSync(dir)) { console.error(`visual-parity compare: no capture ${label} under .parity/visual/ — run agentic-cms visual-parity capture ${label} first`); process.exit(2); }
   const meta = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")); } catch { return {}; } };
   if (meta(a).scheme !== meta(b).scheme) { console.error(`${before} was captured with --scheme ${meta(a).scheme ?? "?"} and ${after} with --scheme ${meta(b).scheme ?? "?"}: compare captures of one scheme`); process.exit(2); }
+  // Two seeds are two visits: what differs may be the seed's doing, so they are compared only when asked.
+  const seeds = [meta(a).seed, meta(b).seed];
+  const alike = sameSeed(...seeds);
+  if (!alike && !flags["mixed-seed"]) { console.error(`${before} was seeded with ${seedLine(seeds[0])} and ${after} with ${seedLine(seeds[1])}: compare captures seeded alike — recapture ${before} with the same seed (the site's ${SITE_SEED} and the same --storage flags), or pass --mixed-seed to see what the seed itself changes`); process.exit(2); }
   const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages });
   const out = flags.json ? console.error : console.log;
   if (report.baseline) out(`baseline: ${report.baseline.ref ?? ""} ${report.baseline.sha ?? ""}`.trim());
+  if (!alike) out(`seed: ${before} ${seedLine(seeds[0])}; ${after} ${seedLine(seeds[1])} (--mixed-seed: a difference may be the seed's)`);
+  else if (seeds[1]) out(`seed: ${seedLine(seeds[1])}, on both`);
   if (report.sampledOut) out(`sampled: ${report.sampledOut.length} page(s) left out by --sample on one side or both, not judged`);
   for (const file of report.files) { out(file.line); if (file.cause) out(`         ${causeLine(file.cause)}`); }
   const lacking = [[before, report.geometry.before], [after, report.geometry.after]].filter(([, has]) => !has).map(([label]) => label);
@@ -335,8 +346,8 @@ function clean() {
 /** A whole proof: for each pass, the baseline of --ref, the tree as it stands and the compare, as the harness's own commands; one summary, one exit. */
 async function proof() {
   const label = labels[0] ?? "proof";
-  const opt = (name) => (flags[name] === undefined || flags[name] === false ? [] : flags[name] === true ? [`--${name}`] : [`--${name}`, String(flags[name])]);
-  const steps = plan({ label, ref: flags.ref ?? "develop", passes: passesOf(flags), build: flags.build, shared: ["scheme", "jobs", "fresh", "third-party"].flatMap(opt), pages: opt("pages"), sample: opt("sample") });
+  // the seed's flags go to both sides of every pass, and each capture reads the site's src/config/harness.ts from this tree
+  const steps = plan({ label, ref: flags.ref ?? "develop", passes: passesOf(flags), build: flags.build, shared: forwarded(flags, ["scheme", "jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded(flags, ["pages"]), sample: forwarded(flags, ["sample"]) });
   const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
   // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
   const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });

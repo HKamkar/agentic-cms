@@ -20,7 +20,7 @@ if (!flags.select && !flags.heading) { console.error("probe: name the element wi
 if (flags.timeline && !flags.motion) { console.error("probe: --timeline samples a playing animation; add --motion"); process.exit(2); }
 const props = [...DEFAULT_PROPS, ...(flags.props ?? "").split(",").map((p) => p.trim()).filter(Boolean)];
 
-const { url, route, page, locator, consoleLines, close } = await openTarget(target, flags, { command: "probe" });
+const { url, route, page, locator, consoleLines, close, seed } = await openTarget(target, flags, { command: "probe" });
 try {
   const count = await requireMatch(locator, flags, route);
   const indexes = flags.all ? [...Array(count).keys()] : [flags.index];
@@ -52,7 +52,7 @@ try {
     return { total: all.length, pending };
   }, FX_START_STATE.source);
   const [scrollY, scrollHeight] = await page.evaluate(() => [window.scrollY, document.documentElement.scrollHeight]);
-  console.log(JSON.stringify({ url, route, width: flags.width, height: flags.height, scheme: flags.scheme, motion: Boolean(flags.motion), scrollY, scrollHeight, elements, reveals, console: consoleLines() }, null, 1));
+  console.log(JSON.stringify({ url, route, width: flags.width, height: flags.height, scheme: flags.scheme, motion: Boolean(flags.motion), seed, scrollY, scrollHeight, elements, reveals, console: consoleLines() }, null, 1));
 } finally { await close(); }
 
 function round(box) { return Object.fromEntries(Object.entries(box).map(([k, v]) => [k, Math.round(v * 100) / 100])); }

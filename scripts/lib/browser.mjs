@@ -9,6 +9,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import zlib from "node:zlib";
+import { SEED_STORAGE } from "./storage-seed.mjs";
 
 let playwright;
 /** playwright-core, or exit 2 naming what to install. */
@@ -62,8 +63,8 @@ export function ffmpegPath({ env = process.env, caches = CACHE_DIRS } = {}) {
   return null;
 }
 
-/** A browser and a context prepared for a capture: no sandbox, no font hinting, the scheme and the motion preference as asked. */
-export async function launch({ scheme = "light", motion = false, width = 1440, height = 900, scale = 1 } = {}) {
+/** A browser and a context prepared for a capture: no sandbox, no font hinting, the scheme and the motion preference as asked, and a seed (lib/storage-seed.mjs) in every page's storage before its scripts run. */
+export async function launch({ scheme = "light", motion = false, width = 1440, height = 900, scale = 1, seed = null } = {}) {
   const { chromium } = await requireBrowser();
   const executablePath = chromePath();
   if (!executablePath) {
@@ -72,6 +73,7 @@ export async function launch({ scheme = "light", motion = false, width = 1440, h
   }
   const browser = await chromium.launch({ executablePath, args: ["--no-sandbox", "--font-render-hinting=none"] });
   const context = await browser.newContext({ reducedMotion: motion ? "no-preference" : "reduce", colorScheme: scheme, deviceScaleFactor: scale, viewport: { width, height } });
+  if (seed) await context.addInitScript(SEED_STORAGE, seed.values);
   return { browser, context, close: () => browser.close() };
 }
 

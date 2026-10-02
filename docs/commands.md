@@ -303,7 +303,7 @@ agentic-cms visual-parity <capture | compare | proof | clean> …
 Screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed.
 
 ```bash
-agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh]
+agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the capture's name under .parity/visual/
@@ -321,18 +321,22 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--sample <n>` | a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare |
 | `--third-party hold|allow` | other origins' scripts and connections (analytics, beacons, widgets) on a build the harness serves: held back by the page's Content-Security-Policy, or allowed; their images, fonts and stylesheets load either way; a --url site is captured as it serves itself (one of `hold`, `allow`) (default `hold`) |
+| `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
-Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, or no browser (playwright-core and a Chromium).
+Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped } } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop
 agentic-cms visual-parity capture after --scheme dark --pages /,/blog
 agentic-cms visual-parity capture after --motion --json
+agentic-cms visual-parity capture after --storage 'consent={"analytics":"denied","at":"{now}"}'
 ```
 
 #### `visual-parity compare`
@@ -340,7 +344,7 @@ agentic-cms visual-parity capture after --motion --json
 Diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/.
 
 ```bash
-agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b]
+agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed]
 ```
 
 - `<before>` — the baseline's label
@@ -351,15 +355,17 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--threshold <n>` | percent of pixels a static or settled frame may differ by (default `0.02`) |
 | `--threshold-mid <n>` | the same for the mid-flight motion frames (150 and 500 ms) (default `20`) |
 | `--pages /a,/b` | judge only these routes' files, on both sides, at the widths the after capture took (a partial capture) |
+| `--mixed-seed` | compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, or captures of two schemes.
+Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
 
-`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }`.
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }`.
 
 ```bash
 agentic-cms visual-parity compare before after --json
 agentic-cms visual-parity compare before after --pages /,/blog
+agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes
 ```
 
 #### `visual-parity proof`
@@ -367,7 +373,7 @@ agentic-cms visual-parity compare before after --pages /,/blog
 A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
 
 ```bash
-agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow]
+agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
@@ -385,9 +391,12 @@ agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [-
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
+| `--storage <key>=<value>` | a localStorage key on both sides of every pass (capture --storage); the site's src/config/harness.ts is read by both without it (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (capture --session-storage) (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts on both sides (capture --no-storage) |
 | `--json` | print the proof as JSON: each pass's captures and compare report |
 
-Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, or captures of two schemes.
+Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, or captures of two schemes.
 
 `--json` prints `{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }`.
 
@@ -431,7 +440,7 @@ agentic-cms visual-parity clean --keep 4 --cache
 One screenshot of a page or of an element on it, prepared like the harness prepares a page, with its box as JSON.
 
 ```bash
-agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--scale 1] [--select <css> | --heading <regex>] [--transparent] [--trim] [--resize <w>] [--out <file>] [--json]
+agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--scale 1] [--select <css> | --heading <regex>] [--transparent] [--trim] [--resize <w>] [--out <file>] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage] [--json]
 ```
 
 - `<target>` — a route of the build (/about) or a URL
@@ -454,14 +463,18 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--trim` | trim the transparent or same-colour edges (sharp) |
 | `--resize <n>` | scale the result to this width in px (0: as photographed) (default `0`) |
 | `--out <file>` | .png or .webp; default .parity/shots/<route>@<width>[--<target>].png |
+| `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout (progress goes to stderr) |
 
-Exit: `0` written; `1` the target was not found on the page; `2` usage, no build, or no browser.
+Exit: `0` written; `1` the target was not found on the page; `2` usage, no build, no browser, or a seed that does not read.
 
-`--json` prints `{ url, route, width, height, scale, scheme, motion, scrollY, target: { by, value, index, tag, id, box, pageBox } | null, out, image: { width, height, transparent, trimmed, resized }, console }`.
+`--json` prints `{ url, route, width, height, scale, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, target: { by, value, index, tag, id, box, pageBox } | null, out, image: { width, height, transparent, trimmed, resized }, console }`.
 
 ```bash
 agentic-cms shot / --width 390 --scheme dark
+agentic-cms shot / --width 390 --no-storage      # a first visit: what the site shows before a choice is stored
 agentic-cms shot / --heading "fits the stack" --select ".card" --scale 2 --json
 agentic-cms shot /about --url http://localhost:8000 --select "picture" --transparent --trim --out .parity/shots/loop.png
 ```
@@ -471,7 +484,7 @@ agentic-cms shot /about --url http://localhost:8000 --select "picture" --transpa
 The numbers behind a screenshot claim: an element's box, computed styles and stacking contexts, the reveals still pending, the console — JSON only.
 
 ```bash
-agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion]
+agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<target>` — a route of the build (/about) or a URL
@@ -492,10 +505,13 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--props <a,b>` | computed properties to add to the default set (opacity, transform, position, z-index, display, visibility, overflow, color, background-color, font-size, line-height, width, height, margin, padding) |
 | `--timeline <n>` | with --motion: scroll the element into view and sample opacity, transform and box top for this many ms (default `0`) |
 | `--every <n>` | the timeline's sampling interval in ms (default `100`) |
+| `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
 
-Exit: `0` printed; `1` no element matched; `2` usage, no build, or no browser.
+Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
-`--json` prints `{ url, route, width, height, scheme, motion, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`.
+`--json` prints `{ url, route, width, height, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`.
 
 ```bash
 agentic-cms probe / --select ".card" --all
@@ -507,7 +523,7 @@ agentic-cms probe / --heading "pricing" --motion --timeline 2000 --every 100
 A candidate sheet from a spec — rows lettered, cells at the real size on the real background — rendered to one picture for a pick by row.
 
 ```bash
-agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] [--json]
+agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage] [--json]
 ```
 
 - `<spec>` — the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img, size?, ground?: { background, color } }] } | { label, note, files: <dir | [files]>, sizes, grounds }] }
@@ -519,11 +535,14 @@ agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--s
 | `--scale <n>` | device scale factor (default `2`) |
 | `--scheme light|dark` | prefers-color-scheme (tokens follow it) (one of `light`, `dark`) (default `light`) |
 | `--width <n>` | the sheet's width in px (default `1200`) |
+| `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout |
 
-Exit: `0` written; `2` usage, a spec error (the field is named), a missing file, or no browser.
+Exit: `0` written; `2` usage, a spec error (the field is named), a missing file, no browser, or a seed that does not read.
 
-`--json` prints `{ file, name, rows: [{ id, label, cells }], width, height }`.
+`--json` prints `{ file, name, rows: [{ id, label, cells }], width, height, seed: { storage, sessionStorage, at } | null }`.
 
 ```bash
 agentic-cms sheet .parity/sector-icons.yaml

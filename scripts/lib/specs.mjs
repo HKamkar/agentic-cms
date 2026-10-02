@@ -8,6 +8,15 @@ const root = { type: "string", value: "<dir>", help: "another site tree (its con
 const report = (file) => ({ type: "boolean", help: `also write the findings to ${file}` });
 const strict = { type: "boolean", help: "every WARN counts as a FAIL" };
 const dryRun = { type: "boolean", help: "print what would change; write nothing" };
+// A visitor's choice in every page's storage before its scripts run (scripts/lib/storage-seed.mjs): the
+// site's src/config/harness.ts, then these pairs over it, key by key.
+const seed = {
+  storage: { type: "string", multiple: true, value: "<key>=<value>", help: "a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds" },
+  "session-storage": { type: "string", multiple: true, value: "<key>=<value>", help: "the same for sessionStorage" },
+  "no-storage": { type: "boolean", help: "ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit)" },
+};
+const seedUsage = "[--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]";
+const seedJson = "seed: { storage, sessionStorage, at } | null";
 
 export const SPECS = {
   lint: {
@@ -83,7 +92,7 @@ export const SPECS = {
     subcommands: {
       capture: {
         command: "visual-parity capture", summary: "screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed",
-        usage: "agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh]",
+        usage: `agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] ${seedUsage}`,
         positionals: [{ name: "label", required: true, help: "the capture's name under .parity/visual/" }],
         flags: {
           motion: { type: "boolean", help: "play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation" },
@@ -97,31 +106,33 @@ export const SPECS = {
           settle: { type: "number", default: 2000, help: "with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle=\"<ms>\" raises it while that element is in view" },
           sample: { type: "number", value: "<n>", help: "a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare" },
           "third-party": { type: "string", default: "hold", choices: ["hold", "allow"], help: "other origins' scripts and connections (analytics, beacons, widgets) on a build the harness serves: held back by the page's Content-Security-Policy, or allowed; their images, fonts and stylesheets load either way; a --url site is captured as it serves itself" },
+          ...seed,
           jobs: { type: "number", value: "<n>", help: "browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed" },
           fresh: { type: "boolean", help: "take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same)" },
           json: { type: "boolean", help: "print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished)" },
         },
-        examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json"],
-        exit: { 0: "captured", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, or no browser (playwright-core and a Chromium)" },
-        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped } } }",
+        examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json", "agentic-cms visual-parity capture after --storage 'consent={\"analytics\":\"denied\",\"at\":\"{now}\"}'"],
+        exit: { 0: "captured", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named)" },
+        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }",
       },
       compare: {
         command: "visual-parity compare", summary: "diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/",
-        usage: "agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b]",
+        usage: "agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed]",
         positionals: [{ name: "before", required: true, help: "the baseline's label" }, { name: "after", required: true, help: "the label to judge" }],
         flags: {
           threshold: { type: "number", default: 0.02, help: "percent of pixels a static or settled frame may differ by" },
           "threshold-mid": { type: "number", default: 20, help: "the same for the mid-flight motion frames (150 and 500 ms)" },
           pages: { type: "string", value: "/a,/b", help: "judge only these routes' files, on both sides, at the widths the after capture took (a partial capture)" },
+          "mixed-seed": { type: "boolean", help: "compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes" },
           json: { type: "boolean", help: "print the report as JSON (also written as report.json in the diff directory)" },
         },
-        examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog"],
-        exit: { 0: "identical within the thresholds", 1: "a difference, a size change or a missing file", 2: "usage, a missing capture, or captures of two schemes" },
-        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }",
+        examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog", "agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes"],
+        exit: { 0: "identical within the thresholds", 1: "a difference, a size change or a missing file", 2: "usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed)" },
+        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }",
       },
       proof: {
         command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference",
-        usage: "agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow]",
+        usage: `agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] ${seedUsage}`,
         positionals: [{ name: "label", help: "the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof" }],
         flags: {
           ref: { type: "string", value: "<git ref>", default: "develop", help: "the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha)" },
@@ -135,10 +146,13 @@ export const SPECS = {
           jobs: { type: "number", value: "<n>", help: "browsers at once, for every capture (capture --jobs)" },
           fresh: { type: "boolean", help: "take every shot again, reusing none (capture --fresh)" },
           "third-party": { type: "string", choices: ["hold", "allow"], help: "other origins' scripts and connections on every capture (capture --third-party)" },
+          storage: { ...seed.storage, help: "a localStorage key on both sides of every pass (capture --storage); the site's src/config/harness.ts is read by both without it" },
+          "session-storage": { ...seed["session-storage"], help: "the same for sessionStorage (capture --session-storage)" },
+          "no-storage": { ...seed["no-storage"], help: "ignore the site's src/config/harness.ts on both sides (capture --no-storage)" },
           json: { type: "boolean", help: "print the proof as JSON: each pass's captures and compare report" },
         },
         examples: ["agentic-cms visual-parity proof", "agentic-cms visual-parity proof nav-fix --states --build", "agentic-cms visual-parity proof --all --ref main --json"],
-        exit: { 0: "every pass identical within the thresholds", 1: "a difference in any pass, or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, or captures of two schemes" },
+        exit: { 0: "every pass identical within the thresholds", 1: "a difference in any pass, or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, a seed that does not read, or captures of two schemes" },
         json: "{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }",
       },
       clean: {
@@ -159,7 +173,7 @@ export const SPECS = {
   },
   shot: {
     command: "shot", script: "shot", group: "look & measure", summary: "one screenshot of a page or of an element on it, prepared like the harness prepares a page, with its box as JSON",
-    usage: "agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--scale 1] [--select <css> | --heading <regex>] [--transparent] [--trim] [--resize <w>] [--out <file>] [--json]",
+    usage: `agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--scale 1] [--select <css> | --heading <regex>] [--transparent] [--trim] [--resize <w>] [--out <file>] ${seedUsage} [--json]`,
     positionals: [{ name: "target", required: true, help: "a route of the build (/about) or a URL" }],
     flags: {
       url: { type: "string", value: "<base>", help: "a served site (a dev server) instead of the build under .next" },
@@ -178,15 +192,16 @@ export const SPECS = {
       trim: { type: "boolean", help: "trim the transparent or same-colour edges (sharp)" },
       resize: { type: "number", default: 0, help: "scale the result to this width in px (0: as photographed)" },
       out: { type: "string", value: "<file>", help: ".png or .webp; default .parity/shots/<route>@<width>[--<target>].png" },
+      ...seed,
       json: { type: "boolean", help: "print one JSON document on stdout (progress goes to stderr)" },
     },
-    examples: ["agentic-cms shot / --width 390 --scheme dark", "agentic-cms shot / --heading \"fits the stack\" --select \".card\" --scale 2 --json", "agentic-cms shot /about --url http://localhost:8000 --select \"picture\" --transparent --trim --out .parity/shots/loop.png"],
-    exit: { 0: "written", 1: "the target was not found on the page", 2: "usage, no build, or no browser" },
-    json: "{ url, route, width, height, scale, scheme, motion, scrollY, target: { by, value, index, tag, id, box, pageBox } | null, out, image: { width, height, transparent, trimmed, resized }, console }",
+    examples: ["agentic-cms shot / --width 390 --scheme dark", "agentic-cms shot / --width 390 --no-storage      # a first visit: what the site shows before a choice is stored", "agentic-cms shot / --heading \"fits the stack\" --select \".card\" --scale 2 --json", "agentic-cms shot /about --url http://localhost:8000 --select \"picture\" --transparent --trim --out .parity/shots/loop.png"],
+    exit: { 0: "written", 1: "the target was not found on the page", 2: "usage, no build, no browser, or a seed that does not read" },
+    json: `{ url, route, width, height, scale, scheme, motion, ${seedJson}, scrollY, target: { by, value, index, tag, id, box, pageBox } | null, out, image: { width, height, transparent, trimmed, resized }, console }`,
   },
   probe: {
     command: "probe", script: "probe", group: "look & measure", summary: "the numbers behind a screenshot claim: an element's box, computed styles and stacking contexts, the reveals still pending, the console — JSON only",
-    usage: "agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion]",
+    usage: `agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] ${seedUsage}`,
     positionals: [{ name: "target", required: true, help: "a route of the build (/about) or a URL" }],
     flags: {
       url: { type: "string", value: "<base>", help: "a served site (a dev server) instead of the build under .next" },
@@ -203,14 +218,15 @@ export const SPECS = {
       props: { type: "string", value: "<a,b>", help: "computed properties to add to the default set (opacity, transform, position, z-index, display, visibility, overflow, color, background-color, font-size, line-height, width, height, margin, padding)" },
       timeline: { type: "number", default: 0, help: "with --motion: scroll the element into view and sample opacity, transform and box top for this many ms" },
       every: { type: "number", default: 100, help: "the timeline's sampling interval in ms" },
+      ...seed,
     },
     examples: ["agentic-cms probe / --select \".card\" --all", "agentic-cms probe / --heading \"pricing\" --motion --timeline 2000 --every 100"],
-    exit: { 0: "printed", 1: "no element matched", 2: "usage, no build, or no browser" },
-    json: "{ url, route, width, height, scheme, motion, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }",
+    exit: { 0: "printed", 1: "no element matched", 2: "usage, no build, no browser, or a seed that does not read" },
+    json: `{ url, route, width, height, scheme, motion, ${seedJson}, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`,
   },
   sheet: {
     command: "sheet", script: "sheet", group: "look & measure", summary: "a candidate sheet from a spec — rows lettered, cells at the real size on the real background — rendered to one picture for a pick by row",
-    usage: "agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] [--json]",
+    usage: `agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--scheme light|dark] ${seedUsage} [--json]`,
     positionals: [{ name: "spec", required: true, help: "the sheet: { name, background, color, rows: [{ label, note, size, cells: [{ label, file | svg | html | img, size?, ground?: { background, color } }] } | { label, note, files: <dir | [files]>, sizes, grounds }] }" }],
     flags: {
       url: { type: "string", value: "<base>", help: "serve img: cells and the site's stylesheets from a served site instead of the build" },
@@ -218,11 +234,12 @@ export const SPECS = {
       scale: { type: "number", default: 2, help: "device scale factor" },
       scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme (tokens follow it)" },
       width: { type: "number", default: 1200, help: "the sheet's width in px" },
+      ...seed,
       json: { type: "boolean", help: "print one JSON document on stdout" },
     },
     examples: ["agentic-cms sheet .parity/sector-icons.yaml", "agentic-cms sheet .parity/marks.yaml --scheme dark --url http://localhost:8000"],
-    exit: { 0: "written", 2: "usage, a spec error (the field is named), a missing file, or no browser" },
-    json: "{ file, name, rows: [{ id, label, cells }], width, height }",
+    exit: { 0: "written", 2: "usage, a spec error (the field is named), a missing file, no browser, or a seed that does not read" },
+    json: `{ file, name, rows: [{ id, label, cells }], width, height, ${seedJson} }`,
   },
   init: {
     command: "init", script: "init", group: "site", summary: "a site from the package: the wireframe example, the agent files (rules and design skills), the config and a manifest; or a refresh of an existing site's agent files",

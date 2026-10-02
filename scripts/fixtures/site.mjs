@@ -23,6 +23,15 @@ export const LOOP_PAGE = `<!doctype html><html lang="en"><head><meta charset="ut
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-duration="2" data-rest="1.2"><rect width="200" height="100" fill="#ddd"/><circle cx="20" cy="50" r="15" fill="#000"><animate attributeName="cx" values="20;180;20" dur="2s" repeatCount="indefinite"/></circle></svg>
 </section></main></body></html>`;
 
+// A page that shows a banner until a choice is stored, the way a consent banner does: its first inline
+// <head> script reads localStorage.consent (and sessionStorage.tab), notes what it found and, finding no
+// record, marks <html> so a 240×64 box shows fixed at the viewport's bottom left, over the page's text.
+export const BANNER = { width: 240, height: 64 };
+export const CONSENT_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<script>window.__seenAtHead = { consent: localStorage.getItem("consent"), tab: sessionStorage.getItem("tab") }; if (!window.__seenAtHead.consent) document.documentElement.dataset.banner = "shown";</script>
+<title>Consent</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } section { padding: 2rem; min-height: 1200px; } .banner { display: none; position: fixed; left: 16px; bottom: 16px; width: ${BANNER.width}px; height: ${BANNER.height}px; background: #000; } html[data-banner=shown] .banner { display: block; }</style></head>
+<body><main><section id="consent" data-section="consent"><h1>A page with a banner</h1><p>Text the banner would cover.</p></section></main><div class="banner" role="dialog" aria-label="consent"></div></body></html>`;
+
 /** Adds a prerendered page to a fixture site: .next/server/app/<route>.html. */
 export function addPage(root, route, html) {
   const file = path.join(root, ".next/server/app", `${route.replace(/^\//, "")}.html`);
