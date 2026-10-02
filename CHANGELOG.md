@@ -4,8 +4,27 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## Unreleased
+## [Unreleased]
 
+- Consent, provider-neutral and headless: `agentic-cms/consent` keeps a
+  visitor's choice in their browser (`{ analytics, at, version }` under a
+  policy's `storageKey`, asked again after `maxAgeDays` or when `version`
+  goes up), follows it across tabs, and gives a site's own banner its state
+  (`useConsent`, `useConsentDecision`, `openConsent`); a tag adapter follows
+  `currentDecision` and `onConsentChange`. `agentic-cms/consent/google` is
+  Google consent mode v2 behind it: `consentDefaultScript(policy)`, an
+  inline script near the top of `<body>` with every type denied, a stored
+  choice replayed and the `_ga` cookies deleted until analytics is granted,
+  and `GoogleTag`, which in basic mode (the default) loads nothing before a
+  grant and switches the tag off on a refusal, and in advanced mode loads at
+  once with cookieless pings; whatever set a change off, the update reaches
+  the dataLayer before the tag's config. Both entries load in a server
+  component and in plain Node; no new dependency. The example wires it,
+  off until `GOOGLE_TAG_ID` is set: `src/config/analytics.ts`, the layout,
+  `ui/ConsentBanner`, Cookie settings in the footer, and
+  `src/config/harness.ts` seeding the screenshot harness with a refused
+  choice ([docs/consent.md](docs/consent.md)). An example without the
+  variable is unchanged.
 - A visitor's choice, seeded: every browser the harness launches can start
   with keys in the page's `localStorage` and `sessionStorage`, written
   before any of the page's scripts runs (the first inline `<head>` script
