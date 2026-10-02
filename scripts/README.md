@@ -108,8 +108,9 @@ against `fixtures/` by `pnpm test:browser`.
   computed styles, stacking contexts, a timeline, the pending reveals, the
   console) as JSON; `pnpm kit sheet <spec.yaml>` renders candidates, rows
   lettered and cells numbered at the real size and background, to one
-  picture. `docs/shot-probe-sheet.md` has the recipes; `lib/page-command.mjs`
-  and `lib/sheet.mjs` are their shared parts.
+  picture. All three seed the page's storage like a capture (below;
+  `--no-storage` is a first visit), and so does `icons audit`. `docs/shot-probe-sheet.md` has the
+  recipes; `lib/page-command.mjs` and `lib/sheet.mjs` are their shared parts.
 - `guard-email` — `pnpm kit guard-email [--domain <host>]… [--json]`
   scans every served file of the build (pages, RSC payloads, the `.body`
   routes, the static chunks) for an address at the site's domain (the host
@@ -175,3 +176,12 @@ against `fixtures/` by `pnpm test:browser`.
   for while the wireframe has no motion and become load-bearing again in a
   fork that adds reveals. Needs a Chromium build (`~/.cache/ms-playwright`, or
   `CHROME_PATH`). The comment at the top of the script has the details.
+  Every page starts from a seeded storage when the site has a
+  `src/config/harness.ts` (`export const harness = { storage: { consent:
+  … } }`) or the run passes `--storage <key>=<value>` /
+  `--session-storage <key>=<value>`: written before any of the page's
+  scripts, so a capture shows the site after a visitor's choice (a consent
+  banner closed); `{now}` in a value is the run's ISO time. The seed is
+  recorded in `meta.json`, read from the tree for a `--ref` baseline too,
+  and `compare` refuses two captures seeded differently unless
+  `--mixed-seed` (`lib/storage-seed.mjs`, `docs/visual-parity.md`).

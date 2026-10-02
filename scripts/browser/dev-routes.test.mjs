@@ -1,8 +1,8 @@
 // The routes the kit writes, rendered by the example site's own dev server:
 // the lab's (lab route → /lab-demo), the design round's (demo new →
 // /hero-demo), a route that ships an inline loop the way a section does
-// (readInlineSvg + InlineAnimation), and the harness's own preparation of a
-// page that is still hydrating. One file, so the servers never run on the
+// (readInlineSvg + InlineAnimation), the harness's own preparation of a
+// page that is still hydrating, and the seed reaching the design routes. One file, so the servers never run on the
 // checkout at once; each test writes only what it removes again.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -205,4 +205,47 @@ test("probe --motion on the example's dev server never trips React's hydration c
       assert.deepEqual(mismatches, [], `${route} at ${width}`);
     }
   } finally { server?.stop(); }
+});
+
+// What an agent photographs while designing — a round's demo route, the lab route — is a page of the dev server in
+// the site's own layout, so whatever the site shows until a choice is stored shows there too. shot and probe seed it
+// like a capture: here the example's one stored choice, its theme, which its first inline script reads.
+test("a seed reaches the design routes on the dev server: /hero-demo (demo new) and /lab-demo (lab route) read it before their first script, --no-storage does not", { skip, timeout: 240000 }, async () => {
+  const { execFile } = await import("node:child_process");
+  const probe = (url, route, ...args) => new Promise((resolve) => execFile(process.execPath, [BIN, "probe", route, "--url", url, "--select", "html", "--props", "color-scheme", ...args], { cwd: ROOT, encoding: "utf8", timeout: 150000 }, (error, stdout, stderr) => resolve({ status: error ? error.code ?? 1 : 0, stdout, stderr })));
+  const labDir = path.join(ROOT, ".parity/lab");
+  const hadLab = fs.existsSync(labDir);
+  const labRoute = path.join(ROOT, "src/app/lab-demo"), heroRoute = path.join(ROOT, "src/app/hero-demo");
+  assert.ok(!fs.existsSync(labRoute) && !fs.existsSync(heroRoute), "no design route in the checkout before the test");
+  fs.mkdirSync(labDir, { recursive: true });
+  const scene = path.join(labDir, "seed-test-mark.svg");
+  assert.equal(lab("new", "seed-test-mark", "--kind", "mark").status, 0);
+  assert.equal(lab("route").status, 0);
+  assert.equal(demo("new", "hero", "--section", "home-hero").status, 0);
+  let server;
+  try {
+    server = await devServer();
+    for (const route of ["/hero-demo", "/lab-demo"]) {
+      await fetch(server.url + route); // compiled once before the probes, which wait 30 s for a page
+      const seeded = await probe(server.url, route, "--storage", "theme=dark");
+      assert.equal(seeded.status, 0, seeded.stderr);
+      const out = JSON.parse(seeded.stdout);
+      assert.deepEqual(out.seed.storage, { theme: "dark" });
+      assert.equal(out.elements[0].computed["color-scheme"], "dark", `${route}: the stored theme applied before the first paint`);
+      const first = await probe(server.url, route, "--no-storage");
+      assert.equal(first.status, 0, first.stderr);
+      assert.equal(JSON.parse(first.stdout).seed, null);
+      assert.equal(JSON.parse(first.stdout).elements[0].computed["color-scheme"], "light dark", `${route}: a first visit follows the system`);
+    }
+  } finally {
+    server?.stop();
+    assert.equal(demo("clean", "hero").status, 0);
+    if (hadLab) {
+      fs.rmSync(scene, { force: true });
+      fs.rmSync(labRoute, { recursive: true, force: true });
+      const validator = path.join(ROOT, ".next/dev/types/validator.ts");
+      if (fs.existsSync(validator) && /src\/app\/(lab|hero)-demo/.test(fs.readFileSync(validator, "utf8"))) fs.rmSync(validator);
+    } else assert.equal(lab("clean").status, 0);
+    assert.ok(!fs.existsSync(labRoute) && !fs.existsSync(heroRoute) && !fs.existsSync(scene), "nothing of the test left in the checkout");
+  }
 });

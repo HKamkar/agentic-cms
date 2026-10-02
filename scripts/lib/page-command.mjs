@@ -4,12 +4,13 @@
 // the page it gets back.
 import path from "node:path";
 import { collectConsole, findTarget, launch, prepare, resolveTarget, routeName, serveStatic } from "./browser.mjs";
+import { seedOrExit, seedRecord } from "./storage-seed.mjs";
 
 export { routeName };
 
 export const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
-/** Opens the target in a prepared page; returns what a command needs and a close() for the end. */
+/** Opens the target in a prepared page, seeded like a capture (lib/storage-seed.mjs); returns what a command needs and a close() for the end. */
 export async function openTarget(target, flags, { command = "agentic-cms" } = {}) {
   const root = process.cwd();
   let server = null;
@@ -17,7 +18,8 @@ export async function openTarget(target, flags, { command = "agentic-cms" } = {}
   if (!flags.url) { try { server = await serveStatic({ root }); } catch (error) { console.error(`${command}: ${error.message}`); process.exit(2); } }
   const base = flags.url ?? server.url;
   const url = resolveTarget(target, { base });
-  const { context, close: closeBrowser } = await launch({ scheme: flags.scheme, motion: flags.motion, width: flags.width, height: flags.height, scale: flags.scale ?? 1 });
+  const seed = await seedOrExit(flags, command);
+  const { context, close: closeBrowser } = await launch({ scheme: flags.scheme, motion: flags.motion, width: flags.width, height: flags.height, scale: flags.scale ?? 1, seed });
   const page = await context.newPage();
   const consoleLines = collectConsole(page);
   await page.goto(url, { waitUntil: "load" });
@@ -27,7 +29,7 @@ export async function openTarget(target, flags, { command = "agentic-cms" } = {}
   if (locator && (flags.scroll === "into-view" || (flags.motion && !flags.scroll))) await locator.nth(flags.index).scrollIntoViewIfNeeded().catch(() => {});
   if (flags.wait) await page.waitForTimeout(flags.wait);
   const close = async () => { await closeBrowser(); server?.close(); };
-  return { root, url, route: /^https?:\/\//.test(target) ? new URL(target).pathname : target, page, locator, consoleLines, close };
+  return { root, url, route: /^https?:\/\//.test(target) ? new URL(target).pathname : target, page, locator, consoleLines, close, seed: seedRecord(seed) };
 }
 
 /** The "by" and "value" of a target, for the JSON and the file name. */

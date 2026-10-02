@@ -59,7 +59,10 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    anything marked `data-lab-drive`, never the reveals around them
    (`docs/lab.md` § Inspecting motion). `pnpm dev`;
    hand over the route's URL on the dev server (and the LAN address for a
-   phone). A dev server restarted after a `pnpm build` that fails every page
+   phone). Your own look at it is `pnpm kit shot /<name>-demo --url <dev
+   server>`, seeded like a capture, so a banner the site shows until a
+   visitor's choice is stored stays closed over the candidates (the owner
+   closes it once in their own browser). A dev server restarted after a `pnpm build` that fails every page
    with `Can't resolve '@vercel/turbopack-next/internal/…'` is reading the
    build's caches: stop it, `rm -rf .next/dev .next/cache/turbopack`, start
    it again (`docs/design.md` § When the dev server will not serve).

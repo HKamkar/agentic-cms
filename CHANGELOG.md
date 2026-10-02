@@ -4,6 +4,33 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## Unreleased
+
+- A visitor's choice, seeded: every browser the harness launches can start
+  with keys in the page's `localStorage` and `sessionStorage`, written
+  before any of the page's scripts runs (the first inline `<head>` script
+  included), so captures, shots and probes show a site after the choice —
+  a consent banner closed — instead of a first visit with the banner over
+  the page. The site's default is `src/config/harness.ts` (`export const
+  harness = { storage: { … }, sessionStorage: { … } }`, a string or any
+  JSON value per key), a file the app never imports; `--storage
+  <key>=<value>` and `--session-storage <key>=<value>` set a key over it
+  for one run and `--no-storage` leaves it out, on `visual-parity capture`
+  and `proof`, `shot`, `probe`, `sheet` and `icons audit` — on the build and
+  on the dev server alike, so a design round's demo route and the lab route
+  are photographed after the choice too. `{now}` in a value is the run's
+  ISO time and `{now:ms}` its epoch milliseconds, replaced once per run, so
+  a record checked against a maximum age never goes stale. A capture
+  records the seed as written in `meta.json` (`seed`), the shot cache keys
+  on it, a `--ref` baseline is seeded from the tree's file, `proof` passes
+  the flags to both sides, and `compare` refuses two captures seeded
+  differently (exit 2) unless `--mixed-seed`; `shot`, `probe`, `sheet` and
+  `icons audit` print the seed in their `--json`. A site without a seed
+  captures as before; a site that adopts one must **recapture baselines**.
+- `icons audit` leaves a design round's demo routes (`/<name>-demo`,
+  `/lab-demo`) out of its pages unless `--pages` names one, as a capture
+  does.
+
 ## [0.6.1] — 2026-09-27
 
 - Every ordinary form item, from config. Beside `text`, `email`, `tel`,

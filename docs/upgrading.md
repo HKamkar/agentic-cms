@@ -18,6 +18,24 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.6.1 → Unreleased
+
+A visitor's choice seeded into every page's storage before its scripts run
+([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)). Nothing
+changes for a site without one: no seed, no init script, the same shots.
+
+- **A site that shows something until a choice is stored** (a consent
+  banner of its own, fixed over the page) adds `src/config/harness.ts`
+  with the record a choice leaves (`{now}` where it carries a time) and
+  **recaptures its baselines**: every capture is then seeded, and `compare`
+  refuses a seeded capture against an unseeded one. `shot`, `probe`,
+  `sheet` and `icons audit` are seeded too, on the build and on the dev
+  server (a demo route, the lab route); `--no-storage` shows the first
+  visit.
+- **The site's `AGENTS.md`** takes the template's new clause by hand (the
+  harness section: the seed, both sides, `--no-storage`); `--agent-files`
+  brings the `design-proof` skill's.
+
 ## 0.6.0 → 0.6.1
 
 Every ordinary form item: `url`, `number`, `date`, `select`, `radios`, one

@@ -23,7 +23,10 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
 1. **Inventory.** `pnpm build` then `pnpm kit icons audit` — every `<img>`
    up to 96 px and every inline `<svg>` on every page, with its rendered
    size, colour, section, heading and the copy beside it, as
-   `.parity/icons/audit.json` and a sheet, one row per page. Group them by
+   `.parity/icons/audit.json` and a sheet, one row per page, measured with
+   the site's seed (`src/config/harness.ts`) so a consent banner's icons
+   are not counted on every page, and without a demo route unless named
+   (`--no-storage` audits the first visit). Group them by
    kind: the chrome's line icons, the marks beside copy, other companies'
    logos, illustrations. A file used on three pages is one decision.
 2. **A family per kind**, chosen with the owner (`design-options`):

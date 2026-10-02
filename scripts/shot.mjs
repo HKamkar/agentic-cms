@@ -18,7 +18,7 @@ const { positionals: [target], flags } = parseOrExit(SPECS.shot, process.argv.sl
 if (flags.out && !/\.(png|webp)$/i.test(flags.out)) { console.error(`shot: --out takes a .png or .webp file, not ${flags.out}`); process.exit(2); }
 const say = (line) => (flags.json ? console.error(line) : console.log(line));
 
-const { root, url, route, page, locator, consoleLines, close } = await openTarget(target, flags, { command: "shot" });
+const { root, url, route, page, locator, consoleLines, close, seed } = await openTarget(target, flags, { command: "shot" });
 try {
   const about = targetOf(flags);
   let element = null;
@@ -43,7 +43,7 @@ try {
   const { width, height } = await image.toFile(outFile);
   const out = relative(root, outFile);
   say(`${out}  ${width}x${height}${element ? `  ${element.tag}${element.id ? `#${element.id}` : ""} at ${element.pageBox.x},${element.pageBox.y} ${element.pageBox.width}x${element.pageBox.height}` : ""}`);
-  if (flags.json) console.log(JSON.stringify({ url, route, width: flags.width, height: flags.height, scale: flags.scale, scheme: flags.scheme, motion: Boolean(flags.motion), scrollY, target: element, out, image: { width, height, transparent: Boolean(flags.transparent), trimmed: Boolean(flags.trim), resized: flags.resize || null }, console: consoleLines() }, null, 1));
+  if (flags.json) console.log(JSON.stringify({ url, route, width: flags.width, height: flags.height, scale: flags.scale, scheme: flags.scheme, motion: Boolean(flags.motion), seed, scrollY, target: element, out, image: { width, height, transparent: Boolean(flags.transparent), trimmed: Boolean(flags.trim), resized: flags.resize || null }, console: consoleLines() }, null, 1));
 } finally { await close(); }
 
 function round(box) { return Object.fromEntries(Object.entries(box).map(([k, v]) => [k, Math.round(v * 100) / 100])); }

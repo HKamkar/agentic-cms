@@ -146,7 +146,12 @@ first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast
 (`pnpm kit visual-parity clean` keeps the newest captures, `--dry-run`
-first).
+first); whatever the site shows until a visitor's choice is stored (a
+consent banner) is closed in every capture, shot, probe and icon audit,
+demo and lab routes on the dev server included, by the seed in
+`src/config/harness.ts` (`export const harness = { storage: { <key>:
+<record> } }`, `{now}` for the time), applied to both sides of a proof,
+and `--no-storage` shows it again.
 
 ## Process
 

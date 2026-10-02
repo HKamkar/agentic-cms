@@ -113,6 +113,15 @@ file (`files: { src: { uses, pages } }`), and as a sheet
 copy). A report of one template glyph is a report of the class; the audit
 is the class.
 
+The pages are measured as a visitor sees them after a choice: seeded like
+a capture from the site's `src/config/harness.ts`
+([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)), so a
+consent banner's close icon is not counted as an icon of every page;
+`--no-storage` measures a first visit, banner and all, and `--json` says
+what was seeded (`seed`). A design round's demo routes (`/<name>-demo`,
+`/lab-demo`), when a build has them, are left out unless `--pages` names
+one.
+
 ## A round: `icons round`
 
 The site's own icons — a set of roles the families' primitives cannot say,

@@ -226,6 +226,10 @@ with an inventory of every animation; `--states` photographs hover, focus,
 checked and open. A compare line says what changed and where: `SIZE …
 shift` when one section grew and pushed the page down, and a `cause:` line
 naming the section and its height change, down to a fraction of a pixel.
+What a site shows until a visitor's choice is stored — a consent banner
+over the page — is closed by a seed in `src/config/harness.ts`, written
+into every page's storage before its scripts run, on both sides of a
+proof.
 
 A proof costs what the change touched. Every page-width whose build files
 are the same bytes as when it was last photographed is copied from the
