@@ -300,6 +300,14 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   worth running in the background, its log under `.parity/<label>.log`.
 - Static captures run with `prefers-reduced-motion`; `--motion` runs without
   it.
+- What a site shows until a visitor's choice is stored (a consent banner) is
+  closed by a seed: `src/config/harness.ts` (`export const harness = {
+  storage: { <key>: <record> } }`, `{now}` for the run's time) or
+  `--storage <key>=<value>`, written into every page's storage before its
+  scripts run, in captures, `proof`, `shot`, `probe` and `sheet`; a `--ref`
+  baseline is seeded from the tree, `compare` refuses two seeds
+  (`--mixed-seed` to see what one changes), and `--no-storage` is a first
+  visit.
 - A capture photographs a copy of the build and `public/`
   (`.parity/snapshots/<label>/`), taken before the browser starts: after
   its `snapshot:` line the tree is free to build and edit. Still build the

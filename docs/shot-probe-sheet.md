@@ -19,6 +19,19 @@ mid-flight; either way the images are touched only once the page has
 hydrated, so a dev server's console shows the site's errors, not the
 harness's.
 
+The page's storage is seeded like a capture's: the site's
+`src/config/harness.ts`, with `--storage <key>=<value>` and
+`--session-storage <key>=<value>` over it, written before any of the page's
+scripts runs ([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)),
+so a `shot` shows the page after a visitor's choice — the consent banner
+closed — and `--json` says what was seeded (`seed`). `--no-storage` is the
+first visit:
+
+```bash
+pnpm kit shot / --width 390 --no-storage                 # the banner, as a new visitor sees it
+pnpm kit probe / --select "[role=dialog]" --no-storage   # its box and stacking, measured
+```
+
 ## `shot` — a picture with its box
 
 ```bash
