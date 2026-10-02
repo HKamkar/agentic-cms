@@ -1,6 +1,6 @@
 {
   "name": "agentic-cms",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "A simple CMS whose editor is an AI agent: content as files in a Next.js repo, validated at build time; the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
   "license": "MIT",
   "type": "module",
@@ -31,6 +31,14 @@
     "./forms/server": {
       "types": "./dist/forms/server/index.d.ts",
       "default": "./dist/forms/server/index.js"
+    },
+    "./consent": {
+      "types": "./dist/consent/index.d.ts",
+      "default": "./dist/consent/index.js"
+    },
+    "./consent/google": {
+      "types": "./dist/consent/google/index.d.ts",
+      "default": "./dist/consent/google/index.js"
     },
     "./email": {
       "types": "./dist/email.d.ts",

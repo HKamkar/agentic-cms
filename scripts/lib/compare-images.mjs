@@ -188,7 +188,7 @@ export function judged(before, after, pages = []) {
   return [...new Set([...kept, ...before.filter((f) => named(f) && shots.has(shotOf(f)))])];
 }
 
-/** The report of two capture directories: one entry per file (with its printed line), the summary, the baseline the after capture names. */
+/** The report of two capture directories: one entry per file (with its printed line), the summary, the baseline the after capture names, each side's seed. */
 export async function compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages = [] }) {
   fs.rmSync(diffDir, { recursive: true, force: true });
   fs.mkdirSync(diffDir, { recursive: true });
@@ -208,5 +208,5 @@ export async function compareCapture(a, b, { before, after, diffDir, threshold, 
   summary.exit = files.length - summary.ok ? 1 : 0;
   const mb = meta(b);
   const geometry = (dir) => fs.readdirSync(dir).some((f) => f.endsWith(".sections.json"));
-  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, sampledOut: sampledOut.length ? sampledOut : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
+  return { before, after, scheme: mb.scheme ?? meta(a).scheme ?? null, threshold, thresholdMid, pages: pages.length ? pages : null, sampledOut: sampledOut.length ? sampledOut : null, baseline: mb.ref || mb.sha ? { ref: mb.ref ?? null, sha: mb.sha ?? null } : null, seed: { before: meta(a).seed ?? null, after: mb.seed ?? null }, geometry: { before: geometry(a), after: geometry(b) }, summary, files };
 }

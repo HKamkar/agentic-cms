@@ -4,6 +4,52 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.7.0] — 2026-10-02
+
+- Consent, provider-neutral and headless: `agentic-cms/consent` keeps a
+  visitor's choice in their browser (`{ analytics, at, version }` under a
+  policy's `storageKey`, asked again after `maxAgeDays` or when `version`
+  goes up), follows it across tabs, and gives a site's own banner its state
+  (`useConsent`, `useConsentDecision`, `openConsent`); a tag adapter follows
+  `currentDecision` and `onConsentChange`. `agentic-cms/consent/google` is
+  Google consent mode v2 behind it: `consentDefaultScript(policy)`, an
+  inline script near the top of `<body>` with every type denied, a stored
+  choice replayed and the `_ga` cookies deleted until analytics is granted,
+  and `GoogleTag`, which in basic mode (the default) loads nothing before a
+  grant and switches the tag off on a refusal, and in advanced mode loads at
+  once with cookieless pings; whatever set a change off, the update reaches
+  the dataLayer before the tag's config. Both entries load in a server
+  component and in plain Node; no new dependency. The example wires it,
+  off until `GOOGLE_TAG_ID` is set: `src/config/analytics.ts`, the layout,
+  `ui/ConsentBanner`, Cookie settings in the footer, and
+  `src/config/harness.ts` seeding the screenshot harness with a refused
+  choice ([docs/consent.md](docs/consent.md)). An example without the
+  variable is unchanged.
+- A visitor's choice, seeded: every browser the harness launches can start
+  with keys in the page's `localStorage` and `sessionStorage`, written
+  before any of the page's scripts runs (the first inline `<head>` script
+  included), so captures, shots and probes show a site after the choice —
+  a consent banner closed — instead of a first visit with the banner over
+  the page. The site's default is `src/config/harness.ts` (`export const
+  harness = { storage: { … }, sessionStorage: { … } }`, a string or any
+  JSON value per key), a file the app never imports; `--storage
+  <key>=<value>` and `--session-storage <key>=<value>` set a key over it
+  for one run and `--no-storage` leaves it out, on `visual-parity capture`
+  and `proof`, `shot`, `probe`, `sheet` and `icons audit` — on the build and
+  on the dev server alike, so a design round's demo route and the lab route
+  are photographed after the choice too. `{now}` in a value is the run's
+  ISO time and `{now:ms}` its epoch milliseconds, replaced once per run, so
+  a record checked against a maximum age never goes stale. A capture
+  records the seed as written in `meta.json` (`seed`), the shot cache keys
+  on it, a `--ref` baseline is seeded from the tree's file, `proof` passes
+  the flags to both sides, and `compare` refuses two captures seeded
+  differently (exit 2) unless `--mixed-seed`; `shot`, `probe`, `sheet` and
+  `icons audit` print the seed in their `--json`. A site without a seed
+  captures as before; a site that adopts one must **recapture baselines**.
+- `icons audit` leaves a design round's demo routes (`/<name>-demo`,
+  `/lab-demo`) out of its pages unless `--pages` names one, as a capture
+  does.
+
 ## [0.6.1] — 2026-09-27
 
 - Every ordinary form item, from config. Beside `text`, `email`, `tel`,

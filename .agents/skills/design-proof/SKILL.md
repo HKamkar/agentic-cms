@@ -100,7 +100,15 @@ decides whether `--motion` is part of the proof.
 - Other origins' scripts and beacons are held back on a build the harness
   serves (analytics, a chat widget); their images and fonts still load. A
   site whose look includes a third-party script's drawing (a chat bubble, a
-  consent banner) captures with `--third-party allow`, on both sides.
+  consent banner from another origin) captures with `--third-party allow`,
+  on both sides.
+- Every browser starts as a first visit. What the site shows until a choice
+  is stored (its own consent banner, fixed over the page) covers what it
+  sits on in every shot: seed the choice in `src/config/harness.ts`
+  (`export const harness = { storage: { <key>: <record> } }`, `{now}` where
+  the record has a time), which every capture, both sides of a proof, `shot`
+  and `probe` read; recapture the baselines once, since `compare` refuses an
+  unseeded one. `--no-storage` shows the banner itself, to prove it.
 - A baseline built for the wrong sha proves nothing: the sha is in
   `meta.json` and on the compare's first line.
 

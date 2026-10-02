@@ -8,10 +8,10 @@ const ROOT = path.resolve(import.meta.dirname, "../..");
 const NEXT = path.join(ROOT, "node_modules/next/dist/bin/next");
 const freePort = () => new Promise((resolve) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => resolve(port)); }); });
 
-/** { url, stop }; rejects with the log's tail when the server exits or is not ready in two minutes. */
-export async function devServer(root = ROOT) {
+/** { url, stop }; `env` adds to the server's environment (a tag id, say). Rejects with the log's tail when the server exits or is not ready in two minutes. */
+export async function devServer(root = ROOT, { env = {} } = {}) {
   const port = await freePort();
-  const child = spawn(process.execPath, [NEXT, "dev", "-p", String(port), "-H", "127.0.0.1"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], detached: true });
+  const child = spawn(process.execPath, [NEXT, "dev", "-p", String(port), "-H", "127.0.0.1"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], detached: true, env: { ...process.env, ...env } });
   let log = "";
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`next dev not ready in 120s:\n${log.slice(-800)}`)), 120000);

@@ -39,9 +39,10 @@ for its shots — how many page-widths (or states) it took, their total and
 mean, and the five slowest, which is where to look when a run is slow.
 Every capture records its mode, scheme and, for a baseline, the ref
 and sha in `meta.json` — for the site's own build also the checkout it was
-(`tree: { head, dirty }`, `null` outside git); `compare` refuses two
-captures of different schemes and prints the baseline it is judging
-against.
+(`tree: { head, dirty }`, `null` outside git) and the storage it was
+seeded with (`seed`, [below](#a-visitors-choice-seeded)); `compare` refuses
+two captures of different schemes or seeded differently, and prints the
+baseline it is judging against.
 
 ## Where the build comes from
 
@@ -94,7 +95,78 @@ third-party script draws on the page — a chat bubble, a consent banner
 loaded from another origin — loses it from its shots; `--third-party allow`
 keeps it (a capture records the setting in `meta.json`, and the shot cache
 never mixes the two). A `--url` site is served by its own server and
-captured as it serves itself.
+captured as it serves itself. A banner the site draws itself until a choice
+is stored is the seed's to close, below.
+
+## A visitor's choice, seeded
+
+Every browser the harness launches starts with empty storage: a first
+visit. A site that renders something until a choice is in `localStorage` —
+a consent banner fixed over the page, a notice, a "what's new"
+card — shows it on every full-page shot and in every `--states` crop it
+overlaps, and whatever lies under it can no longer be proved. A seed writes
+the choice in first: keys and values put into the page's `localStorage`
+(and `sessionStorage`) before any of its own scripts runs, the first inline
+`<head>` script included, through Playwright's `addInitScript`.
+
+The site's default is `src/config/harness.ts`, a file only the harness
+reads — the app never imports it, so it never ships and never changes a
+build file:
+
+```ts
+// The record the consent banner leaves once a visitor has chosen, so the
+// captures show the page after the choice; `shot --no-storage` shows the banner.
+export const harness = {
+  storage: { consent: { analytics: "denied", at: "{now}", version: 1 } },
+};
+```
+
+`storage` is `localStorage`, `sessionStorage` the other; a value is a
+string, stored as it is, or any JSON value, stored as its JSON. The commands
+that take the seed's flags read it — `visual-parity capture` and `proof`,
+`shot`, `probe`, `sheet`, `icons audit` — from the directory they run in,
+against the build or a served site alike: a design round's demo route or
+the lab route on the dev server (`shot /<name>-demo --url …`) starts from
+the same storage as a capture. Flags change it
+for one run: `--storage <key>=<value>` and `--session-storage
+<key>=<value>` (each repeatable, split at the first `=`) set their key over
+the file's, key by key; `--no-storage` leaves the file out, so only the
+flags given are seeded — `shot / --no-storage` is the first visit, banner
+and all. A file of another shape, an unknown key in it, or a pair without
+its `=` exits 2 naming what to fix.
+
+A real record expires — its time is checked against a maximum age — so a
+fixed value goes stale. `{now}` in a value is replaced with the ISO time of
+the run (`2026-10-02T12:00:00.000Z`) and `{now:ms}` with its epoch
+milliseconds; once per run, so every page and every browser of a capture
+gets the same record. Inside an object value a token stays inside its
+quotes; a record that wants the milliseconds as a bare number is written as
+a string (`'{"at":{now:ms}}'`).
+
+The seed is written at the start of every document, in the top frame only,
+over whatever the page before it stored: every page of a run starts from the
+same storage, and another origin's frame is left alone.
+
+Both sides of a compare must be seeded alike, and are:
+
+- a capture records the seed in `meta.json` (and so `capture.json`) as
+  written — `seed: { storage, sessionStorage, at }`, `{now}` unreplaced and
+  the time it stood for beside it — and an unseeded capture records none;
+- the shot cache's settings include the seed, so a seeded and an unseeded
+  shot never stand in for each other, while `{now}` moving on does not stop
+  a shot being reused;
+- a `--ref` baseline is captured by the tree's harness, which reads the
+  tree's `src/config/harness.ts`, never the ref's: the baseline is seeded
+  like the tree, even when the ref predates the file; `proof` passes its
+  `--storage`, `--session-storage` and `--no-storage` to both sides;
+- `compare` refuses two captures seeded differently (exit 2), like two
+  schemes, naming both seeds; it compares the templates, so two runs at
+  different times are alike. `--mixed-seed` compares them all the same — to
+  see what a seed itself changes — with a `seed:` line saying the captures
+  differ in it; a seeded compare prints `seed: … on both`.
+
+A site that adopts a seed recaptures its baselines: an old capture is
+unseeded and the compare refuses it.
 
 ## Unchanged shots are reused
 
@@ -113,8 +185,8 @@ and `capture.json` has `reused: { shots, of }`.
 
 Only the build is an input: a third-party script or image, an analytics
 beacon, is not; nor is a router prefetch, which shows nothing. A change to
-the harness's own sources, the browser, the scheme, the motion settings or
-(for `--states`) the site's config starts from nothing, and a `--url`
+the harness's own sources, the browser, the scheme, the motion settings, the
+seed or (for `--states`) the site's config starts from nothing, and a `--url`
 capture reuses nothing. `--fresh` takes every shot again and refreshes the
 cache: to prove a frame deterministic, or whenever a copied shot is in
 doubt. Four entries are kept per page-width, the least recently used going
@@ -208,6 +280,7 @@ One line per file, sorted:
 
 ```
 baseline: develop 55ab6af3d59bee8ce99b1e572c2bbf5ba360f106
+seed: storage consent={"analytics":"denied","at":"{now}","version":1}, on both
 ok       home@1440.png                                                          0.000% (0 px)
 CHANGED  about@390.png                                                          0.412% (1234 px) rows 2017-2060
 CHANGED  home@1440--s02-500.png                                                18.100% (…)  mid-flight

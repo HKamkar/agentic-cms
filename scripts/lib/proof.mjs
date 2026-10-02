@@ -11,6 +11,14 @@ export const PASSES = { static: [], motion: ["--motion"], states: ["--states"] }
 /** The passes a proof runs: static, then motion and states when asked (or all). */
 export const passesOf = ({ motion = false, states = false, all = false } = {}) => ["static", ...(motion || all ? ["motion"] : []), ...(states || all ? ["states"] : [])];
 
+/** The proof's own flags as a capture's arguments: a boolean as itself, a value after its flag, a repeatable flag once per value; [] for one not given. */
+export const forwarded = (flags, names) => names.flatMap((name) => {
+  const value = flags[name];
+  if (value === undefined || value === false) return [];
+  if (value === true) return [`--${name}`];
+  return (Array.isArray(value) ? value : [value]).flatMap((v) => [`--${name}`, String(v)]);
+});
+
 /** A pass's capture label: <label>-before, <label>-after-motion, … */
 export const labelOf = (label, side, pass) => `${label}-${side}${pass === "static" ? "" : `-${pass}`}`;
 

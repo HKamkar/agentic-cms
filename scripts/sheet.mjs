@@ -11,6 +11,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { serveStatic } from "./lib/browser.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 // lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
 const { buildStylesheets, readSheetSpec, renderSheet, sheetHtml } = await import("./lib/sheet.mjs");
@@ -27,14 +28,15 @@ try {
   process.exit(2);
 }
 
+const seed = await seedOrExit(flags, "sheet");
 // Without a served site the build (or public/ alone) is served, so img: cells and the stylesheets resolve.
 const server = flags.url ? null : await serveStatic({ root, requireBuild: false });
 const base = (flags.url ?? server.url).replace(/\/$/, "");
 const outFile = path.resolve(root, flags.out ?? path.join(".parity/sheets", `${spec.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.png`));
 try {
-  const { width, height } = await renderSheet(spec, { root, base, out: outFile, scale: flags.scale, scheme: flags.scheme, width: flags.width, css });
+  const { width, height } = await renderSheet(spec, { root, base, out: outFile, scale: flags.scale, scheme: flags.scheme, width: flags.width, css, seed });
   const rows = spec.rows.map((row, i) => ({ id: String.fromCharCode(65 + i), label: row.label ?? "", cells: row.cells.length }));
   const file = relative(root, outFile);
   const summary = `${file}  ${rows.map((r) => `${r.id} ${r.label} (${r.cells})`).join(", ")}`;
-  if (flags.json) { console.error(summary); console.log(JSON.stringify({ file, name: spec.name, rows, width, height }, null, 1)); } else console.log(summary);
+  if (flags.json) { console.error(summary); console.log(JSON.stringify({ file, name: spec.name, rows, width, height, seed: seedRecord(seed) }, null, 1)); } else console.log(summary);
 } finally { server?.close(); }

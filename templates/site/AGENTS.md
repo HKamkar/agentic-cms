@@ -38,6 +38,11 @@ a patch under `node_modules`.
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
   not change without redirects.
+- Analytics loads only behind the visitor's consent: `agentic-cms/consent`
+  and `agentic-cms/consent/google` (`GoogleTag`, the consent default as an
+  inline script near the top of `<body>`), configured in
+  `src/config/analytics.ts`; the banner is the site's design
+  (`node_modules/agentic-cms/docs/consent.md`).
 - SEO is a contract, not a checklist: the page file's `seo` block feeds
   the head, its `jsonld` block the structured data; `pnpm build` audits every
   prerendered page (`agentic-cms seo`) and fails on a missing field. Never
@@ -146,7 +151,12 @@ first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast
 (`pnpm kit visual-parity clean` keeps the newest captures, `--dry-run`
-first).
+first); whatever the site shows until a visitor's choice is stored (a
+consent banner) is closed in every capture, shot, probe and icon audit,
+demo and lab routes on the dev server included, by the seed in
+`src/config/harness.ts` (`export const harness = { storage: { <key>:
+<record> } }`, `{now}` for the time), applied to both sides of a proof,
+and `--no-storage` shows it again.
 
 ## Process
 

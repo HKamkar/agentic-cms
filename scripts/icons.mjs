@@ -12,12 +12,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, addStyle, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, addStyle, capturePages, fontsReady, launch, listPages, revealed, serveStatic, settle, withPage } from "./lib/browser.mjs";
 import { AUDIT_PAGE, auditToSheet, byFile } from "./lib/icons-audit.mjs";
 import { renderFamily } from "./lib/icons-family.mjs";
 import { updateIcons } from "./lib/icons-source.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 // lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
 const { renderSheet } = await import("./lib/sheet.mjs");
@@ -72,11 +73,12 @@ if (subcommand === "add" || subcommand === "remove") {
   else if (action === "publish") console.log(report.published.map((p) => `icons round publish: ${p.role}=${p.letter} → ${p.files.join(", ")}`).join("\n"));
   else console.log(`${report.dryRun ? "would remove" : "removed"}: ${report.removed.join(", ")}${report.kept.length ? `; kept: ${report.kept.join(", ")}` : ""}`);
 } else {
-  // audit
+  // audit: the pages a visitor sees after a choice (the seed, as a capture has it), the demo routes only when named
+  const seed = await seedOrExit(flags, "icons audit");
   const server = flags.url ? null : await serveStatic({ root });
   const base = (flags.url ?? server.url).replace(/\/$/, "");
-  const pages = flags.pages ? flags.pages.split(",").filter(Boolean) : listPages(root).filter((r) => r !== "/_not-found");
-  const { context, close } = await launch({ scheme: flags.scheme, width: flags.width });
+  const pages = flags.pages ? flags.pages.split(",").filter(Boolean) : capturePages(listPages(root)).filter((r) => r !== "/_not-found");
+  const { context, close } = await launch({ scheme: flags.scheme, width: flags.width, seed });
   const icons = [];
   try {
     for (const route of pages) {
@@ -93,12 +95,12 @@ if (subcommand === "add" || subcommand === "remove") {
       if (!flags.json) process.stdout.write(`${route} `);
     }
   } finally { await close(); }
-  const report = { pages, count: icons.length, icons, files: byFile(icons) };
+  const report = { pages, count: icons.length, icons, files: byFile(icons), seed: seedRecord(seed) };
   const outFile = path.resolve(root, flags.out ?? ".parity/icons/audit.png");
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
   if (icons.length) {
     const server2 = flags.url ? null : await serveStatic({ root, requireBuild: false });
-    try { await renderSheet(auditToSheet(report, { background: flags.background, color: flags.color }), { root, base: (flags.url ?? server2.url).replace(/\/$/, ""), out: outFile, scale: 2, scheme: flags.scheme }); } finally { server2?.close(); }
+    try { await renderSheet(auditToSheet(report, { background: flags.background, color: flags.color }), { root, base: (flags.url ?? server2.url).replace(/\/$/, ""), out: outFile, scale: 2, scheme: flags.scheme, seed }); } finally { server2?.close(); }
     report.sheet = relative(root, outFile);
   }
   server?.close();

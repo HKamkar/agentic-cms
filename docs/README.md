@@ -27,6 +27,10 @@ rules for an agent working on the code.
   notes, groups, a prefill from the URL) and forms that deliver: the
   endpoint route, where submissions go (a webhook, a provider's API as a sink), the environment
   per host, receiving and verifying the webhook, spam and limits.
+- [consent.md](consent.md) — the visitor's consent choice and the Google tag
+  behind it: the record and its policy, the hooks a banner is built on,
+  consent mode v2 (basic and advanced), GA4's own settings, what the
+  cookie notice says.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
 - [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
