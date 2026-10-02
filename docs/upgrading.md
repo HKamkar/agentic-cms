@@ -28,8 +28,10 @@ changes for a site without one: no seed, no init script, the same shots.
   banner of its own, fixed over the page) adds `src/config/harness.ts`
   with the record a choice leaves (`{now}` where it carries a time) and
   **recaptures its baselines**: every capture is then seeded, and `compare`
-  refuses a seeded capture against an unseeded one. `shot`, `probe` and
-  `sheet` are seeded too; `--no-storage` shows the first visit.
+  refuses a seeded capture against an unseeded one. `shot`, `probe`,
+  `sheet` and `icons audit` are seeded too, on the build and on the dev
+  server (a demo route, the lab route); `--no-storage` shows the first
+  visit.
 - **The site's `AGENTS.md`** takes the template's new clause by hand (the
   harness section: the seed, both sides, `--no-storage`); `--agent-files`
   brings the `design-proof` skill's.

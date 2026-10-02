@@ -24,8 +24,9 @@ The page's storage is seeded like a capture's: the site's
 `--session-storage <key>=<value>` over it, written before any of the page's
 scripts runs ([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)),
 so a `shot` shows the page after a visitor's choice — the consent banner
-closed — and `--json` says what was seeded (`seed`). `--no-storage` is the
-first visit:
+closed — on the build and on the dev server alike, a design round's demo
+route and the lab route included; `--json` says what was seeded (`seed`).
+`--no-storage` is the first visit:
 
 ```bash
 pnpm kit shot / --width 390 --no-storage                 # the banner, as a new visitor sees it

@@ -32,7 +32,10 @@ The page's section component and its module (`src/components/<page>/`), and
 
    Against the dev server while iterating: `--url http://localhost:8000`
    (use the hostname the dev server allows; a page that does not hydrate
-   measures un-hydrated markup).
+   measures un-hydrated markup). The page starts seeded from the site's
+   `src/config/harness.ts`, so what it shows until a visitor's choice is
+   stored (a consent banner) is closed and covers nothing you measure;
+   `--no-storage` when the claim is about that banner itself.
 3. **Read the numbers against the claim**:
    - "Unaligned" / "a gap": the boxes of the element and its neighbour, in
      `pageBox`; the difference is the fix, in the spacing scale.

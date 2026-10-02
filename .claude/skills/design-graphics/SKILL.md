@@ -96,7 +96,8 @@ already stated. For anything that moves, `references/svg-motion.md`.
    And `pnpm kit lab route` then `/lab-demo` on the dev server: the same
    scenes on the site's own grounds — its page, its cards, its panels, as
    the route's `GROUNDS` list says — inside the real chrome, each animated
-   scene with a timeline of its own. When animated candidates are judged
+   scene with a timeline of its own; `pnpm kit shot /lab-demo --url <dev
+   server>` photographs it seeded, with the site's banner closed. When animated candidates are judged
    on a design round's demo route instead, they get the same timeline
    there — `<LabStudy file>` for a file, `<LabTimeline>` around a component
    (`docs/lab.md` § Inspecting motion) — never an `<img>` of the animated

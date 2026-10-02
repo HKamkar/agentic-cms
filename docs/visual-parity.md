@@ -124,7 +124,10 @@ export const harness = {
 `storage` is `localStorage`, `sessionStorage` the other; a value is a
 string, stored as it is, or any JSON value, stored as its JSON. The commands
 that take the seed's flags read it — `visual-parity capture` and `proof`,
-`shot`, `probe`, `sheet` — from the directory they run in. Flags change it
+`shot`, `probe`, `sheet`, `icons audit` — from the directory they run in,
+against the build or a served site alike: a design round's demo route or
+the lab route on the dev server (`shot /<name>-demo --url …`) starts from
+the same storage as a capture. Flags change it
 for one run: `--storage <key>=<value>` and `--session-storage
 <key>=<value>` (each repeatable, split at the first `=`) set their key over
 the file's, key by key; `--no-storage` leaves the file out, so only the

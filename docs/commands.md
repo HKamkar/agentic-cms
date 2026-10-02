@@ -637,28 +637,32 @@ agentic-cms icons family src/config/icon-family.yaml --check
 Every icon on the built pages (an <img> up to --max px, an inline <svg>) with its size, colour, section, heading and the copy beside it — as JSON and as a sheet, one row per page.
 
 ```bash
-agentic-cms icons audit [--url <base>] [--pages /a,/b] [--max 96] [--out .parity/icons/audit.png] [--json]
+agentic-cms icons audit [--url <base>] [--pages /a,/b] [--max 96] [--out .parity/icons/audit.png] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage] [--json]
 ```
 
 | flag | what |
 |---|---|
 | `--url <base>` | a served site instead of the build under .next |
-| `--pages /a,/b` | only these routes (default: every page of the build but the 404) |
+| `--pages /a,/b` | only these routes (default: every page of the build but the 404 and the demo routes, /<name>-demo, which are measured only when named here) |
 | `--max <n>` | the largest rendered size counted as an icon, in px (default `96`) |
 | `--width <n>` | viewport width the pages are measured at (default `1440`) |
 | `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
 | `--background <colour>` | the sheet's background (default the page's) |
 | `--color <colour>` | the sheet's ink |
 | `--out <png>` | the sheet; the JSON goes beside it (default .parity/icons/audit.png) |
+| `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
+| `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
+| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print the report |
 
-Exit: `0` written; `2` no build, or no browser.
+Exit: `0` written; `2` no build, no browser, or a seed that does not read.
 
-`--json` prints `{ pages, count, icons: [{ page, kind, src, width, height, renderedWidth, renderedHeight, color, alt, section, heading, copy, selector }], files: { src: { uses, pages } }, sheet }`.
+`--json` prints `{ pages, count, icons: [{ page, kind, src, width, height, renderedWidth, renderedHeight, color, alt, section, heading, copy, selector }], files: { src: { uses, pages } }, sheet, seed: { storage, sessionStorage, at } | null }`.
 
 ```bash
 agentic-cms icons audit                    # after next build; .parity/icons/audit.png and .json
 agentic-cms icons audit --pages /,/about --json
+agentic-cms icons audit --no-storage        # a first visit: a consent banner's icons too
 ```
 
 #### `icons round`

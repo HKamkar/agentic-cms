@@ -304,7 +304,8 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   closed by a seed: `src/config/harness.ts` (`export const harness = {
   storage: { <key>: <record> } }`, `{now}` for the run's time) or
   `--storage <key>=<value>`, written into every page's storage before its
-  scripts run, in captures, `proof`, `shot`, `probe` and `sheet`; a `--ref`
+  scripts run, in captures, `proof`, `shot`, `probe`, `sheet` and
+  `icons audit`, on the build and on the dev server's demo routes; a `--ref`
   baseline is seeded from the tree, `compare` refuses two seeds
   (`--mixed-seed` to see what one changes), and `--no-storage` is a first
   visit.

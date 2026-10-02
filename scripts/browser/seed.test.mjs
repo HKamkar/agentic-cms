@@ -2,7 +2,8 @@
 // banner page: the record is there before the first inline <head> script reads it, a capture records the
 // template and seeds a --ref-like second run alike, a compare refuses two seeds unless asked and then shows
 // the difference where the banner is and nowhere else, the site's src/config/harness.ts is the default and
-// --no-storage drops it, and shot and probe are seeded like a capture.
+// --no-storage drops it, shot, probe, sheet and the icon audit are seeded like a capture, and the audit
+// leaves a demo route out unless it is named.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -120,5 +121,22 @@ test("probe, shot and sheet are seeded like a capture and say so in their JSON; 
     const sheet = run(root, ["sheet", "disc.yaml", "--json"]);
     assert.equal(sheet.status, 0, sheet.stderr);
     assert.deepEqual(JSON.parse(sheet.stdout).seed.storage, { consent: CONSENT });
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("icons audit inventories the pages after the choice: the seed hides the banner's icon, a first visit counts it; a demo route only when named", { skip }, () => {
+  const root = bannerSite();
+  addPage(root, "/hero-demo", CONSENT_PAGE);
+  const audit = (...args) => { const r = run(root, ["icons", "audit", "--json", ...args]); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
+  const on = (report, page) => report.icons.filter((icon) => icon.page === page);
+  try {
+    const seeded = audit("--storage", `consent=${CONSENT}`);
+    assert.ok(seeded.pages.includes("/consent") && !seeded.pages.includes("/hero-demo"), seeded.pages.join(" "));
+    assert.deepEqual(on(seeded, "/consent"), [], "the banner is closed, its icon not an icon of the page");
+    assert.deepEqual(seeded.seed.storage, { consent: CONSENT });
+    const first = audit("--pages", "/consent,/hero-demo");
+    assert.equal(first.seed, null);
+    assert.equal(on(first, "/consent").length, 1, "a first visit: the banner's close icon");
+    assert.equal(on(first, "/hero-demo").length, 1, "a demo route, named");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
