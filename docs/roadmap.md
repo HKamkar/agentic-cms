@@ -374,9 +374,12 @@ settles.
   a stale server on the dev port); `agentic-cms/styles/reveals.css` (the Fx
   preset start states, importable); `sheet` cells rendered from a route
   (`route: "/#footer"`); the `editorial` plugin mirrored as project skills if
-  wanted. Consent mode stays a site's, and so does the form provider: the
-  kit's part, the endpoint route and its sinks that name no provider,
-  landed in 0.6.0 ([forms.md](forms.md)).
+  wanted. The form provider stays a site's: the kit's part, the endpoint
+  route and its sinks that name no provider, landed in 0.6.0
+  ([forms.md](forms.md)). Consent, once a site's alone, landed in 0.7.0
+  as the package's headless part — the stored choice, the hooks, Google
+  consent mode v2 — with the banner still the site's design
+  ([consent.md](consent.md)).
 - After the lab (`agentic-cms lab`, 0.5.0): three.js scenes as a second
   scene kind (`.parity/lab/<name>.js` modules on a pinned CDN import map —
   still no dependency — `build(ctx) → { scene, camera, update(t) }`, rasters

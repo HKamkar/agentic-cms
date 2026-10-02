@@ -348,6 +348,11 @@ definition returned from `createKit`'s `collections` option
 (every ordinary field type, notes and groups, a prefill from the URL); it
 delivers by `mailto`, or through the site's one dynamic route to a
 webhook or a provider of the site's choosing ([docs/forms.md](docs/forms.md)).
+Analytics waits for the visitor's consent: `agentic-cms/consent` keeps the
+choice in their browser and `agentic-cms/consent/google` loads the Google
+tag only once they allow it, with consent mode v2 denying everything until
+then; the banner is the site's own design, and the example's is off until
+`GOOGLE_TAG_ID` is set ([docs/consent.md](docs/consent.md)).
 ## Upgrading
 
 A site pins the package by tag. An upgrade is the new tag, `pnpm install`,
@@ -432,17 +437,18 @@ content/editorial/           calendar.md, backlog.md, and workshop.yaml when mar
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
 .claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
 templates/site/              what init writes into a site: AGENTS.md, the rules, the config; templates/lab-demo/ the lab's route
-src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), ix/, components/, lab/, email, cx, createKit
+src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
-src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, the form primitives
+src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, ConsentBanner, the form primitives
 src/config/site.ts           the brand, URLs, nav, footer, calls to action
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
+src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy; harness.ts, the screenshot harness's seed
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
 bin/, scripts/               the command line: lint, check, status, docs, seo, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, forms.md, icons.md, lab.md, email.md, roadmap.md
+docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
 ```
 
 MIT licensed.

@@ -32,6 +32,14 @@
       "types": "./dist/forms/server/index.d.ts",
       "default": "./dist/forms/server/index.js"
     },
+    "./consent": {
+      "types": "./dist/consent/index.d.ts",
+      "default": "./dist/consent/index.js"
+    },
+    "./consent/google": {
+      "types": "./dist/consent/google/index.d.ts",
+      "default": "./dist/consent/google/index.js"
+    },
     "./email": {
       "types": "./dist/email.d.ts",
       "default": "./dist/email.js"

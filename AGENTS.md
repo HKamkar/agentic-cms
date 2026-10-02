@@ -357,6 +357,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 - Swappable services (a form backend, analytics, a content source) sit behind a
   TypeScript interface plus a factory in `src/lib/` that picks the implementation
   from config. Callers depend on the interface only.
+- A tag that needs consent loads only through `agentic-cms/consent`: its
+  adapter follows `currentDecision` / `onConsentChange` (`GoogleTag` is the
+  Google one), the consent default is an inline script near the top of
+  `<body>`, and the banner is the site's design (`docs/consent.md`).
 - One implementation per shared UI element. The catalogue is
   `src/components/README.md` — read it before writing markup, build pages from
   it, and add every new shared component to it in the same commit. Shared

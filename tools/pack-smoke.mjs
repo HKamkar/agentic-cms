@@ -7,7 +7,8 @@
 // field-table check, next build and the SEO audit — through the installed
 // command line; then checks the agent files are as shipped, the installed
 // entries a build does not run (the inline loop, the form endpoint's server
-// half) and the tarball's size. Exit 1 on the first failure.
+// half, the consent entries in plain Node) and the tarball's size. Exit 1 on
+// the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -71,6 +72,14 @@ const response = await handle(new Request("https://acme.example/api/forms/f", { 
 console.log(response.status, received.length, received[0]?.version);`;
 const formsServer = spawnSync(process.execPath, ["--input-type=module", "-e", FORMS_SMOKE], { cwd: site, encoding: "utf8" });
 if (formsServer.status !== 0 || formsServer.stdout.trim() !== "200 1 1") { console.error(`pack-smoke: agentic-cms/forms/server from the tarball answered ${formsServer.status}: ${(formsServer.stderr || formsServer.stdout).trim()}`); process.exit(1); }
+// The consent entries load in plain Node, as a site's own tests import them: a stored choice read, the default script built, the hooks and the tag exported — nothing of next/script or JSX on the way.
+const CONSENT_SMOKE = `const consent = await import("agentic-cms/consent");
+const google = await import("agentic-cms/consent/google");
+const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
+const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date().toISOString(), version: 1 }) }, policy);
+console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
+const consentEntries = spawnSync(process.execPath, ["--input-type=module", "-e", CONSENT_SMOKE], { cwd: site, encoding: "utf8" });
+if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") { console.error(`pack-smoke: agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`); process.exit(1); }
 console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
 if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
 else fs.rmSync(scratch, { recursive: true, force: true });

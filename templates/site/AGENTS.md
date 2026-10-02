@@ -38,6 +38,11 @@ a patch under `node_modules`.
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
   not change without redirects.
+- Analytics loads only behind the visitor's consent: `agentic-cms/consent`
+  and `agentic-cms/consent/google` (`GoogleTag`, the consent default as an
+  inline script near the top of `<body>`), configured in
+  `src/config/analytics.ts`; the banner is the site's design
+  (`node_modules/agentic-cms/docs/consent.md`).
 - SEO is a contract, not a checklist: the page file's `seo` block feeds
   the head, its `jsonld` block the structured data; `pnpm build` audits every
   prerendered page (`agentic-cms seo`) and fails on a missing field. Never

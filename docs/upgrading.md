@@ -18,11 +18,13 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.6.1 → Unreleased
+## 0.6.1 → 0.7.0
 
-A visitor's choice seeded into every page's storage before its scripts run
-([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)). Nothing
-changes for a site without one: no seed, no init script, the same shots.
+Two things: a visitor's choice seeded into every page's storage before its
+scripts run ([visual-parity.md](visual-parity.md#a-visitors-choice-seeded)),
+and consent in the package, `agentic-cms/consent` and its Google adapter
+([consent.md](consent.md)). Nothing changes for a site that uses neither:
+no seed, no init script, the same shots.
 
 - **A site that shows something until a choice is stored** (a consent
   banner of its own, fixed over the page) adds `src/config/harness.ts`
@@ -32,9 +34,33 @@ changes for a site without one: no seed, no init script, the same shots.
   `sheet` and `icons audit` are seeded too, on the build and on the dev
   server (a demo route, the lab route); `--no-storage` shows the first
   visit.
-- **The site's `AGENTS.md`** takes the template's new clause by hand (the
-  harness section: the seed, both sides, `--no-storage`); `--agent-files`
-  brings the `design-proof` skill's.
+- **The site's `AGENTS.md`** takes the template's new clauses by hand (the
+  harness section: the seed, both sides, `--no-storage`; the intro bullets:
+  consent is the package's, the banner the site's); `--agent-files` brings
+  the `design-proof` skill's.
+- **A site with a consent implementation of its own** can replace it with
+  the package's, its stored choices kept: the record is `{ analytics, at,
+  version }`, so the same `storageKey` and `version` in the policy read
+  every choice already stored.
+  - The default: `consentDefaultScript(policy)` as a plain inline
+    `<script>` near the top of `<body>` — not `next/script` with
+    `beforeInteractive`, which Next's bootstrap can miss when its chunk
+    arrives before the page's stylesheet (consent.md says why).
+  - The tag: `<GoogleTag tagId policy />` (basic mode) in place of a
+    component that mounted Google's own; the package puts the tag on the
+    page itself and makes the same requests, so `@next/third-parties` can
+    go if nothing else uses it.
+  - The banner keeps its design and takes its state from
+    `useConsent(policy)`; a settings button calls `openConsent()`.
+  - Prove it with the site's own consent tests (the default script run in
+    `node:vm` against `readChoice`) and a production check: nothing of
+    Google's before a choice, the tag after Allow, nothing after Decline, a
+    returning visitor's choice before the tag's config.
+- **The example's new files reach a site only through `init`**: a site
+  that wants consent and has none copies the pattern from
+  [consent.md](consent.md) — `src/config/analytics.ts`, the three lines of
+  the layout, a banner of its own design — and adds `src/config/harness.ts`
+  if it has none, then **recaptures its baselines**.
 
 ## 0.6.0 → 0.6.1
 
