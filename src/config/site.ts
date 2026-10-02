@@ -58,3 +58,19 @@ export const site = {
     ],
   },
 } as const satisfies SiteConfig;
+
+/**
+ * The consent banner's copy (ui/ConsentBanner; the mechanics are
+ * agentic-cms/consent and src/config/analytics.ts). The banner shows only
+ * when a Google tag id is set, and says what it asks: the tag, the cookies,
+ * what declining means, where to change the answer — `settings`, the label of
+ * the footer button that opens the banner again. Decline and Allow are equal
+ * by rule. Raise analytics.consent.version when what this asks changes.
+ */
+export const consentBanner = {
+  title: "Analytics cookies",
+  text: "May we measure visits with Google Analytics? It sets cookies on your device. Decline, and nothing about your visit is sent to Google. Change your answer at any time with Cookie settings, at the bottom of every page.",
+  decline: "Decline",
+  allow: "Allow",
+  settings: "Cookie settings",
+} as const;

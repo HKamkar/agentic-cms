@@ -230,7 +230,8 @@ test("a seed reaches the design routes on the dev server: /hero-demo (demo new) 
       const seeded = await probe(server.url, route, "--storage", "theme=dark");
       assert.equal(seeded.status, 0, seeded.stderr);
       const out = JSON.parse(seeded.stdout);
-      assert.deepEqual(out.seed.storage, { theme: "dark" });
+      assert.equal(out.seed.storage.theme, "dark");
+      assert.match(out.seed.storage.consent, /"analytics":"denied"/, "the example's own seed (src/config/harness.ts) under the flag");
       assert.equal(out.elements[0].computed["color-scheme"], "dark", `${route}: the stored theme applied before the first paint`);
       const first = await probe(server.url, route, "--no-storage");
       assert.equal(first.status, 0, first.stderr);

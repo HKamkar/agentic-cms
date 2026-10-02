@@ -1,5 +1,7 @@
 import { Container } from "./Container";
+import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
+import { analytics } from "@/config/analytics";
 import { site } from "@/config/site";
 
 const columnTitle = "font-label uppercase";
@@ -19,7 +21,7 @@ function LinkColumn({ title, links }: { title: string; links: readonly { href: s
   );
 }
 
-/** The site footer: who this is, where to write, and the two link columns, in one box. */
+/** The site footer: who this is, where to write, the two link columns and, when a tag asks for consent, Cookie settings, in one box. */
 export function Footer() {
   return (
     <footer className="py-section">
@@ -45,6 +47,7 @@ export function Footer() {
           <p className="text-muted lg:col-span-3">
             © {new Date().getFullYear()} {site.name}
           </p>
+          {analytics.tagId && <CookieSettingsButton className="justify-self-start underline lg:col-span-3" />}
         </div>
       </Container>
     </footer>
