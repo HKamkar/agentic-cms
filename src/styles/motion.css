@@ -33,3 +33,32 @@
   .ix-main-init--growIn { opacity: 0; transform: scale(0.75); }
   .ix-main-init--fadeIn { opacity: 0; }
 }
+
+/*
+ * The intro: an Fx with `intro` (a hero's copy) plays its first entrance by
+ * CSS from the first frame instead of holding a start state until the
+ * scripts run. Fx writes its numbers on the element (--ix-delay,
+ * --ix-duration, --ix-distance), the preset's class picks the start pose,
+ * and the curve is ease("outQuart"). Under reduced motion the element shows
+ * at once; the replays are Motion's. The fill is backwards only: the start
+ * pose holds through the delay, and a finished entrance lets go of the
+ * element — with `both` it stayed attached at rest and Chromium kept the
+ * text on a layer of its own, its antialiasing unlike the page's.
+ */
+.ix-intro { animation: ix-intro var(--ix-duration, 1000ms) cubic-bezier(0.165, 0.84, 0.44, 1) var(--ix-delay, 0ms) backwards; }
+.ix-intro--slideInBottom { --ix-from: translate3d(0, var(--ix-distance, 100px), 0); }
+.ix-intro--slideInTop { --ix-from: translate3d(0, calc(-1 * var(--ix-distance, 100px)), 0); }
+.ix-intro--slideInLeft { --ix-from: translate3d(calc(-1 * var(--ix-distance, 100px)), 0, 0); }
+.ix-intro--slideInRight { --ix-from: translate3d(var(--ix-distance, 100px), 0, 0); }
+.ix-intro--slideInTopLeft { --ix-from: translate3d(calc(-1 * var(--ix-distance, 100px)), calc(-1 * var(--ix-distance, 100px)), 0); }
+.ix-intro--slideInTopRight { --ix-from: translate3d(var(--ix-distance, 100px), calc(-1 * var(--ix-distance, 100px)), 0); }
+.ix-intro--slideInBottomLeft { --ix-from: translate3d(calc(-1 * var(--ix-distance, 100px)), var(--ix-distance, 100px), 0); }
+.ix-intro--slideInBottomRight { --ix-from: translate3d(var(--ix-distance, 100px), var(--ix-distance, 100px), 0); }
+.ix-intro--growIn { --ix-from: scale(0.75); }
+.ix-intro--fadeIn { --ix-from: none; }
+@keyframes ix-intro {
+  from { opacity: 0; transform: var(--ix-from); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ix-intro { animation: none; }
+}

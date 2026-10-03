@@ -4,6 +4,23 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.7.1] — 2026-10-03
+
+- `Fx` takes `duration` (ms, default 1000) and `distance` (px, default
+  100), and `intro`: the first entrance is played by CSS from the first
+  frame, not after the scripts. A scroll reveal holds its start pose
+  (opacity 0) until the page has hydrated, which on a phone left a hero's
+  copy unseen for seconds; with `intro` the element carries `ix-intro
+  ix-intro--<preset>` and its numbers as custom properties (`--ix-delay`,
+  `--ix-duration`, `--ix-distance`), the new `ix-intro` block of
+  `src/styles/motion.css` plays it on the ease-out-quart curve, and the
+  replays (after the element has left the viewport entirely) are Motion's
+  as before. Every width; shown at once under reduced motion, and played
+  by its CSS alone without scripts. The keyframes fill backwards only, so
+  a finished entrance leaves the element as a Motion play does (a
+  lingering fill kept Chromium's text on a layer of its own, antialiased
+  unlike the page). Nothing changes for an `Fx` without the new props.
+
 ## [0.7.0] — 2026-10-02
 
 - Consent, provider-neutral and headless: `agentic-cms/consent` keeps a
