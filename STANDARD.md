@@ -335,7 +335,7 @@ The reveal library survives for a fork that wants reveals, whole and unused, in
 
 | Export | What it is |
 |---|---|
-| `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on each entry after the element has left the viewport entirely (never while it is still partly on screen): `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`. |
+| `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on each entry after the element has left the viewport entirely (never while it is still partly on screen): `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`; `duration` (ms) and `distance` (px) change the numbers. `intro` is for the first screen: the first entrance is played by CSS from the first frame (`ix-intro` in `motion.css`, the numbers passed as custom properties), so a hero's copy is never a blank start pose while the scripts load; the replays are Motion's, and it plays at every width. |
 | `OnView` | a sequence over several elements when the section enters: `build={(root) => [[ix("card-2"), { y: "0%" }, { duration: 0.5, ease: ease("ease") }], …]}`, Motion's `animate()` format, resolved inside the element. |
 | `ease(name)` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`. |
 | `ix(name)`, `useMainBreakpoint()`, `useReducedMotionPref()` | the selector for a `data-ix` target; the ≥ 992 px query (`null` until mounted); `prefers-reduced-motion`. |
@@ -343,7 +343,8 @@ The reveal library survives for a fork that wants reveals, whole and unused, in
 Adding a reveal is five lines: import `Fx`, wrap the element, pick the preset
 and the delay, add `mq="main"` if it is desktop-only, and check that the
 preset's start state exists in `motion.css` (`ix-init--*`, or `ix-main-init--*`
-inside the desktop media query for `mq="main"`). A section whose sequence
+inside the desktop media query for `mq="main"`; an `intro` needs the
+`ix-intro` block instead). A section whose sequence
 runs longer than two seconds after it enters the viewport says so on its
 element — `data-settle="2600"` — and the harness's settled motion frame waits
 for it (`docs/visual-parity.md`). The rules that come with it:
