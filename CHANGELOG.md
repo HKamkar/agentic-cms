@@ -4,6 +4,19 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## Unreleased
+
+- `agentic-cms critical-css`, a build gate for prerendered pages: each page
+  gets the rules its own HTML uses inlined, and its stylesheets load
+  without blocking the first paint (`media="print"` until they arrive, a
+  `<noscript>` fallback). Every `@font-face` of the page's stylesheets goes
+  in with its URLs resolved, and rules the built HTML cannot vouch for are
+  kept whole: Tailwind's arbitrary variants and the states a script sets
+  (`[data-…]`, `[aria-…]`). It rewrites `.next/server/app` and the
+  standalone package's copy, leaves a page it has done alone, and `--check`
+  fails naming a page that still waits for a stylesheet. Its place is right
+  after `next build` (docs/deploy.md). New dependency: `beasties`.
+
 ## [0.7.1] — 2026-10-03
 
 - `Fx` takes `duration` (ms, default 1000) and `distance` (px, default

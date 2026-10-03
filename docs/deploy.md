@@ -19,13 +19,52 @@ copies them in. `agentic-cms assemble` does that copy and then proves the
 package complete, as the last step of the build:
 
 ```json
-"build": "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
+"build": "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms critical-css && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
 "preview": "pnpm build && HOSTNAME=0.0.0.0 PORT=8000 node .next/standalone/server.js"
 ```
 
 (`guard-email` belongs there only on a site that keeps its address out of
-the HTML; [email.md](email.md).) What deploys is the `.next/standalone`
-folder, whose start command is `node server.js`.
+the HTML; [email.md](email.md); `critical-css` is the next section.) What
+deploys is the `.next/standalone` folder, whose start command is
+`node server.js`.
+
+## Critical CSS
+
+A prerendered page cannot paint until every stylesheet it links has
+arrived: the HTML, then the CSS, then the first frame. On a slow connection
+that round trip is most of the wait; Lighthouse lists it as render-blocking
+requests. `agentic-cms critical-css`, right after `next build`, removes it:
+
+- each page gets the rules its own HTML uses inlined in a `<style>`
+  ([Beasties](https://github.com/danielroe/beasties) does the inlining);
+- its stylesheets still load, whole and cached for the next page, but no
+  longer block the first paint (`media="print"` until they arrive, with a
+  `<noscript>` fallback for visitors without scripts);
+- every `@font-face` of the page's stylesheets goes in too, its URLs
+  resolved, because fonts named through CSS variables (next/font) give the
+  inliner no family to follow, and a first paint in a fallback font would
+  swap a moment later;
+- rules it cannot judge from the built HTML are kept whole: Tailwind's
+  arbitrary variants (`[&_svg]:size-4`), and states a script sets
+  afterwards (`[data-theme=dark]`, `[aria-expanded=true]`).
+
+It rewrites the pages in `.next/server/app` and the standalone package's
+copy, and leaves a page it has done alone, so it can run twice. A page
+gains its inlined rules (on a site of the kit, 7 to 12 KB gzipped);
+moving between pages inside the site does not, since those navigations
+fetch no HTML. Measured there on a throttled phone (slow 4G, a CPU four
+times slower), the first paint came about half a second sooner. Pages
+regenerated at request time are not covered, and the stylesheet swap is an
+inline `onload` handler, which a strict Content-Security-Policy has to
+allow by its hash. The example's Worker build does not run it.
+
+```bash
+agentic-cms critical-css --check          # change nothing; exit 1 naming each page that still waits for a stylesheet
+agentic-cms critical-css --check --json   # { dirs, pages, inlined, skipped, bytes, blocking }
+```
+
+To check that the inlined rules are complete, load a page with its
+stylesheets blocked: the first screen should match the normal render.
 
 ## Why a command, not a `cp`
 
