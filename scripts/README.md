@@ -117,6 +117,14 @@ against `fixtures/` by `pnpm test:browser`.
   of `site.url`) and exits 1 naming each file; the last step of a build on
   a site that renders its address through `EmailLink` and tokens
   (`docs/email.md`).
+- `critical-css` — `pnpm kit critical-css [--check] [--json]`
+  (`critical-css.mjs`, `lib/critical-css.mjs`) inlines into each
+  prerendered page the rules its own HTML uses, with every `@font-face` of
+  its stylesheets and the rules the HTML cannot vouch for (Tailwind's
+  arbitrary variants, `[data-…]` and `[aria-…]` states), and loads the
+  stylesheets without blocking the first paint; `--check` changes nothing
+  and exits 1 naming each page that still waits for a stylesheet. Right
+  after `next build` on a Node host (`docs/deploy.md`).
 - `assemble` — `pnpm kit assemble [--check] [--json]` (`assemble.mjs`,
   `lib/assemble.mjs`) copies `public/` and `.next/static` into a standalone
   build's package (`.next/standalone`, or its `relativeAppDir`) — into its
