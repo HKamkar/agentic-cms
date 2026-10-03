@@ -49,7 +49,9 @@ requests. `agentic-cms critical-css`, right after `next build`, removes it:
   afterwards (`[data-theme=dark]`, `[aria-expanded=true]`).
 
 It rewrites the pages in `.next/server/app` and the standalone package's
-copy, and leaves a page it has done alone, so it can run twice. A page
+copy, changing nothing in them but the inserted `<style>` and the
+stylesheet links, and leaves a page it has done alone, so it can run
+twice. A page
 gains its inlined rules (on a site of the kit, 7 to 12 KB gzipped);
 moving between pages inside the site does not, since those navigations
 fetch no HTML. Measured there on a throttled phone (slow 4G, a CPU four
