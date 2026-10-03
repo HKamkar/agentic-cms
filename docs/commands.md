@@ -132,7 +132,7 @@ agentic-cms docs --check                  # exit 1 when they are stale (pnpm bui
 
 ## build gates
 
-`seo` · `guard-email` · `assemble` — `seo`, `guard-email` read the site's registry and run in its root
+`seo` · `guard-email` · `critical-css` · `assemble` — `seo`, `guard-email` read the site's registry and run in its root
 
 ### `seo`
 
@@ -177,6 +177,28 @@ Exit: `0` no address as text; `1` an address in a served file (each named); `2` 
 ```bash
 agentic-cms guard-email
 agentic-cms guard-email --domain acme.example --json
+```
+
+### `critical-css`
+
+Inlines each prerendered page's critical CSS (the rules its own HTML uses, its stylesheets' @font-face) and loads the stylesheets without blocking the first paint; the build's pages and the standalone package's copy.
+
+```bash
+agentic-cms critical-css [--check] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--check` | change nothing: only fail when a page still waits for a stylesheet before it paints |
+| `--json` | print the report as one JSON document |
+
+Exit: `0` every page paints without waiting for a stylesheet; `1` a page still links a stylesheet that blocks its paint (each named); `2` usage, or no prerendered pages under .next/server/app.
+
+`--json` prints `{ dirs, pages, inlined, skipped, bytes: { inlined, before, after }, blocking: [{ page, sheets }] }`.
+
+```bash
+agentic-cms critical-css                  # after next build, before seo and assemble
+agentic-cms critical-css --check --json
 ```
 
 ### `assemble`

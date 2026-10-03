@@ -265,7 +265,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.7.1`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.7.2`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -280,7 +280,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.7.1      # allowBuilds below, first
+pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.7.2      # allowBuilds below, first
 pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
 pnpm install && pnpm dev
 ```
@@ -381,6 +381,7 @@ pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behi
 pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
+pnpm kit critical-css   # each prerendered page paints from its own inlined rules, its stylesheets no longer block
 pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked
 pnpm kit icons <add|remove|family|audit|round>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory, a design round for its own
 pnpm kit lab <new|serve|route|render|clean>   # the design canvas: SVG scenes on the site's tokens, on a phone, and as a throwaway route on the site's theme; rendered to the files a page ships; removed after
@@ -421,8 +422,9 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
    server). A public URL never changes without one.
 3. `pnpm build`, `pnpm preview`, click through every page in both themes.
 4. On the example's Cloudflare Worker: `pnpm run deploy`. On a Node server:
-   the build ends with `agentic-cms assemble`, and `.next/standalone` is the
-   package (`node server.js`; [docs/deploy.md](docs/deploy.md)).
+   the build runs `agentic-cms critical-css` after `next build` and ends
+   with `agentic-cms assemble`, and `.next/standalone` is the package
+   (`node server.js`; [docs/deploy.md](docs/deploy.md)).
 5. Attach the domain, verify `/`, a post and `/sitemap.xml`; submit the
    sitemap.
 
@@ -445,7 +447,7 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
 src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy; harness.ts, the screenshot harness's seed
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
-bin/, scripts/               the command line: lint, check, status, docs, seo, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
+bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
 docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
