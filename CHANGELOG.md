@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.7.1] — 2026-10-03
 
 - `Fx` takes `duration` (ms, default 1000) and `distance` (px, default
   100), and `intro`: the first entrance is played by CSS from the first

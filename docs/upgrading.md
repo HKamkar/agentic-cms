@@ -18,7 +18,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.7.0 → next (unreleased)
+## 0.7.0 → 0.7.1
 
 `Fx` gains `duration`, `distance` and `intro` (`CHANGELOG.md`). Nothing
 changes for a site that does not use them. A site that gives its heroes'
