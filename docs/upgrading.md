@@ -18,6 +18,17 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.7.1 → next (unreleased)
+
+One new command, `agentic-cms critical-css` (`CHANGELOG.md`), and one new
+dependency, `beasties`, which `pnpm install` brings. Nothing changes for a
+site that does not run it. A site served as a Node server puts it right
+after `next build` in its `build` script, before `seo` and `assemble`
+([deploy.md](deploy.md#critical-css)); one whose pages carry a strict
+Content-Security-Policy allows the stylesheet swap's inline `onload` by its
+hash first. `agentic-cms critical-css --check` after the build names any
+page that still waits for a stylesheet.
+
 ## 0.7.0 → 0.7.1
 
 `Fx` gains `duration`, `distance` and `intro` (`CHANGELOG.md`). Nothing

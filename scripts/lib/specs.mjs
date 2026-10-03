@@ -266,6 +266,17 @@ export const SPECS = {
     exit: { 0: "no address as text", 1: "an address in a served file (each named)", 2: "usage, or no build under .next" },
     json: "{ domains, scanned, hits: [{ file, addresses }] }",
   },
+  "critical-css": {
+    command: "critical-css", script: "critical-css", group: "build gates", summary: "inlines each prerendered page's critical CSS (the rules its own HTML uses, its stylesheets' @font-face) and loads the stylesheets without blocking the first paint; the build's pages and the standalone package's copy",
+    usage: "agentic-cms critical-css [--check] [--json]",
+    flags: {
+      check: { type: "boolean", help: "change nothing: only fail when a page still waits for a stylesheet before it paints" },
+      json: { type: "boolean", help: "print the report as one JSON document" },
+    },
+    examples: ["agentic-cms critical-css                  # after next build, before seo and assemble", "agentic-cms critical-css --check --json"],
+    exit: { 0: "every page paints without waiting for a stylesheet", 1: "a page still links a stylesheet that blocks its paint (each named)", 2: "usage, or no prerendered pages under .next/server/app" },
+    json: "{ dirs, pages, inlined, skipped, bytes: { inlined, before, after }, blocking: [{ page, sheets }] }",
+  },
   assemble: {
     command: "assemble", script: "assemble", group: "build gates", summary: "packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there",
     usage: "agentic-cms assemble [--check] [--json]",
