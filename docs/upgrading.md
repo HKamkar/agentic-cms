@@ -18,6 +18,12 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.7.2 → next (unreleased)
+
+A fix to `critical-css` (`CHANGELOG.md`): it leaves a page as Next wrote
+it but for the inlined rules and the stylesheet links, so `agentic-cms
+seo` after it passes again. Nothing to change in a site; rebuild.
+
 ## 0.7.1 → 0.7.2
 
 One new command, `agentic-cms critical-css` (`CHANGELOG.md`), and one new

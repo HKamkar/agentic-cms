@@ -7,15 +7,21 @@
 // (media="print" until they have arrived, a <noscript> fallback for pages
 // without scripts); the files stay whole and cached for the next page.
 //
-// Beasties does the inlining. Two of its gaps are closed here, both found on
-// a real site: fonts named through CSS variables (next/font does that) leave
-// it no font-family to follow, so every @font-face of the page's stylesheets
-// goes in, its url()s resolved against the stylesheet they came from; and it
-// cannot evaluate Tailwind's arbitrary variants (`[&_svg]:size-4` is
-// `.\[\&_svg\]\:size-4 svg`), which it would drop, so those rules are kept,
-// with every rule keyed on a data- or aria- attribute: a script sets those
-// states after the HTML was written (a theme before the first paint), so the
-// built HTML cannot show they are needed.
+// Beasties picks the rules; the page is changed here, by the inserted
+// <style> and each stylesheet link's deferral and fallback alone, because
+// Beasties re-serializes the whole document (`alt=""` comes out as a bare
+// `alt`, which the SEO audit fails; `charSet` is lowercased, self-closing
+// slashes dropped, a `data-beasties-container` added to <html>), and the
+// page must stay as Next wrote it. Two of its gaps are closed here, both
+// found on a real site: fonts named through CSS variables (next/font does
+// that) leave it no font-family to follow, so every @font-face of the
+// page's stylesheets goes in, its url()s resolved against the stylesheet
+// they came from; and it cannot evaluate Tailwind's arbitrary variants
+// (`[&_svg]:size-4` is `.\[\&_svg\]\:size-4 svg`), which it would drop, so
+// those rules are kept, with every rule keyed on a data- or aria-
+// attribute: a script sets those states after the HTML was written (a
+// theme before the first paint), so the built HTML cannot show they are
+// needed.
 import fs from "node:fs";
 import path from "node:path";
 import Beasties from "beasties";
@@ -66,19 +72,43 @@ export function blocking(html) {
   return [...live.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*>/g)].filter(([tag]) => !/\bmedia="print"/.test(tag)).map(([tag]) => /\bhref="([^"]+)"/.exec(tag)?.[1] ?? tag);
 }
 
+/** The rules the page's own HTML uses, as Beasties picks them from its stylesheets; "" when it picks none. */
+export async function criticalRules(html, root) {
+  const beasties = new Beasties({
+    path: path.join(root, ".next"), publicPath: "/_next/", preload: false, pruneSource: false,
+    inlineFonts: false, preloadFonts: false, reduceInlineStyles: false, mergeStylesheets: true, compress: true, allowRules: ALWAYS, logLevel: "silent",
+  });
+  const styles = (page) => [...page.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)];
+  const before = new Set(styles(html).map(([tag]) => tag));
+  return styles(await beasties.process(html)).find(([tag]) => !before.has(tag))?.[1] ?? "";
+}
+
+/**
+ * A stylesheet link that no longer blocks the first paint: `media="print"` until it has loaded, then the media
+ * it had, and the link as it was inside <noscript> for visitors without scripts. The tag keeps its own spelling.
+ */
+export function deferred(tag) {
+  const media = /\bmedia="([^"]*)"/.exec(tag)?.[1] ?? "all";
+  const attrs = ` media="print" onload="this.media='${media.replace(/[\\']/g, "\\$&")}'"`;
+  const swapped = /\bmedia="/.test(tag) ? tag.replace(/\s+media="[^"]*"/, attrs) : tag.replace(/\s*(\/?)>$/, `${attrs}$1>`);
+  return `${swapped}<noscript>${tag}</noscript>`;
+}
+
 /** The page with its critical CSS inlined; `skipped` when it is done already or links no stylesheet of the build. */
 export async function inlineCritical(html, root) {
   if (html.includes(`<style ${MARK}`)) return { html, skipped: "done" };
   const sheets = stylesheets(html, root);
   if (!sheets.length) return { html, skipped: "no stylesheet" };
-  const beasties = new Beasties({
-    path: path.join(root, ".next"), publicPath: "/_next/", preload: "media", noscriptFallback: true, pruneSource: false,
-    inlineFonts: false, preloadFonts: false, reduceInlineStyles: false, mergeStylesheets: true, compress: true, allowRules: ALWAYS, logLevel: "silent",
+  const rules = await criticalRules(html, root);
+  if (!rules) return { html, skipped: "nothing to inline" };
+  const style = `<style ${MARK}>${fontFaces(sheets)}${rules}</style>`;
+  const hrefs = new Set(sheets.map((sheet) => sheet.href));
+  let first = true;
+  const out = html.replace(/<link\b[^>]*\brel="stylesheet"[^>]*>/g, (tag) => {
+    if (!hrefs.has(/\bhref="([^"?#]+)/.exec(tag)?.[1])) return tag;
+    const lead = first ? style : "";
+    first = false;
+    return lead + deferred(tag);
   });
-  const before = new Set([...html.matchAll(/<style\b[^>]*>[\s\S]*?<\/style>/g)].map(([tag]) => tag));
-  const out = await beasties.process(html);
-  const added = [...out.matchAll(/<style\b[^>]*>[\s\S]*?<\/style>/g)].map(([tag]) => tag).find((tag) => !before.has(tag));
-  if (!added) return { html, skipped: "nothing to inline" };
-  const marked = added.replace(/^<style\b([^>]*)>/, `<style ${MARK}$1>${fontFaces(sheets)}`);
-  return { html: out.replace(added, marked), inlined: Buffer.byteLength(marked) };
+  return { html: out, inlined: Buffer.byteLength(style) };
 }
