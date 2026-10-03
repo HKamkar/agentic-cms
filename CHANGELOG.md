@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.7.3] — 2026-10-03
 
 - `critical-css` changes a page by its inlined `<style>` and its
   stylesheet links alone, and leaves every other byte as Next wrote it.
