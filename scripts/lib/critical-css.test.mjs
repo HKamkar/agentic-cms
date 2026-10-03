@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { blocking, fontFaces, inlineCritical, MARK, pageDirs, pagesIn } from "./critical-css.mjs";
+import { blocking, deferred, fontFaces, inlineCritical, MARK, pageDirs, pagesIn } from "./critical-css.mjs";
 
 function site(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "critical-css-"));
@@ -22,7 +22,8 @@ const CSS = [
   "[data-theme=dark] .title{color:white}",
   ".menu[aria-expanded=true]{display:block}",
 ].join("");
-const PAGE = '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css" data-precedence="next"/></head><body><h1 class="title">Hello</h1><span class="[&amp;_svg]:size-4"><svg></svg></span><button class="menu" aria-expanded="false">Menu</button></body></html>';
+// The page as Next writes it: React's attribute spellings, empty values written out, self-closing void tags.
+const PAGE = '<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><link rel="stylesheet" href="/_next/static/css/app.css" data-precedence="next"/><script src="/_next/static/chunks/main.js" async=""></script></head><body><h1 class="title">Hello</h1><img src="/images/mark.svg" alt="" width="24" height="24"/><span class="[&amp;_svg]:size-4"><svg></svg></span><button class="menu" aria-expanded="false">Menu</button><!--$--><!--/$--></body></html>';
 const BUILD = { ".next/static/css/app.css": CSS, ".next/server/app/index.html": PAGE };
 
 test("a page gets its own rules inlined, with its fonts, arbitrary variants and script-set states, and stops waiting for the stylesheet", async () => {
@@ -38,10 +39,26 @@ test("a page gets its own rules inlined, with its fonts, arbitrary variants and 
   assert.match(style, /\[data-theme=dark\] \.title/);
   assert.match(style, /aria-expanded=true/);
   assert.match(style, /@font-face\{font-family:Body;src:url\(\/_next\/static\/media\/body\.woff2\)/);
-  assert.match(html, /<link rel="stylesheet" href="\/_next\/static\/css\/app\.css" data-precedence="next" media="print" onload="this\.media='all'">/);
-  assert.match(html, /<noscript><link rel="stylesheet" href="\/_next\/static\/css\/app\.css" data-precedence="next"><\/noscript>/);
+  assert.match(html, /<style data-critical>[^<]*<\/style><link rel="stylesheet" href="\/_next\/static\/css\/app\.css" data-precedence="next" media="print" onload="this\.media='all'"\/>/);
+  assert.match(html, /<noscript><link rel="stylesheet" href="\/_next\/static\/css\/app\.css" data-precedence="next"\/><\/noscript>/);
   assert.deepEqual(blocking(html), []);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("the rest of the page stays as Next wrote it, byte for byte", async () => {
+  const root = site(BUILD);
+  const { html } = await inlineCritical(PAGE, root);
+  const undone = html.replace(/<style data-critical>[\s\S]*?<\/style>/, "").replace(/<noscript>[\s\S]*?<\/noscript>/, "").replace(` media="print" onload="this.media='all'"`, "");
+  assert.equal(undone, PAGE);
+  assert.match(html, /<meta charSet="utf-8"\/>/);
+  assert.match(html, /<img src="\/images\/mark\.svg" alt="" width="24" height="24"\/>/);
+  assert.doesNotMatch(html, /beasties/);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("a link with a media of its own gets it back once loaded, and keeps its spelling", () => {
+  assert.equal(deferred('<link rel="stylesheet" href="/_next/a.css">'), `<link rel="stylesheet" href="/_next/a.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="/_next/a.css"></noscript>`);
+  assert.equal(deferred('<link rel="stylesheet" href="/_next/a.css" media="(width >= 992px)"/>'), `<link rel="stylesheet" href="/_next/a.css" media="print" onload="this.media='(width >= 992px)'"/><noscript><link rel="stylesheet" href="/_next/a.css" media="(width >= 992px)"/></noscript>`);
 });
 
 test("a page done once is left as it is", async () => {

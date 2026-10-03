@@ -4,6 +4,16 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.7.3] — 2026-10-03
+
+- `critical-css` changes a page by its inlined `<style>` and its
+  stylesheet links alone, and leaves every other byte as Next wrote it.
+  0.7.2 wrote back the page as Beasties re-serialized it: an empty
+  `alt=""` came out as a bare `alt`, which `agentic-cms seo` then failed
+  as missing on every decorative image, and `charSet` was lowercased,
+  self-closing slashes dropped and a `data-beasties-container` added to
+  `<html>`. Beasties now only picks the rules.
+
 ## [0.7.2] — 2026-10-03
 
 - `agentic-cms critical-css`, a build gate for prerendered pages: each page
