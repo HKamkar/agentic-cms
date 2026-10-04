@@ -92,7 +92,7 @@ dark band): keep them in a file of your own that the route imports, since
 `lab clean` deletes the route. The files are read on every render, so a
 save in the lab is a refresh here. Every copy's ids are its own, and an
 animated scene gets a timeline of its own (§ Inspecting motion) — its
-controls, its cycle, one clock for all its copies.
+controls, its cycle, one timeline for all its copies.
 
 The page opens with the procedure for the person looking at it (the
 component renders it; `intro={false}` hides it, children add the site's
@@ -127,22 +127,38 @@ round's demo route — has the same controls for it, the one timeline of
   where the range stands. The controls are labelled (the group is
   "<name>: timeline", the range "Time" with the seconds as its value
   text), keep a visible focus ring, and are 44 px tall for a finger.
-- **One clock per animation.** A timeline drives the animation it wraps
-  from one `requestAnimationFrame`: each inline SVG's own timeline is paused
-  and set with `setCurrentTime()`, each CSS or Web Animation of an element
-  inside an SVG — or inside a `data-lab-drive` element, for motion made of
-  HTML and CSS — paused and set by `currentTime`, each lab frame sought.
-  Nothing else under it is touched: wrapped around a whole section, it
+- **One timeline per animation, the browser's clock while it plays.** A
+  timeline sets the animation it wraps: each inline SVG's own timeline
+  (`pauseAnimations()`, `setCurrentTime()`), each CSS or Web Animation of
+  an element inside an SVG — or inside a `data-lab-drive` element, for
+  motion made of HTML and CSS — by `currentTime`, each lab frame through
+  its `window.lab`. Paused, on a scrub, an arrow key or a Replay, and
+  under reduced motion, it holds every copy of the animation — its sizes,
+  its colour variants, its grounds — on the same frame, on screen or not.
+  Playing, it sets them going from one time together and lets each run on
+  its own clock, a transform or an opacity on the compositor as on the
+  page; at every cycle's start it sets them going together again, so
+  copies that drift apart (WebKit advances visible and offscreen SVG
+  timelines differently) and loops shorter than the cycle meet there, and
+  a finite animation past its end holds its last frame until then. The
+  frame callback writes the controls alone, from the elapsed time: the
+  range every frame, the readout at most ten times a second. Setting every
+  copy on every frame, as the timeline did before, made the browser
+  restyle and repaint all of them every frame, on screen or not.
+- **Off screen, stopped.** While the timeline plays, a copy more than half
+  a screen from the viewport stops (an `IntersectionObserver`), and on its
+  way back it is set going from the timeline's time — a timeline far down
+  a page costs nothing until it is scrolled to. A copy is watched by its
+  box — its outermost SVG, its `data-lab-drive` element, its frame — or,
+  when that box moves itself, by the nearest ancestor that does not, so a
+  motion that carries a part off screen never stops it there.
+- **Nothing else under it is touched**: wrapped around a whole section, it
   leaves the section's reveals (`Fx`, `OnView`) on their own clock, where
   driving them replayed each reveal every cycle and folded it flat on a
-  scrub, and they do not count towards the cycle. The copies of one animation — its
-  sizes, its colour variants, its grounds — show the same frame whether
-  they are on screen or not; left to run on their own, SVG timelines
-  drift (WebKit advances visible and offscreen ones differently). Two
-  timelines on a page are independent: their own controls, their own
-  cycle. The frame callback stops on pause, on a cycle of 0 (the controls
-  are disabled) and when the component unmounts, and the readout is
-  written at most ten times a second, apart from the frames.
+  scrub, and they do not count towards the cycle. Two timelines on a page
+  are independent: their own controls, their own cycle. The frame
+  callback stops on pause, on a cycle of 0 (the controls are disabled) and
+  when the component unmounts.
 - **The cycle is read, not restated**: `data-duration` on the root, else
   the longest SMIL `begin` + `dur` and CSS delay + duration in the file
   (`sceneDuration()`); a timeline given none measures what it holds.
