@@ -51,8 +51,11 @@ const write = (rel, text) => {
 
 // Every script, in any case and however its end tag is spelled, until none is left (one pass can join another's halves).
 const withoutScripts = (html) => {
-  let text = html;
-  for (let before = ""; before !== text; ) [before, text] = [text, text.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, "")];
+  let text = html, previous;
+  do {
+    previous = text;
+    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, "");
+  } while (text !== previous);
   return text;
 };
 
