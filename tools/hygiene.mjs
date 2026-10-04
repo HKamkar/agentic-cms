@@ -27,7 +27,7 @@ const SCRATCH = /(^|\/)(notes?|scratch|tmp|todo)\.[a-z]+$|\.(tmp|bak|orig|rej|lo
 export function findings(root, files, { brands }) {
   const out = [];
   const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-  const brandRe = brands.length ? new RegExp(brands.join("|"), "i") : /$^/;
+  const brandRe = brands.length ? new RegExp(brands.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i") : /$^/;
   for (const file of files) {
     if (file.startsWith(".parity/")) out.push(`${file}: a capture is tracked; .parity/ is gitignored`);
     if (SCRATCH.test(file)) out.push(`${file}: a scratch file is tracked`);

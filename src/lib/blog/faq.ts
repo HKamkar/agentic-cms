@@ -5,10 +5,12 @@
 
 export type FaqItem = { question: string; answer: string };
 
+// A bracket ends the text and the URL a match may span: scanning from every "![" or "](" to the next closing one,
+// past further openers, was quadratic on a run of them.
 const stripInline = (s: string) =>
   s
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/!\[[^\][]*\]\([^)[]*\)/g, "")
+    .replace(/\[([^\][]+)\]\([^)[]*\)/g, "$1")
     .replace(/[*_`]/g, "")
     .trim();
 

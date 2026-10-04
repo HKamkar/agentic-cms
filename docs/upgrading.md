@@ -18,6 +18,13 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.7.4 → next (unreleased)
+
+A security fix to the inline-SVG guard (`CHANGELOG.md`). Nothing to change
+in a site, unless one of its drawings hides a script, a handler or a
+`javascript:` URL the guard now finds: the build names the file and what it
+found, and the fix is to take it out of the drawing.
+
 ## 0.7.3 → 0.7.4
 
 A fix to the lab's timeline (`CHANGELOG.md`): while it plays, the

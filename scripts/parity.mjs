@@ -49,6 +49,13 @@ const write = (rel, text) => {
   fs.writeFileSync(path.join(out, rel), text);
 };
 
+// Every script, in any case and however its end tag is spelled, until none is left (one pass can join another's halves).
+const withoutScripts = (html) => {
+  let text = html;
+  for (let before = ""; before !== text; ) [before, text] = [text, text.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, "")];
+  return text;
+};
+
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 const pages = filesUnder(app, ".html");
@@ -58,8 +65,7 @@ for (const rel of pages) {
   write(rel.replace(/\.html$/, ".jsonld"), blocks.map((block) => `${block}\n`).join(""));
   write(
     rel,
-    html
-      .replace(/<script\b[^>]*>.*?<\/script>/gs, "")
+    withoutScripts(html)
       .replace(/<link\b[^>]*\/_next\/static\/[^>]*>/g, "")
       .replace(/<link rel="preload"[^>]*>/g, ""),
   );

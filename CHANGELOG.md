@@ -4,6 +4,26 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- **Security.** `readTrustedSvg`, and with it `readInlineSvg`, `LabStudy`
+  and the lab's scenes, checks an SVG for code as it goes inline, not only
+  as written. A script or an event handler split by a comment
+  (`<scr<!-- -->ipt>`) passed, and dropping the comments joined it; so did
+  a handler after a `/` or a quote (`<rect/onclick=…>`) and a
+  `javascript:` URL spelled with character references or a tab. It stays a
+  guard against a drawing that brings code by accident, for an SVG the
+  repository owns, not a sanitizer for one from outside it.
+- The SVG, scene and FAQ parsers run in linear time: `svgMarkup`,
+  `followsTheme`, `sceneMeta`, `sceneDuration` and the FAQ answers' link
+  stripping slowed quadratically on a run of unclosed comments, a long
+  attribute name or number, or a run of `![` (20,000 of them took 10 s).
+  Every page, its JSON-LD and every SVG of the example come out as before.
+  `followsTheme` now ignores every comment, not only the lab's.
+- `agentic-cms seo` decodes `&amp;` last, so `&amp;lt;` stays `&lt;`;
+  `agentic-cms docs` escapes a backslash in a table cell; `pnpm hygiene
+  --brand` takes the name literally.
+
 ## [0.7.4] — 2026-10-04
 
 - A playing lab timeline (`mountTimeline`, `LabTimeline`) lets the
