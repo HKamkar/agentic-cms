@@ -407,6 +407,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
 - `develop` is the working branch: push day-to-day work there directly. `main` is
   stable and only receives PRs from `develop` (or a feature branch).
+- Rulesets hold it: neither branch can be deleted or force-pushed, `main`
+  changes only through a pull request merged as a merge commit with CI's
+  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted
+  (sites pin them). Never `--delete-branch` a release PR: its head is `develop`.
 - Branch off `develop` as `feat/<slug>`, `bugfix/<slug>` or `refactor/<slug>`;
   open PRs against `develop` unless it is a release.
 - Commit messages carry no AI attribution: no `Co-Authored-By: Claude …`, no
