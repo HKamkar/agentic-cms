@@ -18,7 +18,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.7.4 → next (unreleased)
+## 0.7.4 → 0.7.5
 
 A security release (`CHANGELOG.md`). Move the site's `next` to 16.3.6 or
 later, with its `eslint-config-next` beside it; pnpm warns on an older

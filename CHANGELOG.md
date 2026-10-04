@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.7.5] — 2026-10-04
 
 - **Security.** The package asks for `next` 16.3.6 or later (its peer
   range was `>=16.3.0`): 16.3.6 fixes a remote code execution in
