@@ -150,7 +150,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - Node 22.18+ (26 used, see `.nvmrc`) and pnpm. Run `pnpm install` first:
   `node_modules/next/dist/docs/` (which AGENTS.md says to read) is absent
   until then. `pnpm build` fetches nothing — there is no webfont. Next is
-  16.3.5: `params` is a Promise; `await params` in both `generateMetadata`
+  16.3.8: `params` is a Promise; `await params` in both `generateMetadata`
   and the page. `deploy` collides with a pnpm built-in — always
   `pnpm run deploy`.
 - The palette is CSS `light-dark()`: the pages need a current browser
@@ -407,6 +407,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
 - `develop` is the working branch: push day-to-day work there directly. `main` is
   stable and only receives PRs from `develop` (or a feature branch).
+- Rulesets hold it: neither branch can be deleted or force-pushed, `main`
+  changes only through a pull request merged as a merge commit with CI's
+  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted
+  (sites pin them). Never `--delete-branch` a release PR: its head is `develop`.
 - Branch off `develop` as `feat/<slug>`, `bugfix/<slug>` or `refactor/<slug>`;
   open PRs against `develop` unless it is a release.
 - Commit messages carry no AI attribution: no `Co-Authored-By: Claude …`, no

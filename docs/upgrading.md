@@ -20,10 +20,20 @@ writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
 ## 0.7.4 → next (unreleased)
 
-A security fix to the inline-SVG guard (`CHANGELOG.md`). Nothing to change
-in a site, unless one of its drawings hides a script, a handler or a
-`javascript:` URL the guard now finds: the build names the file and what it
-found, and the fix is to take it out of the drawing.
+A security release (`CHANGELOG.md`). Move the site's `next` to 16.3.6 or
+later, with its `eslint-config-next` beside it; pnpm warns on an older
+`next` now that the package's peer range starts there:
+
+```bash
+pnpm add next@16.3.8 eslint-config-next@16.3.8
+```
+
+`image-size` comes patched with the package. Then `pnpm build`, and a proof
+of the site's pages on the new `next` (`docs/visual-parity.md`).
+
+The inline-SVG guard is stricter: a drawing that hides a script, a handler
+or a `javascript:` URL now fails the build, which names the file and what
+it found; take the code out of the drawing.
 
 ## 0.7.3 → 0.7.4
 

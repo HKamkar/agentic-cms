@@ -6,6 +6,15 @@ changes what a capture writes says **recapture baselines**.
 
 ## [Unreleased]
 
+- **Security.** The package asks for `next` 16.3.6 or later (its peer
+  range was `>=16.3.0`): 16.3.6 fixes a remote code execution in
+  `next/og`'s `ImageResponse` (GHSA-vcvr-r3jv-pc5j). The kit uses no
+  `next/og`; a site that does is exposed until it moves. The example builds
+  with 16.3.8. `image-size` is `^2.0.4`, past two infinite loops in its
+  JXL, HEIF and ICNS parsers (GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr);
+  the kit only measures the site's own images with it. The example's
+  toolchain takes the patched `undici` (through `wrangler`) and
+  `brace-expansion`.
 - **Security.** `readTrustedSvg`, and with it `readInlineSvg`, `LabStudy`
   and the lab's scenes, checks an SVG for code as it goes inline, not only
   as written. A script or an event handler split by a comment
