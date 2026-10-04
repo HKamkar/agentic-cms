@@ -182,7 +182,7 @@ describe("voice rules", () => {
     for (const offset of [4, 6, 8, 10, 12, 14]) assert.equal(lines.filter((line) => line.includes(`line ${APPENDED + offset}`)).length, 0, `line ${APPENDED + offset} must not be a claim`);
   });
   test("structured data and card copy speak for nimbus®: a claim word there needs no subject", () => {
-    has(run({ "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("  type: Blog", "  type: Blog").replace("description: Notes on running private AI under your own control, for founders selling into regulated industries.", "description: Private AI that is GDPR compliant, for founders selling into regulated industries and their teams.") }), 'WARN content/pages/blog.yaml voice-claim: seo.description "compliant" near "GDPR"');
+    has(run({ "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("description: Notes on running private AI under your own control, for founders selling into regulated industries.", "description: Private AI that is GDPR compliant, for founders selling into regulated industries and their teams.") }), 'WARN content/pages/blog.yaml voice-claim: seo.description "compliant" near "GDPR"');
   });
   test("a model name fails", () => has(run({ "blog/x.md": post(FRONTMATTER, BODY + "\nWe run Llama.\n") }), `FAIL content/blog/x.md voice-model: line ${APPENDED} names the model "Llama"; write "open-weight models"`));
   test("a cloud as what the nimbus® stack runs on warns (a heuristic); the customer's account and the installer's variant do not; a link target never counts", () => {

@@ -79,7 +79,7 @@ function typeOf(chain, leaf) {
 const members = (union) => union.def.options.map((option) => option.def.shape?.[union.def.discriminator]?.def.values?.[0]).filter(Boolean);
 const unionName = (union) => (union.def.discriminator === "type" ? "section types" : "kinds");
 
-const cell = (text) => text.replace(/\|/g, "\\|").replace(/<[a-z][^>]*>/g, (tag) => `\`${tag}\``);
+const cell = (text) => text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/<[a-z][^>]*>/g, (tag) => `\`${tag}\``);
 
 /** Table rows for one object shape; nested list-of-entries and entries get rows of their own, keyed `parent[].child`. */
 function rows(shape, prefix = "") {

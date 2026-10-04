@@ -6,7 +6,7 @@
 // page's ink. Plain TypeScript, no React, loadable by the kit's scripts.
 import fs from "node:fs";
 import path from "node:path";
-import { namespaceIds, svgMarkup, tagRoot } from "../svg.ts";
+import { namespaceIds, svgMarkup, tagRoot, withoutComments } from "../svg.ts";
 import { readTrustedSvg } from "../svg-read.ts";
 
 // The SVG helpers a page shipping an inline SVG needs too live beside the engines (../svg.ts, ../svg-read.ts); the lab re-exports them.
@@ -20,7 +20,8 @@ export const LAB_COMMENT = /<!--\s*agentic-cms lab:[\s\S]*?-->\s*/g;
 
 export type SceneMeta = { width: number; height: number; viewBox: string | null; duration: number };
 
-const attrs = (tag: string): Record<string, string> => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]));
+// An attribute starts after whitespace: matching from inside a long name, at every character of it, was quadratic.
+const attrs = (tag: string): Record<string, string> => Object.fromEntries([...tag.matchAll(/\s([\w:-]+)\s*=\s*"([^"]*)"/g)].map((m) => [m[1], m[2]]));
 const walkSvg = (p: string): string[] => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).sort().flatMap((f) => walkSvg(path.join(p, f))) : p.endsWith(".svg") ? [p] : []);
 const relative = (root: string, file: string): string => path.relative(root, file).split(path.sep).join("/");
 
@@ -57,11 +58,11 @@ export function sceneMeta(svg: string): SceneMeta {
 export const animates = (svg: string): boolean => /<(animate|animateTransform|animateMotion|set)\b/.test(svg) || /@keyframes|\banimation(-[a-z-]+)?\s*:/.test(svg);
 
 /** Whether a scene paints with the page's colours — currentColor or a var(--color-*) token — which a file of it carries for one scheme only. */
-export const followsTheme = (svg: string): boolean => /currentColor|var\(\s*--color-/.test(svg.replace(LAB_COMMENT, ""));
+export const followsTheme = (svg: string): boolean => /currentColor|var\(\s*--color-/.test(withoutComments(svg));
 
 /** A time in SMIL or CSS ("2s", "150ms", "1.5") in seconds; NaN when it is not one. */
 const seconds = (value: string): number => {
-  const m = value.trim().match(/^(-?\d*\.?\d+)(ms|s)?$/);
+  const m = value.trim().match(/^(-?(?:\d+(?:\.\d+)?|\.\d+))(ms|s)?$/);
   return m ? Number(m[1]) / (m[2] === "ms" ? 1000 : 1) : Number.NaN;
 };
 

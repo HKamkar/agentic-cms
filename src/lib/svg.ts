@@ -4,8 +4,21 @@
 // No file system and no React, so a client bundle, a server component and
 // the kit's scripts can all import it.
 
+/** `text` without its comments, each with the whitespace after it; an unclosed `<!--` stays. One pass by index: a regex over `<!--…-->` slows quadratically on a run of unclosed openers. */
+export function withoutComments(text: string): string {
+  let out = "", at = 0;
+  for (let open = text.indexOf("<!--"); open >= 0; open = text.indexOf("<!--", at)) {
+    const close = text.indexOf("-->", open + 4);
+    if (close < 0) break;
+    out += text.slice(at, open);
+    at = close + 3;
+    while (at < text.length && /\s/.test(text[at])) at += 1;
+  }
+  return out + text.slice(at);
+}
+
 /** An SVG file's text as inline markup: the XML prolog and the comments dropped. */
-export const svgMarkup = (text: string): string => text.replace(/^<\?xml[^>]*>\s*/, "").replace(/<!--[\s\S]*?-->\s*/g, "");
+export const svgMarkup = (text: string): string => withoutComments(text.replace(/^<\?xml[^>]*>\s*/, ""));
 
 /** The root <svg> of a scene's markup tagged with a class (and sized, when asked), so a page can address it. */
 export function tagRoot(markup: string, className: string, size?: { width: number; height: number }): string {

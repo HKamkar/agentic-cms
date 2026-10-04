@@ -104,7 +104,7 @@ test("the site's src/config/harness.ts seeds every capture as the flag would; --
 test("probe, shot and sheet are seeded like a capture and say so in their JSON; --no-storage shows the first visit", { skip }, () => {
   const root = bannerSite();
   try {
-    writeSiteSeed(root, `export const harness = { storage: { consent: "${CONSENT.replace(/"/g, '\\"')}" }, sessionStorage: { tab: "2" } };\n`);
+    writeSiteSeed(root, `export const harness = { storage: { consent: ${JSON.stringify(CONSENT)} }, sessionStorage: { tab: "2" } };\n`);
     const probe = (...args) => { const r = run(root, ["probe", "/consent", "--select", ".banner", "--props", "display", ...args]); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
     const seeded = probe();
     assert.deepEqual(seeded.seed.storage, { consent: CONSENT });
