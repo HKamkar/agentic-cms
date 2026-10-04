@@ -18,7 +18,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.7.3 → next (unreleased)
+## 0.7.3 → 0.7.4
 
 A fix to the lab's timeline (`CHANGELOG.md`): while it plays, the
 animations it wraps run on the browser's clocks, and a copy far off

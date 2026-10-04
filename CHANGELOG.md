@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.7.4] — 2026-10-04
 
 - A playing lab timeline (`mountTimeline`, `LabTimeline`) lets the
   animation it wraps run on the browser's clocks: it sets every copy going
