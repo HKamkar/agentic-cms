@@ -55,6 +55,17 @@ test("namespaceIds: every id and every reference to one — url(#…) in attribu
   assert.equal(namespaceIds("<svg><rect/></svg>", "p"), "<svg><rect/></svg>");
 });
 
+test("the text of a scene is read in linear time: a run of unclosed comments, a long attribute name, a long number", () => {
+  const timed = (fn: () => unknown) => { const start = performance.now(); fn(); return performance.now() - start; };
+  const opens = "<!--".repeat(50000);
+  assert.ok(timed(() => assert.equal(svgMarkup(`<svg/>${opens}`), `<svg/>${opens}`)) < 500, "an unclosed comment stays, and fast");
+  assert.ok(timed(() => followsTheme(`<!-- agentic-cms lab:${opens}`)) < 500);
+  assert.ok(timed(() => sceneMeta(`<svg ${"-".repeat(50000)} width="2" height="1">`)) < 500);
+  assert.ok(timed(() => assert.equal(sceneDuration(`<svg><animate dur="${"9".repeat(50000)}x"/></svg>`), 0)) < 500);
+  assert.equal(svgMarkup("<svg>a <!-- b <!-- c -->\n d<!-- open"), "<svg>a d<!-- open", "the first close ends a comment, the whitespace after it goes");
+  assert.deepEqual([sceneDuration('<svg><animate dur=".5s"/></svg>'), sceneDuration('<svg><animate dur="2"/></svg>'), sceneDuration('<svg><animate dur="1.s"/></svg>')], [0.5, 2, 0], "times as before: .5s, 2 and not 1.s");
+});
+
 test("sceneDuration: data-duration first, else the longest SMIL begin + dur and CSS delay + duration; 0 for a still", () => {
   assert.equal(sceneDuration(`<svg data-duration="3"><animate dur="9s"/></svg>`), 3);
   assert.equal(sceneDuration(`<svg><animate dur="1.5s" begin="0.25s"/><set dur="500ms" begin="x.end"/></svg>`), 1.75);
@@ -74,6 +85,23 @@ test("readTrustedSvg: a file under the root, outside node_modules, without code 
   assert.equal(readTrustedSvg(root, "public/images/ok.svg"), "<svg><rect/></svg>");
   assert.throws(() => readTrustedSvg(root, "public/images/script.svg"), /carries code \(<script\)/);
   assert.throws(() => readTrustedSvg(root, "public/images/handler.svg"), /carries code \(onclick=\)/);
+  // What a browser reads as code, however the file spells it: joined once the comments go, a handler after a / or a
+  // quote, a javascript: URL in character references or with a tab inside.
+  const hidden = {
+    "joined.svg": ["<svg><scr<!-- -->ipt>alert(1)</script></svg>", "<script"],
+    "joined-handler.svg": ['<svg><rect on<!-- -->click="x()"/></svg>', "onclick="],
+    "slash.svg": ['<svg><rect/onclick="x()"/></svg>', "onclick="],
+    "quote.svg": ['<svg><rect x="1"onclick="x()"/></svg>', "onclick="],
+    "entity.svg": ['<svg><a href="&#106;avascript:alert(1)"><rect/></a></svg>', "javascript:"],
+    "spelled.svg": ['<svg><a href="java&#x09;script&colon;alert(1)"><rect/></a></svg>', "javascript:"],
+  };
+  for (const [name, [svg, code]] of Object.entries(hidden)) {
+    fs.writeFileSync(path.join(root, "public/images", name), svg);
+    assert.throws(() => readTrustedSvg(root, `public/images/${name}`), new RegExp(`carries code \\(${code}\\)`), name);
+  }
+  const fine = '<svg><!-- the mark --><title>On &amp; off</title><rect class="icon" data-on="1"/></svg>';
+  fs.writeFileSync(path.join(root, "public/images/fine.svg"), fine);
+  assert.equal(readTrustedSvg(root, "public/images/fine.svg"), fine, "comments, entities and words beginning with on are no code");
   assert.throws(() => readTrustedSvg(root, "node_modules/x/a.svg"), /only an SVG the site's repository owns/);
   assert.throws(() => readTrustedSvg(root, "../elsewhere.svg"), /only an SVG the site's repository owns/);
   assert.throws(() => readTrustedSvg(root, "public/images/ok.png"), /not an \.svg file/);

@@ -31,6 +31,10 @@ pnpm add next@16.3.8 eslint-config-next@16.3.8
 `image-size` comes patched with the package. Then `pnpm build`, and a proof
 of the site's pages on the new `next` (`docs/visual-parity.md`).
 
+The inline-SVG guard is stricter: a drawing that hides a script, a handler
+or a `javascript:` URL now fails the build, which names the file and what
+it found; take the code out of the drawing.
+
 ## 0.7.3 → 0.7.4
 
 A fix to the lab's timeline (`CHANGELOG.md`): while it plays, the

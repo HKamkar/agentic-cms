@@ -43,7 +43,9 @@ const NOT_FLAT = /<(g|use|defs|style|mask|clipPath|text|symbol|image)\b|\stransf
 
 /** An icon file's shapes as the kit's IconData: stroke paths for a line set, one fill path for a mark set; a site's own file by its root's paint, with its viewBox when it is not the 24 grid. */
 export function parseIcon(svg, set) {
-  const text = svg.replace(/<!--[\s\S]*?-->/g, "");
+  // Comments out until none is left: one pass can join the halves of another around the one it drops.
+  let text = svg;
+  for (let before = ""; before !== text; ) [before, text] = [text, text.replace(/<!--[\s\S]*?-->/g, "")];
   if (set === "file" && NOT_FLAT.test(text)) throw new Error(`${text.match(NOT_FLAT)[0].trim()}: an icon is flat shapes with one paint — no group, transform, use, defs, style, mask, clipPath or text; flatten it first`);
   const shapes = [...text.matchAll(/<(path|rect|circle|ellipse|line|polyline|polygon)\b([^>]*?)\/?>/g)].map((m) => toPathD(m[1], attrs(m[2])));
   if (!shapes.length) throw new Error("no shapes in the icon");
