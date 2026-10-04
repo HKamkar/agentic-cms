@@ -4,6 +4,18 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- **Security.** The package asks for `next` 16.3.6 or later (its peer
+  range was `>=16.3.0`): 16.3.6 fixes a remote code execution in
+  `next/og`'s `ImageResponse` (GHSA-vcvr-r3jv-pc5j). The kit uses no
+  `next/og`; a site that does is exposed until it moves. The example builds
+  with 16.3.8. `image-size` is `^2.0.4`, past two infinite loops in its
+  JXL, HEIF and ICNS parsers (GHSA-5p2g-fcmc-qvqq, GHSA-w3rx-r6r6-pgpr);
+  the kit only measures the site's own images with it. The example's
+  toolchain takes the patched `undici` (through `wrangler`) and
+  `brace-expansion`.
+
 ## [0.7.4] — 2026-10-04
 
 - A playing lab timeline (`mountTimeline`, `LabTimeline`) lets the
