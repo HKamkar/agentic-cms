@@ -118,8 +118,12 @@ test("lab serve's scene page at a phone's width: no sideways scroll, the enlarge
     assert.equal(await page.locator("[data-lab-play]").textContent(), "Pause", "playing again");
     const sources = await page.locator("img.lab-img").evaluateAll((imgs) => imgs.map((img) => new URL(img.src).pathname + new URL(img.src).search));
     assert.ok(sources.length >= 2 && sources.every((src) => src === "/files/spin.svg?replay=1"), `one new URL for every copy: ${sources}`);
-    const times = await page.evaluate(() => [...document.querySelectorAll("iframe.lab-frame")].map((f) => f.contentWindow.lab.time()));
-    assert.ok(times.every((t) => t < 0.9 && Math.abs(t - times[0]) < 1e-6), `every frame restarted from 0, on one clock: ${times}`);
+    const times = () => page.evaluate(() => [...document.querySelectorAll("iframe.lab-frame")].map((f) => f.contentWindow.lab.time()));
+    const restarted = await times();
+    assert.ok(restarted.every((t) => t < 0.9), `every frame restarted from 0: ${restarted}`);
+    await page.locator("[data-lab-play]").click();
+    const held = await times();
+    assert.ok(held.every((t) => Math.abs(t - held[0]) < 1e-6), `paused, every frame on one time, those off screen too: ${held}`);
 
     await page.getByRole("link", { name: "still" }).click();
     await page.waitForURL(/\?still=1$/);

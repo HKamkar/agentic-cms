@@ -3,8 +3,9 @@
 // SMIL through each root <svg>'s own timeline, CSS and Web Animations
 // through document.getAnimations(). The lab's bare page carries it: `lab
 // render` sets it frame by frame, and the lab's own page frames each scene
-// in one and drives every frame's window.lab from its timeline
-// (timeline.ts).
+// in one, whose timeline (timeline.ts) seeks every frame's window.lab and
+// plays it from there. A finite animation already past its end is not
+// played: play() would rewind it to its first frame.
 
 /** window.lab: duration() in seconds (an infinite loop counts one cycle; data-duration on a root wins), seek(t), play(), pause(), time(). */
 export const LAB_API = `window.lab = (() => {
@@ -19,7 +20,7 @@ export const LAB_API = `window.lab = (() => {
     return max || 1;
   }
   function seek(t) { for (const s of roots()) { s.pauseAnimations(); s.setCurrentTime(t); } for (const a of anims()) { a.pause(); a.currentTime = t * 1000; } return t; }
-  function play() { for (const s of roots()) s.unpauseAnimations(); for (const a of anims()) a.play(); }
+  function play() { for (const s of roots()) s.unpauseAnimations(); for (const a of anims()) if (a.currentTime < a.effect.getComputedTiming().endTime) a.play(); }
   function pause() { for (const s of roots()) s.pauseAnimations(); for (const a of anims()) a.pause(); }
   function time() { const s = roots()[0]; return s ? s.getCurrentTime() : 0; }
   return { duration, seek, play, pause, time };

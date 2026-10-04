@@ -125,12 +125,14 @@ for every scene.
   lab route rename every copy's ids and references (`namespaceIds()`);
   markup inlined by hand gets the same, and only SVG the repository owns
   goes inline at all.
-- One clock for all the copies: each root paused and set with
-  `setCurrentTime(t)` from one frame callback, rather than each running on
-  its own — WebKit can advance visible and offscreen SVG timelines
-  differently, so free-running copies drift apart. The callback stops on
-  pause, when there is nothing to play and on unmount, and the readout
-  updates slower than the frames.
+- One timeline for all the copies: paused, scrubbed or stepped, every
+  root is held on one frame (`setCurrentTime(t)`); playing, they are set
+  going from one time together and run on the browser's clock, and set
+  going together again at every cycle's start — WebKit can advance
+  visible and offscreen SVG timelines differently, so copies left to run
+  drift apart. A copy far off screen waits until it comes back. Judge a
+  frame paused: while it plays, copies can sit a fraction of a frame
+  apart.
 - The cycle comes from the file (`data-duration`, else its SMIL and CSS
   timings), never from a constant restated in the route.
 - Around a join, check consecutive frames, not samples a beat apart: pause
