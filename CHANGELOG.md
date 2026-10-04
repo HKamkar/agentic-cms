@@ -4,6 +4,21 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.7.4] — 2026-10-04
+
+- A playing lab timeline (`mountTimeline`, `LabTimeline`) lets the
+  animation it wraps run on the browser's clocks: it sets every copy going
+  from one time together (the SVGs' own timelines unpaused, the CSS and
+  Web Animations and the lab frames played), sets them going together
+  again at each cycle's start, and on a frame writes only its controls. It
+  used to pause every copy and set its time on every frame, on screen or
+  not, which restyled and repainted all of them every frame and slowed the
+  whole page while it played. Paused, scrubbed, stepped, replayed or under
+  reduced motion it holds every copy on one frame as before. A copy more
+  than half a screen off the viewport now stops while the timeline plays
+  and joins its time on the way back. `window.lab.play()` leaves an
+  animation already past its end on its last frame (it rewound it).
+
 ## [0.7.3] — 2026-10-03
 
 - `critical-css` changes a page by its inlined `<style>` and its
