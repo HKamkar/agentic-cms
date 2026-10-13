@@ -29,7 +29,7 @@ const VOICE = {
   ],
   patterns: [{ regex: "^Furthermore,", flags: "m", why: "opener" }],
   claims: { words: ["compliant", "certified"], phrases: ["compliance-ready"], regulations: ["GDPR", "NEN 7510"], subject: "\\b(?:nimbus®?|we|our|the platform)\\b", negation: "not|no|never", instead: "designed to support <the regulation>" },
-  models: { names: ["Llama"], instead: "open-weight models" },
+  models: { names: ["Llama"], instead: "open-weight models", except: ["content/blog/excepted.md"] },
   clouds: { names: ["AWS"], stack: "\\b(?:nimbus®?|we|our stack)\\b[^.;]{0,50}\\b(?:runs?|running|hosted|built)\\b[^.;]{0,20}\\b(?:on|in)\\b", instead: "the stack is Terraform, Kubernetes, Docker" },
 };
 
@@ -185,6 +185,11 @@ describe("voice rules", () => {
     has(run({ "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("description: Notes on running private AI under your own control, for founders selling into regulated industries.", "description: Private AI that is GDPR compliant, for founders selling into regulated industries and their teams.") }), 'WARN content/pages/blog.yaml voice-claim: seo.description "compliant" near "GDPR"');
   });
   test("a model name fails", () => has(run({ "blog/x.md": post(FRONTMATTER, BODY + "\nWe run Llama.\n") }), `FAIL content/blog/x.md voice-model: line ${APPENDED} names the model "Llama"; write "open-weight models"`));
+  test("models.except lifts the model rule on its files, and nothing else", () => {
+    const lines = run({ "blog/excepted.md": post(FRONTMATTER, BODY + "\nWe run Llama on a robust rig.\n") });
+    lacks(lines, "voice-model");
+    has(lines, `FAIL content/blog/excepted.md voice-banned: line ${APPENDED} "robust" is banned`);
+  });
   test("a cloud as what the nimbus® stack runs on warns (a heuristic); the customer's account and the installer's variant do not; a link target never counts", () => {
     has(run({ "blog/x.md": post(FRONTMATTER, BODY + "\nThe nimbus® platform runs on AWS.\n") }), `voice-cloud: line ${APPENDED} "AWS" as part of the nimbus® stack`);
     lacks(run({ "blog/x.md": post(FRONTMATTER, BODY + "\nDeploy in your customer's AWS account. The AWS variant of the installer ships next.\n") }), "voice-cloud");

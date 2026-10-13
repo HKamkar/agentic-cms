@@ -4,6 +4,13 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.7.6] — 2026-10-13
+
+- The voice block's `models` takes an `except` list, like a `banned` or a
+  `patterns` entry: files, or `file#field.path` prefixes, the model rule
+  does not apply to. Every other rule still runs on those files; a block
+  without it reads as before.
+
 ## [0.7.5] — 2026-10-04
 
 - **Security.** The package asks for `next` 16.3.6 or later (its peer
