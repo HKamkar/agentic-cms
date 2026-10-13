@@ -84,8 +84,9 @@ not apply to; `why` and `instead` only feed the message. `claims.words`
 are claims when a regulation from `claims.regulations` is named nearby
 and `claims.subject` matches the sentence (structured data and card copy
 speak for the brand by construction); `claims.phrases` always are;
-`negation` is what excuses a claim word. `models.names` are never named;
-`clouds.names` are fine unless the sentence matches `clouds.stack`. The
+`negation` is what excuses a claim word. `models.names` are never named,
+except in the files `models.except` lists; `clouds.names` are fine
+unless the sentence matches `clouds.stack`. The
 entries below are the generic starting point; add the site's own.
 
 <!-- voice-rules:start -->

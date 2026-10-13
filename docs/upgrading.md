@@ -18,6 +18,10 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.7.5 → next (unreleased)
+
+Nothing to do: a voice block without `models.except` reads as before.
+
 ## 0.7.4 → 0.7.5
 
 A security release (`CHANGELOG.md`). Move the site's `next` to 16.3.6 or

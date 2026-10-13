@@ -67,7 +67,7 @@ const voiceSchema = z.strictObject({
   banned: z.array(z.strictObject({ match: z.string().min(1), ...rule })),
   patterns: z.array(z.strictObject({ regex: z.string().min(1), flags: z.string().optional(), ...rule })),
   claims: z.strictObject({ words: z.array(z.string()), phrases: z.array(z.string()).default([]), regulations: z.array(z.string()), subject: z.string(), negation: z.string(), instead: z.string() }),
-  models: z.strictObject({ names: z.array(z.string()), instead: z.string() }),
+  models: z.strictObject({ names: z.array(z.string()), instead: z.string(), except: rule.except }),
   clouds: z.strictObject({ names: z.array(z.string()), stack: z.string(), instead: z.string() }),
 });
 
@@ -113,6 +113,7 @@ function compile(voice) {
     claimsInstead: voice.claims.instead,
     models: voice.models.names.map((text) => ({ text, re: phrase(text, "") })),
     modelsInstead: voice.models.instead,
+    modelsScope: { except: voice.models.except },
     clouds: voice.clouds.names.map((text) => ({ text, re: phrase(text, "g") })),
     stack: new RegExp(voice.clouds.stack, "i"),
     cloudsInstead: voice.clouds.instead,
@@ -176,7 +177,7 @@ function textRules(m, ctx, raw) {
       break;
     }
   }
-  for (const { text: model, re } of m.models) if (re.test(text)) add("FAIL", "voice-model", `names the model ${q(model)}; write ${q(m.modelsInstead)}`);
+  if (applies(m.modelsScope, ctx)) for (const { text: model, re } of m.models) if (re.test(text)) add("FAIL", "voice-model", `names the model ${q(model)}; write ${q(m.modelsInstead)}`);
   // A cloud name is fine (the customer's account, the installer's variants) unless the sentence says the brand's stack runs on it.
   for (const { re } of m.clouds) {
     const hit = [...text.matchAll(re)].find((match) => m.stack.test(sentenceAround(text, match.index)));
