@@ -34,6 +34,12 @@ changes what a capture writes says **recapture baselines**.
   build"): the capture's guard against `--url`, `--build` and `--ref`
   together ran for `proof` too, whose `--ref` always has a value. `proof`
   with both `--pages` and `--sample` is refused before any capture starts.
+- A `--ref` baseline is built with the tree's `.env.local`, copied into its
+  sibling worktree: the file is gitignored, so the checkout had none, and a
+  build-time value could differ between the two sides of a proof. The
+  sibling's stamp keeps a digest of the file, never its values; a sibling
+  built with another `.env.local`, or before this change, is rebuilt rather
+  than reused.
 
 ## [0.7.6] — 2026-10-13
 
