@@ -177,6 +177,11 @@ changes what a capture writes says **recapture baselines**.
 - `scripts/lib/browser.mjs` gains `webkitPath()` and `launch({ engine })`
   for WebKit beside Chromium, and the "no Chromium build found" message
   names `bash scripts/setup.sh`.
+- `package.json` declares `"sideEffects": ["*.css"]`, so a bundler keeps
+  only the modules a page uses from the package's barrels: a server
+  component that imports `Reveal` from `agentic-cms/ix` no longer loads
+  the Motion library behind `Fx` and `OnView` on its page (69 KB in the
+  example's build), only `Reveal`'s own code.
 
 ## [0.7.6] — 2026-10-13
 
