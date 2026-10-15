@@ -122,7 +122,7 @@ rows:
     cells:
       - { label: health, svg: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6'>…</svg>" }
       - { label: finance, file: candidates/finance.svg }
-      - { label: chip, html: "<span class='font-label border border-ink px-2'>tag</span>" }
+      - { label: chip, html: "<span class='font-label border border-line px-2'>tag</span>" }
 ```
 
 ```bash

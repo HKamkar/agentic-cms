@@ -31,6 +31,13 @@ hard-coded values. All of them live in the `@theme static` block of
 - **Easing and durations:** one table.
 - **Breakpoints:** a fixed set, written into the styling rule.
 
+The example's `@theme` block has the roles at wireframe values:
+`--color-panel`, `--color-line`, `--color-on-ink`,
+`--text-hN--letter-spacing`, `--tracking-label`, `--radius-panel`,
+`--radius-control`, `--shadow-panel`, `--shadow-glow`. A site gives them its
+values rather than naming roles of its own, and every component that asks
+for a role follows.
+
 ## 2. Provided by the kit: don't build these
 
 | What | Where |
@@ -38,6 +45,7 @@ hard-coded values. All of them live in the `@theme static` block of
 | Motion: the play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`, `motionScript()`), the reveals that replay (`Fx`, `OnView`), `ease()`, `useReducedMotionPref`, `useMainBreakpoint`, `InlineAnimation` | `agentic-cms/ix` (`STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs)); the CSS block and its tokens are the site's `src/styles/motion.css` |
 | Above-the-fold images in server components: `EagerImage` | `agentic-cms/components` (`STANDARD.md` §4) |
 | Structured data: `JsonLd` | `agentic-cms/components` |
+| A primitive's looks as one typed map: `variants()`, `VariantProps` | `agentic-cms/cx`, beside `cx` (the components catalogue) |
 | Behaviour without a look: `FaqAccordion`, `EmailLink` with its token, `Icon` with the generated icon map | `agentic-cms/components` ([email.md](email.md), [icons.md](icons.md)) |
 | The consent store and its hooks | `agentic-cms/consent` ([consent.md](consent.md)) |
 | The form engine: the backend, the field types, the endpoint | `agentic-cms/forms` ([forms.md](forms.md)); the site draws the fields |

@@ -122,6 +122,28 @@ changes what a capture writes says **recapture baselines**.
   hydrates when the test tells it to, and the test asserts that
   `imagesReady` is still waiting and the image untouched at that moment.
   `imagesReady` itself is unchanged.
+- `variants()` and `VariantProps` in `agentic-cms/cx`, beside `cx`: a
+  component's looks as one typed map (a base, each axis with its options
+  and its default, compounds for a combination) and the function that
+  picks one, so a new look is a line in the map, never a copy of the
+  component. An option an axis lacks throws and names the options it has.
+  No React: it loads under `node:test` and in server components alike.
+  `pnpm test:pack` runs it from the tarball.
+- Tokens by role, at the wireframe's values, so no pixel moves:
+  `--color-panel` (a panel's face) and `--color-on-ink` (text on an ink
+  ground) alias `paper`, `--color-line` (every hairline) aliases `ink`;
+  each heading step has `--text-hN--letter-spacing: normal`, read by
+  `text-hN` and by `base.css`'s `h1`–`h6`; `--tracking-label` is `normal`;
+  `--radius-panel`, `--radius-control`, `--shadow-panel` and
+  `--shadow-glow` are `0` / `0 0 #0000`, the only radius and shadow
+  tokens there are. The example's components ask for the colour roles
+  where one applies (`border-line`, `stroke-line`, `bg-panel`,
+  `text-on-ink`) and name a value only where no role does: the page
+  ground, text, a filled block, muted text. The rule says so in each place
+  it lives (`AGENTS.md`, the styling rule in both trees, `STANDARD.md` §1
+  and §6, the components catalogue, `globals.css`), and the `design` skill
+  has a design give the roles their values first. A site adds the roles by
+  hand (`docs/migrating-to-0.8.0.md` § 3.6).
 
 ## [0.7.6] — 2026-10-13
 

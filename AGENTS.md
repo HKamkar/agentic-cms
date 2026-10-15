@@ -97,15 +97,22 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   rules under `.prose` and the FAQ block. Plain CSS, no `@apply`, breakpoints
   spelled out (`@media (width >= 992px)`), joined to utilities with `cx()`.
 - Tokens only in the `@theme static` block of `src/app/globals.css`; the two
-  breakpoint steps of the scale in `src/styles/base.css`. Four colours, each
-  a `light-dark()` pair: `paper` (the page ground), `ink` (text and every
-  hairline), `fill` (a filled block), `muted` (secondary text). Nothing else
-  exists as a colour utility — never `bg-white`, `text-black`,
-  `border-gray-*`; a fifth colour is a token first. No radius, shadow, blur,
-  gradient, transition or animation utilities. The type scale is
-  `text-h1`…`text-h6` and `text-body` (never `text-base`/`text-sm`, which
-  carry Tailwind's own line-heights); the fonts are `font-sans` and
-  `font-label`. Breakpoints: `max-sm` < 480, `max-md` < 768, `max-lg` < 992,
+  breakpoint steps of the scale in `src/styles/base.css`. Four colour
+  values, each a `light-dark()` pair — `paper` (the page ground), `ink`
+  (text), `fill` (a filled block), `muted` (secondary text) — and role
+  tokens that alias them: `panel` (a panel's face), `line` (every
+  hairline), `on-ink` (text on an ink ground). A component uses the role
+  where one exists and a value only where no role does; a new value or
+  role is a token first, and nothing else exists as a colour utility —
+  never `bg-white`, `text-black`, `border-gray-*`. Radius and shadow exist
+  only as role tokens (`--radius-panel`, `--radius-control`,
+  `--shadow-panel`, `--shadow-glow`) held at the wireframe's `0` / none; no
+  other radius, shadow, blur, gradient, transition or animation utility
+  exists. The type scale is `text-h1`…`text-h6` and `text-body` (never
+  `text-base`/`text-sm`, which carry Tailwind's own line-heights), each
+  heading step with its letter-spacing token; the fonts are `font-sans`
+  and `font-label`, a label's letter-spacing `--tracking-label`.
+  Breakpoints: `max-sm` < 480, `max-md` < 768, `max-lg` < 992,
   `lg` ≥ 992, `xl` / `2xl` / `3xl` ≥ 1280 / 1440 / 1920.
 - The theme is `color-scheme: light dark` on `:root`, overridden by
   `data-theme` on `<html>` (the `ui/ThemeToggle` button, `localStorage.theme`,
@@ -117,7 +124,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   Cards are a `<ul>` of bordered boxes with `<h3>` titles after the section's
   `<h2>`; a `statement` is the section's `<h2>`. What used to be an
   illustration is a `ui/Placeholder` crossed box; content images are `<img>`
-  with `width`, `height`, `alt` and `block h-auto w-full border border-ink`.
+  with `width`, `height`, `alt` and `block h-auto w-full border border-line`.
 - No motion in the wireframe: no `Fx`, `OnView`, `Reveal` or `Sequence` in a
   section, no `data-ix` or `data-part` attributes, no transitions. The
   `agentic-cms/ix` library and `src/styles/motion.css` stay for a fork that

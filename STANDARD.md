@@ -16,7 +16,8 @@ a stack of labelled boxes whose tags name the section type that drew them.
 
 All tokens live in the `@theme static` block of `src/app/globals.css` and
 nowhere else. A token name becomes utilities (`--color-paper` → `bg-paper`,
-`--container-page` → `max-w-page`, `--spacing-section` → `py-section`);
+`--color-line` → `border-line`, `--container-page` → `max-w-page`,
+`--spacing-section` → `py-section`);
 `src/styles/base.css` redefines two of them per breakpoint on `:root`, so the
 utilities and the element rules read one source at every width.
 
@@ -47,22 +48,34 @@ capture never waits on a network font and a fork picks its own.
 | `font-heading` | `= --font-sans` | what `base.css` sets on `h1`–`h6` (weight 600) |
 | `font-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | — |
 | `font-label` | `= --font-mono` | every boxed label: eyebrows, tags, chips, a section's own type |
+| `tracking-label` | `normal` | a label's letter-spacing, by role |
 
 ### Colours
 
-Four, each a `light-dark()` pair. Tailwind's palette is removed
-(`--color-*: initial`), so a page cannot quietly acquire a colour: `bg-white`,
-`text-black` and `border-gray-300` are not utilities here.
+Four values, each a `light-dark()` pair, and three roles that alias them.
+Tailwind's palette is removed (`--color-*: initial`), so a page cannot quietly
+acquire a colour: `bg-white`, `text-black` and `border-gray-300` are not
+utilities here.
 
-| Token | Light | Dark | What it is |
+| Value | Light | Dark | What it is |
 |---|---|---|---|
-| `paper` | `#ffffff` | `#121212` | the page ground; a form control's ground; the solid button's label |
-| `ink` | `#000000` | `#f2f2f2` | text, every border and hairline, the solid button's fill |
+| `paper` | `#ffffff` | `#121212` | the page ground, and what `panel` and `on-ink` alias |
+| `ink` | `#000000` | `#f2f2f2` | text, the solid button's fill, and what `line` aliases |
 | `fill` | `#e5e5e5` | `#2a2a2a` | a filled block: a label's ground, a placeholder's field, a form's success box |
 | `muted` | `#666666` | `#9a9a9a` | secondary text: a date, a role, a placeholder's caption, a variant note |
 
-A fifth colour is a token first — never a literal in a component, never an alpha
-modifier on one of these.
+| Role | Aliases | What asks for it |
+|---|---|---|
+| `panel` | `paper` | a panel's face, a box with a ground of its own: a form control, the outline button, the consent banner, the skip link |
+| `line` | `ink` | every hairline: a box's border, a rule, the placeholder's cross |
+| `on-ink` | `paper` | text on an ink ground: the solid button's label |
+
+A component uses the role where one exists and a value only where no role
+does: `border-line`, never `border-ink`. The page ground, text, a filled block,
+muted text and the solid button's fill have no role, so they name their value.
+A fork restyles by changing a value, or by pointing a role at another value or
+giving it one of its own. A new value or role is a token first — never a
+literal in a component, never an alpha modifier on one of these.
 
 ### The theme
 
@@ -78,19 +91,19 @@ semantic colours and both modes follow.
 
 ### Type scale
 
-The tokens carry size and line-height, so `text-h2` sets both; `h1`–`h6` get
-theirs from `base.css` and need no type utility at all. The two steps of the
-scale are `:root` overrides in `base.css`.
+The tokens carry size, line-height and, for the headings, letter-spacing, so
+`text-h2` sets all three; `h1`–`h6` get theirs from `base.css` and need no type
+utility at all. The two steps of the scale are `:root` overrides in `base.css`.
 
-| Token | ≥ 768 | < 768 | line-height |
-|---|---|---|---|
-| `text-h1` | 2.5rem | 2rem | 1.15 |
-| `text-h2` | 1.875rem | 1.5rem | 1.25 |
-| `text-h3` | 1.375rem | 1.25rem | 1.3 |
-| `text-h4` | 1.125rem | — | 1.35 |
-| `text-h5` | 1rem | — | 1.4 |
-| `text-h6` | 0.875rem | — | 1.4 |
-| `text-body` | 1rem | — | 1.6 |
+| Token | ≥ 768 | < 768 | line-height | letter-spacing |
+|---|---|---|---|---|
+| `text-h1` | 2.5rem | 2rem | 1.15 | normal |
+| `text-h2` | 1.875rem | 1.5rem | 1.25 | normal |
+| `text-h3` | 1.375rem | 1.25rem | 1.3 | normal |
+| `text-h4` | 1.125rem | — | 1.35 | normal |
+| `text-h5` | 1rem | — | 1.4 | normal |
+| `text-h6` | 0.875rem | — | 1.4 | normal |
+| `text-body` | 1rem | — | 1.6 | — |
 
 Never `text-base`, `text-sm` or `text-lg`: they set Tailwind's line-heights, not
 this scale. A `<p>` that has to look like a heading takes the token
@@ -106,8 +119,13 @@ or a side gutter. Everything in between is the 4 px spacing scale (`gap-2` 8 px,
 `gap-4` 16 px, `p-4` 16 px, `p-6` 24 px, `mb-6` 24 px), and that is the whole
 vocabulary: a wireframe has no arbitrary values to transcribe. `--radius-*`,
 `--shadow-*`, `--blur-*`, `--animate-*` and `--ease-*` are reset to `initial`,
-so `rounded-*`, `shadow-*`, `blur-*`, `animate-*` and `ease-*` do not exist —
-and neither does a gradient or a transition.
+so `blur-*`, `animate-*` and `ease-*` do not exist — and neither does a
+gradient or a transition. Radius and shadow come back only as roles, held at
+the wireframe's values: `rounded-panel` and `rounded-control` (`--radius-panel`,
+`--radius-control`, `0`), `shadow-panel` and `shadow-glow` (`--shadow-panel`,
+`--shadow-glow`, `0 0 #0000`). A surface asks for its radius and shadow by
+role, and a fork gives the roles their values; no other radius or shadow
+utility exists.
 
 ## 2. Layers and files
 
@@ -129,7 +147,7 @@ kind; it is plain CSS (no `@apply`, no preprocessor nesting), spells its
 breakpoints out, and joins the utilities with `cx()` from `src/lib/cx.ts`:
 
 ```tsx
-faq: cx(styles.faq, "mb-8 border border-ink"),
+faq: cx(styles.faq, "mb-8 border border-line"),
 ```
 
 Because preflight already zeroes them, nothing writes `m-0`, `p-0` or
@@ -179,7 +197,7 @@ Two kinds of picture, and they are not interchangeable.
   missing one; empty is fine for decoration), plus explicit size utilities.
   `base.css` sets `img { height: revert-layer }`, so an image sized by `w-full`
   carries `h-auto` with it — the content-image string is
-  `block h-auto w-full border border-ink`.
+  `block h-auto w-full border border-line`.
 
 Above the fold in a **server** component, use `EagerImage` (from
 `agentic-cms/components`): a plain eager
@@ -265,8 +283,8 @@ keyed by position. Every one of them renders inside `ui/Section`, the frame:
 ```tsx
 <section id={type} data-section={type} className="py-section">
   <Container>
-    <div className="border border-ink p-6 max-md:p-4">
-      <span aria-hidden="true" className="mb-4 inline-block border border-ink bg-fill px-2 font-label text-h6">{type}</span>
+    <div className="border border-line p-6 max-md:p-4">
+      <span aria-hidden="true" className="mb-4 inline-block border border-line bg-fill px-2 font-label text-h6">{type}</span>
       …the eyebrow, the heading, the children…
 ```
 
@@ -279,12 +297,12 @@ The shared strings, as they appear in the code:
 
 | What | String |
 |---|---|
-| a card | `flex flex-col gap-2 border border-ink p-4` |
+| a card | `flex flex-col gap-2 border border-line p-4` |
 | a card grid | `grid gap-4 lg:grid-cols-3` (or `-2`, `-4`) |
 | a split | `grid gap-4 lg:grid-cols-2` |
 | a lead paragraph | `mb-6 max-w-prose` |
-| a content image | `block h-auto w-full border border-ink` |
-| an icon | `size-16 border border-ink` |
+| a content image | `block h-auto w-full border border-line` |
+| an icon | `size-16 border border-line` |
 | a statistic | `text-h1 font-semibold` |
 | secondary text | `text-muted` |
 
@@ -294,7 +312,7 @@ The shared strings, as they appear in the code:
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** "What you get": three benefit cards, each an icon, a title and a line. */
 export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefits">) {
@@ -303,7 +321,7 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
       <ul className="grid gap-4 lg:grid-cols-3">
         {cards.map((benefit) => (
           <li key={benefit.title} className={card}>
-            <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-ink" />
+            <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
             <h3>{benefit.title}</h3>
             <p>{benefit.text}</p>
           </li>
