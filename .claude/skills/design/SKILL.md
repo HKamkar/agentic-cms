@@ -40,10 +40,14 @@ dev server and its own commit; never all at once.
    state (hover, focus, current page, open menu) is part of it.
 3. **The sections**, one at a time, in the order a visitor meets them. Each
    section's cards are its own; a card is not a generic component.
-4. **Motion**, last, with the reveal library (`agentic-cms/ix`): start
-   states in `src/styles/motion.css`, `data-ix` targets, every animated
-   component honouring `useReducedMotionPref()`; a sequence longer than two
-   seconds declares `data-settle` on its section.
+4. **Motion**, last, with `agentic-cms/ix` (`STANDARD.md` §7 says which
+   layer): the play-once layer (`Reveal`, `RevealGroup`, `Sequence`,
+   `part()`) by default, armed by `motionScript()` and timed by the
+   `--ease-*` / `--motion-*` tokens; `Fx` and `OnView` only where a replay
+   on re-entry is wanted, with `data-ix` targets and every animated
+   component honouring `useReducedMotionPref()`. Start states and keyframes
+   live in `src/styles/motion.css`; a sequence longer than two seconds
+   declares `data-settle` on its section (`settle` on a `Sequence`).
 
 ## The loop, per element
 

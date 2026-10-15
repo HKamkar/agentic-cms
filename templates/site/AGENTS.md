@@ -97,11 +97,17 @@ paths. The table is written from the rules' frontmatter by
   site's. One colour utility per property per element.
 - Preflight zeroes margins, paddings, borders and list markers: never
   `m-0`, `p-0`, `list-none`.
-- Animation targets are `data-ix` attributes through `ix(name)`, never a
-  styling class; start states live in `src/styles/motion.css`; no
-  `translate-*` / `rotate-*` / `scale-*` utility on an element the reveal
-  library moves; every animated component checks `useReducedMotionPref()`;
-  a sequence longer than two seconds declares `data-settle` on its section.
+- Motion is `agentic-cms/ix`, in two layers (`STANDARD.md` §7 says which).
+  The play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) plays
+  a root once, never on a hover or a second scroll, runs loops only on
+  screen, hides nothing unless `motionScript()` armed the page, and takes
+  its timings from the `--ease-*` / `--motion-*` tokens. The reveals that
+  replay (`Fx`, `OnView`) target `data-ix` attributes through `ix(name)`,
+  never a styling class, and every animated component checks
+  `useReducedMotionPref()`. Start states and keyframes live in
+  `src/styles/motion.css`; no `translate-*` / `rotate-*` / `scale-*` utility
+  on an element either layer moves; a sequence longer than two seconds
+  declares `data-settle` on its section (`settle` on a `Sequence`).
 - Decorative elements are real `aria-hidden` elements, not pseudo-elements.
   No emoji and no symbol characters platforms render as emoji in the UI: an
   icon is an SVG. Interactive things are real `<button>`s and links; no

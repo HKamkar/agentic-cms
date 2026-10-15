@@ -35,7 +35,7 @@ hard-coded values. All of them live in the `@theme static` block of
 
 | What | Where |
 |---|---|
-| Reveals and motion: `Fx`, `OnView`, `ease()`, `useReducedMotionPref`, `useMainBreakpoint`, `InlineAnimation` | `agentic-cms/ix` (`STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs)) |
+| Motion: the play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`, `motionScript()`), the reveals that replay (`Fx`, `OnView`), `ease()`, `useReducedMotionPref`, `useMainBreakpoint`, `InlineAnimation` | `agentic-cms/ix` (`STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs)); the CSS block and its tokens are the site's `src/styles/motion.css` |
 | Above-the-fold images in server components: `EagerImage` | `agentic-cms/components` (`STANDARD.md` §4) |
 | Structured data: `JsonLd` | `agentic-cms/components` |
 | Behaviour without a look: `FaqAccordion`, `EmailLink` with its token, `Icon` with the generated icon map | `agentic-cms/components` ([email.md](email.md), [icons.md](icons.md)) |
@@ -59,7 +59,7 @@ values, for a site to restyle rather than write again.
 | Forms | `TextField`, `TextArea`, `Select` (drawn: the native list looks off), `Checkbox`, `CheckboxGroup` / `RadioGroup` through one `Choice`, `FieldWrap` / `FieldRow` / `Hint` / `Marker`, `FieldGroup`, `FormNote`, `FormShell` (the success and error states), `SubmitButton` | all of them in `ui/form/`, plus `DateField` and `NumberField`; `Select` is the native list with a drawn chevron |
 | Data | `DataTable` (it scrolls inside its own box, and is labelled), `FactTable` (label and value rows), an FAQ section on top of the kit's `FaqAccordion` | `ui/Faq` |
 | Media and performance | `LazyBackdrop` (a CSS background picture below the fold waits until it is near the view), `PauseOffscreen` (stops a loop the compositor cannot run while it is off screen), a `<figure>` pattern with a phone `<source>` for charts ([lab.md](lab.md)) | `ui/Placeholder` for a picture not drawn yet |
-| Motion wrappers | `Reveal` / `RevealGroup` (the site's numbers on top of `Fx`), a `heroIntro(step)` helper for the hero's entrance | none: the wireframe has no motion (`STANDARD.md` §7) |
+| Motion | the `--ease-*` / `--motion-*` values in the layer's block of `motion.css`, a `heroIntro(step)` helper that steps the hero's `Reveal`s (`intro`, a delay per step) | the block at wireframe values, used by nothing: the wireframe has no motion (`STANDARD.md` §7) |
 
 ## 4. Add on the second use, not before
 

@@ -117,7 +117,7 @@ and neither does a gradient or a transition.
 | `base` — Tailwind preflight | margins, paddings, borders and list markers zeroed; `[hidden]` hidden; buttons inherit font and colour | never |
 | `base` — `src/styles/base.css` | `color-scheme` and the two `data-theme` overrides, the two breakpoint steps, `body`, `h1`–`h6`, the underlined `a`, `strong`, `img, video { height: revert-layer }` | a default every page needs |
 | `utilities` — Tailwind | everything else | always |
-| unlayered — `src/styles/motion.css` | the start states of the `ix/` reveal library, outside the layers so they beat any utility | a fork adds a reveal preset (§7) |
+| unlayered — `src/styles/motion.css` | the start states and keyframes of the `ix/` motion library — the reveals' classes and the play-once layer's block with its tokens — outside the layers so they beat any utility | a fork adds a reveal preset or a part (§7) |
 | unlayered — `<Name>.module.css` | what utilities cannot say | see below |
 
 There is exactly one CSS module in the tree,
@@ -243,7 +243,7 @@ shared component goes into it in the same commit. In short:
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `Fx`, `OnView`, `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useReveal()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
+| Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 says which to choose |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
@@ -324,14 +324,26 @@ split and a content image instead of a placeholder.
 
 ## 7. Motion
 
-**The wireframe animates nothing.** No `Fx`, no `OnView`, no `data-ix`, no
-transition or transform utility, no keyframes. Nothing on a page is hidden until
+**The wireframe animates nothing.** No `Fx`, no `OnView`, no `Reveal`, no
+`Sequence`, no `data-ix` or `data-part`, no transition or transform utility, no
+keyframes. Nothing on a page is hidden until
 JavaScript runs: the HTML a crawler receives is the page a reader sees. The only
 state changes are the ones a control owns — the FAQ's `hidden` answer, the
 navbar's mounted menu, the theme attribute — and each is instant.
 
-The reveal library survives for a fork that wants reveals, whole and unused, in
-`agentic-cms/ix` (`src/lib/ix/`) with its start states in `src/styles/motion.css`:
+The motion library survives for a fork that wants motion, whole and unused, in
+`agentic-cms/ix` (`src/lib/ix/`) with its start states and keyframes in
+`src/styles/motion.css`. It has two layers, and the first question is which:
+
+- **Play once: `Reveal`, `RevealGroup`, `Sequence`** (below). A root plays the
+  first time it is seen and never again — not on a second scroll, not on a
+  hover — and its loops run only while it is on screen. This is the default
+  for new work.
+- **Replay on re-entry: `Fx`, `OnView`.** An element plays each time it enters
+  the viewport after having left it entirely. Choose them only when that
+  replay is wanted. One element never takes both.
+
+The reveals that replay:
 
 | Export | What it is |
 |---|---|
@@ -358,6 +370,46 @@ properties compose with Motion's inline `transform` (a static transform on such
 an element goes in a module). Once any of it is in use, `capture <label>
 --motion` plays the animations instead of freezing them and records an inventory
 of every animation with its timing and target, compared exactly.
+
+The play-once layer — CSS keyframes started by one attribute, no animation
+code in the reader's browser beyond two shared observers:
+
+| Export | What it is |
+|---|---|
+| `Reveal` | one element that enters once: `<Reveal effect="rise" delay={120} as="h2">`, effects `rise` (default), `fade`, `scale`. `intro` is for the first screen's copy: the entrance is played by CSS from the first frame, never a blank start pose while the scripts load. |
+| `RevealGroup` | its direct children enter one after another: `<RevealGroup as="ul" effect="pop" step={60}>`, effects `rise`, `fade`, `scale`, `pop`; `step` in ms, or the site's `--motion-stagger`. Each child takes `style` and a data attribute. |
+| `Sequence` | a choreography: every element inside it marked with `part()` plays once, after its own delay, and its loops run only on screen. `as="svg"` for a drawing; `settle={2600}` writes `data-settle` for the harness. |
+| `part(kind, delayMs?, { dim, style }?)`, `PART_KINDS`, `LOOP_KINDS` | the props that make an element a part, `<path {...part("draw", 400)} d="…" />`: `data-part` and `--d`. The kinds: `fade`, `rise`, `scale`, `pop`, `draw` (a stroke draws itself), `grow` (from its left edge), `dim` (fades back to `--dim`), and the loops `flow`, `pulse`, `breathe`. |
+| `staggerDelay(index, delayMs?, stepMs?)` | the delay of a stagger's i-th item: `340ms`, or a `calc()` over `--motion-stagger`. |
+| `useMotionRoot()` | the ref callback behind the three: plays a root once when it is 12 % into the viewport (one shared observer; a root in the last 12 % of the page as soon as it shows), keeps `data-visible` on a root with loops while it is on screen, measures a `draw`'s stroke (`--len`), and plays at once under a lab timeline (`[data-lab-timeline]`). |
+| `motionScript()` | the inline script that arms the page: `data-motion="on"` on `<html>` before the first paint, unless the reader prefers reduced motion. |
+
+Adding the layer: render `motionScript()` as an inline script near the top of
+`<body>` (`<html>` keeps `suppressHydrationWarning`), and keep the layer's block
+at the end of `motion.css` — the armed start states, the keyframes played with
+fill `backwards`, the loops under `[data-play][data-visible]`, the guard that
+puts everything at rest under `prefers-reduced-motion`, and the tokens. The
+tokens are plain `:root` custom properties there — the curves `--ease-enter`,
+`--ease-move`, `--ease-pop`, the durations `--motion-fast`, `--motion-base`,
+`--motion-slow`, the distance `--motion-travel` and the step
+`--motion-stagger` — not `@theme` tokens, which would bring back the `ease-*`
+utilities the wireframe removes; the package carries no timing of its own. The
+rules that come with it:
+
+- a root plays once, when it first enters the viewport — never on a hover or a
+  second scroll; loops run only on screen;
+- nothing is hidden unless armed: without scripts, under reduced motion and in
+  the harness's static captures every part is at rest;
+- the first screen's copy is a `Reveal` with `intro`;
+- curves and durations are the tokens, never a number in a component;
+- no transition or animation class in a section, and no `translate-*`,
+  `rotate-*` or `scale-*` utility on an element a part moves (the keyframes
+  set `transform`);
+- a sequence longer than two seconds says so with `settle`.
+
+`capture --motion` sees the parts play and records them in the inventory, and
+`probe` lists an armed part whose root has not played among the pending
+reveals.
 
 ## 8. Decisions that look odd — do not "fix" these
 

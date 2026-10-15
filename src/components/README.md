@@ -21,9 +21,9 @@ are in `STANDARD.md`):
   pair applies.
 - Text, links and images come in through props or `src/config/site.ts`,
   never hard-coded inside a shared component.
-- The wireframe has no motion: no `Fx`, no `OnView`, no `data-ix`, no
-  transition. The `ix/` library below is kept whole for a fork that wants
-  reveals.
+- The wireframe has no motion: no `Fx`, no `OnView`, no `Reveal`, no
+  `Sequence`, no `data-ix` or `data-part`, no transition. The `ix/` library
+  below is kept whole for a fork that wants motion.
 - `ui/` components have no hooks of their own unless marked `"use client"`,
   so they can be used from server and client components alike.
 - Preflight zeroes margins, paddings, borders and list markers: a component
@@ -198,11 +198,39 @@ definition schema, adding a form, a field type, a backend or a sink — is
 <Form definition={forms.contact} />
 ```
 
-## The reveal library (`agentic-cms/ix`) — available, unused
+## The motion library (`agentic-cms/ix`) — available, unused
 
 Nothing in the wireframe animates, and nothing imports these. They are kept
-whole, with their start states in `src/styles/motion.css`, so a fork that
-wants reveals only has to render `<Fx>` (`STANDARD.md` §7).
+whole, with their start states and keyframes in `src/styles/motion.css`, so a
+fork that wants motion only has to render them (`STANDARD.md` §7). Two layers;
+choose before writing the first one:
+
+- **Play once** — `Reveal`, `RevealGroup`, `Sequence`, `part()`: a root plays
+  the first time it is seen, never again on a second scroll or a hover, and
+  its loops run only on screen. The default for new work.
+- **Replay on re-entry** — `Fx`, `OnView`: an element plays each time it
+  enters the viewport after having left it entirely. Only when that replay is
+  wanted.
+
+### Play once
+
+The layer is CSS keyframes that one attribute starts: a site renders
+`motionScript()` near the top of `<body>` and keeps the layer's block of
+`motion.css` (start states, keyframes, loops, the reduced-motion guard, the
+`--ease-*` / `--motion-*` tokens). Without the script, under reduced motion and
+in the harness's static captures every part is at rest.
+
+| Export | What it is | Use |
+|---|---|---|
+| `Reveal` | One element that enters once | `<Reveal as="h2" effect="fade" delay={120} className="…">` — effects `rise` (default), `fade`, `scale`. `intro` for the first screen's copy: played by CSS from the first frame, never blank while the scripts load. |
+| `RevealGroup` | Its direct children enter one after another, once | `<RevealGroup as="ul" effect="pop" step={60} className="…"><li>…</li>…</RevealGroup>` — effects `rise`, `fade`, `scale`, `pop`; `step` in ms (default the site's `--motion-stagger`), `delay` before the first. Each child takes `style` and a data attribute. |
+| `Sequence` | A choreography of parts, played once; its loops only on screen | `<Sequence as="svg" viewBox="…" settle={2600}><path {...part("draw", 400)} d="…" /><circle {...part("pulse")} … /></Sequence>` — `settle` (ms, for a sequence over two seconds) becomes `data-settle`. |
+| `part(kind, delayMs?, { dim, style }?)` | The props that make an element a part | Spread them on the element: `data-part` and `--d`. Kinds `fade`, `rise`, `scale`, `pop`, `draw`, `grow`, `dim` (fades back to `dim`, 0.16 by default), and the loops `flow`, `pulse`, `breathe`; `PART_KINDS` and `LOOP_KINDS` list them, `PartKind` is their type. |
+| `staggerDelay(index, delayMs?, stepMs?)` | The i-th delay of a stagger | `<li data-part="pop" style={{ "--d": staggerDelay(i, 100) }}>` for a list a `Sequence` staggers by hand (what `RevealGroup` does): `delayMs` plus i steps of the site's `--motion-stagger`, or of `stepMs`. |
+| `useMotionRoot()` | The ref callback behind the three | `<div ref={useMotionRoot()} data-motion-root="">` for a root of one's own: plays it once 12 % into the viewport, keeps `data-visible` for its loops, measures its draws (`--len`), plays at once under a lab timeline. |
+| `motionScript()` | The arming script's text | `<script dangerouslySetInnerHTML={{ __html: motionScript() }} />` near the top of `<body>`: `data-motion="on"` on `<html>` unless the reader prefers reduced motion. |
+
+### Replay on re-entry, and the shared pieces
 
 | Export | What it is | Use |
 |---|---|---|

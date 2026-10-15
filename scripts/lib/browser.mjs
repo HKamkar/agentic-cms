@@ -215,8 +215,27 @@ export const fontsReady = (page) => inPage(page, "fonts", 8000, () => Promise.ra
 // that, rather than a fixed pause, is what makes the scroll-through below
 // mean something; a page that never gets there fails the capture instead of
 // yielding a shot of its unhydrated markup.
+//
+// The play-once layer (ix/Reveal, RevealGroup, Sequence) holds a part back
+// only while it is armed — <html data-motion="on">, which motionScript() sets
+// for a reader with no reduced-motion preference, the condition the layer's
+// CSS block hides anything under — and its root has neither played
+// (data-play) nor plays from the first frame (data-intro). A static capture
+// runs under reduced motion, where nothing is armed: the parts are at rest
+// from the first paint and there is nothing to wait for. Under --motion a
+// part below the fold is pending until its root is scrolled to.
 export const FX_START_STATE = /\bix-(main-)?init--(slideIn\w+|growIn|fadeIn)\b/;
-export const revealed = (page) => page.waitForFunction((pattern) => [...document.querySelectorAll('[class*="ix-init--"], [class*="ix-main-init--"]')].filter((el) => new RegExp(pattern).test(el.getAttribute("class") ?? "")).every((el) => getComputedStyle(el).opacity === "1"), FX_START_STATE.source, { timeout: 15000 });
+/** In the page: every reveal on it (an Fx start state, a part of the play-once layer) and those still held back, each with what identifies it. */
+export const REVEALS = (pattern) => {
+  const fx = [...document.querySelectorAll('[class*="ix-init--"], [class*="ix-main-init--"]')].filter((el) => new RegExp(pattern).test(el.getAttribute("class") ?? ""));
+  const parts = [...document.querySelectorAll("[data-motion-root] [data-part], [data-motion-root][data-part]")];
+  const armed = document.documentElement.getAttribute("data-motion") === "on" && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+  const unplayed = (el) => { const root = el.closest("[data-motion-root]"); return !root.hasAttribute("data-play") && !root.hasAttribute("data-intro"); };
+  const entry = (el) => ({ tag: el.tagName.toLowerCase(), id: el.id || null, classes: [...el.classList], pageTop: Math.round(el.getBoundingClientRect().top + window.scrollY), opacity: getComputedStyle(el).opacity, ...(el.hasAttribute("data-part") ? { part: el.getAttribute("data-part") } : {}) });
+  const pending = [...fx.filter((el) => getComputedStyle(el).opacity !== "1"), ...(armed ? parts.filter(unplayed) : [])];
+  return { total: fx.length + parts.length, pending: pending.map(entry) };
+};
+export const revealed = (page) => page.waitForFunction(`(${REVEALS})(${JSON.stringify(FX_START_STATE.source)}).pending.length === 0`, null, { timeout: 15000 });
 
 // A scroll-into-view sequence (ix/OnView) reaches its end state through a
 // chain that runs on the renderer's main thread: the IntersectionObserver

@@ -229,8 +229,9 @@ and `--pages` names its own. Off by default.
 `<page>@<width>.png` (`home` for `/`, `/` → `__` elsewhere:
 `blog-post__pages-are-files@1440.png`), and the home page's menu open at
 767 and 390 (`home@767--menu.png`, viewport only). The rendering is made
-deterministic: `prefers-reduced-motion` (the reveal library snaps to its
-end state), every CSS animation and transition disabled, infinite loops
+deterministic: `prefers-reduced-motion` (the reveals snap to their end
+state, and the play-once layer arms nothing, so its parts are at rest from
+the first paint), every CSS animation and transition disabled, infinite loops
 held at their first frame, every inline SVG's SMIL clock paused at its
 `data-rest` (seconds; else 0), scroll anchoring off, every image loaded
 before the shot. SMIL is not a CSS or Web Animation, so nothing else stops
@@ -349,7 +350,9 @@ a usage error, a missing capture or two captures of different schemes.
 A static shot is taken only when the page has proved itself: fonts ready
 (with a grace period, so a font that never arrives shows up as a diff rather
 than a hang); every reveal at its end state, which is the trace hydration
-leaves under reduced motion; a scroll-through whose steps are counted in the
+leaves under reduced motion (an armed part of the play-once layer whose root
+has not played counts as a reveal still pending, which a static capture
+never has: under reduced motion nothing is armed); a scroll-through whose steps are counted in the
 renderer's animation frames rather than milliseconds, so a loaded machine
 slows the capture instead of photographing a reveal before it ran — each
 600 px step done once the page has not changed (no DOM mutation) for two

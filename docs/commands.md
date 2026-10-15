@@ -533,7 +533,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 
 Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
-`--json` prints `{ url, route, width, height, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`.
+`--json` prints `{ url, route, width, height, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity, part? }] }, console }`.
 
 ```bash
 agentic-cms probe / --select ".card" --all

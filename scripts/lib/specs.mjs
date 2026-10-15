@@ -222,7 +222,7 @@ export const SPECS = {
     },
     examples: ["agentic-cms probe / --select \".card\" --all", "agentic-cms probe / --heading \"pricing\" --motion --timeline 2000 --every 100"],
     exit: { 0: "printed", 1: "no element matched", 2: "usage, no build, no browser, or a seed that does not read" },
-    json: `{ url, route, width, height, scheme, motion, ${seedJson}, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`,
+    json: `{ url, route, width, height, scheme, motion, ${seedJson}, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity, part? }] }, console }`,
   },
   sheet: {
     command: "sheet", script: "sheet", group: "look & measure", summary: "a candidate sheet from a spec — rows lettered, cells at the real size on the real background — rendered to one picture for a pick by row",

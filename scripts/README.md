@@ -182,7 +182,9 @@ against `fixtures/` by `pnpm test:browser`.
   prove hydration and the footer hairlines that prove the scroll-through ran
   its sequences — look for `ix`/`OnView` markers, so they have nothing to wait
   for while the wireframe has no motion and become load-bearing again in a
-  fork that adds reveals. Needs a Chromium build (`~/.cache/ms-playwright`, or
+  fork that adds reveals. The play-once layer's parts count among the
+  reveals while armed and unplayed, which a static capture never sees: it
+  runs under reduced motion, where the layer arms nothing. Needs a Chromium build (`~/.cache/ms-playwright`, or
   `CHROME_PATH`). The comment at the top of the script has the details.
   Every page starts from a seeded storage when the site has a
   `src/config/harness.ts` (`export const harness = { storage: { consent:
