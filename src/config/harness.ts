@@ -7,14 +7,17 @@
 // no tag) rather than a first visit. `--no-storage` shows the banner itself.
 //
 // The profile: what every capture command takes unless a flag says
-// otherwise — the schemes the site has (a proof runs a pass in each) and the
-// ref a proof's baseline is built from.
+// otherwise — the widths the site is designed and proved at (390 below
+// base.css's 768 step, 768 below its 992, 1440 and 1920 above; the menu is
+// open at the two below 992), the schemes it has (a proof runs a pass in
+// each) and the ref a proof's baseline is built from.
 import { analytics } from "./analytics";
 
 const { storageKey, version } = analytics.consent;
 
 export const harness = {
   storage: { [storageKey]: { analytics: "denied", at: "{now}", version } },
+  widths: [390, 768, 1440, 1920],
   schemes: ["light", "dark"],
   proof: { ref: "develop" },
 };
