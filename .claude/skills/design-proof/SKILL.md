@@ -15,9 +15,10 @@ page survived.
 ## Read first
 
 `docs/visual-parity.md` § Reading a compare; the change's diff (`git diff
-develop --stat`) to know which pages and sections it can touch; whether
-anything animates (`grep -rl "agentic-cms/ix" src/components`), which
-decides whether `--motion` is part of the proof.
+develop --stat`) to know which pages and sections it can touch, and
+whether it touches anything that animates (`grep -rl "agentic-cms/ix"
+src/components`) or a hover, focus, checked or open state, which decides
+whether `--motion` or `--states` is part of the proof.
 
 ## Steps
 
@@ -29,11 +30,12 @@ decides whether `--motion` is part of the proof.
    ```
 
    (A served build standing in for a commit — `--url` — has its `git log
-   -1` printed first.) With reveals in use, also `--motion`; with hover,
-   focus, checked or open states touched, also `--states`; with a dark
-   theme, `--scheme dark`. Only a first capture of a large site needs the
-   background (every later one copies the unchanged pages); a capture is
-   finished when `.parity/visual/<label>/capture.json` exists.
+   -1` printed first.) With animation changed, also `--motion`; with
+   hover, focus, checked or open states touched, also `--states`; on a
+   site with a dark theme, `--scheme dark` as well. Only a first capture
+   of a large site needs the background (every later one copies the
+   unchanged pages); a capture is finished when
+   `.parity/visual/<label>/capture.json` exists.
 2. **The change**, built exactly as it will be committed (`pnpm build`;
    nothing edited after it), then:
 
@@ -48,13 +50,21 @@ decides whether `--motion` is part of the proof.
    any difference; its captures are `proof-before` / `proof-after`
    (`-motion`, `-states`), read like any compare in step 3.
 
-   Capture the full set, not a `--pages` subset to save time: a page whose
-   build files did not change is copied from `.parity/shot-cache/` rather
-   than taken again, and several browsers work at once (`--jobs`), so the
-   second capture of a proof takes the changed pages alone. `--pages /a,/b`
-   is for looking at one page while iterating; a site with many pages of
-   one template (posts) can pass `--sample <n>` to both captures to
-   photograph n of them.
+   Keep the proof as short as the change allows:
+   - the site's widths (`--widths w,w` on both captures);
+   - the pages the change touches (`--pages /a,/b`, the same on both
+     captures and the compare; `proof --pages` passes it to every step),
+     and one page per template (`--sample 1`) only when the change is
+     site-wide: a token, the chrome, a shared component;
+   - `--states` only when hover, focus, checked or open states changed,
+     `--motion` only when animation did;
+   - never a scheme the site does not have.
+
+   A page is left out because the change cannot reach it, never to save
+   time: a page whose build files did not change is copied from
+   `.parity/shot-cache/` rather than taken again, and several browsers
+   work at once (`--jobs`), so a wider capture stays cheap when the change
+   needs it.
 3. **Read the report** (`report.json`, or the lines):
    - `ok` everywhere: a refactor proved. Say so with the counts.
    - `CHANGED` on the pages the change touches, `rows` inside the changed

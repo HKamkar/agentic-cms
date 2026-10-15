@@ -58,9 +58,13 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    around a component — it drives the component's inline SVGs and
    anything marked `data-lab-drive`, never the reveals around them
    (`docs/lab.md` § Inspecting motion). `pnpm dev`;
-   hand over the route's URL on the dev server (and the LAN address for a
-   phone). Your own look at it is `pnpm kit shot /<name>-demo --url <dev
-   server>`, seeded like a capture, so a banner the site shows until a
+   hand over the route's URL on the dev server: the LAN or public address
+   for a phone, with its hostname in `ALLOWED_DEV_ORIGINS`
+   (`docs/dev-server.md`), the candidates measured at the site's widths and
+   their interactions run in WebKit too, and what the machine cannot show
+   named for the owner's Safari (`docs/browsers.md`; the checklist is
+   `docs/design.md` § Handing over and merging). Your own look at it is
+   `pnpm kit shot /<name>-demo --url <dev server>`, seeded like a capture, so a banner the site shows until a
    visitor's choice is stored stays closed over the candidates (the owner
    closes it once in their own browser). A dev server restarted after a `pnpm build` that fails every page
    with `Can't resolve '@vercel/turbopack-next/internal/…'` is reading the
@@ -104,6 +108,9 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 - What is generic leaves the section for the library in the same job, and
   goes into the catalogue with its props; the section composes it. Cards
   stay the section's own.
+- Rejected and unapproved candidates are deleted, never archived, moved
+  aside or kept "for later": `demo clean` takes them with the route, and
+  no commit carries one.
 - The route and the losers never merge: the build's SEO audit fails a route
   without a `seo` block, which is the guard; `demo clean` is the last step
   before the verify block. It removes what the round created that nothing

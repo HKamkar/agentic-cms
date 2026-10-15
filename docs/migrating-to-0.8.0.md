@@ -58,19 +58,58 @@ table in `AGENTS.md`.
 A file you edited is kept and reported `modified`. Compare it with
 `node_modules/agentic-cms/templates/site/rules/<name>.md` (or the skill under
 `node_modules/agentic-cms/.claude/skills/`) and take the new lines by hand.
-They are listed here *(each job adds its lines)*.
+They are listed here *(each job adds its lines)*:
 
-**`AGENTS.md`:** `init` never rewrites it outside the rules table. Add these
-pointers by hand *(job 2; final text at the release)*:
+- **`design-options`:** step 4's hand-over (the LAN or public address with
+  its origin allowed, the site's widths, the interactions in WebKit, what
+  to ask the owner's Safari for), and the rule that rejected and
+  unapproved candidates are deleted, never archived.
+- **`design-proof`:** a proof as short as the change allows (the site's
+  widths, the pages the change touches, `--sample 1` only for a site-wide
+  change, `--states` / `--motion` only when hover or animation changed,
+  never a scheme the site does not have), in place of "capture the full
+  set".
+- **The design rule:** rejected and unapproved candidates are deleted,
+  never archived or kept "for later".
+- **The styling rule:** the site is designed, looked at and measured at
+  its widths, for a new site 390, 768, 1440 and 1920.
 
-- *A fresh clone or a new machine: `node_modules/agentic-cms/docs/setup.md`
-  (`bash scripts/setup.sh`, or the `setup` skill).*
-- *Before starting a server or handing over a URL:
-  `node_modules/agentic-cms/docs/dev-server.md`; `pnpm urls` finds this
-  machine's addresses. A machine's address never goes into the repo.*
-- *How design is shown to the owner and checked in Chrome and Safari:
-  `docs/browsers.md` and `docs/design.md` § Handing over.*
-- *Traps by topic: `node_modules/agentic-cms/docs/gotchas.md`.*
+**`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
+these lines by hand, as a new site's `AGENTS.md` carries them. After the
+bullet that names the engines' contracts:
+
+```md
+- The kit's know-how is under `node_modules/agentic-cms/docs/`, read
+  there, not copied: `setup.md` on a fresh clone or a new machine;
+  `dev-server.md` before starting a server or handing over a URL;
+  `browsers.md` for what Chromium, WebKit and the owner's Safari each
+  check; `primitives.md` for what a new site builds first; `gotchas.md`,
+  the traps by topic, before touching an area it lists.
+- A machine's address never goes into the repo: it is found when needed,
+  per developer, and lives in the gitignored `.env.local`
+  (`ALLOWED_DEV_ORIGINS`, `dev-server.md`).
+```
+
+In § Process, after "Reading a screenshot":
+
+```md
+- The site is designed, looked at and measured at its widths — for a new
+  site four: 390, 768, 1440 and 1920.
+- Rejected and unapproved candidates are deleted, never archived or kept
+  "for later" (`pnpm kit demo clean`, `pnpm kit lab clean`).
+```
+
+In § Parity harness and long runs, the clause "so capture the full set
+rather than a `--pages` subset to save time (`--pages` is for looking at
+one page; `--sample <n>` for a site with many posts)" becomes:
+
+```md
+; keep a proof as short as the change allows — the site's widths
+(`capture --widths`), the pages the change touches (`--pages`), one page
+per template (`--sample 1`) only when the change is site-wide, `--states` /
+`--motion` only when hover or animation changed, never a scheme the site
+does not have
+```
 
 **What changes without any action from you:**
 
@@ -263,22 +302,35 @@ it: a raw `<button>` in a section, or an uncatalogued export in `ui/`.
 **If you wrote your own guard and lint:** move your config's lists into the
 kit's format, then delete your scripts and the rule you wrote.
 
-### 3.8 The know-how pointers *(job 2)*
+### 3.8 The know-how pointers
 
-**Why:** the kit now carries the traps and the practice once, for every site:
-- `docs/gotchas.md`;
-- `docs/browsers.md`;
-- `docs/dev-server.md`;
-- `docs/setup.md`;
-- `docs/primitives.md`;
-- the deploy notes for Cloudflare, Cloud Run and Azure App Service.
+**Why:** the kit now carries the traps and the practice once, for every
+site, under `node_modules/agentic-cms/docs/`:
+- `setup.md`: a fresh clone on a new machine, step by step, and what to
+  do when a step fails;
+- `dev-server.md`: the ports, which address to hand over, the allowed
+  origins, stopping a server, old proof baselines;
+- `browsers.md`: what headless Chromium, headless WebKit and the owner's
+  Safari each check, what headless cannot show, the engines' differences;
+- `primitives.md`: the tokens, what the kit provides, the day-one
+  primitives, what waits for a second use, the rules every primitive
+  follows;
+- `gotchas.md`: the traps by topic (Next.js, Tailwind, CSS and SVG,
+  measuring, pnpm, git and GitHub, services);
+- `deploy.md`: the notes for Cloudflare Workers, Google Cloud Run and
+  Azure App Service beside the Node server;
+- `design.md` § Handing over and merging: the checklist before a URL goes
+  to the owner and before a merge.
 
-**Do:** add the `AGENTS.md` pointers from § 1. If your site has its own
-copies of these guides, delete each entry the kit now has, and keep what is
-only yours: your host's choice, your services, your design decisions.
+**Do:** add the `AGENTS.md` lines from § 1. If your site wrote its own
+copies of these guides, delete each entry the kit's guide now has, and
+keep what is only yours: your brand and design directions, your clone
+URL, your chosen host, your services, and your own overrides of the kit.
+Point your `AGENTS.md` at the kit's guide for the rest.
 
-**Check:** `grep` your `docs/` for an entry the kit's guide also has, and
-expect none.
+**Check:** `grep -rlE "ALLOWED_DEV_ORIGINS|install-deps webkit|auto-cols-fr|not all and \(min-width" docs/`
+finds nothing your site does not keep on purpose, and your `AGENTS.md`
+names the five guides.
 
 ## 4. Delete what your site wrote itself
 
@@ -294,7 +346,7 @@ Each row goes only after its step works.
 | `variants()` | `agentic-cms/cx` | 3.6 |
 | a placement guard, component lint rules, a components rule | `agentic-cms check-components`, `agentic-cms/eslint`, the kit's rule | 3.7 |
 | hand-written review routes (a page of every primitive, of every motion) | `demo new <name> --showcase`, removed by `demo clean` | — |
-| copies of the gotchas, browser, dev-server or setup guides | the kit's docs, plus your site-only lines | 3.8 |
+| copies of the gotchas, browser, dev-server or setup guides, or a primitives spec | the kit's docs, plus your site-only lines | 3.8 |
 
 ## Two paths, worked
 

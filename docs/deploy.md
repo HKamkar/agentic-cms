@@ -1,10 +1,43 @@
-# Deploying a site as a Node server
+# Deploying a site
 
-Every page is prerendered at build time whatever the host. The example
-deploys as a Cloudflare Worker (`pnpm preview`, `pnpm run deploy`; the
-README). This page is the other host the kit supports: a Node server
-running Next's standalone output, on a container or an app service. The
-flags are in [commands.md](commands.md).
+Every page is prerendered at build time whatever the host. The kit
+supports two: a Cloudflare Worker, as the example deploys (the next
+section), and a Node server running Next's standalone output, on a
+container or an app service (from § The build on), with the notes for
+[Google Cloud Run](#google-cloud-run) and
+[Azure App Service](#azure-app-service) at the end. The flags are in
+[commands.md](commands.md); the traps by topic are
+[gotchas.md](gotchas.md).
+
+## Cloudflare Workers
+
+The example's host, through OpenNext (`open-next.config.ts`,
+`wrangler.jsonc`; `init` copies neither, so a site that deploys there takes
+them from the example with its scripts):
+
+```bash
+pnpm preview       # build for Cloudflare and serve the Worker locally on :8000
+pnpm run deploy    # build and deploy; `deploy` alone is a pnpm built-in
+pnpm upload        # build and upload a version without deploying it
+```
+
+- **Static-only.** The Worker serves the prerendered pages from its
+  static-assets cache and has no filesystem at request time; the form
+  endpoint is the one route that runs per request. `revalidate`,
+  on-demand revalidation or a request-time read needs OpenNext's R2
+  incremental cache first.
+- **500s straight after `next build`.** `next start` and `wrangler dev`
+  on a plain Next build answer 500: only `pnpm preview`, `pnpm run deploy`
+  and `pnpm upload` fill the asset cache the Worker reads.
+- **About 40 "Failed to copy node_modules/…" lines** during the OpenNext
+  build are an OpenNext bug and harmless.
+- **No native modules under `src/`.** Everything there is bundled for the
+  Worker, code that only runs at build time included: `sharp` breaks the
+  bundle (`image-size` is the pure-JS alternative); `scripts/` is not
+  bundled.
+- **The form endpoint's destination** is a Worker secret
+  (`wrangler secret put FORM_WEBHOOK_URL`, the same for the secret;
+  [forms.md](forms.md)).
 
 ## The build
 
@@ -120,3 +153,41 @@ failed.
   ([forms.md](forms.md)).
 - **The server renames itself `next-server`.** Find a stale one by the
   port it holds (`ss -ltnp`), not by a pattern on its path.
+
+## Google Cloud Run
+
+A Node server in a container, so everything above applies:
+`output: "standalone"`, `agentic-cms assemble` as the build's last step
+(never a hand-written `cp`), and `HOSTNAME=0.0.0.0` in the container, so
+the server listens on every interface rather than the container's
+hostname. Cloud Run sends traffic to the port in `PORT` (8080 unless the
+service says otherwise), and the standalone server reads it. The form
+endpoint's destination goes in the service's environment, or in its
+secrets.
+
+## Azure App Service
+
+The package from § The build, deployed as a zip, plus the platform's own
+settings:
+
+- **Turn Kudu's build off** (`SCM_DO_BUILD_DURING_DEPLOYMENT=false`): the
+  package is built already, and Kudu would install and build it again on
+  the server.
+- **Session affinity (ARR affinity) is on by default** and sets a cookie
+  before the visitor's consent. Turn it off for a stateless app, and
+  again on every new slot, which starts with it on.
+- **Slot settings are copied once,** when a slot is made: a new app
+  setting goes on every slot by hand.
+- **There is no auto-swap on Linux:** deploy to the staging slot, check
+  that it answers 200, then swap.
+- **Deploy with `clean: true`,** or files deleted from the package stay
+  live on the server.
+- **An organisation's OIDC subject can carry ids.** GitHub lets an
+  organisation customise the subject claim, and then the plain
+  `repo:<owner>/<repo>:…` form of a federated credential does not match:
+  copy the subject the failed login names.
+- **Managed certificates need the Cloudflare proxy off** (DNS only) for a
+  domain whose DNS is there, or the certificate is not issued.
+- **An app registration's client secret expires** (the sign-in in front of
+  a slot, a deploy credential that is not OIDC): put the date in a
+  calendar.

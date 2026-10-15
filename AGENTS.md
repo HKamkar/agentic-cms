@@ -235,7 +235,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
 - `docs/` holds the guides (`docs/README.md` is the index): the command
   line, the screenshot harness, the one-shot page commands, designing, the
-  skills, starting a site, deploying as a Node server, the roadmap. A
+  skills, starting a site, setting up a clone (`setup.md`), serving
+  previews to the owner's devices (`dev-server.md`), Chrome and Safari
+  (`browsers.md`), a new site's primitives (`primitives.md`), the traps by
+  topic (`gotchas.md`), the hosts (`deploy.md`), the roadmap. A
   change to a command or the harness updates its guide in the same pull
   request; `CHANGELOG.md` gets a line under Unreleased.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
@@ -294,10 +297,13 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
   one, two for `--motion`), so a proof's second capture takes the changed
   pages alone and a repeated baseline takes seconds; the example's static
-  set is 44 s from nothing on four cores. Capture the full set, not a `--pages`
-  subset to save time — the cache already skips what did not change;
-  `--fresh` retakes everything. Only a first capture of a large site is
-  worth running in the background, its log under `.parity/<label>.log`.
+  set is 44 s from nothing on four cores. A proof is as short as the
+  change allows (the `design-proof` skill): the pages it touches, one page
+  per template only when it is site-wide, `--states` / `--motion` only
+  when hover or animation changed — a page is left out because the change
+  cannot reach it, never to save time; `--fresh` retakes everything. Only
+  a first capture of a large site is worth running in the background, its
+  log under `.parity/<label>.log`.
 - Static captures run with `prefers-reduced-motion`; `--motion` runs without
   it.
 - What a site shows until a visitor's choice is stored (a consent banner) is
