@@ -121,17 +121,21 @@ test("demo new: /hero-demo on the example site — A, B and the current hero wit
 });
 
 // A section's inline loop, the way a site ships one: the SVG read at build (readInlineSvg, agentic-cms/content) and
-// played by InlineAnimation (agentic-cms/ix), below the fold. Removed by demo clean (the route, the round's pictures).
+// played by InlineAnimation (agentic-cms/ix), below the fold; and a copy under a lab timeline at the top, as a design
+// round's route wraps one. Removed by demo clean (the route, the round's pictures).
 const LOOP = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-duration="2" data-rest="1.5"><defs><clipPath id="frame"><rect width="200" height="100"/></clipPath></defs><g clip-path="url(#frame)"><circle cx="20" cy="50" r="15"><animate attributeName="cx" values="20;180;20" dur="2s" repeatCount="indefinite"/></circle></g></svg>`;
 const INLINE_ROUTE = `import { readInlineSvg } from "agentic-cms/content";
 import { InlineAnimation } from "agentic-cms/ix";
+import { LabTimeline } from "agentic-cms/lab";
 
 export const metadata = { robots: { index: false } };
 
 export default function InlineTestDemo() {
   const markup = readInlineSvg("public/images/inline-test-demo/loop.svg", { prefix: "inline-test" });
+  const timed = readInlineSvg("public/images/inline-test-demo/loop.svg", { prefix: "inline-timed" });
   return (
     <>
+      <LabTimeline label="inline" autoplay={false}><InlineAnimation markup={timed} className="inline-test-timed" /></LabTimeline>
       <div style={{ height: "2400px" }} />
       <InlineAnimation markup={markup} className="inline-test-box" />
       <div style={{ height: "2400px" }} />
@@ -140,7 +144,7 @@ export default function InlineTestDemo() {
 }
 `;
 
-test("InlineAnimation on the example site: waits on its first frame until in view, plays in view, pauses off screen, rests under reduced motion", { skip, timeout: 180000 }, async () => {
+test("InlineAnimation on the example site: waits on its first frame until in view, plays in view, pauses off screen, rests under reduced motion; under a lab timeline the clock is the timeline's", { skip, timeout: 180000 }, async () => {
   const routeDir = path.join(ROOT, "src/app/inline-test-demo");
   const assets = path.join(ROOT, "public/images/inline-test-demo");
   assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(assets), "no inline-test demo in the checkout before the test");
@@ -173,6 +177,14 @@ test("InlineAnimation on the example site: waits on its first frame until in vie
     await page.waitForTimeout(500);
     const away = await clock(page);
     assert.equal(away.paused, true, "off screen: paused");
+    // Under the timeline (autoplay off) the copy at the top stays where the timeline holds it, in view, after a seek and a scroll.
+    const timed = () => page.evaluate(() => { const svg = document.querySelector(".inline-test-timed svg"); return { paused: svg.animationsPaused(), time: Math.round(svg.getCurrentTime() * 1000) / 1000 }; });
+    assert.deepEqual(await timed(), { paused: true, time: 0 }, "in view, held on the timeline's first frame");
+    await page.evaluate(() => { const range = document.querySelector('[aria-label="inline: timeline"] [data-lab-time]'); range.value = "0.8"; range.dispatchEvent(new Event("input", { bubbles: true })); });
+    await page.locator(".inline-test-box").scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    assert.deepEqual(await timed(), { paused: true, time: 0.8 }, "seeked by the timeline, and a scroll away and back does not move it");
     const reduced = await browser.newPage({ viewport: { width: 1100, height: 900 }, reducedMotion: "reduce" });
     await reduced.goto(`${server.url}/inline-test-demo`, { waitUntil: "load", timeout: 120000 });
     await reduced.waitForFunction(() => Math.abs((document.querySelector(".inline-test-box svg")?.getCurrentTime() ?? 0) - 1.5) < 1e-3, null, { timeout: 60000 });

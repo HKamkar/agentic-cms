@@ -46,6 +46,22 @@ changes what a capture writes says **recapture baselines**.
   `agentic-cms/ix`; the workspace snippet in `docs/init.md` and the README
   has `unrs-resolver: true`, as `init` writes it; `src/styles/motion.css`
   names the library `agentic-cms/ix`.
+- The lab timeline (`mountTimeline`, `LabTimeline`) keeps play-once motion
+  on its range. An animation it has driven stays after it ends, where a
+  finished CSS animation whose fill is `none` or `backwards` used to leave
+  `getAnimations()` and the range moved over a frozen end pose; its fill is
+  pinned to `both` under the timeline only, so a page without one keeps
+  `backwards`. Motion that starts after the timeline mounts (an observer
+  sets the attribute that plays it) is found on the next frame, through a
+  `MutationObserver` and `animationstart`: it joins the timeline's time,
+  the cycle is measured again and only grows, and a timeline that had
+  nothing to drive turns its controls on and plays. `lab render`'s clock
+  keeps finished animations the same way, and `InlineAnimation` leaves its
+  clock to a timeline it sits under. `docs/lab.md` § Inspecting motion
+  states the contract: motion of a site's own plays at once under
+  `[data-lab-timeline]`. A site's own fill override under the timeline can
+  go (`docs/migrating-to-0.8.0.md` § 4). CI's browser job installs WebKit
+  too, so the timeline's two-engine tests run there.
 
 ## [0.7.6] — 2026-10-13
 

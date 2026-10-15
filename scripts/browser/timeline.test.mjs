@@ -21,7 +21,7 @@ import "../lib/load-ts.mjs";
 
 const { createElement: h } = await import("react");
 const { renderToStaticMarkup } = await import("react-dom/server");
-const { LabStudy, mountTimeline, timelineControlsHtml } = await import("agentic-cms/lab");
+const { LAB_API, LabStudy, mountTimeline, timelineControlsHtml } = await import("agentic-cms/lab");
 const { chromium, webkit } = await import("playwright-core");
 
 const A = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><clipPath id="frame"><rect width="64" height="64"/></clipPath><linearGradient id="tone"><stop offset="0" stop-color="#e4572e"/><stop offset="1" stop-color="#17bebb"/></linearGradient></defs><g clip-path="url(#frame)"><circle id="dot" cx="16" cy="24" r="10" fill="url(#tone)"><animate attributeName="cx" values="16;48;16" dur="1.6s" repeatCount="indefinite"/></circle><use href="#dot" y="18"/></g></svg>`;
@@ -270,6 +270,84 @@ window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-t
       assert.deepEqual(s.runs, [false, false]);
       // SMIL keeps its time as a float: the SVG and the CSS clock agree to its precision, each copy to the last digit.
       assert.ok(same(s.svg) && same(s.rect) && Math.abs(s.svg[0] - s.rect[0] / 1000) < 1e-5, `paused, both copies on one frame: ${s.svg}, ${s.rect}`);
+    } finally { await browser.close(); server.close(); }
+  });
+}
+
+// Play-once motion the way a site's layer plays it: three parts under data-lab-drive whose backwards-filled entrance runs
+// only once an IntersectionObserver sets data-play on their root — after the timeline has mounted with nothing to drive.
+// Linear, so a part's opacity is its progress. The same page without a timeline, and the lab's bare page (LAB_API) with a
+// short entrance that ends before anything asks for it. The cycle each engine measured, for the other to match.
+const ONCE_CSS = `@keyframes once-in { from { opacity: 0; } } [data-play] .part { animation: once-in 0.8s linear backwards; } [data-play] .part:nth-child(2) { animation-delay: 0.4s; } [data-play] .part:nth-child(3) { animation-delay: 0.8s; }`;
+const ARM = `new IntersectionObserver((entries, io) => { for (const e of entries) if (e.isIntersecting) { e.target.setAttribute("data-play", ""); io.unobserve(e.target); } }).observe(document.getElementById("parts"));`;
+const PARTS = `<div id="parts" data-lab-drive><p class="part">one</p><p class="part">two</p><p class="part">three</p></div>`;
+const onceHtml = (timeline) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>play once</title><style>${ONCE_CSS}</style></head><body>
+${timeline ? `<div data-lab-timeline><div data-lab-controls>${timelineControlsHtml()}</div>${PARTS}</div>` : PARTS}
+<script>${timeline ? `window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-timeline]"));` : ""}
+${ARM}</script></body></html>`;
+const BARE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>bare</title><style>@keyframes flash { from { opacity: 0; } } .flash { animation: flash 0.3s linear; }</style></head><body><p class="flash">x</p><script>${LAB_API}</script></body></html>`;
+const spans = new Map();
+for (const engine of ENGINES) {
+  test(`timeline, ${engine.name}: a backwards play-once entrance armed by an observer after the timeline mounted is found, measured, scrubbable after it ends and replayed; a page without a timeline keeps its backwards fill; lab render's clock keeps an entrance that already ended`, { skip: engine.skip, timeout: 60000 }, async () => {
+    const pages = { "/": onceHtml(true), "/plain": onceHtml(false), "/bare": BARE };
+    const server = http.createServer((req, res) => { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(pages[req.url] ?? ""); });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const browser = await engine.launch();
+    try {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "no-preference" });
+      const page = await context.newPage();
+      const errors = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await page.goto(`${base}/`, { waitUntil: "load" });
+      await page.waitForFunction(() => document.querySelector("[data-lab-play]").textContent === "Pause", null, { timeout: 5000 });
+      const parts = () => page.evaluate(() => {
+        const list = [...document.querySelectorAll(".part")];
+        return { opacity: list.map((el) => Number(getComputedStyle(el).opacity)), fill: list.map((el) => el.getAnimations()[0]?.effect.getTiming().fill), states: list.map((el) => el.getAnimations()[0]?.playState), times: list.map((el) => el.getAnimations()[0]?.currentTime), driven: document.querySelector("[data-lab-timeline]").getAnimations({ subtree: true }).length, disabled: document.querySelector("[data-lab-time]").disabled };
+      });
+      const cycle = await page.evaluate(() => window.timeline.duration());
+      assert.ok(Math.abs(cycle - 1.6) < 1e-6, `the cycle measured once the entrance armed: ${cycle}`);
+      spans.set(engine.name, cycle);
+      if (spans.size === ENGINES.length) assert.equal(new Set(spans.values()).size, 1, `the same cycle in every engine: ${[...spans]}`);
+      let s = await parts();
+      assert.deepEqual([s.fill, s.disabled], [["both", "both", "both"], false], "under the timeline the fill is pinned to both, and the controls are on");
+
+      // Past the first part's end (0.8 s), pause: it ended on its own clock and is still driven.
+      await page.waitForFunction(() => window.timeline.time() > 0.95 && window.timeline.time() < 1.5, null, { timeout: 5000 });
+      await page.locator("[data-lab-play]").click();
+      s = await parts();
+      assert.equal(s.driven, 3, "every part still on the timeline after the first one ended");
+      const seek = (t) => page.evaluate((t) => { const range = document.querySelector("[data-lab-time]"); range.value = String(t); range.dispatchEvent(new Event("input", { bubbles: true })); }, t);
+      const near = (list, want) => list.every((v, i) => Math.abs(v - want[i]) < 0.02);
+      await seek(0.2);
+      s = await parts();
+      assert.ok(near(s.opacity, [0.25, 0, 0]) && near(s.times, [200, 200, 200]), `scrubbed back to 0.2 s, the ended part moves again: ${s.opacity}, ${s.times}`);
+      await seek(0.6);
+      s = await parts();
+      assert.ok(near(s.opacity, [0.75, 0.25, 0]), `0.6 s: ${s.opacity}`);
+      await seek(1.6);
+      s = await parts();
+      assert.ok(near(s.opacity, [1, 1, 1]), `the end: ${s.opacity}`);
+
+      await page.locator("[data-lab-replay]").click();
+      s = await parts();
+      assert.deepEqual(s.states, ["running", "running", "running"], "Replay plays the entrance again");
+      assert.ok(s.times.every((t) => t < 300) && s.opacity[2] === 0, `from its start: ${s.times}, ${s.opacity}`);
+      assert.equal(await page.locator("[data-lab-play]").textContent(), "Pause");
+
+      const plain = await context.newPage();
+      await plain.goto(`${base}/plain`, { waitUntil: "load" });
+      await plain.waitForFunction(() => document.querySelectorAll(".part").length === document.querySelectorAll("[data-play] .part").length, null, { timeout: 5000 });
+      const fills = await plain.evaluate(() => [...document.querySelectorAll(".part")].map((el) => el.getAnimations()[0]?.effect.getTiming().fill));
+      assert.deepEqual(fills, ["backwards", "backwards", "backwards"], "no timeline: the page's own fill");
+      await plain.waitForFunction(() => document.getAnimations().length === 0, null, { timeout: 5000 });
+
+      const bare = await context.newPage();
+      await bare.goto(`${base}/bare`, { waitUntil: "load" });
+      await bare.waitForTimeout(600);
+      const flash = await bare.evaluate(() => { const d = window.lab.duration(); window.lab.seek(0.15); return { d, opacity: Number(getComputedStyle(document.querySelector(".flash")).opacity) }; });
+      assert.ok(Math.abs(flash.d - 0.3) < 1e-6 && Math.abs(flash.opacity - 0.5) < 0.02, `the ended entrance is still the page's: ${flash.d} s, opacity ${flash.opacity} at 0.15 s`);
+      assert.deepEqual(errors, []);
     } finally { await browser.close(); server.close(); }
   });
 }

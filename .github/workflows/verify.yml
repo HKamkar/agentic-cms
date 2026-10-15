@@ -1,10 +1,11 @@
 # What every pull request and every push to develop or main must pass: the
 # verify block (lint, the unit suites, the build with its content lint and
-# SEO audit), the repo's hygiene, and the Chromium-backed suite with a
-# browser installed for it. The pack smoke (a scratch site built from the
-# tarball, minutes) runs on pushes to main. The token reads the repository
-# and nothing else, checkout keeps no credential in .git/config, and every
-# action is pinned to a commit (.github/dependabot.yml proposes the updates).
+# SEO audit), the repo's hygiene, and the browser suite with Chromium and
+# WebKit installed for it (the lab timeline's cases run in both). The pack
+# smoke (a scratch site built from the tarball, minutes) runs on pushes to
+# main. The token reads the repository and nothing else, checkout keeps no
+# credential in .git/config, and every action is pinned to a commit
+# (.github/dependabot.yml proposes the updates).
 name: verify
 on:
   pull_request:
@@ -41,7 +42,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright-core install --with-deps chromium
+      - run: pnpm exec playwright-core install --with-deps chromium webkit
       - run: pnpm test:browser
   pack:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
