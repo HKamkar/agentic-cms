@@ -25,7 +25,7 @@ export function ThemeToggle() {
   };
 
   return (
-    <button type="button" onClick={cycle} className="border border-ink px-3 py-1 font-label text-h6">
+    <button type="button" onClick={cycle} className="border border-line px-3 py-1 font-label text-h6">
       {`Theme: ${theme}`}
     </button>
   );

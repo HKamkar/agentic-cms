@@ -4,7 +4,7 @@ import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** "Own it": the copy, two cards and the button on one side, the analytics card the design draws on the other. */
 export function ChooseUs({ eyebrow, heading, text, cards, cta }: SectionProps<"about-choose-us">) {
@@ -16,7 +16,7 @@ export function ChooseUs({ eyebrow, heading, text, cards, cta }: SectionProps<"a
           <ul className="grid gap-4">
             {cards.map((point) => (
               <li key={point.title} className={card}>
-                <img src={point.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-ink" />
+                <img src={point.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
                 <h3>{point.title}</h3>
                 <p>{point.text}</p>
               </li>

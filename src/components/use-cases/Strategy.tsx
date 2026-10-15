@@ -4,7 +4,7 @@ import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** "What you keep": two cards and the button, beside the stack of analytics cards the design draws. */
 export function Strategy({ eyebrow, heading, cards, cta }: SectionProps<"use-cases-strategy">) {

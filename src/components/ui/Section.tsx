@@ -16,8 +16,8 @@ export function Section({ type, eyebrow, heading, headingAs = "h2", className, c
   return (
     <section id={type} data-section={type} className={cx("py-section", className)}>
       <Container>
-        <div className="border border-ink p-6 max-md:p-4">
-          <span aria-hidden="true" className="mb-4 inline-block border border-ink bg-fill px-2 font-label text-h6">
+        <div className="border border-line p-6 max-md:p-4">
+          <span aria-hidden="true" className="mb-4 inline-block border border-line bg-fill px-2 font-label text-h6">
             {type}
           </span>
           {titled && (

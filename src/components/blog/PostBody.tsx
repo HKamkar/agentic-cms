@@ -13,15 +13,15 @@ import styles from "./PostBody.module.css";
  */
 export const postBlocks: PostBlockClasses = {
   run: styles.prose,
-  quote: "my-8 border border-ink p-6",
+  quote: "my-8 border border-line p-6",
   quoteInner: "flex items-start gap-4 max-sm:flex-col",
   quoteIcon: "/images/blog/ui/quote.svg",
   quoteText: "text-h4 font-medium",
   image: "my-8",
-  imageWrap: "border border-ink",
+  imageWrap: "border border-line",
   imageImg: "inline-block h-auto w-full align-middle",
   faqHeading: "mt-12 mb-4",
-  faq: cx(styles.faq, "mb-8 border border-ink"),
+  faq: cx(styles.faq, "mb-8 border border-line"),
 };
 
 /** A rendered post body: the blocks from rehype-post-blocks, with the FAQ accordion wired up. */

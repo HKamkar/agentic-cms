@@ -1,7 +1,7 @@
 import type { SectionProps } from "@/components/sections/schemas";
 import { Section } from "@/components/ui/Section";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** The statement that says what the site is, over three cards that each carry one figure. */
 export function About({ eyebrow, statement, cards }: SectionProps<"home-about">) {

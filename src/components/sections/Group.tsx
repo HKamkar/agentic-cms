@@ -12,8 +12,8 @@ type Props = { variant: SectionOf<"group">["variant"]; children: ReactNode };
 export function Group({ variant, children }: Props) {
   return (
     <Container>
-      <div className="border border-dashed border-ink" data-section={`group-${variant}`}>
-        <span aria-hidden="true" className="m-4 inline-block border border-ink bg-fill px-2 font-label text-h6">
+      <div className="border border-dashed border-line" data-section={`group-${variant}`}>
+        <span aria-hidden="true" className="m-4 inline-block border border-line bg-fill px-2 font-label text-h6">
           group · {variant}
         </span>
         {children}
