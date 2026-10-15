@@ -80,7 +80,7 @@ test("a seeded capture records the template; a compare refuses two seeds, shows 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("the site's src/config/harness.ts seeds every capture as the flag would; --no-storage drops it; a broken one exits 2 naming it", { skip }, () => {
+test("the site's src/config/harness.ts seeds every capture as the flag would; --no-storage drops the seed, not the profile; a broken one exits 2 naming it", { skip }, () => {
   const root = bannerSite();
   try {
     capture(root, "flag", "--storage", `consent=${CONSENT}`);
@@ -95,7 +95,11 @@ test("the site's src/config/harness.ts seeds every capture as the flag would; --
     const broken = run(root, ["visual-parity", "capture", "x", "--pages", "/consent"]);
     assert.equal(broken.status, 2);
     assert.match(broken.stderr, /visual-parity capture: src\/config\/harness\.ts: harness\.localStorage is not a setting/);
-    const pair = run(root, ["shot", "/consent", "--no-storage", "--storage", "consent"]);
+    // --no-storage leaves the seed out, not the profile beside it: without --scheme the file is read for the scheme
+    const profile = run(root, ["shot", "/consent", "--no-storage"]);
+    assert.equal(profile.status, 2);
+    assert.match(profile.stderr, /shot: src\/config\/harness\.ts: harness\.localStorage is not a setting/);
+    const pair = run(root, ["shot", "/consent", "--scheme", "light", "--no-storage", "--storage", "consent"]);
     assert.equal(pair.status, 2);
     assert.match(pair.stderr, /shot: --storage takes <key>=<value>, not consent/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

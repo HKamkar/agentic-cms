@@ -1,5 +1,6 @@
 // The screenshot harness on the fixture site, through the bin: a static
-// capture and its capture.json, a motion capture with the settled frame and
+// capture and its capture.json, the site's profile as a capture's defaults,
+// a motion capture with the settled frame and
 // a section's data-settle, a capture that photographs its snapshot of the
 // build while the tree changes, and a compare of two builds of different
 // heights.
@@ -32,6 +33,29 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.ok(summary.timings.seconds > 0 && summary.timings.slowest.length === 4 && summary.timings.slowest[0].name.includes("@"), "the slowest page-widths, named");
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/a/home@800.sections.json"), "utf8")).map((s) => s.section), ["hero", "second", "third"]);
     assert.match(r.stderr, /a: 5 screenshots/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the site's profile names a capture's widths and scheme, a flag still wins, and the menu is shot at each profile width where its button shows", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    // the menu button hides from 700 px up, as a site's does above its menu breakpoint
+    const home = path.join(root, ".next/server/app/index.html");
+    fs.writeFileSync(home, fs.readFileSync(home, "utf8").replace("</head>", "<style>@media (min-width: 700px) { header button { display: none; } }</style></head>"));
+    fs.mkdirSync(path.join(root, "src/config"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [800, 390], schemes: [\"dark\", \"light\"] };\n");
+    const profiled = run(root, ["capture", "p", "--json"]);
+    assert.equal(profiled.status, 0, profiled.stderr);
+    const summary = JSON.parse(profiled.stdout);
+    assert.deepEqual(summary.widths, [800, 390], "the profile's widths");
+    assert.equal(summary.meta.scheme, "dark", "the profile's first scheme");
+    assert.deepEqual(files(root, "p").filter((f) => f.includes("--menu")), ["home@390--menu.png"], "no menu where its button does not show");
+    const flagged = JSON.parse(run(root, ["capture", "f", "--widths", "390", "--scheme", "light", "--json"]).stdout);
+    assert.deepEqual([flagged.widths, flagged.meta.scheme], [[390], "light"], "the flags win");
+    fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [390.5] };\n");
+    const broken = run(root, ["capture", "x"]);
+    assert.equal(broken.status, 2);
+    assert.match(broken.stderr, /visual-parity capture: src\/config\/harness\.ts: harness\.widths is a list of whole viewport widths/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
