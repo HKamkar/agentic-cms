@@ -18,6 +18,12 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.7.6 → next (unreleased)
+
+Nothing released yet. 0.8.0's steps are drafted in
+[migrating-to-0.8.0.md](migrating-to-0.8.0.md), filled in as each job of
+the [roadmap](roadmap.md) lands.
+
 ## 0.7.5 → 0.7.6
 
 Nothing to do: a voice block without `models.except` reads as before.

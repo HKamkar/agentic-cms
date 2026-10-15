@@ -18,6 +18,9 @@ rules for an agent working on the code.
   writes, what comes next, what to do after a kit upgrade.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
   next: the tag, the agent files, and each release's own steps.
+- [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
+  0.8.0: the one required step, what it may adopt, what it deletes if it
+  wrote its own; a draft, filled in as each roadmap job lands.
 - [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
   the site's own marks from primitives, the inventory of every icon.
 - [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
@@ -36,7 +39,8 @@ rules for an agent working on the code.
 - [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
   `assemble` as the build's last step, the copy that nests and the check
   that catches it.
-- [roadmap.md](roadmap.md) — what 0.4.0 adds for agents, job by job.
+- [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
+  1.0.0.
 
 The engines' contracts live next to their code and ship with the package:
 `src/lib/content/README.md`, `blog/README.md`, `seo/README.md`,

@@ -4,6 +4,14 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- `docs/roadmap.md` is the 0.8.0 plan — a new site in minutes: ten jobs,
+  the release and what comes after it, toward 1.0.0 — in place of the
+  0.4.0 roadmap, whose open items it carries under Later.
+  `docs/migrating-to-0.8.0.md` is the draft of the guide a site on 0.7.6
+  follows, filled in as each job lands.
+
 ## [0.7.6] — 2026-10-13
 
 - The voice block's `models` takes an `except` list, like a `banned` or a
