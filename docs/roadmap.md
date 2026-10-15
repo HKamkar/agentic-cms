@@ -33,7 +33,8 @@ from outside the kit: `init`, `bash scripts/setup.sh`, `pnpm kit serve`,
 `pnpm kit demo new …` — minutes of machine time, no hand-edited file.
 
 **0.8.0 is the whole roadmap.** Each job below is one pull request against
-`develop`, one session; the release is one pull request `develop` → `main`
+`develop`, one session (jobs 9 and 10 two each, see Order); the release is
+one pull request `develop` → `main`
 when the last job has landed, tagged `v0.8.0`. `package.json` stays at
 0.7.6 on `develop` until the release commit.
 
@@ -118,8 +119,18 @@ before: 6 prints URLs through 4's host library and reads 5's profile);
 the primitives a section must use). Jobs 3–6 update the lines of job 2's
 guides that describe a step their command now does.
 
-*(decide in the PR)* marks a choice the job makes with the owner; the plan
-gives a recommendation.
+They run in two lanes. Jobs 1 and 2 run together; then 3 → 4 → 5 → 6 runs
+beside 7 → 8 → 9 → 10, and 10 starts only after 5 has landed (both change
+`scripts/lib/init.mjs`). Jobs 9 and 10 land as two pull requests each:
+- 9a: the role tokens and `variants()`;
+- 9b: the primitives and the card frames;
+- 10a: the ESLint preset and the components rule;
+- 10b: `check-components`, the lint script `init` writes, and the
+  conditional agent files.
+
+**Decided** marks a choice the owner settled when reviewing this plan
+(2026-10-15), each the recommendation the plan gave. A job that finds a
+decision does not hold says so in its pull request.
 
 ### 0 — This plan into the repo
 
@@ -159,8 +170,8 @@ gives a recommendation.
    ix table (`src/components/README.md:207-215`).
 6. **The ref baseline's worktree has no `.env.local`** (`ref-build.mjs`),
    while the tree's build reads one, so a build-time value can differ
-   between before and after. *(decide in the PR)* Copy `.env.local` into the
-   sibling (recommended), or document it in `docs/visual-parity.md`.
+   between before and after. **Decided:** copy `.env.local` into the
+   sibling.
 7. **The workspace snippet** in `docs/init.md:19-23` and
    `README.md:292-295` lacks `unrs-resolver: true`. Fix it now; job 3 makes
    the snippet unnecessary.
@@ -450,13 +461,14 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
   - restore the kit's `test` when the existing one is
     `echo "Error: no test specified" && exit 1`, and report it. A real
     custom `test` is still kept (`init.test.mjs:58` stands);
-  - *(decide in the PR)* `main: "index.js"`, `license: "ISC"`,
-    `version: "1.0.0"`, `devEngines` and a newer `packageManager`. The
-    recommendation: drop `main`, keep the rest.
+  - `main: "index.js"`, `license: "ISC"`, `version: "1.0.0"`,
+    `devEngines` and a newer `packageManager`. **Decided:** drop `main`,
+    keep the rest.
 - **One install line.** `docs/init.md` drops `pnpm init` and the
-  hand-written workspace. *(decide in the PR)* (a)
+  hand-written workspace. **Decided:** (a)
   `pnpm dlx --allow-build=agentic-cms agentic-cms@github:HKamkar/agentic-cms#v0.8.0 init my-site`
-  if it works with a git spec, tested in pack-smoke; else (b)
+  if it works with a git spec, which the job proves in pack-smoke before
+  anything else; else (b)
   `mkdir`, `pnpm add …`, `pnpm exec agentic-cms init .`. With (b), init no
   longer breaks on what `pnpm add` wrote.
 - **CI for the site.** Add `templates/site/verify.yml` →
@@ -563,8 +575,8 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
   ```
   `validateSiteSeed` (`:55-58`, which rejects every key but the storages
   today) is widened: integer widths, schemes within light/dark, pages
-  starting with `/`. *(decide in the PR)* These keys go inside `harness`
-  (recommended: one file, one loader) or in a separate `profile` export.
+  starting with `/`. **Decided:** these keys go inside `harness` (one file,
+  one loader).
 - **Precedence:** a flag wins, then the profile, then the built-in default.
   `args.mjs:75` fills every spec default, so a flag with a default can
   never yield to a profile.
@@ -582,10 +594,10 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 - **Pages:** `--pages` defaults to the profile's. One page per template is
   `--sample 1`; don't reuse `--all`, which means all three passes.
 - **Two schemes** in the profile run one pass each (label suffix `-dark`).
-- **The kit's own profile** *(decide in the PR)*:
-  - keep eight widths;
-  - or move to 390/768/1440/1920, one width in each band of the example's
-    768 and 992 steps (recommended; CHANGELOG: **recapture baselines**).
+- **The kit's own profile.** **Decided:** 390/768/1440/1920 in place of
+  eight widths, one width in each band of the example's 768 and 992 steps
+  (CHANGELOG: **recapture baselines**). The job first proves that nothing
+  moved at the old eight widths, passing them as `--widths` on both sides.
 - **`init --light-only`** writes `schemes: ["light"]` and a light-only
   example. Each place is listed with its line (`init.mjs` report, 2026-10-15):
   - **`layout.tsx`:** without `THEME_SCRIPT` (`:11-14`, `:33`) or
@@ -609,9 +621,9 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 
 ### 6 — `serve`; a demo or lab that hands itself over
 
-- **`agentic-cms serve`** *(decide the name in the PR: `serve` or `review`;
-  not `preview`, which is OpenNext's Cloudflare preview (`package.json:113`),
-  and not `dev`, which is `pnpm dev`)*:
+- **`agentic-cms serve`** (**Decided:** `serve`, not `review`; not
+  `preview`, which is OpenNext's Cloudflare preview (`package.json:113`),
+  and not `dev`, which is `pnpm dev`):
   - start or reuse `next dev` on the site's port, generalising the test
     helper `scripts/browser/dev-server.mjs` (all interfaces, wait for
     "Ready in", stop the process group);
@@ -703,6 +715,10 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
     - The slider is enabled, a scrub moves it, and Replay restarts it.
     - The span is the same in both engines (3.4 s against 5 s has been
       measured without the fix).
+  - **CI:** the `browser` job installs WebKit too
+    (`playwright-core install --with-deps chromium webkit` in
+    `.github/workflows/verify.yml`). Today it installs Chromium alone, so
+    the WebKit cases skip there.
 
 ### 8 — A play-once motion layer in `agentic-cms/ix`
 
@@ -732,13 +748,13 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
   - `.ts` with `createElement` wherever a test loads it.
 - **Where the CSS lives** (the keyframes and the armed start states, played
   with fill `backwards`, loops under `[data-play][data-visible]`, the
-  reduced-motion guard). *(decide in the PR)*
+  reduced-motion guard). **Decided:** (a) for 0.8.0; (b) moves to Later.
   - **(a)** In the example's `src/styles/motion.css`, unused by the
     wireframe and copied by `init`, with an upgrading step that says "copy
     the block". This fits today's rule (`docs/upgrading.md:72`: "the
-    keyframes are the site's file"). Recommended for 0.8.0.
+    keyframes are the site's file").
   - **(b)** Shipped as `agentic-cms/ix/motion.css` (the 0.4.0 roadmap's
-    `reveals.css`). This needs:
+    `reveals.css`). This would need:
     - the rule reworded, so the presets' start states and keyframes ship
       with the package and a site's overrides load after them;
     - a `files` entry and an exports path, because tsc emits no CSS.
@@ -784,8 +800,8 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 
 - **`variants()` and `VariantProps`:** pure `.ts`, no React, so it loads
   under node:test. An unknown option throws and names the options.
-  *(decide in the PR)* Put it beside `cx` in `agentic-cms/cx` (recommended,
-  no new export) or add `agentic-cms/variants`, with its unit tests.
+  **Decided:** it goes beside `cx` in `agentic-cms/cx` (no new export),
+  with its unit tests.
 - **Tokens by role at wireframe values** (pixel-identical):
   - `--color-panel: var(--color-paper)`, `--color-line: var(--color-ink)`,
     `--color-on-ink: var(--color-paper)`;
@@ -822,10 +838,10 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 
   The catalogue gains a row for each, and the sections "Library first" and
   "Extending a primitive".
-- **Card frames** *(decide in the PR)*. Today the example's sections each
-  declare `const card = "flex flex-col gap-2 border border-ink p-4"`. The
-  proposal: the card's frame is `ui/Panel`, and what goes inside it is each
-  section's own design, from its own copy fields. That keeps "do not build
+- **Card frames.** Today the example's sections each declare
+  `const card = "flex flex-col gap-2 border border-ink p-4"`. **Decided:**
+  the card's frame is `ui/Panel`, and what goes inside it is each section's
+  own design, from its own copy fields. That keeps "do not build
   a generic Card" (`AGENTS.md:371-373`, STANDARD `:250-252`) and lets job
   10's lint ban visual classes in sections. Reword "a section's cards are
   its own" (`design.md:12`, both trees) to "a section's card content is its
@@ -897,9 +913,8 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
   rule is neither written nor reported missing. Adopting the guard is a
   migration step, with the `inherited` list freezing every component the
   site already has.
-- **The kit's example passes in CI.** Job 9's card-frame decision is what
-  lets the visual-class ban pass. If the owner keeps per-section card
-  strings, that option stays off for the example.
+- **The kit's example passes in CI.** Job 9's card frames (`ui/Panel`)
+  are what let the visual-class ban pass in the example's sections.
 - **Tests:**
   - the preset and the guard against planted violations as fixtures, each
     caught by the tool meant for it (ESLint or the guard);
@@ -910,6 +925,9 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 
 1. **The gate: the migration guide has been run on two sites on 0.7.6**,
    one for each of its paths, on a branch in each.
+   - There is no tag yet, so the run pins the candidate,
+     `github:HKamkar/agentic-cms#<develop sha>`; the site moves to
+     `#v0.8.0` after the tag (S).
    - Each site builds and proves identical after its § 1, and its chosen
      opt-ins work.
    - Whatever the runs found is fixed in the guide or the kit, not by hand
@@ -932,9 +950,10 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
 
 ### S — The sites on 0.7.6 follow
 
-Each site in its own pull request, in its own repo, following
+Each site in its own pull request, in its own repo and its own session
+(the kit's sessions work on the kit alone), following
 `docs/migrating-to-0.8.0.md` on the path that fits it ("Two paths,
-worked"):
+worked"). The branch is the one the R.1 gate ran on:
 
 1. **Upgrade:** § 1 of the guide.
 2. **Adopt and delete:** the steps the site takes, each § 4 row deleted as
@@ -942,6 +961,8 @@ worked"):
 3. **Prove and measure:** a short proof; time a fresh clone from
    `bash scripts/setup.sh` to `pnpm kit serve` against the target above;
    the owner's look.
+4. **Pin the release:** after the tag, the branch moves from the candidate
+   sha to `#v0.8.0`, proves again, and merges.
 
 ## After 0.8.0: toward 1.0.0
 
@@ -1010,7 +1031,7 @@ code.
   - three.js scenes in the lab;
   - the `editorial` plugin mirrored as project skills, if wanted;
   - the hold of other origins' scripts for a `--url` site.
-- **If job 8 chose (a):** `agentic-cms/ix/motion.css`.
+- **From job 8:** `agentic-cms/ix/motion.css`, its option (b).
 - **The second-use primitives,** and `LazyBackdrop`/`PauseOffscreen` in the
   package, each when a second site needs it.
 - **A site-side check for machine addresses** in tracked files (hygiene's

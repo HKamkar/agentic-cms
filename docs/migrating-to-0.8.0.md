@@ -45,6 +45,10 @@ pnpm exec agentic-cms init . --agent-files --check   # what will change, writes 
 pnpm exec agentic-cms init . --agent-files           # skills, rules, the rules table
 ```
 
+**Before the release** there is no tag: a site that runs this guide as the
+release's gate pins the candidate, `github:HKamkar/agentic-cms#<develop sha>`,
+and moves to `#v0.8.0` once the tag exists.
+
 **What `--agent-files` updates:** the skills, the scoped rules and the rules
 table in `AGENTS.md`.
 - **Skills:** `design-proof`, `design-options`, `design-graphics`, `design`,
@@ -194,8 +198,7 @@ kept and documented.
 1. Render `motionScript()` near the top of `<body>`.
 2. Copy the layer's block from `node_modules/agentic-cms/src/styles/motion.css`
    into your `src/styles/motion.css`, with its custom properties
-   (`--ease-*`, `--motion-*`) *(job 8 decides whether the package ships this
-   file instead)*.
+   (`--ease-*`, `--motion-*`).
 3. Use `Reveal` and friends in new work. Move existing reveals only when
    the owner wants them to stop replaying.
 
@@ -216,8 +219,7 @@ immediate play under it). The timeline handles both now.
 never a copy. Components name roles (`panel`, `line`, `on-ink`), never hues.
 
 **Do:**
-- **`variants()`:** `import { variants, type VariantProps } from "agentic-cms/cx"`
-  *(or `agentic-cms/variants`; job 9 decides)*.
+- **`variants()`:** `import { variants, type VariantProps } from "agentic-cms/cx"`.
 - **Tokens by role:** add the role tokens to `@theme static` as aliases of
   your colours. The values are yours.
 - **Primitives:** the example now has `Panel`, `OutlineButton`,
