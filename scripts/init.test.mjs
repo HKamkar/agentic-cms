@@ -15,7 +15,7 @@ const quiet = { log: () => {} };
 test("scaffold lays out a site from the package: the example, the agent files, the config, a manifest", () => {
   const target = path.join(tmp(), "my-site");
   const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
+  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
     assert.ok(fs.existsSync(path.join(target, file)), file);
   }
   assert.ok(!fs.existsSync(path.join(target, "src/lib")), "nothing of the package's source");
@@ -28,6 +28,8 @@ test("scaffold lays out a site from the package: the example, the agent files, t
   assert.equal(pkg.dependencies["agentic-cms"], "github:HKamkar/agentic-cms#v0.4.0");
   assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo");
   assert.equal(pkg.scripts.kit, "agentic-cms");
+  assert.equal(pkg.scripts.urls, "agentic-cms urls");
+  assert.ok(!("setup" in pkg.scripts), "no script named setup: pnpm setup is pnpm's own");
   assert.ok(pkg.devDependencies["playwright-core"] && pkg.devDependencies.tailwindcss && pkg.dependencies.next && pkg.dependencies.zod);
   assert.ok(!("@opennextjs/cloudflare" in pkg.devDependencies) && !("wrangler" in pkg.devDependencies));
 
@@ -123,6 +125,16 @@ test("pnpm init's package.json: its failing test gives way to the kit's, its mai
   fs.writeFileSync(path.join(own, "index.js"), "export {};\n");
   scaffold(own, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
   assert.equal(JSON.parse(read(own, "package.json")).main, "index.js");
+});
+
+test("the setup script is written once, then kept as the site has it, and hands over to agentic-cms setup", () => {
+  const target = tmp();
+  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes("scripts/setup.sh"));
+  assert.equal(read(target, "scripts/setup.sh"), read(KIT, "templates/site/setup.sh"));
+  assert.match(read(target, "scripts/setup.sh"), /\nexec pnpm exec agentic-cms setup "\$@"\n$/);
+  fs.writeFileSync(path.join(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
+  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes("scripts/setup.sh"));
+  assert.equal(read(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
 });
 
 test("the site's CI workflow is written once, then kept as the site has it", () => {

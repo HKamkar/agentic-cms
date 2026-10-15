@@ -129,8 +129,9 @@ does not have
   ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)).
 - `demo new` waits until its route answers on a running dev server and
   prints the URLs to hand over *(job 6)*.
-- `lab serve` lists real network addresses only, not container bridges, and
-  each scene's URL *(jobs 4, 6)*.
+- `lab serve` lists real network addresses only: no container or VM bridge
+  (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It will also
+  print each scene's URL *(job 6)*.
 
 **Check:** the verify block, then `pnpm kit visual-parity proof upgrade --ref develop --build`.
 It must be identical. If it isn't, that is a kit bug: report it with the
@@ -172,33 +173,55 @@ breakpoint.
 **If you wrote your own short-proof script:** delete it, and point the
 package script at `agentic-cms visual-parity proof`.
 
-### 3.2 `setup`, `urls`, `serve` *(jobs 4, 6)*
+### 3.2 `setup`, `urls`, `serve` *(serve: job 6)*
 
 **Why:** a co-worker, or their agent in Claude Code or Codex, sets the site
-up from a fresh clone with one command. The owner's phone gets URLs that
-work.
+up from a fresh clone with one command, and the owner's phone gets URLs
+that work: a page opened from an address `next dev` was not told about
+renders and never hydrates.
 
 **Do:**
 
-1. Copy `node_modules/agentic-cms/templates/site/setup.sh` to
-   `scripts/setup.sh`. It checks Node, installs pnpm and the dependencies,
-   then runs `agentic-cms setup`.
-2. Add `"urls": "agentic-cms urls"` to the package scripts. Don't add a
-   `setup` script: `pnpm setup` is a pnpm built-in.
-3. Run `bash scripts/setup.sh` once. It:
-   - installs Chromium and WebKit (and WebKit's Linux libraries with
-     `--deps`);
-   - writes `.env.local` and this machine's `ALLOWED_DEV_ORIGINS`;
-   - runs the lint and the tests.
-4. From then on, run `pnpm kit serve` to start the dev server and the lab
-   and print every URL.
+1. Copy the setup script, which checks Node, gets pnpm at the
+   `packageManager` version and installs the dependencies (none of which a
+   command inside `node_modules` can do for itself), then runs
+   `agentic-cms setup`:
 
-**Check:** `pnpm kit setup --check` exits 0, and the owner's phone loads a
-page that hydrates (a menu opens).
+   ```bash
+   cp node_modules/agentic-cms/templates/site/setup.sh scripts/setup.sh
+   ```
+
+2. Add `"urls": "agentic-cms urls"` to the package scripts. Don't add a
+   `setup` script: `pnpm setup` is pnpm's own command.
+3. Run `bash scripts/setup.sh` once (`--deps` to let it install WebKit's
+   Linux libraries with `sudo`, `--no-public` on a machine no viewer
+   reaches from outside). It:
+   - installs Chromium and WebKit when they are missing, and on Linux
+     checks that WebKit launches, printing the `sudo` line for its
+     libraries when it does not;
+   - writes `.env.local` from `.env.example` when absent, and adds this
+     machine's LAN and public addresses to `ALLOWED_DEV_ORIGINS`;
+   - runs `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`);
+   - prints the dev server's and the lab's URLs.
+4. In `AGENTS.md`, the know-how bullet's "`setup.md` on a fresh clone or a
+   new machine" becomes "`setup.md` on a fresh clone or a new machine
+   (`bash scripts/setup.sh`; the `setup` skill runs it)", and the
+   addresses bullet's "(`ALLOWED_DEV_ORIGINS`, `dev-server.md`)" becomes
+   "(`ALLOWED_DEV_ORIGINS`; `pnpm urls` prints the URLs to hand over and
+   `--write` adds the missing hosts; `dev-server.md`)". The `setup` skill
+   comes with `init --agent-files` (§ 1).
+5. From then on, `pnpm urls` prints the URLs to hand over and says which
+   address `ALLOWED_DEV_ORIGINS` lacks; `pnpm urls --write` adds it.
+   *(job 6:)* `pnpm kit serve` starts the dev server and the lab and prints
+   every URL.
+
+**Check:** `pnpm exec agentic-cms setup --check` exits 0 (it writes,
+installs and runs nothing), `pnpm urls` exits 0, and the owner's phone
+loads a page that hydrates (a menu opens).
 
 **If you wrote your own setup or addresses script:** delete it once this
-works. Keep your site-only steps as a short script that calls
-`bash scripts/setup.sh` first.
+works, with any package script that ran it. Keep your site-only steps as a
+short script that calls `bash scripts/setup.sh` first, then does its own.
 
 ### 3.3 CI
 
@@ -402,8 +425,8 @@ Each row goes only after its step works.
 
 | You wrote | Now | After |
 |---|---|---|
-| a setup script | `scripts/setup.sh` and `agentic-cms setup` | 3.2 |
-| a script that finds the machine's addresses or writes `ALLOWED_DEV_ORIGINS` | `agentic-cms urls` | 3.2 |
+| a setup script (Node, pnpm, the install, the browsers, `.env.local`, a verify) | `scripts/setup.sh` from the kit's template, which ends in `agentic-cms setup`; site-only steps in a script that calls it first | 3.2 |
+| a script that finds the machine's addresses or writes `ALLOWED_DEV_ORIGINS`, and its package script | `pnpm urls` (`agentic-cms urls`, `--write`) | 3.2 |
 | a short-proof wrapper, or a workaround for `proof --build` | `visual-parity proof` with the profile | 1, 3.1 |
 | a lab-timeline patch for play-once motion | the timeline itself | 1 |
 | a play-once motion layer | `agentic-cms/ix` | 3.5 |

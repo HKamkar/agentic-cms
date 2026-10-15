@@ -6,7 +6,7 @@ it lay the site out, in one line:
 
 ```bash
 pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
-cd my-site && pnpm install && pnpm dev
+cd my-site && bash scripts/setup.sh && pnpm dev
 ```
 
 `pnpm dlx` installs the kit in a temporary place and runs its `init`, which
@@ -62,6 +62,12 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   `pnpm test`, `pnpm build` and `agentic-cms init . --agent-files --check`,
   with pnpm from `packageManager` (Node 25 and later ship no corepack), Node
   from `.nvmrc`, and every action pinned to a commit.
+- **The setup script**: `scripts/setup.sh`, which a clone runs first on any
+  machine: Node checked, pnpm at the `packageManager` version, the install,
+  then `agentic-cms setup` (the browsers, `.env.local` and this machine's
+  origins, the lint and the tests, the URLs; [setup.md](setup.md)). The
+  package scripts include `urls` (`agentic-cms urls`), and none is named
+  `setup`: `pnpm setup` is pnpm's own command.
 
 Nothing of the package's source; nothing about a host (Cloudflare, Azure,
 a VPS are a site's decision, written into its `PLAN.md`). An existing file
@@ -70,6 +76,9 @@ is never overwritten unless `--force`; each file prints `created`,
 with `--force` too, and print `merged` with what changed.
 
 ## Then
+
+`bash scripts/setup.sh` first ([setup.md](setup.md)): the install, the
+browsers, `.env.local`, the checks, and the URLs `pnpm dev` answers on.
 
 1. `src/config/site.ts`: the brand, the URL, the address, the nav, the
    footer, the calls to action (data only).

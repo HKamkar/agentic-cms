@@ -28,23 +28,28 @@ topic are [gotchas.md](gotchas.md).
 ## Install
 
 ```bash
-pnpm exec playwright-core install chromium webkit
+bash scripts/setup.sh                      # with the rest of the setup (setup.md)
+pnpm exec agentic-cms setup --no-public    # the same steps once the dependencies are in
 ```
 
-Both builds land in Playwright's cache (`~/.cache/ms-playwright` on Linux,
+`agentic-cms setup` runs `pnpm exec playwright-core install` for the
+engines not installed yet (`--engines chromium` for one). Both builds land
+in Playwright's cache (`~/.cache/ms-playwright` on Linux,
 `~/Library/Caches/ms-playwright` on a Mac), where the kit's commands find
-Chromium; `CHROME_PATH` points them at a Chrome of your own instead.
+them; `CHROME_PATH` points them at a Chrome of your own instead.
 
-On Linux, WebKit needs system libraries the first time. If it does not
-launch, install them (it asks for `sudo`; `$(command -v node)` because
-`sudo` resets `PATH` and may not find a Node installed by a version
-manager):
+On Linux, WebKit needs system libraries the first time. Setup launches
+WebKit to find out, and when it does not launch prints the line that
+installs them, which asks for `sudo` (`$(command -v node)` because `sudo`
+resets `PATH` and may not find a Node installed by a version manager); the
+machine's owner runs it, or lets setup run it with `--deps`:
 
 ```bash
 sudo "$(command -v node)" node_modules/playwright-core/cli.js install-deps webkit
 ```
 
-A Mac needs nothing more.
+A Mac needs nothing more. `pnpm exec agentic-cms setup --check` says
+whether both engines are installed and WebKit launches, changing nothing.
 
 ## The same check in both engines
 

@@ -59,7 +59,8 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   per scene, rather than the index) and a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
   `&still=1` for its still).
 - The server listens on `0.0.0.0:8001` by default and prints every LAN
-  address, so the owner opens the same page on a phone; it serves only the
+  address (the machine's real interfaces, as `pnpm urls` lists them: no
+  container bridge), so the owner opens the same page on a phone; it serves only the
   scenes it listed and generated HTML — nothing else of the tree.
   `--host 127.0.0.1` keeps it on this machine.
 - The second window is the route (below): the same scenes on the site's

@@ -7,8 +7,8 @@
 // it binds the loopback, gzips everything and routes like a Next build.
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
+import { lanAddresses } from "./hosts.mjs";
 import { LAB_DIR, animates, listScenes, sceneDuration, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
 import { bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
 
@@ -17,9 +17,9 @@ const NO_STORE = { "cache-control": "no-store" };
 export const ICON_SIZES = [24, 40, 64];
 const ICON_SIZED = 96;
 
-/** Every LAN address of this machine as a URL on the port (IPv4, not loopback). */
-export function lanUrls(port) {
-  return Object.values(os.networkInterfaces()).flat().filter((i) => i && i.family === "IPv4" && !i.internal).map((i) => `http://${i.address}:${port}`);
+/** Every LAN address of this machine as a URL on the port: IPv4 on its real interfaces, not loopback or a container's bridge (lib/hosts.mjs). */
+export function lanUrls(port, interfaces) {
+  return lanAddresses(interfaces).map((ip) => `http://${ip}:${port}`);
 }
 
 const send = (res, status, type, body) => { res.writeHead(status, { "content-type": type, ...NO_STORE }); res.end(body); };

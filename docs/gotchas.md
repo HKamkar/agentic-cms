@@ -35,7 +35,8 @@ there.
   other hostnames in `ALLOWED_DEV_ORIGINS` in `.env.local` —
   comma-separated, hostnames only, no scheme and no port — which the
   site's `next.config.ts` reads into `allowedDevOrigins`, and restart the
-  dev server ([dev-server.md](dev-server.md)). A script that opens the dev
+  dev server; `pnpm urls --write` adds this machine's
+  ([dev-server.md](dev-server.md)). A script that opens the dev
   server uses `localhost`, not `127.0.0.1`, which is refused the same way.
   `-H 0.0.0.0` is not needed: `next dev` listens on every interface by
   default.
@@ -119,9 +120,9 @@ there.
   the site's direct dependencies from the site's own files, so a site
   script that imports a dependency of the kit (`image-size`, say) fails
   with `ERR_MODULE_NOT_FOUND`. Add it to the site's `devDependencies`.
-- **No pnpm on Node 25 and later.** Those releases ship no corepack. Run
-  `npm install -g pnpm@<version>` with the version `packageManager`
-  names ([setup.md](setup.md)).
+- **No pnpm on Node 25 and later.** Those releases ship no corepack.
+  `bash scripts/setup.sh` falls back to `npm install -g pnpm@<version>`
+  with the version `packageManager` names ([setup.md](setup.md)).
 - **A script named like a built-in.** `deploy` and `setup` are pnpm
   commands of their own, so `pnpm deploy` and `pnpm setup` never run the
   site's script of that name: write `pnpm run deploy`, `pnpm run setup`.

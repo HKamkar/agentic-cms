@@ -3,7 +3,8 @@
 // content and images), the agent files (a site's path-scoped rules from
 // templates/site/rules/, the design skills for Claude Code and Codex), the
 // site templates (AGENTS.md, CLAUDE.md, README, PLAN, the Next
-// config, the Claude settings, .gitignore, the CI workflow) and the
+// config, the Claude settings, .gitignore, the CI workflow, the setup
+// script that installs what a package cannot install for itself) and the
 // generated config (package.json, tsconfig.json, pnpm-workspace.yaml).
 // Nothing of the package's source. Existing files are kept unless forced;
 // package.json and pnpm-workspace.yaml are merged, forced or not, so what
@@ -23,7 +24,7 @@ import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs"
 /** The example, copied as it is. */
 export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
 /** The templates under templates/site/, and where each lands. */
-export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml" };
+export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "setup.sh": "scripts/setup.sh" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
 export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/skills": ".claude/skills", ".agents/skills": ".agents/skills" };
 export const MANIFEST = ".agentic-cms.json";
@@ -76,7 +77,7 @@ function sitePackage(target, { kitRoot, version }) {
     type: "module",
     engines: kit.engines,
     packageManager: kit.packageManager,
-    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: "eslint", test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", kit: "agentic-cms" },
+    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: "eslint", test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
     dependencies: { "agentic-cms": `github:HKamkar/agentic-cms#v${version}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
     devDependencies: { "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], eslint: dev.eslint, "eslint-config-next": dev["eslint-config-next"], "playwright-core": dev["playwright-core"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   };

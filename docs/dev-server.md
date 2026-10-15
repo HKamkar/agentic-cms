@@ -5,7 +5,10 @@ tablet. So the dev server and the lab have to be reachable from outside
 the machine the agent works on. This page says which ports, which address
 to hand over, how to let `next dev` serve that address, and how to stop a
 server. Read it before starting a server or handing over a URL; which
-browser checks what is [browsers.md](browsers.md).
+browser checks what is [browsers.md](browsers.md). `pnpm urls`
+([`agentic-cms urls`](commands.md#urls)) does the finding: this machine's
+URLs for both servers, which one answers, and the origins `next dev`
+lacks.
 
 Nothing here names a machine. An address depends on who is developing and
 where, so it is found when it is needed and never written down in the
@@ -32,13 +35,28 @@ repo; here it is `<lan-ip>` or `<public-ip>`.
 Hand over the page itself, not an index: the demo route, or each scene's
 own `/scene/<name>`.
 
-Finding the addresses:
+Finding the addresses is `pnpm urls`:
 
-- **LAN:** `hostname -I` or `ip -4 addr show` on Linux, `ipconfig getifaddr
-  en0` on a Mac; skip container bridges (`docker0`, `br-…`, `veth…`).
-  `pnpm kit lab serve` prints its LAN URLs itself.
-- **Public:** `curl -s https://ifconfig.me` (or `https://api.ipify.org`)
-  from the machine that serves.
+```text
+dev server, port 8000: running
+  localhost  http://localhost:8000
+  LAN        http://<lan-ip>:8000
+  public     http://<public-ip>:8000   answers only where a firewall opens 8000, to the viewer's IP only
+lab, port 8001: not running (pnpm kit lab serve starts it); /scene/<name> on the same hosts
+
+ALLOWED_DEV_ORIGINS in .env.local covers every address above
+```
+
+- **LAN:** the IPv4 addresses of the machine's real interfaces; loopback,
+  container and VM bridges (`docker0`, `br-…`, `veth…`, `virbr…`) and a
+  Mac's tunnels are left out. `pnpm kit lab serve` prints the same list.
+- **Public:** asked of `api.ipify.org`, then `ifconfig.me`, four seconds
+  each; `--no-public` skips it offline or on a laptop no viewer reaches
+  from outside.
+- **The ports:** the dev server's from the `-p` of `scripts.dev` in
+  `package.json` (`--port` for another), the lab's 8001 (`--lab-port`).
+- `--json` prints the same as one document; exit 1 means an address is
+  missing from `ALLOWED_DEV_ORIGINS`.
 
 ## Letting `next dev` serve that address
 
@@ -53,8 +71,11 @@ writes it) reads the other hostnames from `ALLOWED_DEV_ORIGINS`:
 ALLOWED_DEV_ORIGINS=<lan-ip>,<public-ip>
 ```
 
-Hostnames only, comma-separated: no scheme, no port. Restart the dev
-server after changing it. The lab server is not Next and needs no entry.
+Hostnames only, comma-separated: no scheme, no port. `pnpm urls --write`
+adds the addresses it found that the line lacks (making `.env.local` from
+`.env.example` when it is absent) and keeps the file's other lines and
+entries; `bash scripts/setup.sh` runs it. Restart the dev server after a
+change. The lab server is not Next and needs no entry.
 
 **A machine's address never goes into the repo**: not in `.env.example`,
 a doc, a test, a commit message or a pull request. Each developer's

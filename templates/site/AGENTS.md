@@ -36,14 +36,16 @@ a patch under `node_modules`.
   `docs/visual-parity.md`, the one-shot page commands
   `docs/shot-probe-sheet.md`, the design loop `docs/design.md`.
 - The kit's know-how is under `node_modules/agentic-cms/docs/`, read
-  there, not copied: `setup.md` on a fresh clone or a new machine;
+  there, not copied: `setup.md` on a fresh clone or a new machine
+  (`bash scripts/setup.sh`; the `setup` skill runs it);
   `dev-server.md` before starting a server or handing over a URL;
   `browsers.md` for what Chromium, WebKit and the owner's Safari each
   check; `primitives.md` for what a new site builds first; `gotchas.md`,
   the traps by topic, before touching an area it lists.
 - A machine's address never goes into the repo: it is found when needed,
   per developer, and lives in the gitignored `.env.local`
-  (`ALLOWED_DEV_ORIGINS`, `dev-server.md`).
+  (`ALLOWED_DEV_ORIGINS`; `pnpm urls` prints the URLs to hand over and
+  `--write` adds the missing hosts; `dev-server.md`).
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
   not change without redirects.

@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -17,6 +18,7 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
   assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
+  assert.match(r.stdout, /\n {2}site\s+init · setup · urls\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -151,4 +153,57 @@ test("visual-parity proof --build runs its baseline step (no three-sources refus
     assert.equal(both.status, 2);
     assert.match(both.stderr, /^visual-parity proof: --pages and --sample both choose the pages of a capture; pass one\n$/, "nothing else ran");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+/** Two servers listening on the loopback for a command to find up: a spawned command connects while the test waits on it, so the kernel accepts. */
+const listening = () => Promise.all([0, 1].map(() => new Promise((resolve) => { const server = net.createServer((socket) => socket.end()); server.listen(0, "127.0.0.1", () => resolve(server)); })));
+
+test("urls: this machine's URLs and its origins, --write fills .env.local once, no dev port is a usage error", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "urls-cli-"));
+  const servers = await listening();
+  const [dev, lab] = servers.map((s) => String(s.address().port));
+  try {
+    assert.equal(run(["urls"], dir).status, 2);
+    assert.match(run(["urls"], dir).stderr, /^urls: no dev port — package\.json's scripts\.dev runs no next dev here; pass --port\n$/);
+    assert.match(run(["urls", "--no-publc"], dir).stderr, /did you mean --no-public\?/);
+    fs.writeFileSync(path.join(dir, ".env.example"), "# kept\nALLOWED_DEV_ORIGINS=\n");
+    const written = run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--write"], dir);
+    assert.equal(written.status, 0, written.stderr);
+    assert.match(written.stdout, new RegExp(`^dev server, port ${dev}: running\n {2}localhost {2}http://localhost:${dev}\n`));
+    assert.match(written.stdout, new RegExp(`\nlab, port ${lab}: running, each scene at /scene/<name>\n`));
+    assert.match(written.stdout, /public {5}not looked up \(--no-public\)/);
+    const report = JSON.parse(run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--json"], dir).stdout);
+    assert.equal(report.dev.up, true);
+    assert.equal(report.addresses.publicLookedUp, false);
+    assert.deepEqual(report.origins.missing, [], "written once: covered on the next run");
+    if (report.addresses.lan.length) assert.equal(fs.readFileSync(path.join(dir, ".env.local"), "utf8"), `# kept\nALLOWED_DEV_ORIGINS=${report.addresses.lan.join(",")}\n`);
+    else assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no LAN address: nothing to write");
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${dev}` } }));
+    assert.match(run(["urls", "--no-public", "--lab-port", lab], dir).stdout, new RegExp(`^dev server, port ${dev}: running`), "the port from scripts.dev");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("setup: --engines takes the kit's engines only; --check writes nothing and prints its report as JSON", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "setup-cli-"));
+  const servers = await listening();
+  const [dev, lab] = servers.map((s) => String(s.address().port));
+  try {
+    const wrong = run(["setup", "--engines", "chromium,firefox"], dir);
+    assert.equal(wrong.status, 2);
+    assert.match(wrong.stderr, /^setup: --engines is a list of chromium, webkit, not chromium,firefox; run agentic-cms setup --help\n$/);
+    assert.match(run(["setup", "--help"]).stdout, /--deps {19}on Linux, install WebKit's system libraries/);
+    const bare = run(["setup", "--check", "--no-browsers", "--no-public", "--json", "--lab-port", lab], dir);
+    assert.equal(bare.status, 2, "no package.json here");
+    assert.equal(JSON.parse(bare.stdout).steps.at(-1).detail, "no package.json here: run setup in the site's root");
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "site", scripts: { dev: `next dev -p ${dev}` } }));
+    fs.writeFileSync(path.join(dir, ".env.example"), "ALLOWED_DEV_ORIGINS=\n");
+    const r = run(["setup", "--check", "--no-browsers", "--no-public", "--json", "--lab-port", lab], dir);
+    assert.ok([0, 1].includes(r.status), r.stderr);
+    const report = JSON.parse(r.stdout);
+    assert.equal(report.check, true);
+    assert.deepEqual(report.steps.map((s) => s.step), ["node", "pnpm", "browsers", "env", "origins", "dev port", "verify"]);
+    assert.match(report.steps.find((s) => s.step === "dev port").detail, new RegExp(`a server answers on ${dev}`));
+    assert.match(r.stderr, /setup --check: what this clone has, changing nothing/, "the progress on stderr, the report alone on stdout");
+    assert.deepEqual(fs.readdirSync(dir).sort(), [".env.example", "package.json"], "--check wrote nothing");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });

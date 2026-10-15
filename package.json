@@ -117,6 +117,7 @@
     "build:pkg": "tsc -p tsconfig.build.json",
     "prepare": "tsc -p tsconfig.build.json",
     "content:docs": "node bin/agentic-cms.mjs docs",
+    "urls": "node bin/agentic-cms.mjs urls",
     "kit": "node bin/agentic-cms.mjs"
   },
   "dependencies": {

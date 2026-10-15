@@ -1,51 +1,79 @@
 # Setting up a clone
 
 For a person or an agent, on a fresh clone of a site built on the kit (or of
-the kit itself) and a machine that may have nothing installed. Each step
-says how to check it; the table at the end is what to do when one fails.
-An agent asked to "set up this project" in Claude Code or Codex follows
-this page in order.
+the kit itself) and a machine that may have nothing installed. Two commands
+do it; this page says what each step is for, how to check it, and what to do
+when one fails. An agent asked to "set up this project" in Claude Code or
+Codex follows this page, through the `setup` skill.
+
+## The commands
+
+```bash
+bash scripts/setup.sh                      # Node, pnpm, the install, then agentic-cms setup
+pnpm dev                                   # the dev server, on the port of scripts.dev
+pnpm urls                                  # this machine's URLs, and the origins next dev serves
+```
+
+`scripts/setup.sh` is the site's copy of the kit's
+`templates/site/setup.sh` (`init` writes it, and keeps a site's own). It
+does what a package inside `node_modules` cannot do for itself, then hands
+over to [`agentic-cms setup`](commands.md#setup), which does the rest. Every
+step keeps what is already there, so a second run takes seconds; run it
+again after fixing whatever a step reported. In a checkout of the kit
+itself, which has no `scripts/setup.sh`, the same is
+`pnpm install --frozen-lockfile && pnpm kit setup`.
+
+| Flag | What it adds or changes |
+|---|---|
+| `--check` | reports every step and writes, installs and runs nothing (after the install, which `setup.sh` always does); exit 1 on a gap |
+| `--build` | verifies with `pnpm build` too, about a minute |
+| `--deps` | on Linux, installs WebKit's system libraries with `sudo` when WebKit does not launch |
+| `--no-browsers` | skips the browsers: a machine that only edits content |
+| `--engines chromium` | installs only the browsers named (default `chromium,webkit`) |
+| `--no-public` | does not look up the public address: offline, or a laptop no viewer reaches from outside |
+
+`pnpm exec agentic-cms setup --check` alone (`pnpm kit setup --check` in
+the kit) is the doctor: Node, pnpm, the browsers, WebKit's libraries,
+`.env.local`, the origins and whether a server already holds the dev port,
+one line each, nothing changed.
 
 ## The steps
 
-```bash
-nvm install && nvm use                     # or: fnm use --install-if-missing (reads .nvmrc)
-corepack enable pnpm                       # Node 25 and later: npm install -g pnpm@<version>
-pnpm install --frozen-lockfile
-pnpm exec playwright-core install chromium webkit
-cp -n .env.example .env.local              # then this machine's hostnames in ALLOWED_DEV_ORIGINS
-pnpm lint && pnpm test                     # pnpm build for the full gate
-pnpm dev                                   # port 8000
-```
-
-1. **Node 22.18 or newer**, the version `.nvmrc` names. With nvm:
-   `nvm install && nvm use`; with fnm: `fnm use --install-if-missing`.
-   Check: `node -v`.
-2. **pnpm, at the version `package.json` pins** in `packageManager`.
-   `corepack enable pnpm` where Node still ships corepack; Node 25 and
-   later do not, so there it is `npm install -g pnpm@<version>` with that
-   version. Check: `pnpm -v`.
-3. **The dependencies:** `pnpm install --frozen-lockfile`. A site fetches
-   the kit from GitHub here and builds its `dist/` (`prepare`), which
-   pnpm runs only when `pnpm-workspace.yaml` allows it (`allowBuilds`:
-   the kit's git spec, `sharp`, `unrs-resolver`; [init.md](init.md)).
-4. **The browsers:** `pnpm exec playwright-core install chromium webkit`.
-   Chromium drives every kit command (`shot`, `probe`, `sheet`,
-   `visual-parity`, `lab render`); WebKit is Safari's engine for the
-   checks in [browsers.md](browsers.md). On Linux WebKit needs system
-   libraries the first time, which take `sudo`
-   ([browsers.md § Install](browsers.md#install)). A machine that only
-   edits content can skip this step.
-5. **`.env.local`** from `.env.example` when it is absent (`cp -n`
-   keeps one that exists). It is gitignored. Add this machine's
-   hostnames to `ALLOWED_DEV_ORIGINS`, found as
-   [dev-server.md](dev-server.md#which-address-to-hand-over) says; an
-   address never goes into a tracked file.
-6. **Verify:** `pnpm lint` and `pnpm test`. `pnpm build` is the full gate
-   (the content lint first, the prerender, the SEO audit last), about a
-   minute.
-7. **Start:** `pnpm dev` on port 8000, then the URL for the device that
-   will look ([dev-server.md](dev-server.md)).
+1. **Node 22.18 or newer**, the version `.nvmrc` names (`setup.sh`).
+   With nvm: `nvm install && nvm use`; with fnm:
+   `fnm use --install-if-missing`. Check: `node -v`.
+2. **pnpm, at the version `package.json` pins** in `packageManager`
+   (`setup.sh`): `corepack enable pnpm` where Node still ships corepack;
+   Node 25 and later do not, so there it is `npm install -g pnpm@<version>`.
+   Check: `pnpm -v`.
+3. **The dependencies:** `pnpm install --frozen-lockfile` (`setup.sh`; a
+   new site from `init`, which has no lockfile yet, gets a plain
+   `pnpm install`, and commits the lockfile it writes). A site fetches the
+   kit from GitHub here and builds its `dist/` (`prepare`), which pnpm runs
+   only when `pnpm-workspace.yaml` allows it (`allowBuilds`: the kit's git
+   spec, `sharp`, `unrs-resolver`; [init.md](init.md)).
+4. **The browsers** (`agentic-cms setup`):
+   `pnpm exec playwright-core install chromium webkit`, for the engines not
+   installed yet. Chromium drives every kit command (`shot`, `probe`,
+   `sheet`, `visual-parity`, `lab render`); WebKit is Safari's engine for
+   the checks in [browsers.md](browsers.md). On Linux WebKit needs system
+   libraries the first time, which take `sudo`: setup launches WebKit to
+   find out, and prints the line to run, or runs it with `--deps`
+   ([browsers.md § Install](browsers.md#install)).
+5. **`.env.local`** from `.env.example` when it is absent (`agentic-cms
+   setup`). It is gitignored.
+6. **The origins** (`agentic-cms setup`, as `pnpm urls --write`): this
+   machine's LAN addresses and its public address go into
+   `ALLOWED_DEV_ORIGINS`, as hostnames, beside what the file already lists
+   ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)).
+   They are found now, on this machine, and never go into a tracked file.
+7. **Verify** (`agentic-cms setup`): `pnpm lint` and `pnpm test`; with
+   `--build`, `pnpm build` (the content lint first, the prerender, the SEO
+   audit last).
+8. **The URLs** (`agentic-cms setup`, and `pnpm urls` any time after):
+   localhost, the LAN and the public address on the dev server's port and
+   the lab's, each server said running or not. Then `pnpm dev`, and the URL
+   for the device that will look ([dev-server.md](dev-server.md)).
 
 Two steps need the machine's owner, and an agent stops for them rather
 than working around them: `sudo` for WebKit's system libraries, and a
@@ -55,13 +83,15 @@ cloud VM's firewall when the owner's devices must reach the dev server.
 
 | Symptom | Do this |
 |---|---|
-| `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` lacks the `allowBuilds` key the error names: add it (`init` writes the kit's three; [init.md](init.md)) and run `pnpm install` again |
-| `pnpm: command not found` on Node 25 or later | no corepack there: `npm install -g pnpm@<version>`, the `packageManager` version |
-| `no Chromium build found` from a kit command | `pnpm exec playwright-core install chromium`, or `CHROME_PATH` pointing at a Chrome you have |
-| WebKit fails to launch on Linux | `sudo "$(command -v node)" node_modules/playwright-core/cli.js install-deps webkit` |
+| `setup.sh` stops at Node | install the version `.nvmrc` names (`nvm install && nvm use`), then run it again |
+| `setup.sh` could not install pnpm | `npm install -g pnpm@<version>`, the `packageManager` version, with `sudo` if npm's global folder needs it |
+| `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` lacks the `allowBuilds` key the error names: add it (`init` writes the kit's three; [init.md](init.md)) and run the setup again |
+| `browsers ✗ the browser install failed` | the network or the disk: the install's own output says which; run the setup again when it is fixed |
+| `no Chromium build found` from a kit command | `bash scripts/setup.sh`, or `CHROME_PATH` pointing at a Chrome you have |
+| `webkit libraries ! WebKit does not launch` | the owner runs the line it prints (`sudo "$(command -v node)" node_modules/playwright-core/cli.js install-deps webkit`), or `bash scripts/setup.sh --deps` |
 | every dev page fails with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build | stop the dev server, `rm -rf .next/dev .next/cache/turbopack`, start it again ([design.md § When the dev server will not serve](design.md#when-the-dev-server-will-not-serve)) |
 | a route you just created answers 404 | the dev server's watcher has not seen it yet: wait a second or two and reload (the first request also compiles it) |
-| a page on another device renders but nothing on it works | its hostname is missing from `ALLOWED_DEV_ORIGINS`: add it and restart `pnpm dev` ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)) |
+| a page on another device renders but nothing on it works | its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart `pnpm dev` ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)) |
 | `pnpm lint` fails naming the component to use instead | read the message: the library comes first (`src/components/README.md`), so use the primitive it names rather than loosening the rule |
 
 ## What to read next

@@ -38,6 +38,6 @@ if (flags["agent-files"]) {
   else {
     const where = path.relative(process.cwd(), target);
     console.log(`init: ${result.created.length} created, ${result.updated.length} updated, ${result.kept.length} kept in ${where || "."}`);
-    console.log(`next: ${where ? `cd ${where} && ` : ""}pnpm install && pnpm dev — then src/config/site.ts, src/app/globals.css, content/VOICE.md, and the design skill`);
+    console.log(`next: ${where ? `cd ${where} && ` : ""}bash scripts/setup.sh && pnpm dev — then src/config/site.ts, src/app/globals.css, content/VOICE.md, and the design skill`);
   }
 }

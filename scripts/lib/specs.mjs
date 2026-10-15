@@ -17,6 +17,8 @@ const seed = {
 };
 const seedUsage = "[--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]";
 const seedJson = "seed: { storage, sessionStorage, at } | null";
+// The lab server's port: lab serve listens on it, urls and setup look for it there.
+const LAB_PORT = 8001;
 
 export const SPECS = {
   lint: {
@@ -255,6 +257,38 @@ export const SPECS = {
     exit: { 0: "written, or every agent file as the kit ships it", 1: "--check found drift", 2: "usage" },
     json: "{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }",
   },
+  setup: {
+    command: "setup", script: "setup", group: "site", summary: "a clone made ready to work on, the steps after scripts/setup.sh got Node checked, pnpm and the dependencies: the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests, then the URLs; each step keeps what is there, so a re-run takes seconds",
+    usage: "agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit] [--deps] [--no-public] [--port <n>] [--lab-port <n>] [--json]",
+    flags: {
+      check: { type: "boolean", help: "report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap" },
+      build: { type: "boolean", help: "verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute)" },
+      "no-browsers": { type: "boolean", help: "skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium)" },
+      engines: { type: "string", default: "chromium,webkit", value: "<a,b>", help: "the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md)" },
+      deps: { type: "boolean", help: "on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed)" },
+      "no-public": { type: "boolean", help: "do not look up the public address (offline, or a machine no viewer reaches from outside)" },
+      port: { type: "number", value: "<n>", help: "the dev server's port (default: the -p of package.json's scripts.dev)" },
+      "lab-port": { type: "number", default: LAB_PORT, help: "the lab server's port (lab serve's)" },
+      json: { type: "boolean", help: "print the report as JSON (the steps' progress and the commands' output go to stderr)" },
+    },
+    examples: ["agentic-cms setup                          # what bash scripts/setup.sh runs last", "agentic-cms setup --check                  # what is missing; writes nothing", "agentic-cms setup --deps                   # with WebKit's Linux libraries (asks for sudo)", "agentic-cms setup --no-browsers --build    # a machine that only edits content, through the full gate"],
+    exit: { 0: "ready (a step left for the owner, sudo for WebKit's libraries, is printed, not failed)", 1: "a verify step failed, or --check found a gap", 2: "the environment — Node older than 22.18, no package.json here, no pnpm or playwright-core, a browser install that failed — or usage" },
+    json: "{ ready, check, steps: [{ step, status: ok|done|skipped|gap|todo|failed, detail, command? }], todo: [command], urls: <urls --json> | null }",
+  },
+  urls: {
+    command: "urls", script: "urls", group: "site", summary: "this machine's URLs for the dev server and the lab — localhost, the LAN, the public address — whether each server answers, and whether ALLOWED_DEV_ORIGINS in .env.local covers every address, without which a page opened there never hydrates; --write adds the missing ones",
+    usage: "agentic-cms urls [--write] [--no-public] [--port <n>] [--lab-port <n>] [--json]",
+    flags: {
+      write: { type: "boolean", help: "add the missing addresses to ALLOWED_DEV_ORIGINS in .env.local (made from .env.example when absent), as hostnames, keeping the file's other lines; then restart the dev server" },
+      "no-public": { type: "boolean", help: "do not look up the public address (api.ipify.org, then ifconfig.me; 4 s each)" },
+      port: { type: "number", value: "<n>", help: "the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000)" },
+      "lab-port": { type: "number", default: LAB_PORT, help: "the lab server's port (lab serve's)" },
+      json: { type: "boolean", help: "print the report as JSON" },
+    },
+    examples: ["agentic-cms urls                           # the URLs to hand over, and a missing origin named", "agentic-cms urls --write                   # the missing origins into .env.local", "agentic-cms urls --no-public --json"],
+    exit: { 0: "every address is in ALLOWED_DEV_ORIGINS (or was written)", 1: "an address is missing from it, or .env.local is, and --write was not given", 2: "no dev port (no package.json's scripts.dev to read it from, and no --port), or usage" },
+    json: "{ addresses: { lan, public, publicLookedUp }, dev: { port, up, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }",
+  },
   "guard-email": {
     command: "guard-email", script: "guard-email", group: "build gates", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
     usage: "agentic-cms guard-email [--domain <host>]… [--json]",
@@ -406,7 +440,7 @@ export const SPECS = {
         usage: "agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]",
         flags: {
           host: { type: "string", default: "0.0.0.0", value: "<address>", help: "the interface to listen on (0.0.0.0: every one, so a phone on the LAN can open it; 127.0.0.1: this machine only)" },
-          port: { type: "number", default: 8001, help: "the port" },
+          port: { type: "number", default: LAB_PORT, help: "the port" },
           scenes: { type: "string", multiple: true, value: "<file|dir>", help: "more scenes: an SVG file, or a folder walked for .svg files (public/images/home, say, to reopen what a page ships)" },
           sizes: { type: "string", value: "<px,px>", help: "the sizes every scene is also shown at, inline and as an <img> — the sizes it ships at (without it: 24, 40 and 64 for an icon-sized scene, up to 96 px wide, and none for a bigger one)" },
         },
