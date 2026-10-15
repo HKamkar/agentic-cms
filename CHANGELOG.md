@@ -29,6 +29,23 @@ changes what a capture writes says **recapture baselines**.
   measured at its widths (the styling rule); a new site's `AGENTS.md`
   points at the five guides, and a site on 0.7.6 adds those lines by hand
   (`docs/migrating-to-0.8.0.md` § 1, § 3.8).
+- `visual-parity proof --build` builds the tree before its first after
+  capture, as documented. It exited 2 on every call ("three sources of one
+  build"): the capture's guard against `--url`, `--build` and `--ref`
+  together ran for `proof` too, whose `--ref` always has a value. `proof`
+  with both `--pages` and `--sample` is refused before any capture starts.
+- A `--ref` baseline is built with the tree's `.env.local`, copied into its
+  sibling worktree: the file is gitignored, so the checkout had none, and a
+  build-time value could differ between the two sides of a proof. The
+  sibling's stamp keeps a digest of the file, never its values; a sibling
+  built with another `.env.local`, or before this change, is rebuilt rather
+  than reused.
+- Docs: `lab clean --help` and `docs/commands.md` show its current summary
+  (the spec had two, and the older one won); `STANDARD.md` §5 and §7 and the
+  components catalogue list `useReveal`, `EASE` and `fillBox` of
+  `agentic-cms/ix`; the workspace snippet in `docs/init.md` and the README
+  has `unrs-resolver: true`, as `init` writes it; `src/styles/motion.css`
+  names the library `agentic-cms/ix`.
 
 ## [0.7.6] — 2026-10-13
 

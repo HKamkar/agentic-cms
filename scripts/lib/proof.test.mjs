@@ -24,6 +24,14 @@ test("the plan: per pass, the baseline of the ref, the after capture, the compar
   assert.equal(plan()[0].args[3], "develop");
 });
 
+test("no step of a plan carries both --ref and --build: a capture refuses two sources of one build", () => {
+  for (const passes of [["static"], ["static", "motion", "states"]]) {
+    const steps = plan({ passes, build: true });
+    assert.ok(steps.every((s) => !(s.args.includes("--ref") && s.args.includes("--build"))), passes.join(","));
+    assert.equal(steps.filter((s) => s.args.includes("--build")).length, 1, "the tree is built once");
+  }
+});
+
 test("the proof's flags forwarded to its captures: a value after its flag, a repeatable one per value, a boolean as itself, nothing for one not given", () => {
   const flags = { scheme: "dark", jobs: 2, fresh: false, "no-storage": true, storage: ["consent={\"at\":\"{now}\"}", "theme=dark"], "session-storage": [], pages: undefined };
   assert.deepEqual(forwarded(flags, ["scheme", "jobs", "fresh", "storage", "session-storage", "no-storage", "pages"]), ["--scheme", "dark", "--jobs", "2", "--storage", "consent={\"at\":\"{now}\"}", "--storage", "theme=dark", "--no-storage"]);

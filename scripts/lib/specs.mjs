@@ -100,7 +100,7 @@ export const SPECS = {
           scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme for the capture" },
           url: { type: "string", value: "<base>", help: "capture a served site instead of serving .next (print its git log -1 first)" },
           build: { type: "boolean", help: "run the site's `pnpm build` first (log: .parity/<label>.build.log)" },
-          ref: { type: "string", value: "<git ref>", help: "capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, installed, built (reused for the same sha once a build finished), served and captured" },
+          ref: { type: "string", value: "<git ref>", help: "capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, the tree's .env.local copied in, installed, built (reused for the same sha and .env.local once a build finished), served and captured" },
           widths: { type: "string", value: "w,w", help: "viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion)" },
           pages: { type: "string", value: "/a,/b", help: "only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here" },
           settle: { type: "number", default: 2000, help: "with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle=\"<ms>\" raises it while that element is in view" },
@@ -449,7 +449,7 @@ export const SPECS = {
         json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }",
       },
       clean: {
-        command: "lab clean", summary: "removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays", summary: "removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
+        command: "lab clean", summary: "removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
         usage: "agentic-cms lab clean [--json]",
         flags: { json: { type: "boolean", help: "print { removed: [paths], kept: [paths] }" } },
         examples: ["agentic-cms lab clean"],

@@ -1,5 +1,5 @@
 /*
- * Start states for the reveal library in src/components/ix/. One class per
+ * Start states for the reveal library, agentic-cms/ix. One class per
  * `Fx` preset, and an `ix-main-init--` twin inside the desktop media query for
  * the presets a fork limits to `mq="main"` (below 992 the element simply
  * shows). The animation code replaces these values on its first frame.

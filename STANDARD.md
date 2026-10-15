@@ -243,7 +243,7 @@ shared component goes into it in the same commit. In short:
 | Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `Fx`, `OnView`, `InlineAnimation`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
+| Motion | `Fx`, `OnView`, `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useReveal()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
@@ -337,7 +337,9 @@ The reveal library survives for a fork that wants reveals, whole and unused, in
 |---|---|
 | `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on each entry after the element has left the viewport entirely (never while it is still partly on screen): `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`; `duration` (ms) and `distance` (px) change the numbers. `intro` is for the first screen: the first entrance is played by CSS from the first frame (`ix-intro` in `motion.css`, the numbers passed as custom properties), so a hero's copy is never a blank start pose while the scripts load; the replays are Motion's, and it plays at every width. |
 | `OnView` | a sequence over several elements when the section enters: `build={(root) => [[ix("card-2"), { y: "0%" }, { duration: 0.5, ease: ease("ease") }], …]}`, Motion's `animate()` format, resolved inside the element. |
-| `ease(name)` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`. |
+| `InlineAnimation`, `fillBox(markup)` | one of the site's own SMIL loops, inline: on its first frame until in view, played from the start on each entry, paused off screen, at its `data-rest` under reduced motion (`docs/lab.md` § Inline); `fillBox` is its markup step, the root `<svg>` given `display:block;width:100%;height:100%` first in its `style`, so the box sizes the drawing before any stylesheet loads. |
+| `ease(name)`, `EASE` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`; `EASE` is the table itself (name → cubic-bezier tuple, read-only), `ease()` a copy of one tuple for Motion. |
+| `useReveal(ref, offset, once?)` | when a scroll-into-view effect plays: once the element is `offset` % into the viewport, and again only after it has left the viewport entirely (`once` never re-arms); returns the number of plays, the key of an effect of one's own. `Fx`, `OnView` and `InlineAnimation` play on it. |
 | `ix(name)`, `useMainBreakpoint()`, `useReducedMotionPref()` | the selector for a `data-ix` target; the ≥ 992 px query (`null` until mounted); `prefers-reduced-motion`. |
 
 Adding a reveal is five lines: import `Fx`, wrap the element, pick the preset

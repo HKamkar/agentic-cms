@@ -61,11 +61,15 @@ the branch as pushed, and `HEAD`, a sha or `HEAD~2` in this checkout; checked
 out as a detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
 the site, whose `tsconfig` would include it — its demo routes removed
 (`src/app/<name>-demo`: never production, and the build's SEO audit rejects
-them by design, so a commit made mid-round still builds), installed with the
-lockfile as it was, built there, served and captured; a sibling whose build
-finished for the same sha is reused (its `.parity/ref-build.json` says so —
-one whose build failed is rebuilt, never reused), older ref siblings are
-removed, and the sha and the demo routes it removed go into `meta.json`).
+them by design, so a commit made mid-round still builds), given the tree's
+`.env.local` (gitignored, so a checkout has none, while the tree's own build
+reads it: without the copy a build-time value could differ between the two
+sides), installed with the lockfile as it was, built there, served and
+captured; a sibling whose build finished for the same sha and the same
+`.env.local` is reused (its `.parity/ref-build.json` says so, with a digest
+of the file, never its values — one whose build failed, or that read another
+`.env.local`, is rebuilt), older ref siblings are removed, and the sha and
+the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
 

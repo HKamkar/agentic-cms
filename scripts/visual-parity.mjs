@@ -66,7 +66,10 @@ if (subcommand === "capture" && flags.sample !== undefined) {
 }
 const settleMs = flags.settle ?? 2000;
 if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
-if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+// A proof passes --ref to its baseline and --build to its first after capture, never both to one capture (lib/proof.mjs).
+if (subcommand === "capture" && [flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+// The proof refuses it under its own name before any capture starts, not as a failed baseline step.
+if (subcommand === "proof" && flags.sample !== undefined && onlyPages.length) { console.error("visual-parity proof: --pages and --sample both choose the pages of a capture; pass one"); process.exit(2); }
 // Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
 // a --url site is served by its own server and captured as it serves itself.
 const THIRD_PARTY = flags["third-party"] ?? "hold";

@@ -292,6 +292,7 @@ only when `pnpm-workspace.yaml` allows it:
 allowBuilds:
   "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
   sharp: true
+  unrs-resolver: true
 ```
 
 Either way the site carries, from the first session and with nothing

@@ -113,8 +113,13 @@ does not have
 
 **What changes without any action from you:**
 
-- `visual-parity proof --build` works. It exited 2 on every call before
-  *(job 1)*.
+- `visual-parity proof --build` works: it builds the tree before the first
+  after capture. Before, it exited 2 on every call. `--pages` with
+  `--sample` is refused up front.
+- A `--ref` baseline is built with your `.env.local` (copied into its
+  worktree), so a build-time value is the same on both sides. With a
+  `.env.local`, the first proof after the upgrade rebuilds its baseline
+  once: the old build was made without it.
 - With no profile (§ 3.1), every command's defaults are what they were
   *(job 5)*.
 - The lab timeline scrubs play-once CSS motion and measures animations that

@@ -4,19 +4,25 @@
 // never inside it, where the site's tsconfig would include it — its demo
 // routes removed (a design round's src/app/<name>-demo, never production,
 // which the build's SEO audit rejects by design), installed with the
-// lockfile as it was and built there. A cache of one: a sibling whose build
-// succeeded for the same sha (its stamp says so) is reused, and older ref
-// siblings are removed when a new one is made. The shell and the file system
-// are injected so the sequence is tested without git.
+// lockfile as it was and built there, with the tree's .env.local copied in
+// (gitignored, so the worktree has none, and the tree's own build reads it).
+// A cache of one: a sibling whose build succeeded for the same sha and the
+// same .env.local (its stamp says so) is reused, and older ref siblings are
+// removed when a new one is made. The shell and the file system are injected
+// so the sequence is tested without git.
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 /** Written in the sibling once its build succeeded; a sibling without it (a failed build) is rebuilt, never reused. */
 export const STAMP = ".parity/ref-build.json";
+/** The tree's build-time values the worktree lacks: gitignored, read by next build. */
+export const ENV_FILE = ".env.local";
 const DEFAULTS = {
   readdir: (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir) : []),
   read: (file) => fs.readFileSync(file, "utf8"),
   write: (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); },
+  copy: (from, to) => fs.copyFileSync(from, to),
 };
 
 /** The sibling directory a sha is built in: ../<site>-ref-<sha12>. */
@@ -55,6 +61,12 @@ function readStamp(dir, { exists, read }) {
   try { return JSON.parse(read(file)); } catch { return null; }
 }
 
+/** The digest of the tree's .env.local, or null when it has none: the stamp keeps this, never the values. */
+function envDigest(root, { exists, read }) {
+  const file = path.join(root, ENV_FILE);
+  return exists(file) ? createHash("sha256").update(read(file)).digest("hex").slice(0, 16) : null;
+}
+
 /** Removes the worktree's demo routes (src/app/<name>-demo); their routes, e.g. ["/hero-demo"]. */
 function removeDemos(dir, { readdir, rm, log }) {
   const demos = readdir(path.join(dir, "src/app")).filter((name) => /^[a-z0-9][a-z0-9-]*-demo$/.test(name)).sort();
@@ -63,11 +75,11 @@ function removeDemos(dir, { readdir, rm, log }) {
   return demos.map((d) => `/${d}`);
 }
 
-/** Clears the way for a fresh worktree at dir: the same sha's unstamped sibling, then older ref siblings, then git's records of them. */
-function clearSiblings(dir, { root, exec, exists, rm, log }) {
+/** Clears the way for a fresh worktree at dir: the same sha's sibling that cannot be reused, then older ref siblings, then git's records of them. */
+function clearSiblings(dir, { root, exec, exists, rm, log, why }) {
   // `worktree remove` before `prune`: a folder deleted while git still lists it makes the next `worktree add` fail ("missing but already registered")
   if (exists(dir)) {
-    log(`visual-parity: rebuilding ${dir} (no stamp: its build did not finish)`);
+    log(`visual-parity: rebuilding ${dir} (${why})`);
     try { exec("git", ["worktree", "remove", "--force", dir], { cwd: root }); } catch { /* not a worktree any more */ }
     if (exists(dir)) rm(dir);
   }
@@ -79,23 +91,25 @@ function clearSiblings(dir, { root, exec, exists, rm, log }) {
   exec("git", ["worktree", "prune"], { cwd: root });
 }
 
-/** Resolves, checks out, strips the demo routes of, installs and builds the ref; { dir, sha, subject, reused, demos }. */
+/** Resolves, checks out, strips the demo routes of, gives the tree's .env.local to, installs and builds the ref; { dir, sha, subject, reused, demos }. */
 export function buildRef(ref, { root, exec, exists, rm, log = console.error, ...io }) {
-  const { readdir, read, write } = { ...DEFAULTS, ...io };
+  const { readdir, read, write, copy } = { ...DEFAULTS, ...io };
   try { exec("git", ["fetch", "origin", "--quiet"], { cwd: root }); } catch { log(`visual-parity: could not fetch origin; resolving ${ref} from what is here`); }
   const sha = resolve(exec, root, ref);
   let subject = sha.slice(0, 7);
   try { subject = git(exec, root, ["log", "-1", "--format=%h %ci %s", sha]); } catch { /* a sha with no log line */ }
   const dir = refDirectory(root, sha);
   log(`visual-parity: baseline ${ref} = ${subject}`);
+  const env = envDigest(root, { exists, read });
   const stamp = readStamp(dir, { exists, read });
-  if (stamp?.sha === sha) { log(`visual-parity: reusing the build in ${dir}`); return { dir, sha, subject, reused: true, demos: stamp.demos ?? [] }; }
-  clearSiblings(dir, { root, exec, exists, rm, log });
+  if (stamp?.sha === sha && (stamp.env ?? null) === env) { log(`visual-parity: reusing the build in ${dir}`); return { dir, sha, subject, reused: true, demos: stamp.demos ?? [] }; }
+  clearSiblings(dir, { root, exec, exists, rm, log, why: stamp?.sha === sha ? `its build read another ${ENV_FILE}` : "no stamp: its build did not finish" });
   exec("git", ["worktree", "add", "--detach", dir, sha], { cwd: root });
   const demos = removeDemos(dir, { readdir, rm, log });
+  if (env) { copy(path.join(root, ENV_FILE), path.join(dir, ENV_FILE)); log(`visual-parity: baseline built with the tree's ${ENV_FILE}`); }
   log(`visual-parity: installing and building ${dir} (minutes)`);
   exec("pnpm", ["install", "--frozen-lockfile", "--prefer-offline"], { cwd: dir });
   exec("pnpm", ["build"], { cwd: dir });
-  write(path.join(dir, STAMP), JSON.stringify({ sha, demos }));
+  write(path.join(dir, STAMP), JSON.stringify({ sha, demos, ...(env ? { env } : {}) }));
   return { dir, sha, subject, reused: false, demos };
 }

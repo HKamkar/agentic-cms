@@ -84,5 +84,6 @@ test("lab clean keeps an icon round and names it; everything else of the lab goe
     assert.deepEqual(JSON.parse(r.stdout), { removed: [".parity/lab/scratch", ".parity/lab/spin.svg"], kept: [".parity/lab/rounds/modules"] });
     assert.ok(fs.existsSync(path.join(root, ".parity/lab/rounds/modules/graph-A.svg")));
     assert.match(run(root, ["clean"]).stdout, /nothing to remove; \.parity\/lab\/rounds\/modules kept \(an icon round: agentic-cms icons round retire modules\)/);
+    assert.match(run(root, ["clean", "--help"]).stdout, /all but an icon round in progress/, "the help says so too");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

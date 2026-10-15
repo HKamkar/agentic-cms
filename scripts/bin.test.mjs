@@ -139,3 +139,16 @@ test("visual-parity proof: its help names the passes and the ref; a wrong choice
   assert.equal(wrong.status, 2);
   assert.match(wrong.stderr, /did you mean --motion\?/);
 });
+
+test("visual-parity proof --build runs its baseline step (no three-sources refusal), and --pages with --sample is refused before any capture", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proof-build-"));
+  try {
+    const r = run(["visual-parity", "proof", "--build", "--ref", "nope"], dir);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /nope: not a commit, branch or tag/, "the baseline capture ran and stopped at the ref");
+    assert.doesNotMatch(r.stderr, /three sources/);
+    const both = run(["visual-parity", "proof", "--pages", "/", "--sample", "1"], dir);
+    assert.equal(both.status, 2);
+    assert.match(both.stderr, /^visual-parity proof: --pages and --sample both choose the pages of a capture; pass one\n$/, "nothing else ran");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
