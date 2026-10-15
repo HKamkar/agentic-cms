@@ -1,28 +1,29 @@
 import { Placeholder } from "@/components/ui/Placeholder";
+import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-line p-4";
+const card = "flex flex-col gap-2 p-4";
 type Stat = SectionProps<"about-story">["sovereignty"];
 
 /** A card that is a picture and the caption under it. */
 function CaptionCard({ label, caption }: { label: string; caption: string }) {
   return (
-    <li className={card}>
+    <Panel as="li" className={card}>
       <Placeholder ratio="aspect-square" label={label} className="w-24" />
       <p>{caption}</p>
-    </li>
+    </Panel>
   );
 }
 
 /** A card that is a line, a figure and the line under the figure. */
 function StatCard({ title, value, text }: Stat) {
   return (
-    <li className={card}>
+    <Panel as="li" className={card}>
       <h3>{title}</h3>
       <p className="text-h1 font-semibold">{value}</p>
       <p>{text}</p>
-    </li>
+    </Panel>
   );
 }
 
@@ -35,12 +36,12 @@ export function Story({ eyebrow, statement, founded, sovereignty, compliance, pa
         <StatCard {...sovereignty} />
         <StatCard {...compliance} />
         <CaptionCard label="partners" caption={partners} />
-        <li className={card}>
+        <Panel as="li" className={card}>
           <h3>{modalities.heading}</h3>
           <Placeholder ratio="aspect-video" label="modalities" />
           <p className="text-h1 font-semibold">{modalities.stat}</p>
           <p>{modalities.text}</p>
-        </li>
+        </Panel>
       </ul>
     </Section>
   );

@@ -121,10 +121,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   colours and both modes follow.
 - Every section renders inside `ui/Section`: its `type` is its YAML section
   type, its `id` and its `data-section`, and the tag is shown on purpose.
-  Cards are a `<ul>` of bordered boxes with `<h3>` titles after the section's
-  `<h2>`; a `statement` is the section's `<h2>`. What used to be an
+  Cards are a `<ul>` of `ui/Panel` frames (`as="li"`) with `<h3>` titles
+  after the section's `<h2>`; a `statement` is the section's `<h2>`. What used to be an
   illustration is a `ui/Placeholder` crossed box; content images are `<img>`
-  with `width`, `height`, `alt` and `block h-auto w-full border border-line`.
+  with `width`, `height`, `alt` and `block h-auto w-full border border-line`
+  (`ui/Media` writes one).
 - No motion in the wireframe: no `Fx`, `OnView`, `Reveal` or `Sequence` in a
   section, no `data-ix` or `data-part` attributes, no transitions. The
   `agentic-cms/ix` library and `src/styles/motion.css` stay for a fork that
@@ -386,9 +387,9 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   (start states in `src/styles/motion.css`). Never paste header, footer,
   button, container or title block markup into a page. Extract repeated
   markup into a component before its second use, driven by props or
-  `src/config/`. Cards are the exception: every section's cards are its own
-  design, so a section renders them from its own copy fields; do not build a
-  generic Card.
+  `src/config/`. Cards are the exception: a card's frame is `ui/Panel`, and
+  what goes inside it is each section's own design, from its own copy
+  fields; do not build a generic Card.
 - Four engines carry their full contract next to the code: `src/lib/blog/README.md`
   (posts, frontmatter, body conventions), `src/lib/content/README.md`
   (collections — posts, authors, categories, reviews, faqs, use cases, pages —

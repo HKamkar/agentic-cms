@@ -5,6 +5,52 @@ are assembled from these; **new markup goes into a page only when nothing
 here fits**, and any new shared component is added to this file in the same
 commit.
 
+## Library first
+
+Before building anything (a section, a card, a button):
+
+1. **Look here.** If a primitive fits, use it.
+2. **Extend it** when it almost fits: a new option in its looks, a new prop,
+   never a copy beside it (§ Extending a primitive).
+3. **Add a primitive** only when nothing fits: in `ui/`, with its entry in
+   this file in the same commit, then use it.
+4. **Compose** the section from the pieces. A section lays them out (the
+   grid, the gaps, the order) and draws no box of its own: its frame is
+   `Section`, a card's frame is `Panel`, and what goes inside a card is the
+   section's own design, from its own copy fields.
+
+## Extending a primitive
+
+A primitive with more than one look declares them in one map with
+`variants()` (§ Class helpers): the base classes, each axis's options, the
+defaults. A new look is **one new option** in the map, never a copy of the
+component and never a class string in a section. The maps are exported
+beside their components (`button`, `panel`, `heading`, `iconButton`), so an
+element a component has to draw itself wears the same classes: the form's
+submit is `buttonClass("solid")`, a card that is a whole link
+`cx(panel(), …)`.
+
+```tsx
+export const panel = variants({
+  variants: {
+    variant: {
+      solid: "border border-line rounded-panel shadow-panel",
+      dashed: "border border-dashed border-line rounded-panel",
+    },
+  },
+  defaults: { variant: "solid" },
+});
+```
+
+The options ask for role tokens (`border-line`, `rounded-panel`,
+`shadow-panel`, `bg-panel` on a box with a ground of its own), so a design
+that gives the roles their values restyles every primitive at once, and an
+option of its own is for a look the roles cannot say. The example keeps `Panel` at `solid` and
+`dashed`: any other surface is a site's design, added as an option there. A
+primitive also grows by a prop (`Heading`'s `size` and `entrance`, `Media`'s
+`eager`), and takes `className` for the layout and spacing of the place it
+is used in.
+
 Rules that apply to all of them (the design system and the section anatomy
 are in `STANDARD.md`):
 
@@ -50,7 +96,7 @@ gutter. Nothing else on a page sets a width.
 ### `Section`
 
 The frame every section renders in: a `<section>` with the page's vertical
-rhythm, a `Container`, and a bordered box whose corner tag is the section's
+rhythm, a `Container`, and a `Panel` whose corner tag is the section's
 type. Props: `type` (required), `eyebrow?`, `heading?`, `headingAs?`
 (`"h1" | "h2"`, default `h2`), `className?`, `children?`.
 
@@ -67,23 +113,50 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 <Section type="contact-form">…</Section>            // no title block
 ```
 
-## Chrome (`src/components/ui/`)
+### `Panel`
+
+The one surface: the hairline, the panel radius and shadow, each a role
+token (`border-line rounded-panel shadow-panel`), at the wireframe's ink,
+`0` and none. It has no ground of its own here, as the boxes it replaced
+had none; a design that gives panels a face adds `bg-panel` to `solid`.
+`Section` draws its box with it, `sections/Group` its dashed one, the
+footer its box, and every section its cards' frames; what goes inside a
+card stays the section's own design. Props: `variant?` (`"solid" | "dashed"`, default `solid`), `as?` (`"div" |
+"li" | "article" | "aside"`, default `div`), `className?` (the layout and
+spacing inside, never a look), and any attribute (`id`, `data-section`,
+aria). `panel({ variant })` is the same frame as a class string, for an
+element a component draws itself: the blog card is a whole link, the
+consent banner a dialog with a ref (which adds its own `bg-panel`, an
+overlay's ground).
+
+```tsx
+<Panel as="li" className="flex flex-col gap-2 p-4">…</Panel>   // a card in a <ul>
+<Panel variant="dashed" data-section={`group-${variant}`}>…</Panel>
+<Link href={href} className={cx(panel(), "flex flex-col gap-3 p-4 no-underline")}>…</Link>
+```
+
+## Chrome and actions (`src/components/ui/`)
 
 | Component | What it is | Props | Notes |
 |---|---|---|---|
 | `Navbar` | The site header | — | `"use client"`; rendered once in `app/layout.tsx`. `<header>` with a `<nav aria-label="Main">`; the brand, `site.nav`, `site.signIn`, `site.cta` and the theme switch. Below 992 px the links and actions hide (`max-lg:hidden`) behind a `Menu` button (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
 | `NavLink` | A link in the chrome | `href`, `label`, `className?` | `"use client"`. An `http(s)` href renders a plain `<a>`; everything else `next/link`, marked `aria-current="page"` only when the href is exactly the current path — so a section anchor is never "current". |
 | `ThemeToggle` | The theme switch | — | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |
-| `Footer` | The site footer | — | `<footer>` with one bordered box: the brand, `site.tagline`, the `<address>`, the e-mail, and the `Quick links` and `Follow us` columns from `site.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
-| `ConsentBanner` | The consent banner | — | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`. A non-modal `role="dialog"`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `buttonClass("outline")` button, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
+| `Footer` | The site footer | — | `<footer>` with one `Panel`: the brand, `site.tagline`, the `<address>`, the e-mail, and the `Quick links` and `Follow us` columns from `site.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
+| `ConsentBanner` | The consent banner | — | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
 | `CookieSettingsButton` | Opens the consent banner again | `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`; the footer renders it, and any page may. |
-| `Button` | The site's button, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. `solid` is `bg-ink text-on-ink`, `outline` is `bg-panel text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
-| `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`. |
+| `Button` | The call to action, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. Its looks are the `button` map (`variants()`): `solid` is `bg-ink text-on-ink`, `outline` is `bg-panel text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
+| `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`, `OutlineButton` `buttonClass("outline")`. |
+| `OutlineButton` | A choice on the page | `label`, `onClick?`, `pressed?`, `disabled?`, `className?` | A real `<button type="button">` in the outline look: a filter, a toggle, a step, a consent answer, never a call to action (that is `Button`, a link). `pressed` sets `aria-pressed` and makes it a toggle; left out, it is a plain button. Takes `onClick`, so it is used from a client component. |
+| `IconButton` | A button that shows only an icon | `label`, `icon`, `onClick?`, `pressed?`, `disabled?`, `variant?` (`"outline" \| "solid"`, default `outline`), `className?` | 44 px square (`size-11`), so a finger hits it. `label` is required: it is the accessible name (`aria-label`) and the tooltip (`title`), and the icon is `aria-hidden`. Its looks are the `iconButton` map. Unused by the wireframe. |
 
 ```tsx
 <Button href={site.links.contact} label={cta} />
 <Button href={site.links.blog} label={cta} current />
 <Button href={site.cta.href} label={site.cta.label} variant="outline" />
+<OutlineButton label={copy.allow} onClick={() => choose("granted")} />
+<OutlineButton label={category.name} pressed={shown === category.slug} onClick={() => setShown(category.slug)} />
+<IconButton label="Next" icon={<Icon {...ICONS["lucide:arrow-right"]} size={20} />} onClick={next} />
 ```
 
 ## The engine's React pieces (`src/lib/components/`)
@@ -145,9 +218,23 @@ aspect utility), `label?` (default `"illustration"`), `className?`.
 <Placeholder ratio="aspect-[16/10]" label="platform screenshot" />
 ```
 
-A picture the copy actually describes is a real `<img>` instead, with
-`width`, `height`, `alt` and `className="block h-auto w-full border
-border-line"` (`STANDARD.md` §4).
+A picture the copy actually describes is `Media` instead.
+
+## `Media` (`src/components/ui/Media.tsx`)
+
+A picture the copy describes, so a section never writes `<img>`: `block
+h-auto w-full`, with the hairline (`border border-line`) unless
+`framed={false}`. Props: `src`, `alt` (`""` only for decoration), `width`
+and `height` (the file's own size, so the box is reserved before it loads),
+`eager?`, `framed?`, `className?`. Below the fold, the default, it is an
+`<img loading="lazy">`; `eager` renders `EagerImage` for a picture above
+the fold in a server component, so it stays out of other pages' prefetches
+(`STANDARD.md` §4).
+
+```tsx
+<Media src={dashboard.image} width={1200} height={750} alt={dashboard.imageAlt} />
+<Media src={post.image} width={1600} height={900} alt={post.imageAlt} eager />
+```
 
 ## Title block (`src/components/ui/`)
 
@@ -170,12 +257,61 @@ an `<Eyebrow>` — a use case's sector, a post's category, a post's date:
 
 ### `Heading`
 
-A page or section heading; the type comes from `base.css`, so it takes no
-type utilities. Props: `as?` (`"h1" | "h2" | "h3"`, default `h2`),
-`className?`, `children`.
+A page or section heading, its level apart from its size. Props: `as?`
+(`"h1"`…`"h6"`, default `h2`), `size?` (`"auto"`, default, or `"h1"`…`"h6"`),
+`entrance?` (`"rise" | "fade" | "scale"`), `intro?`, `delay?`, `className?`,
+`children`. Without a `size` the type is the level's own, from `base.css`;
+`size` sets it from the `heading` map instead (an `h3` at `h4` size is
+`text-h4`). `entrance` renders it as the play-once layer's `Reveal`
+(`agentic-cms/ix`): it enters once, `intro` from the first frame for the
+first screen's heading, `delay` in ms. The wireframe passes no entrance, so
+nothing moves.
 
 ```tsx
 <Heading as="h1">{heading}</Heading>
+<Heading as="h3" size="h4">{title}</Heading>
+<Heading as="h1" entrance="rise" intro>{heading}</Heading>   // a site with motion
+```
+
+## Text (`src/components/ui/`)
+
+### `TextLink`
+
+A link in running copy, so a section never writes `<a>`. Props: `href`,
+`className?`, `children`. A path or an anchor (`/…`, `#…`) renders
+`next/link`; an `http(s)` address opens in a new tab (`target="_blank"
+rel="noopener noreferrer"`); anything else (`mailto:`, `tel:`) is a plain
+`<a>`. It keeps the page's underline. A link that looks like a button is
+`Button`; a link in the chrome is `NavLink`.
+
+```tsx
+<TextLink href={site.links.blog}>the blog</TextLink>
+<TextLink href="https://example.com/spec">the spec</TextLink>
+```
+
+### `MetaLine` and `metaLabel`
+
+A line of small uppercase metadata, a post's category, date and reading
+time, in `metaLabel` (`font-label text-h6 uppercase tracking-label
+text-muted`). Props: `items: string[]` (an empty one is left out),
+`className?`. The items are separated by a ` · ` that is `aria-hidden`.
+`metaLabel` is the same type as a class string, for a label that is not a
+line (a table's head). Unused by the wireframe, whose labels are the boxed
+`eyebrowText`.
+
+```tsx
+<MetaLine items={[post.category.name, formatDate(post.date), `${post.readingMinutes} min read`]} />
+```
+
+### `keepWords` (`src/components/ui/text.ts`)
+
+`keepWords(text)` turns each hyphen between two letters or digits into
+U+2011, the non-breaking hyphen, so a line never breaks inside
+"end-to-end"; a spaced dash and a leading or trailing hyphen stay. No React,
+so it runs in server components and under `node:test` (`text.test.ts`).
+
+```tsx
+<h3>{keepWords(card.title)}</h3>
 ```
 
 ## FAQ (`src/components/ui/Faq.tsx`)
@@ -233,7 +369,8 @@ definition schema, adding a form, a field type, a backend or a sink — is
 
 ## The motion library (`agentic-cms/ix`) — available, unused
 
-Nothing in the wireframe animates, and nothing imports these. They are kept
+Nothing in the wireframe animates, and nothing renders these: `Heading`
+imports `Reveal` for its `entrance`, which no section passes. They are kept
 whole, with their start states and keyframes in `src/styles/motion.css`, so a
 fork that wants motion only has to render them (`STANDARD.md` §7). Two layers;
 choose before writing the first one:
@@ -309,12 +446,13 @@ One component per section type, in the folder its page belongs to:
 Each is a server component unless it needs the browser, renders inside
 `ui/Section`, takes its copy as `SectionProps<"<type>">`, and builds its
 content from the shared strings in `STANDARD.md` §6 — `Container`, the
-title block and the button come from this file, illustrations from
+title block, `Panel` and the button come from this file, illustrations from
 `Placeholder`, content images from `<img>`.
 
-Cards inside a section are **not** shared components — every section's
-cards are its own design — so a section renders them from a data array at
-the top of its file (`CARDS.map(...)`), as a `<ul>` when they are a list.
+A card's frame is `Panel` (`<Panel as="li">` in a list), and what goes
+inside it is the section's own design: there is no shared `Card`, so a
+section renders its cards from a data array at the top of its file
+(`CARDS.map(...)`), as a `<ul>` when they are a list.
 When the cards are content someone edits, the array is a collection the
 registry resolves for the section through `withData()` (`UseCaseCards` →
 `kit.content.getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →

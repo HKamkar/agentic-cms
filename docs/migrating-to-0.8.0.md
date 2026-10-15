@@ -348,12 +348,23 @@ applies, never the hue behind it.
   named, nothing moves and the proof is identical. The styling rule and
   the `design` skill that `--agent-files` writes say it; if you kept an
   edited copy, take their token lines from the kit's (§ 1).
-- **Primitives:** the example now has `Panel`, `OutlineButton`,
-  `IconButton`, `Heading` (with size and entrance), `MetaLine`, `TextLink`,
-  `Media` and `keepWords`. `init` never copies the example into an existing
-  site, so copy the ones you want from
-  `node_modules/agentic-cms/src/components/ui/`, with their catalogue rows,
-  and restyle them with your tokens.
+- **Primitives:** the example now has `Panel` (`solid`, `dashed`, and
+  `panel()` for an element a component draws itself), `OutlineButton` (a
+  choice, `aria-pressed` when it toggles), `IconButton` (44 px, its label
+  required), `Heading` (its level apart from its `size`, and an `entrance`
+  through `Reveal`), `MetaLine` and `metaLabel`, `TextLink`, `Media` and
+  `keepWords` (`ui/text.ts`), and `Button` declares its looks with
+  `variants()` (`button`, behind `buttonClass`). `init` never
+  copies the example into an existing site, so copy the ones you want from
+  `node_modules/agentic-cms/src/components/ui/` with their catalogue rows
+  (`src/components/README.md`, with its § Library first and § Extending a
+  primitive), and restyle them with your tokens: each asks for the roles
+  above. The example's cards are a `<Panel as="li">` around each section's
+  own content, and `Section` draws its box with `Panel`; a site that adopts
+  `Panel` moves its card frames the same way and keeps what goes inside
+  them. The design rule `--agent-files` writes says "a section's card
+  content is its own; the card frame is `ui/Panel`"; an edited copy takes
+  that line by hand (§ 1).
 - **The guide:** `docs/primitives.md` is the checklist of what a site builds
   on day one and what waits for a second use.
 
