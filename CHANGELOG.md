@@ -40,6 +40,12 @@ changes what a capture writes says **recapture baselines**.
   sibling's stamp keeps a digest of the file, never its values; a sibling
   built with another `.env.local`, or before this change, is rebuilt rather
   than reused.
+- Docs: `lab clean --help` and `docs/commands.md` show its current summary
+  (the spec had two, and the older one won); `STANDARD.md` §5 and §7 and the
+  components catalogue list `useReveal`, `EASE` and `fillBox` of
+  `agentic-cms/ix`; the workspace snippet in `docs/init.md` and the README
+  has `unrs-resolver: true`, as `init` writes it; `src/styles/motion.css`
+  names the library `agentic-cms/ix`.
 
 ## [0.7.6] — 2026-10-13
 

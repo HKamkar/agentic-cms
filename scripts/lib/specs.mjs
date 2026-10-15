@@ -449,7 +449,7 @@ export const SPECS = {
         json: "{ scene, file, still, source, format, width, height, frames, fps, duration, scheme, background, bytes, note, console }",
       },
       clean: {
-        command: "lab clean", summary: "removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays", summary: "removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
+        command: "lab clean", summary: "removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays",
         usage: "agentic-cms lab clean [--json]",
         flags: { json: { type: "boolean", help: "print { removed: [paths], kept: [paths] }" } },
         examples: ["agentic-cms lab clean"],

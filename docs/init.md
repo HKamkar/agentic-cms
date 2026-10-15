@@ -14,12 +14,15 @@ pnpm install && pnpm dev
 
 A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
 only when `pnpm-workspace.yaml` allows it — `init` writes the file, but the
-first `pnpm add` needs it too:
+first `pnpm add` needs it too, with the keys `init` writes (`unrs-resolver`
+is `eslint-config-next`'s resolver; without it the install after `init`
+stops at `ERR_PNPM_IGNORED_BUILDS`):
 
 ```yaml
 allowBuilds:
   "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
   sharp: true
+  unrs-resolver: true
 ```
 
 From a checkout of the kit, `pnpm kit init ../my-site` does the same.

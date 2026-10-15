@@ -895,7 +895,7 @@ agentic-cms lab render hero --out public/images/home/hero.webm --animate --backg
 
 #### `lab clean`
 
-Removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays.
+Removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays.
 
 ```bash
 agentic-cms lab clean [--json]
