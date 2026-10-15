@@ -1,8 +1,9 @@
 import { Placeholder } from "@/components/ui/Placeholder";
+import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-line p-4";
+const card = "flex flex-col gap-2 p-4";
 
 /** The "why us" section: three points beside the screenshot the design draws. */
 export function ChooseUs({ eyebrow, heading, points }: SectionProps<"use-cases-choose-us">) {
@@ -11,10 +12,10 @@ export function ChooseUs({ eyebrow, heading, points }: SectionProps<"use-cases-c
       <div className="grid gap-4 lg:grid-cols-2">
         <ul className="grid gap-4">
           {points.map((point) => (
-            <li key={point.title} className={card}>
+            <Panel as="li" key={point.title} className={card}>
               <h3>{point.title}</h3>
               <p>{point.text}</p>
-            </li>
+            </Panel>
           ))}
         </ul>
         <Placeholder ratio="aspect-[16/10]" label="platform screenshot" />

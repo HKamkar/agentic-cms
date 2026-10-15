@@ -182,6 +182,34 @@ changes what a capture writes says **recapture baselines**.
   component that imports `Reveal` from `agentic-cms/ix` no longer loads
   the Motion library behind `Fx` and `OnView` on its page (69 KB in the
   example's build), only `Reveal`'s own code.
+- The example has the day-one primitives in `src/components/ui/`, at the
+  wireframe's values and on the role tokens, each with its row in the
+  components catalogue: `Panel` (`solid`, `dashed`; `panel()` is the same
+  frame as a class string, for a card that is a link or a dialog with a
+  ref), `OutlineButton` (a choice on the page, a `<button>` with
+  `aria-pressed` when it toggles, never a call to action), `IconButton`
+  (44 px, its label required), `Heading` (its level apart from its `size`;
+  `entrance` renders the play-once `Reveal`, which the wireframe never
+  passes), `MetaLine` and `metaLabel`, `TextLink` (`next/link` for a path,
+  a new tab for `http(s)`), `Media` (`EagerImage` above the fold, a lazy
+  `<img>` otherwise) and `keepWords` (U+2011 in a hyphenated word, with its
+  test). `Button` declares its looks with `variants()` (`button`, behind
+  the same `buttonClass`). The catalogue gains § Library first and
+  § Extending a primitive, and `docs/primitives.md` its "In the example"
+  column.
+- The card frame is `ui/Panel`: `Section` draws its box with it,
+  `sections/Group` its dashed one, the footer its box, every section its
+  cards' frames (`<Panel as="li">`, in place of each file's
+  `const card = "… border border-line p-4"`), the blog card and the
+  consent banner `panel()`, whose answers are two `OutlineButton`s. What
+  goes inside a card stays each section's own design, and there is still
+  no shared `Card`. The design rule (both trees) says "a section's card
+  content is its own; the card frame is `ui/Panel`", and `AGENTS.md`,
+  `STANDARD.md`, the styling rule and the `design` skill agree. Panels
+  ask for `rounded-panel` and `shadow-panel`, `0` and none in the
+  wireframe, and have no ground of their own, as the boxes they replace
+  had none (a design adds `bg-panel` to `solid`): the proof is identical
+  in both schemes, with `--states`.
 
 ## [0.7.6] — 2026-10-13
 

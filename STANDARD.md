@@ -66,7 +66,7 @@ utilities here.
 
 | Role | Aliases | What asks for it |
 |---|---|---|
-| `panel` | `paper` | a panel's face, a box with a ground of its own: a form control, the outline button, the consent banner, the skip link |
+| `panel` | `paper` | a panel's face, a box with a ground of its own: a form control, the outline button, the consent banner, the skip link (a `ui/Panel` has none in the wireframe; a design that gives panels one adds it to `solid`) |
 | `line` | `ink` | every hairline: a box's border, a rule, the placeholder's cross |
 | `on-ink` | `paper` | text on an ink ground: the solid button's label |
 
@@ -197,10 +197,11 @@ Two kinds of picture, and they are not interchangeable.
   missing one; empty is fine for decoration), plus explicit size utilities.
   `base.css` sets `img { height: revert-layer }`, so an image sized by `w-full`
   carries `h-auto` with it — the content-image string is
-  `block h-auto w-full border border-line`.
+  `block h-auto w-full border border-line`. `ui/Media` writes exactly that
+  `<img>` from `src`, `width`, `height` and `alt`, so new markup uses it.
 
 Above the fold in a **server** component, use `EagerImage` (from
-`agentic-cms/components`): a plain eager
+`agentic-cms/components`, or `<Media eager>`): a plain eager
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
@@ -255,19 +256,22 @@ shared component goes into it in the same commit. In short:
 
 | Kind | Components | Rule |
 |---|---|---|
-| Layout | `ui/Container`, `ui/Section` | every section renders inside `Section`; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`), `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
-| Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` | `Section` renders both from its props; `eyebrowText` is the same label as a class string |
-| Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
+| Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`) | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; nothing else sets a page width |
+| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
+| Actions | `ui/Button` (+ `button`, `buttonClass`), `ui/OutlineButton`, `ui/IconButton` (+ `iconButton`) | a call to action is `Button`, a link; a choice on the page is `OutlineButton`, a `<button>` with `aria-pressed` when it toggles; an icon alone is `IconButton`, 44 px, its label required |
+| Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` (+ `heading`) | `Section` renders both from its props; `eyebrowText` is the same label as a class string; a heading's level is apart from its size, and its `entrance` is the play-once `Reveal`, unused here |
+| Text | `ui/TextLink`, `ui/MetaLine` (+ `metaLabel`), `keepWords` (`ui/text.ts`) | a link in copy (`next/link` for a path, a new tab for `http(s)`); small uppercase metadata; a hyphenated word kept on one line |
+| Pictures | `ui/Placeholder`, `ui/Media` | every illustration the design has not drawn; a picture the copy describes, lazy, or `EagerImage` above the fold |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 says which to choose |
+| Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
-Cards are **not** a shared component: every section's cards are its own design,
-so a section renders them from a data array at the top of its file or from the
-collection the registry resolves for it. Do not build a generic `Card`.
+A card's frame is `ui/Panel`, and what goes inside it is each section's own
+design: a section renders its cards from a data array at the top of its file or
+from the collection the registry resolves for it, each a `<Panel as="li">`. Do
+not build a generic `Card`.
 
 Brand data, links and the chrome's text come from `src/config/site.ts`; a
 section's copy arrives as props from its page file. Neither is ever hard-coded
@@ -283,7 +287,7 @@ keyed by position. Every one of them renders inside `ui/Section`, the frame:
 ```tsx
 <section id={type} data-section={type} className="py-section">
   <Container>
-    <div className="border border-line p-6 max-md:p-4">
+    <Panel className="p-6 max-md:p-4">
       <span aria-hidden="true" className="mb-4 inline-block border border-line bg-fill px-2 font-label text-h6">{type}</span>
       …the eyebrow, the heading, the children…
 ```
@@ -297,7 +301,7 @@ The shared strings, as they appear in the code:
 
 | What | String |
 |---|---|
-| a card | `flex flex-col gap-2 border border-line p-4` |
+| a card | `<Panel as="li" className="flex flex-col gap-2 p-4">` |
 | a card grid | `grid gap-4 lg:grid-cols-3` (or `-2`, `-4`) |
 | a split | `grid gap-4 lg:grid-cols-2` |
 | a lead paragraph | `mb-6 max-w-prose` |
@@ -309,10 +313,11 @@ The shared strings, as they appear in the code:
 `src/components/about/Benefits.tsx`, whole:
 
 ```tsx
+import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-line p-4";
+const card = "flex flex-col gap-2 p-4";
 
 /** "What you get": three benefit cards, each an icon, a title and a line. */
 export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefits">) {
@@ -320,11 +325,11 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
     <Section type="about-benefits" eyebrow={eyebrow} heading={heading}>
       <ul className="grid gap-4 lg:grid-cols-3">
         {cards.map((benefit) => (
-          <li key={benefit.title} className={card}>
+          <Panel as="li" key={benefit.title} className={card}>
             <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
             <h3>{benefit.title}</h3>
             <p>{benefit.text}</p>
-          </li>
+          </Panel>
         ))}
       </ul>
     </Section>
@@ -333,9 +338,10 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
 ```
 
 A server component (nothing here needs the browser); the frame and title block
-from `Section`; cards as list items from the section's own array; `<h3>` after
-the section's `<h2>`; body copy as a bare `<p>`; the icon carrying its size both
-on the element and in the attributes. A call to action would be
+from `Section`; cards as `Panel` list items from the section's own array, the
+layout inside them the section's own; `<h3>` after the section's `<h2>`; body
+copy as a bare `<p>`; the icon carrying its size both on the element and in the
+attributes. A call to action would be
 `<Button href={site.links.contact} label={cta} />`.
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.

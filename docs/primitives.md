@@ -57,25 +57,25 @@ values, for a site to restyle rather than write again.
 
 | Group | Primitives | In the example |
 |---|---|---|
-| Layout | `Container` (a card stays each section's own design) | `ui/Container` |
-| Type | `Heading` (its level separate from its look, with an entrance prop), `Eyebrow`, `MetaLine` / `metaLabel` (small uppercase metadata), `TextLink`, a `keepWords` helper for hyphenated words (U+2011, so they never break) | `ui/Heading` (the level only), `ui/Eyebrow` |
-| Actions | `Button` (a link: the call to action, in variants), `OutlineButton` (a choice on the page, never a call to action), `IconButton` (a round icon button with a required label) | `ui/Button` (a link, solid or outline) |
-| Surfaces | one `Panel` with variants (solid, and the looks the site's direction adds) and a shared tile-frame class | `ui/Section` draws the section's box; each section declares its own card frame |
+| Layout | `Container` (a card's content stays each section's own design; its frame is the `Panel`) | `ui/Container` |
+| Type | `Heading` (its level separate from its look, with an entrance prop), `Eyebrow`, `MetaLine` / `metaLabel` (small uppercase metadata), `TextLink`, a `keepWords` helper for hyphenated words (U+2011, so they never break) | `ui/Heading` (its level, a `size`, an `entrance` through `Reveal`), `ui/Eyebrow`, `ui/MetaLine` / `metaLabel`, `ui/TextLink`, `keepWords` in `ui/text.ts` |
+| Actions | `Button` (a link: the call to action, in variants), `OutlineButton` (a choice on the page, never a call to action), `IconButton` (a round icon button with a required label) | `ui/Button` (a link, `solid` or `outline`, on `variants()`), `ui/OutlineButton`, `ui/IconButton` (a 44 px square at wireframe values) |
+| Surfaces | one `Panel` with variants (solid, and the looks the site's direction adds) and a shared tile-frame class | `ui/Panel` (`solid`, `dashed`) and `panel()`: `ui/Section` draws its box with it, `sections/Group` its dashed one, and every section its cards' frames |
 | Icons | `NavIcon` (line icons for navigation), `ContentIcon` (the site's own marks beside copy), `BrandIcon` (other companies' logos), `SocialLinks` | `Icon` from the package, its families from `icons add` ([icons.md](icons.md)) |
 | Chrome | `Navbar` with its mobile menu (one navigation landmark per menu), `Footer`, `PageHero` (the plain page header for legal pages and the 404), `PostalAddress` | `ui/Navbar`, `ui/NavLink`, `ui/Footer`, `ui/ThemeToggle` |
 | Consent, if there is analytics | `ConsentBanner`, `CookieSettingsButton` | both, in `ui/` |
 | Forms | `TextField`, `TextArea`, `Select` (drawn: the native list looks off), `Checkbox`, `CheckboxGroup` / `RadioGroup` through one `Choice`, `FieldWrap` / `FieldRow` / `Hint` / `Marker`, `FieldGroup`, `FormNote`, `FormShell` (the success and error states), `SubmitButton` | all of them in `ui/form/`, plus `DateField` and `NumberField`; `Select` is the native list with a drawn chevron |
 | Data | `DataTable` (it scrolls inside its own box, and is labelled), `FactTable` (label and value rows), an FAQ section on top of the kit's `FaqAccordion` | `ui/Faq` |
-| Media and performance | `LazyBackdrop` (a CSS background picture below the fold waits until it is near the view), `PauseOffscreen` (stops a loop the compositor cannot run while it is off screen), a `<figure>` pattern with a phone `<source>` for charts ([lab.md](lab.md)) | `ui/Placeholder` for a picture not drawn yet |
+| Media and performance | `LazyBackdrop` (a CSS background picture below the fold waits until it is near the view), `PauseOffscreen` (stops a loop the compositor cannot run while it is off screen), a `<figure>` pattern with a phone `<source>` for charts ([lab.md](lab.md)) | `ui/Media` (`EagerImage` above the fold, a lazy `<img>` otherwise), `ui/Placeholder` for a picture not drawn yet |
 | Motion | the `--ease-*` / `--motion-*` values in the layer's block of `motion.css`, a `heroIntro(step)` helper that steps the hero's `Reveal`s (`intro`, a delay per step) | the block at wireframe values, used by nothing: the wireframe has no motion (`STANDARD.md` §7) |
 
 ## 4. Add on the second use, not before
 
 `ShowMore` (it paginates while every item stays in the HTML), `Dots`,
 chips and badges, a meter, tabs, a carousel. Each appears because a second
-section needed it: the library grows from picks, not from plans. "Cards
-are a section's own design" holds unless the site names an exception, in
-the catalogue, with its reason.
+section needed it: the library grows from picks, not from plans. "A card's
+content is its section's own design, in a `Panel` frame" holds unless the
+site names an exception, in the catalogue, with its reason.
 
 ## Rules every primitive follows
 
