@@ -4,7 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { agentFiles, readManifest, scaffold } from "./lib/init.mjs";
+import { parse as parseYaml } from "yaml";
+import { agentFiles, ALLOW_BUILDS, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "..");
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "init-"));
@@ -14,7 +15,7 @@ const quiet = { log: () => {} };
 test("scaffold lays out a site from the package: the example, the agent files, the config, a manifest", () => {
   const target = path.join(tmp(), "my-site");
   const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
+  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
     assert.ok(fs.existsSync(path.join(target, file)), file);
   }
   assert.ok(!fs.existsSync(path.join(target, "src/lib")), "nothing of the package's source");
@@ -33,6 +34,8 @@ test("scaffold lays out a site from the package: the example, the agent files, t
   const tsconfig = JSON.parse(read(target, "tsconfig.json"));
   assert.deepEqual(tsconfig.compilerOptions.paths, { "@/*": ["./src/*"] });
   assert.match(read(target, "pnpm-workspace.yaml"), /"agentic-cms@git\+https:\/\/github\.com\/HKamkar\/agentic-cms\.git": true/);
+  assert.deepEqual(parseYaml(read(target, "pnpm-workspace.yaml")).allowBuilds, Object.fromEntries(ALLOW_BUILDS.map((name) => [name, true])));
+  assert.equal(mergeWorkspace(read(target, "pnpm-workspace.yaml")), null, "the kit's own workspace lacks nothing");
   assert.match(read(target, ".claude/settings.json"), /"repo": "HKamkar\/agentic-cms"/);
   assert.doesNotMatch(read(target, ".claude/rules/content-engine.md"), /(?<!agentic-cms\/)src\/lib\//, "a site's rule never names the kit's source");
   assert.match(read(target, ".claude/rules/content-engine.md"), /node_modules\/agentic-cms\/src\/lib\/content\/README\.md/);
@@ -47,7 +50,7 @@ test("scaffold lays out a site from the package: the example, the agent files, t
 
 test("scaffold never overwrites without --force, and merges an existing package.json", () => {
   const target = tmp();
-  fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "kept-name", scripts: { dev: "next dev -p 4000" }, dependencies: { "agentic-cms": "github:HKamkar/agentic-cms#v0.3.3" } }, null, 2));
+  fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "kept-name", scripts: { dev: "next dev -p 4000", test: "node --test" }, dependencies: { "agentic-cms": "github:HKamkar/agentic-cms#v0.3.3" } }, null, 2));
   fs.mkdirSync(path.join(target, "src/config"), { recursive: true });
   fs.writeFileSync(path.join(target, "src/config/site.ts"), "export const site = {} as const;\n");
   const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
@@ -56,11 +59,83 @@ test("scaffold never overwrites without --force, and merges an existing package.
   const pkg = JSON.parse(read(target, "package.json"));
   assert.equal(pkg.name, "kept-name");
   assert.equal(pkg.scripts.dev, "next dev -p 4000", "an existing script is kept");
+  assert.equal(pkg.scripts.test, "node --test", "a real test script of the site's is kept");
   assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", "a missing script is added");
   assert.equal(pkg.dependencies["agentic-cms"], "github:HKamkar/agentic-cms#v0.3.3", "an existing dependency is kept");
   const forced = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: true, ...quiet });
   assert.ok(forced.updated.includes("src/config/site.ts"));
   assert.notEqual(read(target, "src/config/site.ts"), "export const site = {} as const;\n");
+});
+
+// What docs/init.md had a site write before init (0.7.6 and earlier): `pnpm init`'s package.json and the workspace snippet without unrs-resolver.
+const PNPM_INIT = { name: "my-site", version: "1.0.0", description: "", main: "index.js", scripts: { test: 'echo "Error: no test specified" && exit 1' }, keywords: [], author: "", license: "ISC", devEngines: { packageManager: { name: "pnpm", version: "12.11.2", onFail: "download" } }, packageManager: "pnpm@12.11.2", type: "module" };
+const OLD_SNIPPET = `# our settings, kept\nallowBuilds:\n  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true\n  sharp: true # the image optimiser\nnodeLinker: hoisted\n`;
+
+test("an existing workspace is merged, not kept: the kit's missing keys added, the site's keys, values and comments left, unchanged on a second run", () => {
+  const target = tmp();
+  fs.writeFileSync(path.join(target, "pnpm-workspace.yaml"), OLD_SNIPPET);
+  const logged = [];
+  const first = scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
+  assert.ok(first.updated.includes("pnpm-workspace.yaml"));
+  assert.ok(logged.includes("merged   pnpm-workspace.yaml (allowBuilds: unrs-resolver)"), logged.join("\n"));
+  const merged = read(target, "pnpm-workspace.yaml");
+  assert.equal(merged, `${OLD_SNIPPET.replace("nodeLinker", "  unrs-resolver: true\nnodeLinker")}`, "one line added, the rest byte for byte");
+  assert.deepEqual(Object.keys(parseYaml(merged).allowBuilds), ALLOW_BUILDS);
+  const second = scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  assert.ok(second.kept.includes("pnpm-workspace.yaml"));
+  assert.equal(read(target, "pnpm-workspace.yaml"), merged);
+  // --force merges too: the site's settings and its own value for a kit key are never replaced
+  fs.writeFileSync(path.join(target, "pnpm-workspace.yaml"), "allowBuilds:\n  sharp: false\n");
+  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: true, ...quiet });
+  assert.deepEqual(parseYaml(read(target, "pnpm-workspace.yaml")).allowBuilds, { sharp: false, "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true, "unrs-resolver": true });
+  assert.match(read(target, "pnpm-workspace.yaml"), /^ {2}"agentic-cms@git\+https:\/\/github\.com\/HKamkar\/agentic-cms\.git": true$/m, "the git spec quoted, as the kit writes it");
+});
+
+test("a legacy onlyBuiltDependencies list, which pnpm no longer reads, is carried into allowBuilds and left in place", () => {
+  const legacy = "onlyBuiltDependencies:\n  - sharp\n  - esbuild\n";
+  const merged = mergeWorkspace(legacy);
+  assert.deepEqual(merged.added, [...ALLOW_BUILDS, "esbuild"]);
+  assert.deepEqual(parseYaml(merged.text), { onlyBuiltDependencies: ["sharp", "esbuild"], allowBuilds: { "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true, sharp: true, "unrs-resolver": true, esbuild: true } });
+  assert.equal(mergeWorkspace(merged.text), null);
+  assert.deepEqual(mergeWorkspace("allowBuilds:\n  agentic-cms@git+https://github.com/HKamkar/agentic-cms.git: true\n").added, ["sharp", "unrs-resolver"], "the key as `pnpm add --allow-build` writes it, unquoted, is the same key");
+  assert.deepEqual(parseYaml(mergeWorkspace("").text), { allowBuilds: Object.fromEntries(ALLOW_BUILDS.map((name) => [name, true])) }, "an empty file gets the keys");
+  assert.equal(mergeWorkspace("allowBuilds: [sharp]\n"), null, "a shape pnpm cannot read is left for pnpm to name");
+  assert.equal(mergeWorkspace("allowBuilds:\n  sharp: true\n bad: indent\n"), null, "a file that does not parse is left alone");
+});
+
+test("pnpm init's package.json: its failing test gives way to the kit's, its main is dropped, its license, version, devEngines and packageManager stay", () => {
+  const target = tmp();
+  fs.writeFileSync(path.join(target, "package.json"), JSON.stringify(PNPM_INIT, null, 2));
+  const logged = [];
+  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
+  const pkg = JSON.parse(read(target, "package.json"));
+  assert.equal(pkg.scripts.test, 'node --import agentic-cms/loader --test "src/**/*.test.ts"');
+  assert.ok(!("main" in pkg));
+  assert.equal(pkg.license, "ISC");
+  assert.equal(pkg.version, "1.0.0");
+  assert.deepEqual(pkg.devEngines, PNPM_INIT.devEngines);
+  assert.equal(pkg.packageManager, "pnpm@12.11.2");
+  assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo");
+  assert.ok(logged.includes('merged   package.json (the kit\'s test script in place of pnpm init\'s placeholder; pnpm init\'s main: "index.js" dropped)'), logged.join("\n"));
+  // a main that names a file the site has is the site's
+  const own = tmp();
+  fs.writeFileSync(path.join(own, "package.json"), JSON.stringify({ ...PNPM_INIT, scripts: {} }));
+  fs.writeFileSync(path.join(own, "index.js"), "export {};\n");
+  scaffold(own, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  assert.equal(JSON.parse(read(own, "package.json")).main, "index.js");
+});
+
+test("the site's CI workflow is written once, then kept as the site has it", () => {
+  const target = tmp();
+  const workflow = ".github/workflows/verify.yml";
+  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes(workflow));
+  const steps = parseYaml(read(target, workflow)).jobs.test.steps;
+  assert.deepEqual(steps.filter((s) => s.run).map((s) => s.run), ["pnpm install --frozen-lockfile", "pnpm lint", "pnpm test", "pnpm build", "pnpm exec agentic-cms init . --agent-files --check"]);
+  for (const { uses } of steps.filter((s) => s.uses)) assert.match(uses, /@[0-9a-f]{40}$/, `${uses}: pinned to a commit`);
+  assert.equal(steps.find((s) => s.uses?.startsWith("actions/setup-node@")).with["node-version-file"], ".nvmrc");
+  fs.writeFileSync(path.join(target, workflow), "name: ours\n");
+  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes(workflow));
+  assert.equal(read(target, workflow), "name: ours\n");
 });
 
 test("agentFiles --check tells a site's edit from a kit update and a missing file", () => {

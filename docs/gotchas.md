@@ -125,6 +125,15 @@ there.
 - **A script named like a built-in.** `deploy` and `setup` are pnpm
   commands of their own, so `pnpm deploy` and `pnpm setup` never run the
   site's script of that name: write `pnpm run deploy`, `pnpm run setup`.
+- **A build approval by name alone.** `--allow-build=agentic-cms` does not
+  match a git-hosted package, and its install stops at
+  `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`. The key is the dependency's git
+  URL, `agentic-cms@git+https://github.com/HKamkar/agentic-cms.git`, as
+  `init` writes it ([init.md](init.md)).
+- **An `onlyBuiltDependencies` list that no longer counts.** pnpm reads
+  `allowBuilds` alone, so the names of the old list stop the install at
+  `ERR_PNPM_IGNORED_BUILDS` until they are keys of `allowBuilds`. `init`
+  carries them over when it merges a workspace.
 
 ## Git and GitHub
 

@@ -242,13 +242,13 @@ export const SPECS = {
     json: `{ file, name, rows: [{ id, label, cells }], width, height, ${seedJson} }`,
   },
   init: {
-    command: "init", script: "init", group: "site", summary: "a site from the package: the wireframe example, the agent files (rules and design skills), the config and a manifest; or a refresh of an existing site's agent files",
+    command: "init", script: "init", group: "site", summary: "a site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files",
     usage: "agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]",
     positionals: [{ name: "dir", help: "where the site goes (default: the current directory)" }],
     flags: {
       "agent-files": { type: "boolean", help: "only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept" },
       check: { type: "boolean", help: "with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing" },
-      force: { type: "boolean", help: "overwrite files that exist (package.json is always merged, never overwritten)" },
+      force: { type: "boolean", help: "overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten)" },
       json: { type: "boolean", help: "print the result as JSON" },
     },
     examples: ["agentic-cms init .", "agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills", "agentic-cms init . --agent-files --check  # what drifted, for CI"],

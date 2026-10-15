@@ -1,85 +1,150 @@
 #!/usr/bin/env node
 // Proves the package as a site sees it, which the checkout never does (the
 // example resolves the package's name to the source): packs the package,
-// installs the tarball in a scratch directory as a site's one engine
-// dependency, lays the site out with `agentic-cms init` from that install,
-// installs its dependencies and runs its build — the content lint, the
-// field-table check, next build and the SEO audit — through the installed
-// command line; then checks the agent files are as shipped, the installed
-// entries a build does not run (the inline loop, the form endpoint's server
-// half, the consent entries in plain Node) and the tarball's size. Exit 1 on
-// the first failure.
+// and in a scratch folder that holds what the old install docs left there
+// (`pnpm init`'s package.json and the workspace snippet without
+// unrs-resolver), runs the install line of docs/init.md as it is written,
+// the tarball standing in for the git spec. Then it installs the site's
+// dependencies and runs its build — the content lint, the field-table check,
+// next build and the SEO audit — its lint and its tests through the
+// installed command line; then checks the agent files are as shipped, the
+// installed entries a build does not run (the inline loop, the form
+// endpoint's server half, the consent entries in plain Node) and the
+// tarball's size. Exit 1 on the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const keep = process.argv.includes("--keep");
 const MAX_TARBALL = 1024 * 1024;
-const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
-const site = path.join(scratch, "site");
-const run = (command, args, cwd) => {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: { ...process.env, CI: "1" } });
-  if (result.status !== 0) {
-    console.error(`pack-smoke: ${command} ${args.join(" ")} failed in ${cwd}`);
-    process.exit(1);
-  }
-};
+const ENV = { ...process.env, CI: "1" };
 
-// 1. The tarball: what a consumer installs, dist/ included (prepare runs first).
-const packed = execFileSync("pnpm", ["pack", "--pack-destination", scratch, "--json"], { cwd: ROOT, encoding: "utf8" });
-const tarball = path.join(scratch, path.basename(JSON.parse(packed.slice(packed.indexOf("{"))).filename));
-const size = fs.statSync(tarball).size;
-if (size > MAX_TARBALL) { console.error(`pack-smoke: the tarball is ${(size / 1024).toFixed(0)} KB, over the ${MAX_TARBALL / 1024} KB the files list is meant to stay under`); process.exit(1); }
+/** pnpm's answer when its cached metadata predates a version the registry has published. */
+export const STALE_METADATA = /ERR_PNPM_NO_MATCHING_VERSION/;
 
-// 2. A scratch site with the tarball as its engine, laid out by the installed init.
-fs.mkdirSync(site, { recursive: true });
-fs.writeFileSync(path.join(site, "package.json"), JSON.stringify({ name: "agentic-cms-smoke", private: true, type: "module", dependencies: { "agentic-cms": `file:${tarball}` } }, null, 2));
-fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), "allowBuilds:\n  sharp: true\n  unrs-resolver: true\n");
-run("pnpm", ["install", "--prefer-offline"], site);
-for (const shipped of ["templates/site/AGENTS.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "content/pages/home.yaml", "docs/commands.md"]) {
-  if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) { console.error(`pack-smoke: the tarball lacks ${shipped} (package.json files)`); process.exit(1); }
+/**
+ * A `pnpm install --prefer-offline`, run once more without --prefer-offline
+ * when it fails on stale metadata: the online install refreshes the
+ * machine's metadata itself, so nobody has to clear pnpm's cache by hand.
+ * `run(args)` resolves to { status, output }.
+ */
+export async function installWithRetry(args, run, log = console.error) {
+  const first = await run(args);
+  if (first.status === 0 || !args.includes("--prefer-offline") || !STALE_METADATA.test(first.output)) return first;
+  log("pack-smoke: pnpm's cached metadata lacks a published version; installing again without --prefer-offline, which refreshes it");
+  return run(args.filter((arg) => arg !== "--prefer-offline"));
 }
-run("pnpm", ["exec", "agentic-cms", "init", "."], site);
-// init pins the dependency to the kit's tag; the smoke keeps the tarball
-const pkg = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8"));
-pkg.dependencies["agentic-cms"] = `file:${tarball}`;
-fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
 
-// 3. Install the site's dependencies (the lockfile moves: init added them) and build through the installed command line.
-run("pnpm", ["install", "--prefer-offline", "--no-frozen-lockfile"], site);
-run("pnpm", ["build"], site);
-run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
-// The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
-const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
-if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) { console.error(`pack-smoke: agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`); process.exit(1); }
-// The inline-loop pieces ship: readInlineSvg runs from the installed agentic-cms/content, InlineAnimation is compiled into the ix entry.
-fs.writeFileSync(path.join(site, "public/smoke-loop.svg"), '<svg xmlns="http://www.w3.org/2000/svg" data-rest="1"><circle id="c" r="1"/><use href="#c"/></svg>');
-const inline = spawnSync(process.execPath, ["--input-type=module", "-e", 'const { readInlineSvg } = await import("agentic-cms/content"); console.log(readInlineSvg("public/smoke-loop.svg", { prefix: "smoke" }));'], { cwd: site, encoding: "utf8" });
-if (inline.status !== 0 || !/id="smoke-c"[\s\S]*href="#smoke-c"/.test(inline.stdout)) { console.error(`pack-smoke: readInlineSvg from the tarball answered ${inline.status}: ${(inline.stderr || inline.stdout).trim()}`); process.exit(1); }
-const ix = path.join(site, "node_modules/agentic-cms/dist/ix");
-if (!fs.existsSync(path.join(ix, "InlineAnimation.js")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.js"), "utf8")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.d.ts"), "utf8"))) { console.error("pack-smoke: the tarball's agentic-cms/ix lacks InlineAnimation"); process.exit(1); }
-// The form endpoint's server half ships: agentic-cms/forms/server, installed, validates a Request and hands it to a sink.
+/** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site`) as pnpm's arguments, with the package spec and the folder swapped; null when the doc has no such line. */
+export function documentedInstall(doc, { spec, dir }) {
+  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site$/m)?.[0];
+  if (!line) return null;
+  return line.split(/\s+/).slice(1).map((arg) => (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
+}
+
+/** What `pnpm init` writes, at the pnpm running the smoke (a newer one would be downloaded through devEngines). */
+export const pnpmInitPackage = (name, pnpm) => ({ name, version: "1.0.0", description: "", main: "index.js", scripts: { test: 'echo "Error: no test specified" && exit 1' }, keywords: [], author: "", license: "ISC", devEngines: { packageManager: { name: "pnpm", version: pnpm, onFail: "download" } }, packageManager: `pnpm@${pnpm}`, type: "module" });
+/** The workspace docs/init.md had a site write by hand up to 0.7.6: without unrs-resolver, which stopped the install after init at ERR_PNPM_IGNORED_BUILDS. */
+export const OLD_WORKSPACE = 'allowBuilds:\n  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true\n  sharp: true\n';
+
+const fail = (message) => { console.error(`pack-smoke: ${message}`); process.exit(1); };
+const run = (command, args, cwd) => {
+  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: ENV });
+  if (result.status !== 0) fail(`${command} ${args.join(" ")} failed in ${cwd}`);
+};
+/** Runs a command with its output shown as it comes and kept for the caller. */
+const tee = (command, args, cwd) => new Promise((resolve) => {
+  const child = spawn(command, args, { cwd, stdio: ["inherit", "pipe", "pipe"], env: ENV });
+  let output = "";
+  child.stdout.on("data", (chunk) => { output += chunk; process.stdout.write(chunk); });
+  child.stderr.on("data", (chunk) => { output += chunk; process.stderr.write(chunk); });
+  child.on("close", (status) => resolve({ status, output }));
+});
+async function install(args, cwd) {
+  const result = await installWithRetry(["install", ...args], (pnpmArgs) => tee("pnpm", pnpmArgs, cwd));
+  if (result.status !== 0) fail(`pnpm install ${args.join(" ")} failed in ${cwd}`);
+}
+
+/** 1. The tarball: what a consumer installs, dist/ included (prepare runs first). */
+function pack(scratch) {
+  const packed = execFileSync("pnpm", ["pack", "--pack-destination", scratch, "--json"], { cwd: ROOT, encoding: "utf8" });
+  const tarball = path.join(scratch, path.basename(JSON.parse(packed.slice(packed.indexOf("{"))).filename));
+  const size = fs.statSync(tarball).size;
+  if (size > MAX_TARBALL) fail(`the tarball is ${(size / 1024).toFixed(0)} KB, over the ${MAX_TARBALL / 1024} KB the files list is meant to stay under`);
+  return { tarball, size };
+}
+
+/** 2. The old docs' leftovers, then the documented line laying the site out over them; init pins the kit's tag, the smoke keeps the tarball. */
+function layOut(scratch, site, tarball) {
+  fs.mkdirSync(site, { recursive: true });
+  const pnpm = execFileSync("pnpm", ["--version"], { cwd: scratch, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pnpmInitPackage("agentic-cms-smoke", pnpm), null, 2));
+  fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), OLD_WORKSPACE);
+  const dlx = documentedInstall(fs.readFileSync(path.join(ROOT, "docs/init.md"), "utf8"), { spec: `file:${tarball}`, dir: path.basename(site) });
+  if (!dlx) fail("docs/init.md has no `pnpm dlx … init my-site` install line to run");
+  run("pnpm", dlx, scratch);
+  const pkg = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8"));
+  if (pkg.scripts.test.includes("no test specified") || "main" in pkg) fail("init kept pnpm init's placeholder test or its main");
+  if (!/^ {2}unrs-resolver: true$/m.test(fs.readFileSync(path.join(site, "pnpm-workspace.yaml"), "utf8"))) fail("init left pnpm-workspace.yaml without unrs-resolver");
+  pkg.dependencies["agentic-cms"] = `file:${tarball}`;
+  fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
+}
+
+/** 3. The site's dependencies (no lockfile yet), the files the tarball must ship, then the build, the lint, the tests and the agent files through the installed command line. */
+async function build(site) {
+  await install(["--prefer-offline", "--no-frozen-lockfile"], site);
+  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "content/pages/home.yaml", "docs/commands.md"]) {
+    if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
+  }
+  run("pnpm", ["build"], site);
+  run("pnpm", ["lint"], site);
+  run("pnpm", ["test"], site);
+  run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+}
+
+/** 4. The installed entries a build does not run. */
+function entries(site) {
+  // The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
+  const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
+  if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) fail(`agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`);
+  // The inline-loop pieces ship: readInlineSvg runs from the installed agentic-cms/content, InlineAnimation is compiled into the ix entry.
+  fs.writeFileSync(path.join(site, "public/smoke-loop.svg"), '<svg xmlns="http://www.w3.org/2000/svg" data-rest="1"><circle id="c" r="1"/><use href="#c"/></svg>');
+  const inline = node(site, 'const { readInlineSvg } = await import("agentic-cms/content"); console.log(readInlineSvg("public/smoke-loop.svg", { prefix: "smoke" }));');
+  if (inline.status !== 0 || !/id="smoke-c"[\s\S]*href="#smoke-c"/.test(inline.stdout)) fail(`readInlineSvg from the tarball answered ${inline.status}: ${(inline.stderr || inline.stdout).trim()}`);
+  const ix = path.join(site, "node_modules/agentic-cms/dist/ix");
+  if (!fs.existsSync(path.join(ix, "InlineAnimation.js")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.js"), "utf8")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.d.ts"), "utf8"))) fail("the tarball's agentic-cms/ix lacks InlineAnimation");
+  // The form endpoint's server half ships: agentic-cms/forms/server, installed, validates a Request and hands it to a sink.
+  const formsServer = node(site, FORMS_SMOKE);
+  if (formsServer.status !== 0 || formsServer.stdout.trim() !== "200 1 1") fail(`agentic-cms/forms/server from the tarball answered ${formsServer.status}: ${(formsServer.stderr || formsServer.stdout).trim()}`);
+  // The consent entries load in plain Node, as a site's own tests import them: a stored choice read, the default script built, the hooks and the tag exported — nothing of next/script or JSX on the way.
+  const consentEntries = node(site, CONSENT_SMOKE);
+  if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") fail(`agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`);
+}
+const node = (cwd, source) => spawnSync(process.execPath, ["--input-type=module", "-e", source], { cwd, encoding: "utf8" });
 const FORMS_SMOKE = `const { createFormHandler } = await import("agentic-cms/forms/server");
 const received = [];
 const form = { id: "f", name: "F", items: [{ type: "email", name: "email", label: "E-mail", required: true }], submit: { label: "s", waitLabel: "w" }, messages: { success: "y", error: "n" }, backend: { kind: "endpoint", url: "/api/forms/f" } };
 const handle = createFormHandler({ forms: { f: form }, sink: { deliver: async (submission) => { received.push(submission); } } });
 const response = await handle(new Request("https://acme.example/api/forms/f", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ values: { email: "hello@acme.example" } }) }), "f");
 console.log(response.status, received.length, received[0]?.version);`;
-const formsServer = spawnSync(process.execPath, ["--input-type=module", "-e", FORMS_SMOKE], { cwd: site, encoding: "utf8" });
-if (formsServer.status !== 0 || formsServer.stdout.trim() !== "200 1 1") { console.error(`pack-smoke: agentic-cms/forms/server from the tarball answered ${formsServer.status}: ${(formsServer.stderr || formsServer.stdout).trim()}`); process.exit(1); }
-// The consent entries load in plain Node, as a site's own tests import them: a stored choice read, the default script built, the hooks and the tag exported — nothing of next/script or JSX on the way.
 const CONSENT_SMOKE = `const consent = await import("agentic-cms/consent");
 const google = await import("agentic-cms/consent/google");
 const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
 const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date().toISOString(), version: 1 }) }, policy);
 console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
-const consentEntries = spawnSync(process.execPath, ["--input-type=module", "-e", CONSENT_SMOKE], { cwd: site, encoding: "utf8" });
-if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") { console.error(`pack-smoke: agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`); process.exit(1); }
-console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
-if (keep) console.log(`pack-smoke: scratch site kept at ${site}`);
-else fs.rmSync(scratch, { recursive: true, force: true });
+
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
+  const site = path.join(scratch, "site");
+  const { tarball, size } = pack(scratch);
+  layOut(scratch, site, tarball);
+  await build(site);
+  entries(site);
+  console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+  if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
+  else fs.rmSync(scratch, { recursive: true, force: true });
+}

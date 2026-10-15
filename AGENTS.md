@@ -246,9 +246,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   assert the trees identical); design work on the example starts with the
   `design` skill like on any site. `templates/site/` is what `agentic-cms
   init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config); the kit's own `AGENTS.md` and `.claude/rules/` describe this
-  repo and are not what a site gets. A change to a rule of the kit that a
-  site shares goes to both.
+  the config, its CI workflow `verify.yml`); the kit's own `AGENTS.md` and
+  `.claude/rules/` describe this repo and are not what a site gets. A
+  change to a rule of the kit that a site shares goes to both.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own

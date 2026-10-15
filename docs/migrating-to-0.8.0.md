@@ -200,15 +200,25 @@ page that hydrates (a menu opens).
 works. Keep your site-only steps as a short script that calls
 `bash scripts/setup.sh` first.
 
-### 3.3 CI *(job 3)*
+### 3.3 CI
 
 **Why:** the lint, the tests and the build on every pull request, and the
 agent files checked against the kit.
 
-**Do:** if `.github/workflows/` has no verify workflow, copy
-`node_modules/agentic-cms/templates/site/verify.yml` to
-`.github/workflows/verify.yml`. If yours exists, add the step
-`pnpm exec agentic-cms init . --agent-files --check`.
+**Do:** if `.github/workflows/` has no verify workflow, copy the one a new
+site gets from `init`:
+
+```bash
+mkdir -p .github/workflows
+cp node_modules/agentic-cms/templates/site/verify.yml .github/workflows/verify.yml
+```
+
+It takes Node from `.nvmrc` and pnpm from `packageManager` in
+`package.json`, as a site from `init` has them. If your site has a
+workflow of its own, add the step
+`pnpm exec agentic-cms init . --agent-files --check` to it. That step exits
+1 on a rule or skill your site edited (`modified`), not only on a stale or
+missing one: a site that keeps edits of its own leaves the step out.
 
 **Check:** a pull request runs it, and it passes.
 
@@ -384,6 +394,6 @@ Each row goes only after its step works.
 |---|---|
 | `init --agent-files` reports a rule or skill `modified` | You edited it: take the new lines by hand (§ 1). `--force` would discard your edits |
 | The proof differs after § 1 alone | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |
-| `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` misses an `allowBuilds` key: `init .` merges them now *(job 3)*, or add the key named in the error |
+| `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` misses the `allowBuilds` key the error names, or lists it under `onlyBuiltDependencies`, which pnpm no longer reads: add it under `allowBuilds` as `<name>: true`. A new site's `init` writes the kit's three keys and merges them into a workspace it finds |
 | `pnpm lint` fails everywhere after 3.7 | Components missing from `inherited`: list them, then replace them one pull request at a time |
 | A page on the owner's phone renders but nothing works | Its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart the dev server |
