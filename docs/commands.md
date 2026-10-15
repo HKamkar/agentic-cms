@@ -984,7 +984,7 @@ agentic-cms demo clean                     # every *-demo route
 
 ### `init`
 
-A site from the package: the wireframe example, the agent files (rules and design skills), the config and a manifest; or a refresh of an existing site's agent files.
+A site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
 agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]
@@ -996,7 +996,7 @@ agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check
 |---|---|
 | `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
 | `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
-| `--force` | overwrite files that exist (package.json is always merged, never overwritten) |
+| `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--json` | print the result as JSON |
 
 Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage.

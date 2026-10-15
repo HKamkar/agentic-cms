@@ -59,7 +59,9 @@ a patch under `node_modules`.
 - Verify = `pnpm lint` + `pnpm test` + `pnpm content:lint` + `pnpm build`
   (the content lint first, the SEO audit last), 0 failures, before calling
   a change done; `pnpm kit visual-parity` before a merge that touches
-  `src/`, styles or images.
+  `src/`, styles or images. CI (`.github/workflows/verify.yml`) runs the
+  same, and `agentic-cms init . --agent-files --check`, on every pull
+  request.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex

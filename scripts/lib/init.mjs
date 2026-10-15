@@ -3,10 +3,12 @@
 // content and images), the agent files (a site's path-scoped rules from
 // templates/site/rules/, the design skills for Claude Code and Codex), the
 // site templates (AGENTS.md, CLAUDE.md, README, PLAN, the Next
-// config, the Claude settings, .gitignore) and the generated config
-// (package.json, tsconfig.json, pnpm-workspace.yaml). Nothing of the
-// package's source. Existing files are kept unless forced; package.json is
-// merged. A manifest (.agentic-cms.json) records the hash of every agent
+// config, the Claude settings, .gitignore, the CI workflow) and the
+// generated config (package.json, tsconfig.json, pnpm-workspace.yaml).
+// Nothing of the package's source. Existing files are kept unless forced;
+// package.json and pnpm-workspace.yaml are merged, forced or not, so what
+// `pnpm init` or an older install left there cannot stop the first install
+// or the first test. A manifest (.agentic-cms.json) records the hash of every agent
 // file as written, so `init --agent-files --check` can tell a site's own
 // edit (never clobbered) from a file the kit has since updated. The site's
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
@@ -15,12 +17,13 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { isMap, parseDocument, Scalar } from "yaml";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
 
 /** The example, copied as it is. */
 export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
 /** The templates under templates/site/, and where each lands. */
-export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore" };
+export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
 export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/skills": ".claude/skills", ".agents/skills": ".agents/skills" };
 export const MANIFEST = ".agentic-cms.json";
@@ -60,7 +63,10 @@ function copyTree(kitRoot, target, entry, opts) {
 
 const kitPackage = (kitRoot) => JSON.parse(fs.readFileSync(path.join(kitRoot, "package.json"), "utf8"));
 
-/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win). */
+/** What `pnpm init` (and `npm init`) write as the test script: a test run that always fails. */
+const PLACEHOLDER_TEST = 'echo "Error: no test specified" && exit 1';
+
+/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win, but for `pnpm init`'s placeholders); `notes` says which placeholder went. */
 function sitePackage(target, { kitRoot, version }) {
   const kit = kitPackage(kitRoot);
   const dev = kit.devDependencies;
@@ -78,7 +84,16 @@ function sitePackage(target, { kitRoot, version }) {
   if (!fs.existsSync(file)) return { text: JSON.stringify(wanted, null, 2) + "\n", merged: false };
   const existing = JSON.parse(fs.readFileSync(file, "utf8"));
   const merged = { ...wanted, ...existing, scripts: { ...wanted.scripts, ...existing.scripts }, dependencies: { ...wanted.dependencies, ...existing.dependencies }, devDependencies: { ...wanted.devDependencies, ...existing.devDependencies } };
-  return { text: JSON.stringify(merged, null, 2) + "\n", merged: true };
+  const notes = dropPlaceholders(merged, { target, test: wanted.scripts.test });
+  return { text: JSON.stringify(merged, null, 2) + "\n", merged: true, notes };
+}
+
+/** `pnpm init`'s two placeholders lose to the kit: its failing test script, and `main` naming an index.js that is not there. Its license, version, devEngines and packageManager stay. */
+function dropPlaceholders(merged, { target, test }) {
+  const notes = [];
+  if (merged.scripts.test?.trim() === PLACEHOLDER_TEST) { merged.scripts.test = test; notes.push("the kit's test script in place of pnpm init's placeholder"); }
+  if (merged.main === "index.js" && !fs.existsSync(path.join(target, "index.js"))) { delete merged.main; notes.push('pnpm init\'s main: "index.js" dropped'); }
+  return notes;
 }
 
 function siteTsconfig(kitRoot) {
@@ -88,12 +103,54 @@ function siteTsconfig(kitRoot) {
   return JSON.stringify(tsconfig, null, 2) + "\n";
 }
 
+/** The builds a site's install runs: the kit's prepare (its dist/), sharp, and eslint-config-next's resolver. */
+export const ALLOW_BUILDS = ["agentic-cms@git+https://github.com/HKamkar/agentic-cms.git", "sharp", "unrs-resolver"];
+const plainName = (name) => /^[\w.-]+$/.test(name);
 const WORKSPACE = `# pnpm settings. The git dependency builds its dist/ on install (prepare), which pnpm runs only when allowed here.
 allowBuilds:
-  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
-  sharp: true
-  unrs-resolver: true
-`;
+${ALLOW_BUILDS.map((name) => `  ${plainName(name) ? name : JSON.stringify(name)}: true\n`).join("")}`;
+
+/**
+ * The site's pnpm-workspace.yaml merged with the kit's: the allowBuilds keys it
+ * lacks added as true, the names of a legacy onlyBuiltDependencies list (which
+ * pnpm 11 and later no longer read) carried over with them, and every other key,
+ * value and comment left as the site wrote it. { text, added }, or null when
+ * nothing is missing or the file is not a map pnpm could read either.
+ */
+export function mergeWorkspace(text) {
+  const doc = parseDocument(text);
+  if (doc.errors.length || !(doc.contents === null || isMap(doc.contents))) return null;
+  if (!isMap(doc.get("allowBuilds"))) {
+    if (doc.get("allowBuilds") != null) return null;
+    doc.set("allowBuilds", doc.createNode({}));
+  }
+  const allow = doc.get("allowBuilds");
+  const legacy = doc.toJS()?.onlyBuiltDependencies;
+  const wanted = [...new Set([...ALLOW_BUILDS, ...(Array.isArray(legacy) ? legacy.map(String) : [])])];
+  const added = wanted.filter((name) => !allow.has(name));
+  if (!added.length) return null;
+  for (const name of added) allow.set(quotedKey(doc, name), true);
+  return { text: doc.toString(), added };
+}
+
+/** A key past a plain package name (a git spec) is double-quoted, as the kit's own workspace writes it. */
+function quotedKey(doc, name) {
+  const key = doc.createNode(name);
+  if (!plainName(name)) key.type = Scalar.QUOTE_DOUBLE;
+  return key;
+}
+
+/** Writes pnpm-workspace.yaml, or merges the kit's keys into an existing one (with --force too: a site's settings are never replaced). */
+function putWorkspace(target, { result, log }) {
+  const file = path.join(target, "pnpm-workspace.yaml");
+  if (!fs.existsSync(file)) return put(target, "pnpm-workspace.yaml", WORKSPACE, { result, log });
+  const merged = mergeWorkspace(fs.readFileSync(file, "utf8"));
+  if (!merged) { result.kept.push("pnpm-workspace.yaml"); return "kept"; }
+  fs.writeFileSync(file, merged.text);
+  result.updated.push("pnpm-workspace.yaml");
+  log(`merged   pnpm-workspace.yaml (allowBuilds: ${merged.added.join(", ")})`);
+  return "merged";
+}
 
 /** Lays the site out under target; { created, updated, kept }. */
 export function scaffold(target, { kitRoot, version, force = false, log = console.log }) {
@@ -105,9 +162,9 @@ export function scaffold(target, { kitRoot, version, force = false, log = consol
   put(target, "STANDARD.md", standard, opts);
   for (const [from, to] of Object.entries(TEMPLATES)) put(target, to, fs.readFileSync(path.join(kitRoot, "templates/site", from), "utf8"), opts);
   const pkg = sitePackage(target, { kitRoot, version });
-  if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log("merged   package.json"); } else put(target, "package.json", pkg.text, opts);
+  if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log(`merged   package.json${pkg.notes.length ? ` (${pkg.notes.join("; ")})` : ""}`); } else put(target, "package.json", pkg.text, opts);
   put(target, "tsconfig.json", siteTsconfig(kitRoot), opts);
-  put(target, "pnpm-workspace.yaml", WORKSPACE, opts);
+  putWorkspace(target, opts);
   agentFiles(target, { kitRoot, version, force, log, result });
   return result;
 }
