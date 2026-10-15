@@ -252,9 +252,11 @@ Illustrations are crossed placeholder boxes; content images come from
 `pnpm kit placeholder <out> <width> <height>` until real ones exist.
 `STANDARD.md` is the design system; `src/components/README.md` the catalogue.
 The `agentic-cms/ix` library stays in the package for a fork that wants
-motion: scroll-into-view reveals and sequences, and `InlineAnimation`, a
-site's own SVG loop that plays in view and rests for a reader who prefers
-reduced motion.
+motion: a play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`)
+whose roots play the first time they are seen and never again, the
+scroll-into-view reveals and sequences that replay on each entry, and
+`InlineAnimation`, a site's own SVG loop that plays in view and rests for a
+reader who prefers reduced motion.
 
 ## Built on agentic-cms
 

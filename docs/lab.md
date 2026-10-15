@@ -198,9 +198,12 @@ round's demo route — has the same controls for it, the one timeline of
 **Motion of your own plays at once under a timeline.** What plays once
 when it is seen — a reveal armed by an observer — skips the wait under
 `[data-lab-timeline]`, so the cycle is whole when the timeline measures it
-and the range starts where the motion starts. Check in the ref callback
-that arms it: a child's ref callback runs before the timeline's, so the
-animations exist when the timeline mounts.
+and the range starts where the motion starts. The play-once layer of
+`agentic-cms/ix` does it already (`useMotionRoot`, behind `Reveal`,
+`RevealGroup` and `Sequence`: a `Sequence` drawn as an inline `<svg>` is
+driven, an HTML root takes `data-lab-drive`). Motion of your own checks in
+the ref callback that arms it: a child's ref callback runs before the
+timeline's, so the animations exist when the timeline mounts.
 
 ```ts
 const arm = useCallback((el: HTMLElement | null) => {

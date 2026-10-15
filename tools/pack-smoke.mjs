@@ -8,9 +8,9 @@
 // dependencies and runs its build — the content lint, the field-table check,
 // next build and the SEO audit — its lint and its tests through the
 // installed command line; then checks the agent files are as shipped, the
-// installed entries a build does not run (the inline loop, the form
-// endpoint's server half, the consent entries in plain Node) and the
-// tarball's size. Exit 1 on the first failure.
+// installed entries a build does not run (the inline loop, the play-once
+// layer, the form endpoint's server half, the consent entries in plain Node)
+// and the tarball's size. Exit 1 on the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -18,6 +18,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
 const MAX_TARBALL = 1024 * 1024;
@@ -117,6 +118,7 @@ function entries(site) {
   if (inline.status !== 0 || !/id="smoke-c"[\s\S]*href="#smoke-c"/.test(inline.stdout)) fail(`readInlineSvg from the tarball answered ${inline.status}: ${(inline.stderr || inline.stdout).trim()}`);
   const ix = path.join(site, "node_modules/agentic-cms/dist/ix");
   if (!fs.existsSync(path.join(ix, "InlineAnimation.js")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.js"), "utf8")) || !/InlineAnimation/.test(fs.readFileSync(path.join(ix, "index.d.ts"), "utf8"))) fail("the tarball's agentic-cms/ix lacks InlineAnimation");
+  playOnceLayer(site, ix);
   // The form endpoint's server half ships: agentic-cms/forms/server, installed, validates a Request and hands it to a sink.
   const formsServer = node(site, FORMS_SMOKE);
   if (formsServer.status !== 0 || formsServer.stdout.trim() !== "200 1 1") fail(`agentic-cms/forms/server from the tarball answered ${formsServer.status}: ${(formsServer.stderr || formsServer.stdout).trim()}`);
@@ -125,6 +127,19 @@ function entries(site) {
   if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") fail(`agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`);
 }
 const node = (cwd, source) => spawnSync(process.execPath, ["--input-type=module", "-e", source], { cwd, encoding: "utf8" });
+
+/** The play-once layer is in the installed ix entry, and its plain halves run from its files in plain Node: a part's props, a stagger, the arming script. */
+function playOnceLayer(site, ix) {
+  const texts = ["index.js", "index.d.ts"].map((file) => fs.readFileSync(path.join(ix, file), "utf8"));
+  const missing = LAYER_EXPORTS.filter((name) => texts.some((text) => !new RegExp(`\\b${name}\\b`).test(text)));
+  if (missing.length) fail(`the tarball's agentic-cms/ix lacks ${missing.join(", ")}`);
+  const fileUrl = (file) => JSON.stringify(pathToFileURL(path.join(ix, file)).href);
+  const parts = node(site, `const { part, staggerDelay } = await import(${fileUrl("parts.js")});
+const { motionScript } = await import(${fileUrl("motionScript.js")});
+console.log(JSON.stringify(part("rise", 120)), staggerDelay(2, 0, 80), motionScript().includes("data-motion"));`);
+  if (parts.status !== 0 || parts.stdout.trim() !== '{"data-part":"rise","style":{"--d":"120ms"}} 160ms true') fail(`the play-once layer from the tarball answered ${parts.status}: ${(parts.stderr || parts.stdout).trim()}`);
+}
+const LAYER_EXPORTS = ["Reveal", "RevealGroup", "Sequence", "part", "staggerDelay", "useMotionRoot", "motionScript"];
 const FORMS_SMOKE = `const { createFormHandler } = await import("agentic-cms/forms/server");
 const received = [];
 const form = { id: "f", name: "F", items: [{ type: "email", name: "email", label: "E-mail", required: true }], submit: { label: "s", waitLabel: "w" }, messages: { success: "y", error: "n" }, backend: { kind: "endpoint", url: "/api/forms/f" } };

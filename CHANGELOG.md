@@ -95,6 +95,25 @@ changes what a capture writes says **recapture baselines**.
   metadata predates a published version (`ERR_PNPM_NO_MATCHING_VERSION`):
   the online install refreshes that metadata, so no one clears the
   machine's cache to get past it.
+- `agentic-cms/ix` gains a play-once layer beside `Fx` and `OnView`:
+  `Reveal`, `RevealGroup` and `Sequence` play a root once, the first time
+  it is 12 % into the viewport, never again on a second scroll or a hover;
+  `part(kind, delay)` makes an element a part (`fade`, `rise`, `scale`,
+  `pop`, `draw`, `grow`, `dim`, and the loops `flow`, `pulse`, `breathe`,
+  which run only while their root is on screen), with `staggerDelay`,
+  `useMotionRoot` (one shared observer; a root at the very end of a page
+  plays as soon as it shows; at once under a lab timeline) and
+  `motionScript()`, the inline script that arms the page unless the reader
+  prefers reduced motion. The keyframes, the armed start states, the loops,
+  the reduced-motion guard and the `--ease-*` / `--motion-*` tokens are a
+  block at the end of the example's `src/styles/motion.css`, used by
+  nothing in the wireframe; a site that adopts the layer copies it
+  (`docs/migrating-to-0.8.0.md` § 3.5). `STANDARD.md` §7 and the
+  components catalogue say which layer to choose, and the styling rule
+  (`templates/site/rules/styling.md`) names both. `revealed()` and
+  `probe`'s `reveals.pending` count an armed part whose root has not
+  played; a static capture runs under reduced motion, where nothing is
+  armed, so no captured frame moves.
 
 ## [0.7.6] — 2026-10-13
 

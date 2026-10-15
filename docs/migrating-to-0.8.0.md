@@ -252,17 +252,27 @@ or a second scroll, and its loops run only on screen:
 kept and documented.
 
 **Do:**
-1. Render `motionScript()` near the top of `<body>`.
-2. Copy the layer's block from `node_modules/agentic-cms/src/styles/motion.css`
-   into your `src/styles/motion.css`, with its custom properties
-   (`--ease-*`, `--motion-*`).
-3. Use `Reveal` and friends in new work. Move existing reveals only when
-   the owner wants them to stop replaying.
+1. Render `motionScript()` near the top of `<body>`, beside the theme
+   script (`<html>` keeps `suppressHydrationWarning`):
+   `<script dangerouslySetInnerHTML={{ __html: motionScript() }} />`, with
+   `motionScript` from `agentic-cms/ix`.
+2. Copy the block that starts at "The play-once layer" at the end of
+   `node_modules/agentic-cms/src/styles/motion.css` into your
+   `src/styles/motion.css`, its `:root` custom properties with it
+   (`--ease-enter`, `--ease-move`, `--ease-pop`, `--motion-fast`,
+   `--motion-base`, `--motion-slow`, `--motion-travel`,
+   `--motion-stagger`), then give them your values. Keep them out of
+   `@theme`: there they would bring back the `ease-*` utilities.
+3. Use `Reveal` and friends in new work (`STANDARD.md` §7, the components
+   catalogue). Move existing reveals only when the owner wants them to stop
+   replaying.
 
 **Check:**
 - a browser check: scroll away and back, and nothing replays; hover, and
   nothing replays;
 - with reduced motion, nothing is hidden;
+- `pnpm kit probe <page> --select <element> --motion` lists the parts
+  below the fold under `reveals.pending`, each with its kind;
 - `pnpm kit visual-parity proof motion --motion --build`.
 
 **If you wrote your own play-once layer:** switch the imports to
@@ -270,7 +280,11 @@ kept and documented.
 timeline patch of your own. The timeline pins the fill of what it drives
 to `both`, so a fill override under `[data-lab-timeline]` goes; the
 layer plays at once under a timeline, as `docs/lab.md` § Inspecting
-motion asks of any motion.
+motion asks of any motion. The layer's markup is `data-motion="on"` on
+`<html>`, `data-motion-root`, `data-part`, `data-play`, `data-visible` and
+`data-intro`, with `--d`, `--len` and `--dim`: a stylesheet of your own
+written for those names keeps working, any other takes the kit's block
+(step 2).
 
 ### 3.6 `variants()`, tokens by role, the example's primitives *(job 9)*
 
