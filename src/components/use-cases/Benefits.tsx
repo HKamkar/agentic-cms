@@ -2,7 +2,7 @@ import { Placeholder } from "@/components/ui/Placeholder";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 type Benefit = SectionProps<"use-cases-benefits">["left"];
 
 /** One side of the row: two benefits, each an icon and the line it belongs to. */
@@ -11,7 +11,7 @@ function BenefitList({ benefits }: { benefits: Benefit }) {
     <ul className="grid gap-4">
       {benefits.map((benefit) => (
         <li key={benefit.text} className={card}>
-          <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-ink" />
+          <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
           <p className="font-medium">{benefit.text}</p>
         </li>
       ))}

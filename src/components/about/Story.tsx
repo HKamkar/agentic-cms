@@ -2,7 +2,7 @@ import { Placeholder } from "@/components/ui/Placeholder";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 type Stat = SectionProps<"about-story">["sovereignty"];
 
 /** A card that is a picture and the caption under it. */

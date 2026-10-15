@@ -26,7 +26,7 @@ export function ConsentBanner() {
   }, [open, reopened]);
   if (!open) return null;
   return (
-    <div ref={ref} role="dialog" aria-modal="false" aria-labelledby={titleId} aria-describedby={textId} className="fixed inset-x-4 bottom-4 z-40 border border-ink bg-paper p-6 lg:right-auto lg:max-w-md">
+    <div ref={ref} role="dialog" aria-modal="false" aria-labelledby={titleId} aria-describedby={textId} className="fixed inset-x-4 bottom-4 z-40 border border-line bg-panel p-6 lg:right-auto lg:max-w-md">
       <p id={titleId} className="font-label uppercase">
         {copy.title}
       </p>

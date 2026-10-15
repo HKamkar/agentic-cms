@@ -99,7 +99,7 @@ export function Navbar() {
   const onKeyDown = (e: KeyboardEvent) => open && handleMenuKey(e, menuRef.current, buttonRef.current, close);
 
   return (
-    <header className="border-b border-ink bg-paper" onKeyDown={onKeyDown}>
+    <header className="border-b border-line bg-paper" onKeyDown={onKeyDown}>
       <Container>
         <div className="flex items-center justify-between gap-4 py-3">
           <NavLink href="/" label={site.shortName} className="font-semibold no-underline" />
@@ -111,13 +111,13 @@ export function Navbar() {
           <div className="flex items-center gap-3 max-lg:hidden">
             <Actions />
           </div>
-          <button ref={buttonRef} type="button" className="border border-ink px-3 py-1 lg:hidden" aria-expanded={open} aria-controls={MENU_ID} onClick={() => setOpenedOn(open ? null : pathname)}>
+          <button ref={buttonRef} type="button" className="border border-line px-3 py-1 lg:hidden" aria-expanded={open} aria-controls={MENU_ID} onClick={() => setOpenedOn(open ? null : pathname)}>
             Menu
           </button>
         </div>
       </Container>
       {open && (
-        <div ref={menuRef} id={MENU_ID} className="border-t border-ink lg:hidden" onClick={onMenuClick}>
+        <div ref={menuRef} id={MENU_ID} className="border-t border-line lg:hidden" onClick={onMenuClick}>
           <Container>
             <ul className="flex flex-col gap-3 py-4">
               <NavItems />

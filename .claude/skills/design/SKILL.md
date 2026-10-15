@@ -34,7 +34,11 @@ dev server and its own commit; never all at once.
    scale, the spacing rhythm, and — re-enabled as tokens, not utilities —
    radius, shadow, blur, easing. A colour becomes a token at its second use.
    The wireframe's four colours are the seed; a design has more, named for
-   what they are for (`paper`, `ink`, `accent`), never for their hue.
+   what they are for (`paper`, `ink`, `accent`), never for their hue. Where
+   the site has role tokens (a site from `init` starts with `panel`, `line`,
+   `on-ink`, the radius and shadow roles, the headings' letter-spacing and
+   `--tracking-label`, all at the wireframe's values), the design gives the
+   roles their values first: every component that asks for a role follows.
 2. **The chrome.** The navbar, the footer, the buttons, the title block:
    shared once in `src/components/ui/`, never pasted into a page. Every
    state (hover, focus, current page, open menu) is part of it.

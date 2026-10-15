@@ -13,9 +13,15 @@ are in `STANDARD.md`):
   `blog/PostBody.module.css`; a second one is justified only by something
   utilities cannot say. Every change that must not move a pixel is proven
   with `agentic-cms visual-parity`.
-- Four colours, each a `light-dark()` pair: `paper`, `ink`, `fill`,
-  `muted`. No radius, shadow, blur, gradient, transition or animation
-  utility exists. The type scale is `text-h1`…`text-h6` and `text-body`.
+- Four colour values, each a `light-dark()` pair — `paper`, `ink`, `fill`,
+  `muted` — and role tokens that alias them (`panel`, `line`, `on-ink`): a
+  component uses the role where one exists (`border-line` for every
+  hairline, `bg-panel` for a box with a ground of its own, `text-on-ink` on
+  an ink ground) and a value only where no role does. Radius and shadow
+  exist only as role tokens (`rounded-panel`, `rounded-control`,
+  `shadow-panel`, `shadow-glow`) held at the wireframe's `0` / none; no
+  other radius, shadow, blur, gradient, transition or animation utility
+  exists. The type scale is `text-h1`…`text-h6` and `text-body`.
 - A component never reads the theme. `color-scheme` on `:root`, overridden
   by `data-theme` on `<html>`, decides which side of every `light-dark()`
   pair applies.
@@ -71,7 +77,7 @@ passes its own tag — `post-hero`, `post-body`, `blog-index-list`,
 | `Footer` | The site footer | — | `<footer>` with one bordered box: the brand, `site.tagline`, the `<address>`, the e-mail, and the `Quick links` and `Follow us` columns from `site.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
 | `ConsentBanner` | The consent banner | — | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`. A non-modal `role="dialog"`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `buttonClass("outline")` button, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
 | `CookieSettingsButton` | Opens the consent banner again | `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`; the footer renders it, and any page may. |
-| `Button` | The site's button, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. `solid` is `bg-ink text-paper`, `outline` is `bg-paper text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
+| `Button` | The site's button, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. `solid` is `bg-ink text-on-ink`, `outline` is `bg-panel text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
 | `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`. |
 
 ```tsx
@@ -95,7 +101,34 @@ Components that carry no design, imported from `agentic-cms/components`
 | `FaqAccordion` | `children` | `"use client"`. Every `h3` inside a `[data-faq]` block toggles the paragraphs after it (`aria-expanded` on the question, `data-open` on the answers); the site's post body styles draw both. Not the site's `ui/Faq`. |
 
 ```tsx
-<EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-ink" />
+<EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-line" />
+```
+
+## Class helpers (`agentic-cms/cx`)
+
+Two functions with no React, so they load in server and client components
+and under `node:test` alike.
+
+- **`cx(...parts)`** joins class names and skips the falsy ones:
+  `cx(styles.faq, "mb-8 border border-line")`, `cx(control, className)`.
+- **`variants({ base, variants, defaults, compound? })`** declares a
+  component's looks as one typed map and returns the function that picks
+  one: the base, each axis's option or its default, then every `compound`
+  whose options are all picked. A new look is one line in the map, never a
+  copy of the component. An option an axis lacks throws and names the
+  options it has. `VariantProps<typeof fn>` is the props it takes: each
+  axis, optional.
+
+```tsx
+import { variants, type VariantProps } from "agentic-cms/cx";
+
+const box = variants({
+  base: "border border-line p-4",
+  variants: { tone: { plain: "bg-panel", filled: "bg-fill" } },
+  defaults: { tone: "plain" },
+});
+type BoxLook = VariantProps<typeof box>; // { tone?: "plain" | "filled" }
+box({ tone: "filled" }); // "border border-line p-4 bg-fill"
 ```
 
 ## `Placeholder` (`src/components/ui/Placeholder.tsx`)
@@ -114,7 +147,7 @@ aspect utility), `label?` (default `"illustration"`), `className?`.
 
 A picture the copy actually describes is a real `<img>` instead, with
 `width`, `height`, `alt` and `className="block h-auto w-full border
-border-ink"` (`STANDARD.md` §4).
+border-line"` (`STANDARD.md` §4).
 
 ## Title block (`src/components/ui/`)
 
@@ -192,7 +225,7 @@ definition schema, adding a form, a field type, a backend or a sink — is
 | `FormNote` | A line of text inside the form with a link at its end. |
 | `FieldGroup` | A `<fieldset>` with a `<legend>` (`text-h4 font-semibold`) around fields, rows and notes. |
 | `SubmitButton` | A real `<button type="submit">` wearing `buttonClass("solid")`, disabled and relabelled while the submission is in flight. |
-| `field.ts` | `control` — the shared control string: `block w-full border border-ink bg-paper px-3 py-2 placeholder:text-muted`. |
+| `field.ts` | `control` — the shared control string: `block w-full border border-line bg-panel px-3 py-2 placeholder:text-muted`. |
 
 ```tsx
 <Form definition={forms.contact} />

@@ -4,7 +4,7 @@ import { Placeholder } from "@/components/ui/Placeholder";
 import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** Two cards and a call to action beside the illustration: the section that names what the reader gives up. */
 export function Automation({ eyebrow, heading, cta, cards }: SectionProps<"home-automation">) {
@@ -15,7 +15,7 @@ export function Automation({ eyebrow, heading, cta, cards }: SectionProps<"home-
           <ul className="grid gap-4">
             {cards.map((entry) => (
               <li key={entry.title} className={card}>
-                <img src={entry.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-ink" />
+                <img src={entry.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
                 <h3>{entry.title}</h3>
                 <p>{entry.text}</p>
               </li>

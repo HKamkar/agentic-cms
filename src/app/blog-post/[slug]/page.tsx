@@ -45,7 +45,7 @@ export default async function PostPage({ params }: Props) {
       <article>
         <Section type="post-hero" eyebrow="blog post" heading={post.title} headingAs="h1">
           {/* Above the fold in a server component: EagerImage keeps the preload hint out of the RSC payload. */}
-          {post.image && <EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-ink" />}
+          {post.image && <EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-line" />}
         </Section>
 
         <Section type="post-body">
@@ -72,7 +72,7 @@ export default async function PostPage({ params }: Props) {
 
         <Section type="post-author">
           <footer className="flex gap-4">
-            {post.author.image && <img src={post.author.image} width={110} height={110} alt={post.author.imageAlt ?? ""} loading="lazy" className="size-28 border border-ink" />}
+            {post.author.image && <img src={post.author.image} width={110} height={110} alt={post.author.imageAlt ?? ""} loading="lazy" className="size-28 border border-line" />}
             <div className="flex flex-col gap-2">
               <p className="font-medium">{post.author.name}</p>
               {post.author.title && <p className="text-muted">{post.author.title}</p>}

@@ -1,7 +1,7 @@
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 border border-line p-4";
 
 /** "The technology": the statement and the four cards under it, each one figure and one line. */
 export function Vision({ eyebrow, statement, cards }: SectionProps<"use-cases-vision">) {

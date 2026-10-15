@@ -14,10 +14,10 @@ export function FormShell({ state, messages, children }: { state: FormState; mes
   return (
     <div>
       {children}
-      <div className={cx("border border-ink bg-fill p-4", state === "done" ? "block" : "hidden")} role="status">
+      <div className={cx("border border-line bg-fill p-4", state === "done" ? "block" : "hidden")} role="status">
         <Message text={messages.success} email={messages.email} />
       </div>
-      <div className={cx("mt-2 border border-ink p-4", state === "fail" ? "block" : "hidden")} role="alert">
+      <div className={cx("mt-2 border border-line p-4", state === "fail" ? "block" : "hidden")} role="alert">
         <Message text={messages.error} email={messages.email} />
       </div>
     </div>

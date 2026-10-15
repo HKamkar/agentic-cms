@@ -3,10 +3,10 @@ import { cx } from "agentic-cms/cx";
 
 export type ButtonVariant = "solid" | "outline";
 
-const box = "inline-flex items-center justify-center border border-ink px-5 py-2.5 font-medium no-underline";
+const box = "inline-flex items-center justify-center border border-line px-5 py-2.5 font-medium no-underline";
 
 /** The button's classes on their own, for a real `<button>` (a form's submit). */
-export const buttonClass = (variant: ButtonVariant = "solid") => box + (variant === "solid" ? " bg-ink text-paper" : " bg-paper text-ink");
+export const buttonClass = (variant: ButtonVariant = "solid") => box + (variant === "solid" ? " bg-ink text-on-ink" : " bg-panel text-ink");
 
 type Props = {
   href: string;

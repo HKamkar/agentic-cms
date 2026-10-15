@@ -289,12 +289,42 @@ written for those names keeps working, any other takes the kit's block
 ### 3.6 `variants()`, tokens by role, the example's primitives *(job 9)*
 
 **Why:** one typed map of looks per primitive, so a new look is a line and
-never a copy. Components name roles (`panel`, `line`, `on-ink`), never hues.
+never a copy. Components name roles (`panel`, `line`, `on-ink`) wherever one
+applies, never the hue behind it.
 
 **Do:**
-- **`variants()`:** `import { variants, type VariantProps } from "agentic-cms/cx"`.
-- **Tokens by role:** add the role tokens to `@theme static` as aliases of
-  your colours. The values are yours.
+- **`variants()`:** `import { variants, type VariantProps } from "agentic-cms/cx"`,
+  beside `cx`. `variants({ base, variants, defaults, compound })` returns
+  the function that picks a look (`button({ variant: "outline" })`), and
+  `VariantProps<typeof button>` types the component's props. An option an
+  axis lacks throws and names the options it has. The components catalogue
+  (`node_modules/agentic-cms/src/components/README.md` § Class helpers) has
+  an example.
+- **Tokens by role:** add the roles to `@theme static` as aliases of your
+  values, the radius and shadow roles after any `--radius-*: initial` /
+  `--shadow-*: initial` reset:
+
+  ```css
+  --color-panel: var(--color-paper);   /* a panel's face: a box with a ground of its own */
+  --color-line: var(--color-ink);      /* every hairline: a border, a rule, a cross */
+  --color-on-ink: var(--color-paper);  /* text on an ink ground */
+  --text-h1--letter-spacing: normal;   /* and so on, to h6 */
+  --tracking-label: normal;            /* a label's letter-spacing */
+  --radius-panel: 0;
+  --radius-control: 0;
+  --shadow-panel: 0 0 #0000;
+  --shadow-glow: 0 0 #0000;
+  ```
+
+  The values are yours: alias your own colour names, and give radius and
+  shadow your design's values. In `src/styles/base.css`, `h1`–`h6` read
+  `letter-spacing: var(--text-hN--letter-spacing)` beside their size. Then
+  move components onto the roles where one applies: a hairline is
+  `border-line`, a box with a ground of its own `bg-panel`, text on an ink
+  ground `text-on-ink`. While each role aliases the value a component
+  named, nothing moves and the proof is identical. The styling rule and
+  the `design` skill that `--agent-files` writes say it; if you kept an
+  edited copy, take their token lines from the kit's (§ 1).
 - **Primitives:** the example now has `Panel`, `OutlineButton`,
   `IconButton`, `Heading` (with size and entrance), `MetaLine`, `TextLink`,
   `Media` and `keepWords`. `init` never copies the example into an existing

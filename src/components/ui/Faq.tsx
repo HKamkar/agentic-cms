@@ -23,7 +23,7 @@ function FaqItem({ question, answer }: FaqEntry) {
   const [open, setOpen] = useState(false);
   const answerId = useId();
   return (
-    <li className="border-t border-ink">
+    <li className="border-t border-line">
       <h3>
         <button type="button" className="flex w-full items-center justify-between gap-4 py-3 text-left" aria-expanded={open} aria-controls={answerId} onClick={() => setOpen((value) => !value)}>
           {question}

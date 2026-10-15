@@ -9,8 +9,8 @@
 // next build and the SEO audit — its lint and its tests through the
 // installed command line; then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
-// layer, the form endpoint's server half, the consent entries in plain Node)
-// and the tarball's size. Exit 1 on the first failure.
+// layer, the form endpoint's server half, the consent entries and the class
+// helpers in plain Node) and the tarball's size. Exit 1 on the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -125,6 +125,7 @@ function entries(site) {
   // The consent entries load in plain Node, as a site's own tests import them: a stored choice read, the default script built, the hooks and the tag exported — nothing of next/script or JSX on the way.
   const consentEntries = node(site, CONSENT_SMOKE);
   if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") fail(`agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`);
+  classHelpers(site);
 }
 const node = (cwd, source) => spawnSync(process.execPath, ["--input-type=module", "-e", source], { cwd, encoding: "utf8" });
 
@@ -139,6 +140,18 @@ const { motionScript } = await import(${fileUrl("motionScript.js")});
 console.log(JSON.stringify(part("rise", 120)), staggerDelay(2, 0, 80), motionScript().includes("data-motion"));`);
   if (parts.status !== 0 || parts.stdout.trim() !== '{"data-part":"rise","style":{"--d":"120ms"}} 160ms true') fail(`the play-once layer from the tarball answered ${parts.status}: ${(parts.stderr || parts.stdout).trim()}`);
 }
+/** agentic-cms/cx loads in plain Node, as a site's own tests import it: cx joins, variants() picks a look and refuses an option its axis lacks, and the types name VariantProps. */
+function classHelpers(site) {
+  const classes = node(site, CX_SMOKE);
+  if (classes.status !== 0 || classes.stdout.trim() !== 'a b|border p-8|variants: "xl" is not an option of size (md, lg)') fail(`agentic-cms/cx from the tarball answered ${classes.status}: ${(classes.stderr || classes.stdout).trim()}`);
+  const types = fs.readFileSync(path.join(site, "node_modules/agentic-cms/dist/cx.d.ts"), "utf8");
+  if (!/\bVariantProps\b/.test(types) || !/\bvariants\b/.test(types)) fail("the tarball's agentic-cms/cx types lack variants or VariantProps");
+}
+const CX_SMOKE = `const { cx, variants } = await import("agentic-cms/cx");
+const box = variants({ base: "border", variants: { size: { md: "p-4", lg: "p-8" } }, defaults: { size: "md" } });
+let refused = "";
+try { box({ size: "xl" }); } catch (error) { refused = error.message; }
+console.log([cx("a", false, "b"), box({ size: "lg" }), refused].join("|"));`;
 const LAYER_EXPORTS = ["Reveal", "RevealGroup", "Sequence", "part", "staggerDelay", "useMotionRoot", "motionScript"];
 const FORMS_SMOKE = `const { createFormHandler } = await import("agentic-cms/forms/server");
 const received = [];
