@@ -17,11 +17,13 @@ rules for an agent working on the code.
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
   writes, what comes next, what to do after a kit upgrade.
 - [setup.md](setup.md) — a fresh clone on a new machine, for a person or an
-  agent: Node, pnpm, the install, the browsers, `.env.local`, the checks,
-  and what to do when a step fails.
+  agent: `bash scripts/setup.sh` and `agentic-cms setup` (Node, pnpm, the
+  install, the browsers, `.env.local` and its origins, the checks), the
+  doctor (`setup --check`), and what to do when a step fails.
 - [dev-server.md](dev-server.md) — serving previews to the owner's
-  devices: the ports, which address to hand over, `ALLOWED_DEV_ORIGINS`,
-  stopping a server, old proof baselines.
+  devices: the ports, which address to hand over (`agentic-cms urls`),
+  `ALLOWED_DEV_ORIGINS` (`urls --write`), stopping a server, old proof
+  baselines.
 - [browsers.md](browsers.md) — Chrome and Safari, who checks what:
   headless Chromium, headless WebKit as a stand-in, the owner's Safari;
   what headless cannot show; the engines' differences.

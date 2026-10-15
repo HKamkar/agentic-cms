@@ -1,7 +1,8 @@
 // The browser the harness and the one-shot commands share: Chromium through
-// playwright-core (the package's one optional peer), a static server for the
-// site's production build, and the waits that make a page deterministic
-// before it is photographed or measured. Everything here was the harness's
+// playwright-core (the package's one optional peer), WebKit beside it for the
+// Safari-engine checks (docs/browsers.md), a static server for the site's
+// production build, and the waits that make a page deterministic before it
+// is photographed or measured. Everything here was the harness's
 // (scripts/visual-parity.mjs) and keeps its behaviour; the header of that
 // script and docs/visual-parity.md say why each wait exists.
 import fs from "node:fs";
@@ -12,19 +13,26 @@ import zlib from "node:zlib";
 import { SEED_STORAGE } from "./storage-seed.mjs";
 
 let playwright;
-/** playwright-core, or exit 2 naming what to install. */
-export async function requireBrowser() {
-  playwright ??= await import("playwright-core").catch(() => {
-    console.error("agentic-cms: install playwright-core (an optional peer of agentic-cms: pnpm add -D playwright-core) and a Chromium build (`pnpm exec playwright-core install chromium` puts one under ~/.cache/ms-playwright; or CHROME_PATH)");
-    process.exit(2);
-  });
+/** playwright-core, or null when the site does not install it. */
+export async function loadBrowser() {
+  playwright ??= await import("playwright-core").catch(() => null);
   return playwright;
 }
 
+/** playwright-core, or exit 2 naming what to install. */
+export async function requireBrowser() {
+  if (await loadBrowser()) return playwright;
+  console.error("agentic-cms: install playwright-core (an optional peer of agentic-cms: pnpm add -D playwright-core) and a Chromium build (`bash scripts/setup.sh` does both on a site from init; `pnpm exec playwright-core install chromium` puts one under ~/.cache/ms-playwright; or CHROME_PATH)");
+  process.exit(2);
+}
+
 // Where Playwright keeps its browsers on each platform, and the executable
-// inside a Chromium build there.
-const CACHE_DIRS = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), ".cache/ms-playwright"), path.join(os.homedir(), "Library/Caches/ms-playwright"), process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "ms-playwright")].filter(Boolean);
+// inside a Chromium or a WebKit build there.
+export const CACHE_DIRS = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), ".cache/ms-playwright"), path.join(os.homedir(), "Library/Caches/ms-playwright"), process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "ms-playwright")].filter(Boolean);
 const EXECUTABLES = ["chrome-linux64/chrome", "chrome-linux/chrome", "chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium", "chrome-mac/Chromium.app/Contents/MacOS/Chromium", "chrome-win/chrome.exe", "chrome-win64/chrome.exe"];
+const WEBKIT_EXECUTABLES = ["pw_run.sh", "Playwright.exe"];
+/** The engines the kit launches: Chromium for every command, WebKit for the checks that stand in for Safari. */
+export const ENGINES = ["chromium", "webkit"];
 
 /** CHROME_PATH, else the newest Chromium build in Playwright's cache, else playwright-core's own path; null when none exists. */
 export function chromePath() {
@@ -39,6 +47,35 @@ export function chromePath() {
   }
   try { const exe = playwright?.chromium.executablePath(); return exe && fs.existsSync(exe) ? exe : null; } catch { return null; }
 }
+
+/**
+ * playwright-core's own WebKit build when it is installed, else the newest
+ * webkit-<n> build in Playwright's cache; null when none exists. The other way
+ * round from chromePath on purpose: Chromium speaks a stable protocol to any
+ * build, while WebKit's is Playwright's own patch, so the build this
+ * playwright-core names is the one sure to talk to it.
+ */
+export function webkitPath({ caches = CACHE_DIRS, pw = playwright } = {}) {
+  try { const exe = pw?.webkit.executablePath(); if (exe && fs.existsSync(exe)) return exe; } catch { /* no build of its own: the cache */ }
+  for (const cache of caches) {
+    if (!cache || !fs.existsSync(cache)) continue;
+    const builds = fs.readdirSync(cache).filter((d) => /^webkit-\d+$/.test(d)).sort((a, b) => Number(b.slice(7)) - Number(a.slice(7)));
+    for (const build of builds) {
+      const exe = WEBKIT_EXECUTABLES.map((e) => path.join(cache, build, e)).find((e) => fs.existsSync(e));
+      if (exe) return exe;
+    }
+  }
+  return null;
+}
+
+/** The executable of an engine (chromePath or webkitPath); null when none is installed. */
+export const browserPath = (engine) => (engine === "webkit" ? webkitPath() : chromePath());
+
+/** What to run when an engine has no build: the setup script, or the one install line. */
+export const NO_BUILD = {
+  chromium: "agentic-cms: no Chromium build found — run `bash scripts/setup.sh` (or `pnpm exec playwright-core install chromium`, which puts one under ~/.cache/ms-playwright), or set CHROME_PATH",
+  webkit: "agentic-cms: no WebKit build found — run `bash scripts/setup.sh` (or `pnpm exec playwright-core install webkit`; on Linux it also needs its system libraries, docs/browsers.md § Install)",
+};
 
 // Playwright's browser cache also holds an ffmpeg build (for its video
 // recording): a small one — JPEG in, VP8 WebM out — that stands in for a
@@ -63,15 +100,16 @@ export function ffmpegPath({ env = process.env, caches = CACHE_DIRS } = {}) {
   return null;
 }
 
-/** A browser and a context prepared for a capture: no sandbox, no font hinting, the scheme and the motion preference as asked, and a seed (lib/storage-seed.mjs) in every page's storage before its scripts run. */
-export async function launch({ scheme = "light", motion = false, width = 1440, height = 900, scale = 1, seed = null } = {}) {
-  const { chromium } = await requireBrowser();
-  const executablePath = chromePath();
+/** A browser and a context prepared for a capture: Chromium (no sandbox, no font hinting) or, with `engine: "webkit"`, WebKit; the scheme and the motion preference as asked, and a seed (lib/storage-seed.mjs) in every page's storage before its scripts run. */
+export async function launch({ engine = "chromium", scheme = "light", motion = false, width = 1440, height = 900, scale = 1, seed = null } = {}) {
+  if (!ENGINES.includes(engine)) throw new Error(`no engine ${engine}: ${ENGINES.join(" or ")}`);
+  const pw = await requireBrowser();
+  const executablePath = browserPath(engine);
   if (!executablePath) {
-    console.error("agentic-cms: no Chromium build found — set CHROME_PATH, or run `pnpm exec playwright-core install chromium` (it lands under ~/.cache/ms-playwright)");
+    console.error(NO_BUILD[engine]);
     process.exit(2);
   }
-  const browser = await chromium.launch({ executablePath, args: ["--no-sandbox", "--font-render-hinting=none"] });
+  const browser = engine === "webkit" ? await pw.webkit.launch({ executablePath }) : await pw.chromium.launch({ executablePath, args: ["--no-sandbox", "--font-render-hinting=none"] });
   const context = await browser.newContext({ reducedMotion: motion ? "no-preference" : "reduce", colorScheme: scheme, deviceScaleFactor: scale, viewport: { width, height } });
   if (seed) await context.addInitScript(SEED_STORAGE, seed.values);
   return { browser, context, close: () => browser.close() };

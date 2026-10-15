@@ -980,7 +980,7 @@ agentic-cms demo clean                     # every *-demo route
 
 ## site
 
-`init`
+`init` · `setup` · `urls`
 
 ### `init`
 
@@ -1007,6 +1007,63 @@ Exit: `0` written, or every agent file as the kit ships it; `1` --check found dr
 agentic-cms init .
 agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
 agentic-cms init . --agent-files --check  # what drifted, for CI
+```
+
+### `setup`
+
+A clone made ready to work on, the steps after scripts/setup.sh got Node checked, pnpm and the dependencies: the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests, then the URLs; each step keeps what is there, so a re-run takes seconds.
+
+```bash
+agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit] [--deps] [--no-public] [--port <n>] [--lab-port <n>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--check` | report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap |
+| `--build` | verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute) |
+| `--no-browsers` | skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium) |
+| `--engines <a,b>` | the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md) (default `chromium,webkit`) |
+| `--deps` | on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed) |
+| `--no-public` | do not look up the public address (offline, or a machine no viewer reaches from outside) |
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev) |
+| `--lab-port <n>` | the lab server's port (lab serve's) (default `8001`) |
+| `--json` | print the report as JSON (the steps' progress and the commands' output go to stderr) |
+
+Exit: `0` ready (a step left for the owner, sudo for WebKit's libraries, is printed, not failed); `1` a verify step failed, or --check found a gap; `2` the environment — Node older than 22.18, no package.json here, no pnpm or playwright-core, a browser install that failed — or usage.
+
+`--json` prints `{ ready, check, steps: [{ step, status: ok|done|skipped|gap|todo|failed, detail, command? }], todo: [command], urls: <urls --json> | null }`.
+
+```bash
+agentic-cms setup                          # what bash scripts/setup.sh runs last
+agentic-cms setup --check                  # what is missing; writes nothing
+agentic-cms setup --deps                   # with WebKit's Linux libraries (asks for sudo)
+agentic-cms setup --no-browsers --build    # a machine that only edits content, through the full gate
+```
+
+### `urls`
+
+This machine's URLs for the dev server and the lab — localhost, the LAN, the public address — whether each server answers, and whether ALLOWED_DEV_ORIGINS in .env.local covers every address, without which a page opened there never hydrates; --write adds the missing ones.
+
+```bash
+agentic-cms urls [--write] [--no-public] [--port <n>] [--lab-port <n>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--write` | add the missing addresses to ALLOWED_DEV_ORIGINS in .env.local (made from .env.example when absent), as hostnames, keeping the file's other lines; then restart the dev server |
+| `--no-public` | do not look up the public address (api.ipify.org, then ifconfig.me; 4 s each) |
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000) |
+| `--lab-port <n>` | the lab server's port (lab serve's) (default `8001`) |
+| `--json` | print the report as JSON |
+
+Exit: `0` every address is in ALLOWED_DEV_ORIGINS (or was written); `1` an address is missing from it, or .env.local is, and --write was not given; `2` no dev port (no package.json's scripts.dev to read it from, and no --port), or usage.
+
+`--json` prints `{ addresses: { lan, public, publicLookedUp }, dev: { port, up, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }`.
+
+```bash
+agentic-cms urls                           # the URLs to hand over, and a missing origin named
+agentic-cms urls --write                   # the missing origins into .env.local
+agentic-cms urls --no-public --json
 ```
 
 <!-- commands-doc:end -->

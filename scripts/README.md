@@ -15,9 +15,10 @@ a value outside a flag's `choices` lists them, `--help` prints the spec
 with its `examples`; a spec's `group` is its family in the map the bin
 prints, `site: true` marks one that reads the site's registry and is
 refused outside a site's root).
-`lib/browser.mjs` is the Chromium, the static server and the waits the
-harness and the page commands share; `browser/` holds their tests, run
-against `fixtures/` by `pnpm test:browser`.
+`lib/browser.mjs` is the Chromium (and the WebKit beside it,
+`launch({ engine })`), the static server and the waits the harness and the
+page commands share; `browser/` holds their tests, run against `fixtures/`
+by `pnpm test:browser`.
 
 - `optimize-svg-rasters` — `pnpm kit optimize-svg-rasters [--lossy]
   [--dry-run] [file.svg ...]` re-encodes the PNGs that design-tool SVG
@@ -156,6 +157,26 @@ against `fixtures/` by `pnpm test:browser`.
   own icons, graphics and short 2D loops, opened when a drawing is needed
   and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
   `lib/lab-page.mjs`, `lib/lab-server.mjs`).
+- `setup` — `pnpm kit setup [--check] [--build] [--no-browsers]
+  [--engines chromium,webkit] [--deps] [--no-public]` (`setup.mjs`) makes a
+  clone ready to work on, after a site's `scripts/setup.sh` (the kit's
+  `templates/site/setup.sh`, which `init` copies) checked Node, got pnpm at
+  the `packageManager` version and installed: the browsers not installed
+  yet, WebKit's Linux libraries (a launch tells; `--deps` runs the `sudo`
+  line, else it is printed for the owner), `.env.local` from
+  `.env.example`, this machine's addresses in `ALLOWED_DEV_ORIGINS`,
+  `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`), then the URLs.
+  Every step keeps what is there; `--check` reports and changes nothing
+  (`docs/setup.md`; `lib/setup.mjs`, with the shell, the file system, the
+  browsers and the network passed in).
+- `urls` — `pnpm urls [--write] [--no-public] [--port <n>]` (`urls.mjs`)
+  prints this machine's URLs for the dev server (its port from
+  `scripts.dev`) and the lab, localhost, the LAN and the public address,
+  whether each server answers, and whether `ALLOWED_DEV_ORIGINS` in
+  `.env.local` covers every address; `--write` adds the missing hostnames,
+  keeping the file's other lines; exit 1 on a missing one without it
+  (`docs/dev-server.md`; `lib/hosts.mjs`, which the lab server lists its
+  LAN URLs from too).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at eight widths with motion frozen

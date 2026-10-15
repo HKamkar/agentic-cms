@@ -282,7 +282,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
-cd my-site && pnpm install && pnpm dev
+cd my-site && bash scripts/setup.sh && pnpm dev
 ```
 
 The kit is a git dependency that builds its `dist/` as it installs, which
@@ -376,6 +376,8 @@ pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-sv
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
+pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
+pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit critical-css   # each prerendered page paints from its own inlined rules, its stylesheets no longer block
 pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked
@@ -434,7 +436,7 @@ content/VOICE.md             the voice and claim rules; _templates/VOICE.md is t
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
 .claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
-templates/site/              what init writes into a site: AGENTS.md, the rules, the config; templates/lab-demo/ the lab's route
+templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow, scripts/setup.sh; templates/lab-demo/ the lab's route
 src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas

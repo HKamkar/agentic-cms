@@ -5,8 +5,9 @@ the reveal library, the command line, the design skills — is the package;
 this repo holds the design, the content, the config and the docs.
 
 ```bash
-pnpm install
+bash scripts/setup.sh  # a fresh clone: Node, pnpm, the install, the browsers, .env.local, lint and test
 pnpm dev             # http://localhost:8000
+pnpm urls            # this machine's URLs, for a phone or another computer
 pnpm build           # content lint → docs check → next build → SEO audit
 pnpm kit --help      # the command line
 ```

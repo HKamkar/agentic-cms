@@ -144,6 +144,39 @@ changes what a capture writes says **recapture baselines**.
   and §6, the components catalogue, `globals.css`), and the `design` skill
   has a design give the roles their values first. A site adds the roles by
   hand (`docs/migrating-to-0.8.0.md` § 3.6).
+- A clone is set up by one command, `bash scripts/setup.sh`. `init` writes
+  it from `templates/site/setup.sh` (kept when present): it checks Node
+  22.18 or newer, gets pnpm at the `packageManager` version (corepack,
+  else `npm install -g`, since Node 25 and later ship no corepack), runs
+  the install (`--frozen-lockfile` once a lockfile exists), then hands
+  over to the new `agentic-cms setup`. That installs the browsers not
+  installed yet (`--engines chromium,webkit`), launches WebKit on Linux to
+  see whether its system libraries are there and prints the `sudo` line
+  when they are not (`--deps` runs it), writes `.env.local` from
+  `.env.example` and this machine's addresses into `ALLOWED_DEV_ORIGINS`,
+  runs `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`) and ends
+  with the URLs. Each step keeps what is there, so a re-run takes
+  seconds; `--check` reports every step and changes nothing (exit 1 on a
+  gap). There is no package script named `setup`: `pnpm setup` is pnpm's
+  own. The `setup` skill (`.claude/skills/`, `.agents/skills/`) runs it
+  for an agent asked to set a project up, and stops for `sudo` and the
+  firewall. `init`'s next step names it, and `docs/setup.md`,
+  `docs/browsers.md` and `docs/dev-server.md` give the commands in place
+  of the manual steps.
+- `agentic-cms urls` (`pnpm urls`; `init` adds the script) prints this
+  machine's URLs for the dev server and the lab (localhost, the LAN and
+  the public address), whether each server answers, and whether
+  `ALLOWED_DEV_ORIGINS` in `.env.local` covers every address, without
+  which a page opened from another device never hydrates. `--write` adds
+  the missing hostnames and keeps the file's other lines; it exits 1 on
+  a missing one without it. The dev port comes from the `-p` of
+  `scripts.dev`; `--no-public` skips the public lookup (api.ipify.org,
+  then ifconfig.me). `lab serve` lists its LAN URLs through the same
+  library (`scripts/lib/hosts.mjs`), so container and VM bridges are no
+  longer among them.
+- `scripts/lib/browser.mjs` gains `webkitPath()` and `launch({ engine })`
+  for WebKit beside Chromium, and the "no Chromium build found" message
+  names `bash scripts/setup.sh`.
 
 ## [0.7.6] — 2026-10-13
 

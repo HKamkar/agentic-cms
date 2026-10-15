@@ -10,7 +10,7 @@ import path from "node:path";
 import { test } from "node:test";
 import zlib from "node:zlib";
 import sharp from "sharp";
-import { QUIET, chromePath, hydrated, imagesReady, launch, listPages, prepare, quiet, revealed, serveStatic, settle, snap, withPage } from "../lib/browser.mjs";
+import { QUIET, chromePath, hydrated, imagesReady, launch, listPages, loadBrowser, prepare, quiet, revealed, serveStatic, settle, snap, webkitPath, withPage } from "../lib/browser.mjs";
 import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const chrome = chromePath();
@@ -110,6 +110,23 @@ test("the static preparation holds an inline SMIL loop at its data-rest, paused"
 test("chromePath names a file that exists", { skip }, () => {
   assert.ok(fs.existsSync(chrome), chrome);
 });
+
+await loadBrowser();
+const webkit = webkitPath();
+for (const [engine, skipEngine] of [["chromium", skip], ["webkit", webkit ? false : "no WebKit: run `bash scripts/setup.sh` or `pnpm exec playwright-core install webkit`"]]) {
+  test(`launch({ engine: "${engine}" }) opens that engine with the scheme, the motion preference and the viewport asked for`, { skip: skipEngine }, async () => {
+    const root = fixtureSite();
+    const server = await serveStatic({ root });
+    const { browser, context, close } = await launch({ engine, scheme: "dark", width: 390, height: 700 });
+    try {
+      assert.equal(browser.browserType().name(), engine);
+      const page = await context.newPage();
+      await page.goto(server.url + "/");
+      assert.deepEqual(await page.evaluate(() => ({ dark: matchMedia("(prefers-color-scheme: dark)").matches, reduced: matchMedia("(prefers-reduced-motion: reduce)").matches, width: innerWidth })), { dark: true, reduced: true, width: 390 });
+      assert.match(await page.textContent("body"), /A fixture page/);
+    } finally { await close(); server.close(); fs.rmSync(root, { recursive: true, force: true }); }
+  });
+}
 
 // React marks each element it hydrates with a "__reactFiber$…" key; the page below plays a Next app with one image
 // inside markup React inserted as a string (never hydrated) and one image of its own. It hydrates when the test calls

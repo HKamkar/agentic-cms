@@ -147,8 +147,9 @@ grows from picks, not from plans.
   looks off (§ Measure, don't guess);
 - their interactions are run in WebKit too, not only in Chromium
   ([browsers.md](browsers.md));
-- the URL is the LAN or the public one, with its hostname allowed in
-  `ALLOWED_DEV_ORIGINS` ([dev-server.md](dev-server.md)); for the lab,
+- the URL is the LAN or the public one `pnpm urls` printed, with its
+  hostname allowed in `ALLOWED_DEV_ORIGINS` (`pnpm urls --write`;
+  [dev-server.md](dev-server.md)); for the lab,
   each scene's own `/scene/<name>`, not the index;
 - what the machine cannot show (a backdrop blur, real touch, Apple's
   fonts) is named, with a request to check it in Safari.
