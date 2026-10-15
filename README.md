@@ -279,21 +279,14 @@ and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.7.6      # allowBuilds below, first
-pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
-pnpm install && pnpm dev
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
+cd my-site && pnpm install && pnpm dev
 ```
 
-A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
-only when `pnpm-workspace.yaml` allows it:
-
-```yaml
-allowBuilds:
-  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
-  sharp: true
-  unrs-resolver: true
-```
+The kit is a git dependency that builds its `dist/` as it installs, which
+pnpm runs only when allowed by that exact key; `init` writes it into the
+site's `pnpm-workspace.yaml` with the others the site's install needs, and
+the site's CI workflow with it.
 
 Either way the site carries, from the first session and with nothing
 installed, what an agent needs to design it: the rules (`AGENTS.md`, and

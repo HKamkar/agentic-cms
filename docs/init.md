@@ -2,27 +2,29 @@
 
 Two ways to start, one result. **Fork** this repo when you want the example
 around you and replace it piece by piece; or **install** the package and let
-it lay the site out:
+it lay the site out, in one line:
 
 ```bash
-mkdir my-site && cd my-site
-pnpm init                                                        # a package.json to add to
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.7.6           # the engine (allowBuilds below, first)
-pnpm exec agentic-cms init .                                     # the site
-pnpm install && pnpm dev
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
+cd my-site && pnpm install && pnpm dev
 ```
 
-A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
-only when `pnpm-workspace.yaml` allows it — `init` writes the file, but the
-first `pnpm add` needs it too, with the keys `init` writes (`unrs-resolver`
-is `eslint-config-next`'s resolver; without it the install after `init`
-stops at `ERR_PNPM_IGNORED_BUILDS`):
+`pnpm dlx` installs the kit in a temporary place and runs its `init`, which
+lays the site out in `my-site/` (`.` for the folder you are in). The kit is
+a git dependency: it builds its `dist/` as it installs (`prepare`), which
+pnpm runs only for a package its build approvals name by that exact key — a
+bare `--allow-build=agentic-cms` does not match a git-hosted package. `init`
+writes the same key into the site's `pnpm-workspace.yaml`, with `sharp` and
+`unrs-resolver` (`eslint-config-next`'s resolver), so the site's own install
+needs nothing more. Nothing is written by hand first: no `pnpm init`, no
+workspace.
 
-```yaml
-allowBuilds:
-  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
-  sharp: true
-  unrs-resolver: true
+Into a project that already has a `package.json`, `pnpm add` takes the same
+approval and records it in the workspace:
+
+```bash
+pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6
+pnpm exec agentic-cms init .
 ```
 
 From a checkout of the kit, `pnpm kit init ../my-site` does the same.
@@ -45,14 +47,27 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   manifest of the agent files as written.
 - **The config**: `package.json` (the scripts a build needs and the
   dependencies at the kit's versions — merged into an existing one, whose
-  name, scripts and dependencies win), `tsconfig.json`, `pnpm-workspace.yaml`,
-  `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`,
-  `.gitignore`, `.env.example`, `.nvmrc`, `README.md`, `PLAN.md`.
+  name, scripts and dependencies win, but for `pnpm init`'s placeholders:
+  its failing `test` gives way to the kit's and its `main: "index.js"` is
+  dropped, while its `license`, `version`, `devEngines` and
+  `packageManager` stay), `tsconfig.json`, `pnpm-workspace.yaml` (merged
+  into an existing one: the `allowBuilds` keys it lacks are added, the
+  names of a legacy `onlyBuiltDependencies` list, which pnpm no longer
+  reads, are carried into it, and every other key, value and comment stays
+  as the site wrote it), `next.config.ts`, `postcss.config.mjs`,
+  `eslint.config.mjs`, `.gitignore`, `.env.example`, `.nvmrc`, `README.md`,
+  `PLAN.md`.
+- **CI**: `.github/workflows/verify.yml`, on every pull request and every
+  push to `develop` or `main`: `pnpm install --frozen-lockfile`, `pnpm lint`,
+  `pnpm test`, `pnpm build` and `agentic-cms init . --agent-files --check`,
+  with pnpm from `packageManager` (Node 25 and later ship no corepack), Node
+  from `.nvmrc`, and every action pinned to a commit.
 
 Nothing of the package's source; nothing about a host (Cloudflare, Azure,
 a VPS are a site's decision, written into its `PLAN.md`). An existing file
 is never overwritten unless `--force`; each file prints `created`,
-`updated` or `kept`.
+`updated` or `kept`. `package.json` and `pnpm-workspace.yaml` are merged,
+with `--force` too, and print `merged` with what changed.
 
 ## Then
 
@@ -82,7 +97,9 @@ pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit
 ```
 
 A rule is `ok`, `modified` (the site edited it: kept, never overwritten),
-`stale` (the kit has a newer one) or `missing`. `AGENTS.md` is the site's
+`stale` (the kit has a newer one) or `missing`; `--check` exits 1 on
+anything but `ok`, a site's own edit included, and the CI workflow `init`
+writes runs it on every pull request. `AGENTS.md` is the site's
 own, but for one block between `<!-- rules-table:start -->` and
 `<!-- rules-table:end -->`: the scoped-rules table, written from the rules'
 `paths` frontmatter — the site's edited rules included — because Codex reads

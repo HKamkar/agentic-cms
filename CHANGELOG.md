@@ -62,6 +62,39 @@ changes what a capture writes says **recapture baselines**.
   `[data-lab-timeline]`. A site's own fill override under the timeline can
   go (`docs/migrating-to-0.8.0.md` § 4). CI's browser job installs WebKit
   too, so the timeline's two-engine tests run there.
+- A site starts in one line, `pnpm dlx
+  --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git
+  agentic-cms@github:HKamkar/agentic-cms#v<x.y.z> init my-site`, in place of
+  `pnpm init`, a hand-written workspace, `pnpm add` and `init .`
+  (`docs/init.md`, the README). The build approval is the dependency's git
+  URL: `--allow-build=agentic-cms` alone does not match a git-hosted
+  package.
+- `init` merges an existing `pnpm-workspace.yaml` instead of keeping it:
+  the `allowBuilds` keys it lacks are added (a workspace from the old docs
+  had no `unrs-resolver`, and the install after `init` stopped at
+  `ERR_PNPM_IGNORED_BUILDS`), the names of a legacy `onlyBuiltDependencies`
+  list, which pnpm no longer reads, are carried into it, and the site's own
+  keys, values and comments stay. The file is written only on a change and
+  reported `merged`; `--force` merges too.
+- `init` replaces `pnpm init`'s placeholders in an existing `package.json`:
+  its failing `test` script gives way to the kit's (a real test script of
+  the site's is kept) and its `main: "index.js"` is dropped; its `license`,
+  `version`, `devEngines` and `packageManager` stay.
+- `init` writes the site's CI, `.github/workflows/verify.yml` (kept when
+  present): install, lint, test, build and
+  `init . --agent-files --check` on every pull request and every push to
+  `develop` or `main`, with pnpm from `packageManager`, Node from `.nvmrc`
+  and every action pinned to a commit. A site on 0.7.6 copies it from
+  `templates/site/verify.yml` (`docs/migrating-to-0.8.0.md` § 3.3).
+- `init`'s next-steps line drops its `cd .` when the site is the current
+  folder.
+- `pnpm test:pack` runs `docs/init.md`'s install line as written (the
+  tarball for the git spec), in a folder holding what the old docs left
+  there, and runs the scratch site's lint and tests after its build. Its
+  install retries once without `--prefer-offline` when pnpm's cached
+  metadata predates a published version (`ERR_PNPM_NO_MATCHING_VERSION`):
+  the online install refreshes that metadata, so no one clears the
+  machine's cache to get past it.
 
 ## [0.7.6] — 2026-10-13
 
