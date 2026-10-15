@@ -56,7 +56,8 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    gets the lab's timeline on the route, so the owner can pause, step and
    replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
    around a component — it drives the component's inline SVGs and
-   anything marked `data-lab-drive`, never the reveals around them
+   anything marked `data-lab-drive`, never the reveals around them, and
+   motion that plays once when seen plays at once under it
    (`docs/lab.md` § Inspecting motion). `pnpm dev`;
    hand over the route's URL on the dev server: the LAN or public address
    for a phone, with its hostname in `ALLOWED_DEV_ORIGINS`

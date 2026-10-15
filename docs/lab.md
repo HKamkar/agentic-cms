@@ -159,9 +159,28 @@ round's demo route — has the same controls for it, the one timeline of
   are independent: their own controls, their own cycle. The frame
   callback stops on pause, on a cycle of 0 (the controls are disabled) and
   when the component unmounts.
+- **Play-once motion stays on the range.** An entrance that runs once and
+  ends is still there to scrub after it ends: the timeline keeps every
+  animation it has driven (a finished CSS animation whose fill is `none`
+  or `backwards` leaves `getAnimations()`, and the range used to move over
+  a frozen end pose) and pins its fill to `both` when it first sees it, so
+  past its end it holds its last frame. Under the timeline only: a page
+  without one keeps its `backwards` fill, for the reason the intro's rule
+  in `src/styles/motion.css` gives. An animation that is cancelled, or
+  whose element leaves the timeline, drops out. `lab render`'s clock
+  (`window.lab` on the bare page) keeps them the same way.
+- **Motion that starts after the timeline mounts** — an
+  `IntersectionObserver` sets the attribute that plays it, a class
+  arrives — is found on the next frame: a change under the timeline
+  (outside its controls) or an `animationstart` makes it look again. What
+  it finds joins the timeline's time; with no cycle declared the cycle is
+  measured again, and only grows; a timeline that had nothing to drive
+  turns its controls on and plays, unless the reader prefers reduced
+  motion.
 - **The cycle is read, not restated**: `data-duration` on the root, else
   the longest SMIL `begin` + `dur` and CSS delay + duration in the file
-  (`sceneDuration()`); a timeline given none measures what it holds.
+  (`sceneDuration()`); a timeline given none measures what it holds, and
+  again when motion starts late.
 - **Reduced motion**: a reader who prefers it gets every timeline paused
   on its first frame until they press Play, and a scene's own
   `prefers-reduced-motion` rule still applies inside it.
@@ -175,6 +194,28 @@ round's demo route — has the same controls for it, the one timeline of
   inline: a file under the site's root, outside `node_modules`, with no
   script, event handler or `javascript:` URL (`readTrustedSvg()` refuses
   anything else).
+
+**Motion of your own plays at once under a timeline.** What plays once
+when it is seen — a reveal armed by an observer — skips the wait under
+`[data-lab-timeline]`, so the cycle is whole when the timeline measures it
+and the range starts where the motion starts. Check in the ref callback
+that arms it: a child's ref callback runs before the timeline's, so the
+animations exist when the timeline mounts.
+
+```ts
+const arm = useCallback((el: HTMLElement | null) => {
+  if (!el) return;
+  if (el.closest("[data-lab-timeline]")) { el.dataset.play = ""; return; } // the timeline's clock
+  observer.observe(el); // plays it on entry
+  return () => observer.unobserve(el);
+}, []);
+```
+
+Motion that waits anyway is still found when it starts (above), a moment
+late. A loop that runs its own clock leaves it to the timeline the same
+way: `InlineAnimation` (§ Inline) neither waits for the viewport nor
+pauses off screen under `[data-lab-timeline]`, and the timeline plays,
+pauses and seeks it.
 
 On a **demo route** (`pnpm kit demo new`, the `design-options` round), an
 animated candidate gets the same inspection. A file — a mark, a loop — is
@@ -349,7 +390,8 @@ import { InlineAnimation } from "agentic-cms/ix";
   in, in percent), pauses off screen, and shows the frame at `data-rest`
   to a reader who prefers reduced motion — the frame the screenshot
   harness holds too. A scene carries `data-duration` and `data-rest` on its
-  root (the `loop` template has both; `lab render` keeps them).
+  root (the `loop` template has both; `lab render` keeps them). Under a lab
+  timeline it leaves the clock to the timeline (§ Inspecting motion).
 - The file is the scene rendered for one scheme (`--out x.svg`), or the
   scene itself when it should paint in the page's ink and tokens — inline,
   `currentColor` and `var(--color-*)` follow the page, which an `<img>`

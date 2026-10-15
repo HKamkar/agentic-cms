@@ -122,8 +122,11 @@ does not have
   once: the old build was made without it.
 - With no profile (§ 3.1), every command's defaults are what they were
   *(job 5)*.
-- The lab timeline scrubs play-once CSS motion and measures animations that
-  start after it mounts *(job 7)*.
+- The lab timeline keeps play-once motion on its range after it ends,
+  with the fill of what it drives pinned to `both` (under the timeline
+  only), and finds, measures and plays motion that starts after it mounts.
+  `InlineAnimation` under a timeline leaves its clock to it
+  ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)).
 - `demo new` waits until its route answers on a running dev server and
   prints the URLs to hand over *(job 6)*.
 - `lab serve` lists real network addresses only, not container bridges, and
@@ -254,8 +257,10 @@ kept and documented.
 
 **If you wrote your own play-once layer:** switch the imports to
 `agentic-cms/ix`, then delete your components, your hooks and any lab
-timeline patch of your own (a fill override under the timeline, or an
-immediate play under it). The timeline handles both now.
+timeline patch of your own. The timeline pins the fill of what it drives
+to `both`, so a fill override under `[data-lab-timeline]` goes; the
+layer plays at once under a timeline, as `docs/lab.md` § Inspecting
+motion asks of any motion.
 
 ### 3.6 `variants()`, tokens by role, the example's primitives *(job 9)*
 
