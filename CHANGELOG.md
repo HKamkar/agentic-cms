@@ -114,6 +114,14 @@ changes what a capture writes says **recapture baselines**.
   `probe`'s `reveals.pending` count an armed part whose root has not
   played; a static capture runs under reduced motion, where nothing is
   armed, so no captured frame moves.
+- The browser suite's `imagesReady` test no longer fails on a slow runner.
+  Its page hydrated on a 300 ms timer that started while `setContent` was
+  still parsing, so a slow load spent part of it before the test's clock
+  began (CI measured 172 ms of the 250 it asserted) and could carry the
+  "not touched yet" check, 120 ms in, past the hydration. The page now
+  hydrates when the test tells it to, and the test asserts that
+  `imagesReady` is still waiting and the image untouched at that moment.
+  `imagesReady` itself is unchanged.
 
 ## [0.7.6] — 2026-10-13
 
