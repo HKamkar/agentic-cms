@@ -11,6 +11,24 @@ changes what a capture writes says **recapture baselines**.
   0.4.0 roadmap, whose open items it carries under Later.
   `docs/migrating-to-0.8.0.md` is the draft of the guide a site on 0.7.6
   follows, filled in as each job lands.
+- The know-how a site used to bring in mid-build is in the kit, in five
+  new guides: `docs/setup.md` (a fresh clone on a new machine, and what to
+  do when a step fails), `docs/dev-server.md` (serving previews to the
+  owner's devices: the ports, which address, `ALLOWED_DEV_ORIGINS`,
+  stopping a server), `docs/browsers.md` (what headless Chromium,
+  headless WebKit and the owner's Safari each check, what headless cannot
+  show, the engines' differences), `docs/primitives.md` (what a new site
+  builds first, against what the example has) and `docs/gotchas.md` (the
+  traps by topic). `docs/deploy.md` adds Cloudflare Workers, Google Cloud
+  Run and Azure App Service; `docs/design.md` § Handing over and merging;
+  `docs/lab.md` a phone drawing for a chart; `docs/consent.md` GA4's late
+  event after a Reject. The agent files carry the practice: rejected
+  candidates are deleted, never archived (`design-options`, the design
+  rule); a proof is as short as the change allows, in place of "capture
+  the full set" (`design-proof`, `docs/visual-parity.md`); the site is
+  measured at its widths (the styling rule); a new site's `AGENTS.md`
+  points at the five guides, and a site on 0.7.6 adds those lines by hand
+  (`docs/migrating-to-0.8.0.md` § 1, § 3.8).
 
 ## [0.7.6] — 2026-10-13
 

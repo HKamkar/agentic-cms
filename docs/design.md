@@ -75,7 +75,7 @@ How a section gets its design, as it runs in practice (the
    there — `<LabStudy file>` for an animated file, `<LabTimeline>` around
    a component — so the owner can pause it, step it 0.01 s at a time and
    replay it (`docs/lab.md` § Inspecting motion). The agent hands over the
-   dev-server URL.
+   dev-server URL (§ Handing over and merging).
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
@@ -135,9 +135,41 @@ tab strip and the table left for `ui/` with their props in the catalogue;
 round went the same way and left two more pieces in `ui/` — the library
 grows from picks, not from plans.
 
+## Handing over and merging
+
+**Before handing over a URL:**
+
+- the candidates carry the page's real copy, the current version last,
+  each lettered with one line on what differs, and a timeline on anything
+  that moves (§ The round);
+- they are measured at the site's widths (for a new site 390, 768, 1440
+  and 1920): overflow, tap targets, the numbers behind anything that
+  looks off (§ Measure, don't guess);
+- their interactions are run in WebKit too, not only in Chromium
+  ([browsers.md](browsers.md));
+- the URL is the LAN or the public one, with its hostname allowed in
+  `ALLOWED_DEV_ORIGINS` ([dev-server.md](dev-server.md)); for the lab,
+  each scene's own `/scene/<name>`, not the index;
+- what the machine cannot show (a backdrop blur, real touch, Apple's
+  fonts) is named, with a request to check it in Safari.
+
+**Before the merge:**
+
+- the winner is promoted, and its generic pieces are in
+  `src/components/ui/` with their catalogue rows;
+- `demo clean` and `lab clean` have run, and `git status` shows nothing of
+  the round;
+- the verify block passes, and a proof as short as the change allows (the
+  `design-proof` skill);
+- the owner has looked on the dev server and said so.
+
+**Rejected and unapproved candidates are deleted,** never archived, moved
+aside or kept "for later": `demo clean` takes them with the route, and no
+commit carries a losing candidate.
+
 ## When the dev server will not serve
 
-Two failures cost a round more time than the design does, and both have a
+Three failures cost a round more time than the design does, and each has a
 one-line fix:
 
 - **Every page fails to compile with `Can't resolve
@@ -153,6 +185,10 @@ one-line fix:
   `pnpm kit demo clean` and `pnpm kit lab clean` delete that file when it
   still names the route they removed; for any other route, remove it by
   hand or run `next dev` once.
+- **A utility class works in the production build but not on the dev
+  page**: Tailwind's scan of the sources is cached under `.next/dev`, and
+  can miss a class a file has just started using. `rm -rf .next/dev` and
+  restart the dev server.
 
 ## Measure, don't guess
 

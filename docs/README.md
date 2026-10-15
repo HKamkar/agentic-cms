@@ -16,6 +16,21 @@ rules for an agent working on the code.
   leans on, how a site keeps them current.
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
   writes, what comes next, what to do after a kit upgrade.
+- [setup.md](setup.md) — a fresh clone on a new machine, for a person or an
+  agent: Node, pnpm, the install, the browsers, `.env.local`, the checks,
+  and what to do when a step fails.
+- [dev-server.md](dev-server.md) — serving previews to the owner's
+  devices: the ports, which address to hand over, `ALLOWED_DEV_ORIGINS`,
+  stopping a server, old proof baselines.
+- [browsers.md](browsers.md) — Chrome and Safari, who checks what:
+  headless Chromium, headless WebKit as a stand-in, the owner's Safari;
+  what headless cannot show; the engines' differences.
+- [primitives.md](primitives.md) — what a new site builds first: the
+  tokens, what the kit provides, the day-one primitives against what the
+  example has, what waits for a second use, the rules every one follows.
+- [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
+  Tailwind, CSS and SVG, measuring, pnpm, git and GitHub, services; each
+  the symptom, the reason and what to do.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
   next: the tag, the agent files, and each release's own steps.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
@@ -36,9 +51,10 @@ rules for an agent working on the code.
   cookie notice says.
 - [email.md](email.md) — keeping the e-mail address out of served files:
   the token, `EmailLink`, `withEmailToken`, `guard-email` in the build.
-- [deploy.md](deploy.md) — a Node server host: `output: "standalone"`,
-  `assemble` as the build's last step, the copy that nests and the check
-  that catches it.
+- [deploy.md](deploy.md) — the hosts: a Cloudflare Worker, and a Node
+  server (`output: "standalone"`, `assemble` as the build's last step, the
+  copy that nests and the check that catches it), with the notes for
+  Google Cloud Run and Azure App Service.
 - [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
   1.0.0.
 

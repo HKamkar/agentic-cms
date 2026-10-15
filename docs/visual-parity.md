@@ -376,14 +376,18 @@ falls through after 10 s.
 
 ## Traps a long run meets
 
-- Capture the full set, not a `--pages` subset to save time: every
+- A proof is as short as the change allows: the site's widths
+  (`--widths`), the pages the change touches (`--pages`, the same on both
+  captures and the compare), one page per template (`--sample 1`) only when
+  the change is site-wide, `--states` / `--motion` only when hover or
+  animation changed, never a scheme the site does not have. A page is left
+  out because the change cannot reach it, never to save time: every
   page-width whose build files did not change is copied from
-  `.parity/shot-cache/`, and several browsers work at once, so the second
-  capture of a proof takes the changed pages alone (on the example, one post
-  edited: 18.7 s for 80 page-widths; the whole static set from nothing,
-  44 s on four cores). `--pages` is for looking at one page while
-  iterating. Only a first capture of a large site is worth the background,
-  with its output in a log (`.parity/<label>.log`) whose tail you read.
+  `.parity/shot-cache/`, and several browsers work at once, so a wider
+  capture stays cheap (on the example, one post edited: 18.7 s for 80
+  page-widths; the whole static set from nothing, 44 s on four cores).
+  Only a first capture of a large site is worth the background, with its
+  output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before
   the browser starts: once it prints `snapshot:`, building, editing
   `public/` or moving assets no longer reaches it. Still build the exact

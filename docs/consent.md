@@ -159,6 +159,10 @@ runs. Keep them in step with the page — every type denied by default, for
 every region — or leave them off; never let them grant what the page
 denies.
 
+GA4 can send one event that was measured before the visitor's Reject about
+3 s after it. That is Google's behaviour, not a consent bug: the refusal
+still reaches the tag at once, and nothing measured after it is sent.
+
 ## What the cookie notice says
 
 The kit does the mechanics; the notice's wording is the site's, and its

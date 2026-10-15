@@ -35,6 +35,15 @@ a patch under `node_modules`.
   `node_modules/agentic-cms/docs/commands.md`, the screenshot harness
   `docs/visual-parity.md`, the one-shot page commands
   `docs/shot-probe-sheet.md`, the design loop `docs/design.md`.
+- The kit's know-how is under `node_modules/agentic-cms/docs/`, read
+  there, not copied: `setup.md` on a fresh clone or a new machine;
+  `dev-server.md` before starting a server or handing over a URL;
+  `browsers.md` for what Chromium, WebKit and the owner's Safari each
+  check; `primitives.md` for what a new site builds first; `gotchas.md`,
+  the traps by topic, before touching an area it lists.
+- A machine's address never goes into the repo: it is found when needed,
+  per developer, and lives in the gitignored `.env.local`
+  (`ALLOWED_DEV_ORIGINS`, `dev-server.md`).
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
   not change without redirects.
@@ -144,9 +153,11 @@ a `reflow` verdict or a diff on every text line below one section is, per
 its `cause:` line, a section a fraction of a pixel taller, else a stacking
 context that flipped the compositor (`pnpm kit probe` prints the chain);
 a capture copies every page-width whose build files are unchanged from
-`.parity/shot-cache/` and runs several browsers (`--jobs`), so capture the
-full set rather than a `--pages` subset to save time (`--pages` is for
-looking at one page; `--sample <n>` for a site with many posts); only a
+`.parity/shot-cache/` and runs several browsers (`--jobs`); keep a proof
+as short as the change allows — the site's widths (`capture --widths`), the
+pages the change touches (`--pages`), one page per template (`--sample 1`)
+only when the change is site-wide, `--states` / `--motion` only when hover
+or animation changed, never a scheme the site does not have; only a
 first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast
@@ -179,6 +190,10 @@ and `--no-storage` shows it again.
 - Reading a screenshot: measure, don't guess (`design-measure`). "It looks
   broken" is resolved with `pnpm kit probe` and `pnpm kit shot`, not by
   eyeballing.
+- The site is designed, looked at and measured at its widths — for a new
+  site four: 390, 768, 1440 and 1920.
+- Rejected and unapproved candidates are deleted, never archived or kept
+  "for later" (`pnpm kit demo clean`, `pnpm kit lab clean`).
 - A pick from a sheet is not the owner's look at the built thing: build it,
   show it on the dev server, ask, then merge.
 

@@ -450,7 +450,7 @@ src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
 bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, migrating-to-0.8.0.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
+docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, setup.md, dev-server.md, browsers.md, primitives.md, gotchas.md, upgrading.md, migrating-to-0.8.0.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
 ```
 
 MIT licensed.
