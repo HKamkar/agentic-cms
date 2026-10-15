@@ -2,7 +2,7 @@
 // The design canvas for the site's own graphics, opened when a drawing is
 // needed and removed when its files are rendered: `new` writes a scene to
 // start from under .parity/lab, `serve` shows every scene on the site's
-// tokens (light and dark, inline and as an <img>, at its sizes and enlarged,
+// tokens (in each of its schemes, inline and as an <img>, at its sizes and enlarged,
 // with a scrubber, a replay and its still) to the owner's browser and phone, `render` writes the file a page ships, `clean`
 // removes the lab. Nothing of it lives under src/ or in package.json;
 // docs/lab.md has the recipe and the design-graphics skill the procedure.
@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { relative } from "./lib/page-command.mjs";
+import { profileOrExit, schemeOrExit } from "./lib/profile.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { LAB_DIR, ROUNDS_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
@@ -36,7 +37,9 @@ if (subcommand === "new") {
   let sizes;
   try { sizes = flags.sizes === undefined ? null : parseSizes(flags.sizes); } catch (error) { fail(`--sizes: ${error.message}`); }
   let server;
-  try { server = await startLabServer({ root, extra: flags.scenes, host: flags.host, port: flags.port, watch: true, sizes }); } catch (error) { fail(error.message); }
+  // one ground per scheme the site's profile names (src/config/harness.ts); light and dark without one
+  const schemes = (await profileOrExit("lab serve"))?.schemes;
+  try { server = await startLabServer({ root, extra: flags.scenes, host: flags.host, port: flags.port, watch: true, sizes, schemes }); } catch (error) { fail(error.message); }
   console.log(`lab: ${server.urls.join("  ")}\n     scenes under ${LAB_DIR}/${flags.scenes.length ? ` and ${flags.scenes.join(", ")}` : ""}; a saved file reloads the page; Ctrl-C stops`);
   const stop = () => { server.close(); process.exit(0); };
   process.on("SIGINT", stop);
@@ -51,6 +54,8 @@ if (subcommand === "new") {
 } else if (subcommand === "render") {
   if (!flags.out) fail("--out names the file to write; its extension picks the format");
   const { renderScene } = await import("./lib/lab-render.mjs");
+  // --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+  flags.scheme = await schemeOrExit(flags, "lab render");
   let report;
   try { report = await renderScene(root, positionals[0], flags); } catch (error) { fail(error.message); }
   const line = `${report.file}  ${report.width}x${report.height}  ${report.frames} frame${report.frames === 1 ? "" : "s"}${report.fps ? ` at ${report.fps} fps` : ""}  ${(report.bytes / 1024).toFixed(1)}KB${report.still ? `; still ${report.still}` : ""}${report.source ? `; source ${report.source}` : ""}`;

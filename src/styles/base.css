@@ -4,11 +4,11 @@
  * and list markers; what is left is the page ground, the type and the two
  * things a reader needs without a class: a heading that looks like one and a
  * link that looks clickable.
- *
- * The theme is one attribute on :root, so a light and a dark page share every
- * rule below: the `light-dark()` colours in globals.css read `color-scheme`.
- * Without the attribute the reader's own system setting decides.
  */
+
+/* The theme is one attribute on :root, so a light and a dark page share every
+   rule below: the `light-dark()` colours in globals.css read `color-scheme`.
+   Without the attribute the reader's own system setting decides. */
 :root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }

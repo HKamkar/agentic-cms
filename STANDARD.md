@@ -52,17 +52,27 @@ capture never waits on a network font and a fork picks its own.
 
 ### Colours
 
-Four values, each a `light-dark()` pair, and three roles that alias them.
+Four values<!-- dark-mode:start -->, each a `light-dark()` pair,<!-- dark-mode:end --> and three roles that alias them.
 Tailwind's palette is removed (`--color-*: initial`), so a page cannot quietly
 acquire a colour: `bg-white`, `text-black` and `border-gray-300` are not
 utilities here.
 
+<!-- dark-mode:start -->
 | Value | Light | Dark | What it is |
 |---|---|---|---|
 | `paper` | `#ffffff` | `#121212` | the page ground, and what `panel` and `on-ink` alias |
 | `ink` | `#000000` | `#f2f2f2` | text, the solid button's fill, and what `line` aliases |
 | `fill` | `#e5e5e5` | `#2a2a2a` | a filled block: a label's ground, a placeholder's field, a form's success box |
 | `muted` | `#666666` | `#9a9a9a` | secondary text: a date, a role, a placeholder's caption, a variant note |
+
+<!-- dark-mode:end -->
+<!-- light-only: | Value | Colour | What it is |
+|---|---|---|
+| `paper` | `#ffffff` | the page ground, and what `panel` and `on-ink` alias |
+| `ink` | `#000000` | text, the solid button's fill, and what `line` aliases |
+| `fill` | `#e5e5e5` | a filled block: a label's ground, a placeholder's field, a form's success box |
+| `muted` | `#666666` | secondary text: a date, a role, a placeholder's caption, a variant note |
+ -->
 
 | Role | Aliases | What asks for it |
 |---|---|---|
@@ -77,6 +87,7 @@ A fork restyles by changing a value, or by pointing a role at another value or
 giving it one of its own. A new value or role is a token first — never a
 literal in a component, never an alpha modifier on one of these.
 
+<!-- dark-mode:start -->
 ### The theme
 
 `:root { color-scheme: light dark; }` in `base.css` is the whole mechanism:
@@ -88,6 +99,14 @@ before the first paint, so a reader who chose dark never sees a white flash.
 `viewport.colorScheme` declares that both are supported. A component never reads
 the theme, never branches on it and never carries a `dark:` variant: it uses the
 semantic colours and both modes follow.
+<!-- dark-mode:end -->
+<!-- light-only: ### The scheme
+
+One scheme, light: `:root { color-scheme: light; }` in `base.css`, every colour
+a single value, `viewport.colorScheme` `"light"`, and `schemes: ["light"]` in
+the profile (`src/config/harness.ts`), so no proof and no lab ground is in a
+scheme the site does not have. A component never carries a `dark:` variant.
+ -->
 
 ### Type scale
 
@@ -133,7 +152,7 @@ utility exists.
 |---|---|---|
 | `theme` — `globals.css` `@theme static` | the tokens | a value is needed a second time |
 | `base` — Tailwind preflight | margins, paddings, borders and list markers zeroed; `[hidden]` hidden; buttons inherit font and colour | never |
-| `base` — `src/styles/base.css` | `color-scheme` and the two `data-theme` overrides, the two breakpoint steps, `body`, `h1`–`h6`, the underlined `a`, `strong`, `img, video { height: revert-layer }` | a default every page needs |
+| `base` — `src/styles/base.css` | `color-scheme`<!-- dark-mode:start --> and the two `data-theme` overrides<!-- dark-mode:end -->, the two breakpoint steps, `body`, `h1`–`h6`, the underlined `a`, `strong`, `img, video { height: revert-layer }` | a default every page needs |
 | `utilities` — Tailwind | everything else | always |
 | unlayered — `src/styles/motion.css` | the start states and keyframes of the `ix/` motion library — the reveals' classes and the play-once layer's block with its tokens — outside the layers so they beat any utility | a fork adds a reveal preset or a part (§7) |
 | unlayered — `<Name>.module.css` | what utilities cannot say | see below |
@@ -257,7 +276,7 @@ shared component goes into it in the same commit. In short:
 | Kind | Components | Rule |
 |---|---|---|
 | Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`) | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
+| Chrome | `ui/Navbar`, `ui/NavLink`, <!-- dark-mode:start -->`ui/ThemeToggle`, <!-- dark-mode:end -->`ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
 | Actions | `ui/Button` (+ `button`, `buttonClass`), `ui/OutlineButton`, `ui/IconButton` (+ `iconButton`) | a call to action is `Button`, a link; a choice on the page is `OutlineButton`, a `<button>` with `aria-pressed` when it toggles; an icon alone is `IconButton`, 44 px, its label required |
 | Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` (+ `heading`) | `Section` renders both from its props; `eyebrowText` is the same label as a class string; a heading's level is apart from its size, and its `entrance` is the play-once `Reveal`, unused here |
 | Text | `ui/TextLink`, `ui/MetaLine` (+ `metaLabel`), `keepWords` (`ui/text.ts`) | a link in copy (`next/link` for a path, a new tab for `http(s)`); small uppercase metadata; a hyphenated word kept on one line |
@@ -353,7 +372,7 @@ split and a content image instead of a placeholder.
 keyframes. Nothing on a page is hidden until
 JavaScript runs: the HTML a crawler receives is the page a reader sees. The only
 state changes are the ones a control owns — the FAQ's `hidden` answer, the
-navbar's mounted menu, the theme attribute — and each is instant.
+navbar's mounted menu<!-- dark-mode:start -->, the theme attribute<!-- dark-mode:end --> — and each is instant.
 
 The motion library survives for a fork that wants motion, whole and unused, in
 `agentic-cms/ix` (`src/lib/ix/`) with its start states and keyframes in
@@ -409,7 +428,7 @@ code in the reader's browser beyond two shared observers:
 | `motionScript()` | the inline script that arms the page: `data-motion="on"` on `<html>` before the first paint, unless the reader prefers reduced motion. |
 
 Adding the layer: render `motionScript()` as an inline script near the top of
-`<body>` (`<html>` keeps `suppressHydrationWarning`), and keep the layer's block
+`<body>` (with `suppressHydrationWarning` on `<html>`), and keep the layer's block
 at the end of `motion.css` — the armed start states, the keyframes played with
 fill `backwards`, the loops under `[data-play][data-visible]`, the guard that
 puts everything at rest under `prefers-reduced-motion`, and the tokens. The
@@ -456,11 +475,11 @@ reveals.
   accent and it is the underline; buttons and cards that are links opt out with
   `no-underline`.
 - **The same placeholder picture appears everywhere.** One grey crossed field is
-  the point: it says "a picture goes here", not "this picture".
+  the point: it says "a picture goes here", not "this picture".<!-- dark-mode:start -->
 - **The theme button reads `Theme: system`.** Three states — the reader's system
   setting (no attribute at all), then light, then dark, then back. The attribute
   *is* the state, so the server renders `system`, the first client render agrees
-  with it, and the label is never wrong for a frame.
+  with it, and the label is never wrong for a frame.<!-- dark-mode:end -->
 - **`/sections/*` are in the footer, not the nav.** They are agentic-cms showing its
   section types to whoever forks it, not pages a visitor is being sent to.
 
@@ -509,16 +528,15 @@ last) and `pnpm preview`.
 **Changing an existing page.** A refactor moves no pixels and proves it:
 
 ```bash
-pnpm kit visual-parity capture before
-pnpm kit visual-parity capture before-dark --scheme dark
 # …make the change, pnpm build…
-pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after
+pnpm kit visual-parity proof          # the baseline of develop, the tree, the compare
 ```
 
-A capture renders every prerendered page of the current build at eight widths
-(1920, 1440, 1280, 1100, 992, 800, 767, 390) plus the open menu at 767 and 390.
-`--scheme dark` renders the dark mode (a fresh browser context has no stored
-choice, so the default capture is the light one); `--motion` is for when the
+A capture renders every prerendered page of the current build at the site's
+widths — the profile's, `widths` in `src/config/harness.ts` (390, 768, 1440
+and 1920 for a new site) — with the home page's menu open at each of them
+where its button shows. `proof` runs a pass in each scheme the profile names
+(`schemes`; a dark one's captures end in `-dark`); `--motion` is for when the
 `ix/` library is in use (§7); `--states` for when hover, focus, checked or open
 change; `--pages /,/blog` limits a capture and its compare to the pages a step
 touches. Every `compare` must come back clean, and each proven state is

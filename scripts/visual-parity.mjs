@@ -27,6 +27,7 @@ import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_IN
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
+import { captureWidths, menuWidths, profileOrExit, proofSettings, schemeOf } from "./lib/profile.mjs";
 import { forwarded, passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
 import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
@@ -41,17 +42,20 @@ const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-par
 const loadKit = async () => (await import("@/kit")).kit;
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".parity/visual");
-const DEFAULT_WIDTHS = [1920, 1440, 1280, 1100, 992, 800, 767, 390];
-const MENU_WIDTHS = [767, 390];
+// The site's profile (src/config/harness.ts, lib/profile.mjs): its widths, schemes and proof settings are the
+// defaults a flag overrides for one run; read from the tree, so a --ref baseline is captured like the tree.
+const profile = subcommand === "capture" || subcommand === "proof" ? await profileOrExit(`visual-parity ${subcommand}`) : null;
 
 const motion = Boolean(flags.motion);
 // The theme follows prefers-color-scheme (and a stored choice, absent in a fresh browser context), so a scheme is a capture option.
-const scheme = flags.scheme ?? "light";
+const scheme = schemeOf(flags.scheme, profile);
 const states = Boolean(flags.states);
 if (subcommand === "capture" && motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
-const MOTION_WIDTHS = [1440, 390];
 const MOTION_FRAMES_MS = [150, 500];
-const widths = (flags.widths ?? (motion ? MOTION_WIDTHS : DEFAULT_WIDTHS).join(",")).split(",").map(Number);
+const widths = captureWidths({ flag: flags.widths, motion, profile });
+// The home page's menu is opened at these widths wherever its button shows: the site's own widths below its menu breakpoint.
+const MENU_WIDTHS = menuWidths(profile);
+const MENU_BUTTON = ".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]";
 const threshold = flags.threshold ?? 0.02;
 const thresholdMid = flags["threshold-mid"] ?? 20;
 const onlyPages = (flags.pages ?? "").split(",").filter(Boolean);
@@ -216,7 +220,7 @@ async function captureStates(open, baseUrl, dir, { root, kit, shots }) {
   return count;
 }
 
-/** A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and (the home page at the menu widths) the open menu; the number of PNGs. */
+/** A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and (the home page at a menu width where its button shows) the open menu; the number of PNGs. */
 async function shootPage(page, { dir, name, pagePath, width }) {
   await fontsReady(page);
   await addStyle(page, NO_ANCHORING_CSS);
@@ -233,7 +237,9 @@ async function shootPage(page, { dir, name, pagePath, width }) {
   await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
   fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
   if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
-  await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
+  const menu = page.locator(MENU_BUTTON).first();
+  if (!(await menu.isVisible())) return 1;
+  await menu.click();
   await page.waitForTimeout(600);
   await snap(page, path.join(dir, `${name}--menu.png`));
   return 2;
@@ -350,23 +356,25 @@ function clean() {
 async function proof() {
   const label = labels[0] ?? "proof";
   // the seed's flags go to both sides of every pass, and each capture reads the site's src/config/harness.ts from this tree
-  const steps = plan({ label, ref: flags.ref ?? "develop", passes: passesOf(flags), build: flags.build, shared: forwarded(flags, ["scheme", "jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded(flags, ["pages"]), sample: forwarded(flags, ["sample"]) });
+  // a flag, then the site's profile, then the built-in default: the ref, a pass in each scheme, the pages
+  const { ref, schemes, pages } = proofSettings(flags, profile);
+  const steps = plan({ label, ref, passes: passesOf(flags), schemes, build: flags.build, shared: forwarded(flags, ["jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded({ pages }, ["pages"]), widths: forwarded(flags, ["widths"]), sample: forwarded(flags, ["sample"]) });
   const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
   // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
   const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });
   const result = await runProof(steps, { run, log: (step) => console.error(`\nproof: ${step.pass} — ${step.step === "compare" ? "the compare" : `${step.step}: ${step.label}`}`) });
-  if (flags.json) console.log(JSON.stringify({ label, ref: flags.ref ?? "develop", ...result }, null, 1));
-  else printProof(label, result);
+  if (flags.json) console.log(JSON.stringify({ label, ref, schemes, ...result }, null, 1));
+  else printProof(label, ref, result);
   process.exitCode = result.exit;
 }
 
 /** The proof's summary: a line per pass (the compare's counts, each side's time and reuse), then the verdict. */
-function printProof(label, { passes, exit, failed }) {
+function printProof(label, ref, { passes, exit, failed }) {
   const side = (c) => (c ? `${c.label} ${c.seconds} s${c.reused?.shots ? `, ${c.reused.shots} of ${c.reused.of} reused` : ""}` : "—");
-  console.log(`\nproof ${label} against ${flags.ref ?? "develop"}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
+  console.log(`\nproof ${label} against ${ref}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
   for (const p of passes) {
     const s = p.report?.summary;
-    console.log(`  ${p.pass.padEnd(7)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
+    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
   }
   if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);
   else console.log(exit ? `proof: a difference — the diffs are in .parity/visual/<before>-vs-<after>, the lines above` : "proof: identical within the thresholds, every pass");

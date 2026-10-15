@@ -18,12 +18,10 @@
  * directly. There is no brand here on purpose: a fork replaces these values
  * and every page follows, because nothing below is repeated in a component.
  *
- * The palette is four colour values, each a light and a dark value through
- * `light-dark()`; `color-scheme` on :root (base.css) picks the side, so the
- * theme toggle changes one attribute and never a class on an element. Role
- * tokens alias the values: a component asks for the role where one exists
- * (`border-line`, not `border-ink`) and for a value only where no role does,
- * so a fork restyles every panel face or every hairline in one line.
+ * The palette is four colour values, and role tokens alias them: a
+ * component asks for the role where one exists (`border-line`, not
+ * `border-ink`) and for a value only where no role does, so a fork restyles
+ * every panel face or every hairline in one line.
  *
  * A token name becomes utilities (`--color-paper` → `bg-paper`,
  * `--color-line` → `border-line`, `--container-page` → `max-w-page`,
@@ -52,6 +50,9 @@
      wireframe page cannot quietly acquire a colour. paper = page ground,
      ink = text, fill = a filled block, muted = secondary text. */
   --color-*: initial;
+  /* Each value a light and a dark side through `light-dark()`: `color-scheme`
+     on :root (base.css) picks the side, so the theme toggle changes one
+     attribute and never a class on an element. */
   --color-paper: light-dark(#ffffff, #121212);
   --color-ink: light-dark(#000000, #f2f2f2);
   --color-fill: light-dark(#e5e5e5, #2a2a2a);

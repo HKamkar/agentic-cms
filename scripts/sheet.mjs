@@ -11,6 +11,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { serveStatic } from "./lib/browser.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { schemeOrExit } from "./lib/profile.mjs";
 import { seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 // lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
@@ -29,6 +30,8 @@ try {
 }
 
 const seed = await seedOrExit(flags, "sheet");
+// --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+flags.scheme = await schemeOrExit(flags, "sheet");
 // Without a served site the build (or public/ alone) is served, so img: cells and the stylesheets resolve.
 const server = flags.url ? null : await serveStatic({ root, requireBuild: false });
 const base = (flags.url ?? server.url).replace(/\/$/, "");
