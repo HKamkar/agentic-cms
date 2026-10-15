@@ -151,10 +151,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
   `pnpm kit placeholder <out> <width> <height>`.
-- Proof: a refactor that must not move a pixel captures before and after with
-  `pnpm kit visual-parity capture <label>` and `compare` clean, in
-  both schemes (`--scheme dark`), with `--states` when hover / focus /
-  checked / open change and `--motion` only when there is motion to check.
+- Proof: a refactor that must not move a pixel proves it with
+  `pnpm kit visual-parity proof` (or `capture` before and after and
+  `compare`) clean, in each scheme the profile names (the example's two),
+  with `--states` when hover / focus / checked / open change and
+  `--motion` only when there is motion to check.
   Markup-only refactors: `agentic-cms parity`.
 
 ## Gotchas
@@ -295,12 +296,16 @@ The contract — modes, file names, how to read a compare, the waits and why —
 is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
 - `pnpm kit visual-parity capture <label>` renders every prerendered page of
-  the current build at eight widths and `compare <before> <after>` diffs
-  them (`visual-parity proof` runs the baseline, the after capture and the
-  compare of each pass in one, with one exit); `--scheme dark` renders the
-  dark mode (a fresh browser context has no stored choice, so the default
-  capture is light), `--states` photographs hover, focus, checked and open,
-  `--motion` plays animations (only worth running where something animates).
+  the current build at the site's widths and `compare <before> <after>`
+  diffs them (`visual-parity proof` runs the baseline, the after capture
+  and the compare of each pass in one, with one exit). The widths, the
+  schemes and what a bare `proof` covers are the site's profile, in
+  `src/config/harness.ts` beside its seed (the example's: 390, 768, 1440
+  and 1920, light and dark, against `develop`): a flag wins, then the
+  profile, then the built-in default (eight widths, light); `proof` runs a
+  pass in each scheme, the dark one's captures ending in `-dark`.
+  `--states` photographs hover, focus, checked and open, `--motion` plays
+  animations (only worth running where something animates).
   `--pages /,/blog` limits a capture to the pages you are looking at — pass
   the same `--pages` to the compare; `--sample <n>` takes n pages of each
   template (the posts) and the compare leaves the rest out. The page list

@@ -151,7 +151,12 @@ paths. The table is written from the rules' frontmatter by
 
 ## Parity harness and long runs
 
-The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
+The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The
+site's profile in `src/config/harness.ts` says once what every capture
+takes without a flag: its `widths`, its `schemes` (a proof runs a pass in
+each, the dark one's captures ending in `-dark`) and `proof: { pages, ref }`,
+what a bare `pnpm kit visual-parity proof` covers and proves against — so
+that command, with no flag, is the site's proof. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
 on (`pnpm kit visual-parity proof [--motion] [--states]` runs baseline,
 after and compare in one); a capture photographs a copy of the build, so after its `snapshot:`
@@ -164,10 +169,11 @@ its `cause:` line, a section a fraction of a pixel taller, else a stacking
 context that flipped the compositor (`pnpm kit probe` prints the chain);
 a capture copies every page-width whose build files are unchanged from
 `.parity/shot-cache/` and runs several browsers (`--jobs`); keep a proof
-as short as the change allows — the site's widths (`capture --widths`), the
-pages the change touches (`--pages`), one page per template (`--sample 1`)
-only when the change is site-wide, `--states` / `--motion` only when hover
-or animation changed, never a scheme the site does not have; only a
+as short as the change allows — the profile's widths and schemes (a flag
+only for a run that needs others; never a scheme the site does not have),
+the pages the change touches (`--pages`), one page per template
+(`--sample 1`) only when the change is site-wide, `--states` / `--motion`
+only when hover or animation changed; only a
 first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast
@@ -200,8 +206,9 @@ and `--no-storage` shows it again.
 - Reading a screenshot: measure, don't guess (`design-measure`). "It looks
   broken" is resolved with `pnpm kit probe` and `pnpm kit shot`, not by
   eyeballing.
-- The site is designed, looked at and measured at its widths — for a new
-  site four: 390, 768, 1440 and 1920.
+- The site is designed, looked at and measured at its widths — the
+  profile's, `widths` in `src/config/harness.ts`; for a new site four:
+  390, 768, 1440 and 1920.
 - Rejected and unapproved candidates are deleted, never archived or kept
   "for later" (`pnpm kit demo clean`, `pnpm kit lab clean`).
 - A pick from a sheet is not the owner's look at the built thing: build it,

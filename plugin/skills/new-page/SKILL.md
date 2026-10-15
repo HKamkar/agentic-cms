@@ -45,8 +45,9 @@ installs the package),
 5. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; read the
    `WARN` lines on the new file.
 6. **Verify** (below), then look at the page at every width: `pnpm kit
-   visual-parity capture <slug>-new --pages /<slug>` and open the eight
-   shots in `.parity/visual/<slug>-new/` (a new page has no baseline; this
+   visual-parity capture <slug>-new --pages /<slug>` and open its shots,
+   one per width of the site's profile, in `.parity/visual/<slug>-new/` (a
+   new page has no baseline; this
    is inspection). If `site.ts` changed, `pnpm kit parity` before and after
    must differ only in the nav and footer of the other pages.
 7. **Commit** `Page: /<slug>` on the repo's working branch.

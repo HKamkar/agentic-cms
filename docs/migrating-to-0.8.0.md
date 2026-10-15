@@ -120,8 +120,11 @@ does not have
   worktree), so a build-time value is the same on both sides. With a
   `.env.local`, the first proof after the upgrade rebuilds its baseline
   once: the old build was made without it.
-- With no profile (§ 3.1), every command's defaults are what they were
-  *(job 5)*.
+- With no profile (§ 3.1), every command's defaults are what they were:
+  a capture takes the eight widths and light, the menu is shot at 767 and
+  390, and a bare `proof` runs one pass in light against `develop`. The
+  one difference: a menu shot is skipped where the menu button does not
+  show, instead of failing the capture.
 - The lab timeline keeps play-once motion on its range after it ends,
   with the fill of what it drives pinned to `both` (under the timeline
   only), and finds, measures and plays motion that starts after it mounts.
@@ -145,17 +148,20 @@ step that fixes it.
 Watch:
 - The screenshot harness learns the new motion layer's markers *(job 8)*. If
   that changes a captured frame, the CHANGELOG says **recapture baselines**.
-- If the kit's built-in default widths change for sites with no profile
-  *(job 5)*, the same applies.
+- A site with no profile keeps the built-in widths: only the kit's own
+  example moved to four, so nothing to recapture until the site writes a
+  profile (§ 3.1).
 
 ## 3. Adopt what you want
 
-### 3.1 The site profile *(job 5)*
+### 3.1 The site profile
 
-**Why:** proofs are only as long as your site needs. Today the default is
-eight widths, every page and both schemes, even on a site without dark mode.
+**Why:** proofs are only as long as your site needs. Without a profile the
+default is eight widths, every page and light only — or a second capture in
+dark that each command has to be told about.
 
-**Do:** say what your site is, once, in `src/config/harness.ts`:
+**Do:** say what your site is, once, in `src/config/harness.ts` (create it
+with just these keys if the site has no seed):
 
 ```ts
 export const harness = {
@@ -166,12 +172,29 @@ export const harness = {
 };
 ```
 
-**Check:** `pnpm kit visual-parity proof profile --build` captures only those
-widths and schemes. Menu shots are taken at the widths below the menu
-breakpoint.
+Every key is optional; one you leave out keeps the built-in default. Then
+in `AGENTS.md` § Parity harness, make the profile the site's proof: after
+"The contract is `node_modules/agentic-cms/docs/visual-parity.md`." add
+"The site's profile in `src/config/harness.ts` says once what every
+capture takes without a flag: its `widths`, its `schemes` (a proof runs a
+pass in each, the dark one's captures ending in `-dark`) and `proof: {
+pages, ref }`, what a bare `pnpm kit visual-parity proof` covers and
+proves against — so that command, with no flag, is the site's proof.", and
+"the site's widths (`capture --widths`)" becomes "the profile's widths and
+schemes (a flag only for a run that needs others; never a scheme the site
+does not have)" (dropping the later "never a scheme the site does not
+have").
+
+**Check:** `pnpm kit visual-parity proof profile --build` takes only those
+widths, pages and schemes (one pass per scheme), and opens the menu at each
+width below the menu breakpoint (where its button shows). A key of the
+wrong shape exits 2 naming it. Baselines taken at other widths no longer
+compare: recapture them.
 
 **If you wrote your own short-proof script:** delete it, and point the
-package script at `agentic-cms visual-parity proof`.
+package script, if you keep one, at `agentic-cms visual-parity proof`:
+`--sample 1` is one page per template, and `--pages` the pages a change
+touches.
 
 ### 3.2 `setup`, `urls`, `serve` *(serve: job 6)*
 
@@ -245,23 +268,31 @@ missing one: a site that keeps edits of its own leaves the step out.
 
 **Check:** a pull request runs it, and it passes.
 
-### 3.4 Light only *(job 5)*
+### 3.4 Light only
 
 **Why:** a site without dark mode should carry no theme script, toggle or
 `light-dark()` pairs, and no proof or lab ground in a scheme it doesn't have.
 
-**Do:** set `schemes: ["light"]` (§ 3.1). If your site still has the
-example's theme wiring, remove it as `init --light-only` would:
-- `src/app/layout.tsx`: no `THEME_SCRIPT` and no `suppressHydrationWarning`,
-  and `colorScheme: "light"`;
-- `src/styles/base.css`: `color-scheme: light`;
-- `globals.css`: single values;
-- no `ThemeToggle`, in the navbar or anywhere else.
+**Do:** set `schemes: ["light"]` (§ 3.1): from then on no capture, proof or
+lab ground is in dark. If your site still has the example's theme wiring,
+remove it as `init --light-only` does for a new site:
+- `src/app/layout.tsx`: delete the `THEME_SCRIPT` constant (with its
+  comment) and the `<script>` that renders it, drop
+  `suppressHydrationWarning` from `<html>` (unless the play-once layer's
+  `motionScript()` is in use: it needs it), and set
+  `viewport.colorScheme` to `"light"`;
+- `src/styles/base.css`: `:root { color-scheme: light; }` in place of
+  `light dark` and the two `:root[data-theme=…]` rules;
+- `src/app/globals.css`: each `light-dark(a, b)` becomes `a`;
+- `src/components/ui/ThemeToggle.tsx` goes, with its import and its
+  `<ThemeToggle />` in the navbar or anywhere else it is rendered;
+- `STANDARD.md` and `src/components/README.md`: the theme passages go
+  (the kit's copies mark them `<!-- dark-mode:start -->` … `<!--
+  dark-mode:end -->`).
 
-The exact lines are in the roadmap's job 5.
-
-**Check:** a proof of the change is identical in light. The theme toggle is
-gone, and that is intended: say so in the commit.
+**Check:** `grep -rn "ThemeToggle\|THEME_SCRIPT\|data-theme\|light-dark(" src`
+finds nothing, and a proof of the change is identical in light. The theme
+toggle is gone, and that is intended: say so in the commit.
 
 ### 3.5 The play-once motion layer *(jobs 7, 8)*
 

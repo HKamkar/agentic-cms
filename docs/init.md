@@ -36,7 +36,10 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   `content/` (the registries, the FAQ set, the page files, three posts that
   describe how a post is built), `public/` (the placeholders and the OG
   images), `STANDARD.md` (the wireframe's standard, with a note that the
-  `design` skill replaces it as the look lands).
+  `design` skill replaces it as the look lands). Its `src/config/harness.ts`
+  holds the site's profile — the widths a capture takes (390, 768, 1440 and
+  1920), the schemes a proof runs a pass in (light and dark), the ref a
+  proof's baseline is built from ([visual-parity.md](visual-parity.md#the-sites-profile)).
 - **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
   it), `.claude/rules/` (path-scoped invariants for the content engine, the
   blog, forms, SEO, styling and design, pointing at the engine's READMEs
@@ -74,6 +77,38 @@ a VPS are a site's decision, written into its `PLAN.md`). An existing file
 is never overwritten unless `--force`; each file prints `created`,
 `updated` or `kept`. `package.json` and `pnpm-workspace.yaml` are merged,
 with `--force` too, and print `merged` with what changed.
+
+## A site without dark mode
+
+`--light-only` at the end of the install line above — or, in a project that
+already has the kit,
+
+```bash
+pnpm exec agentic-cms init my-site --light-only
+```
+
+— lays the same example out with one scheme, light:
+
+- the profile says `schemes: ["light"]`, so no proof and no lab ground is in
+  a scheme the site does not have;
+- `src/app/globals.css` holds each colour as a single value (the light
+  side of each `light-dark()` pair), and `src/styles/base.css` says
+  `:root { color-scheme: light; }`;
+- `src/app/layout.tsx` has no theme script and no
+  `suppressHydrationWarning` on `<html>`, and its viewport says
+  `colorScheme: "light"`;
+- there is no `ThemeToggle`, in the navbar or anywhere else;
+- `STANDARD.md` and `src/components/README.md` lose their dark-mode
+  passages, which the kit marks `<!-- dark-mode:start -->` …
+  `<!-- dark-mode:end -->` (with `<!-- light-only: … -->` for the text a
+  light-only site reads in their place).
+
+The code edits anchor on the theme's own names, not on the lines around
+them; one that finds nothing to change stops `init` (exit 2) before any
+file is written, naming the file — a kit bug to report. The rules and skills
+are the same for every site: they speak of "each scheme the profile names".
+A site already laid out goes light-only by hand, as the migration guide's
+§ 3.4 says.
 
 ## Then
 
