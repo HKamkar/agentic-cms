@@ -230,14 +230,17 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   only), and finds, measures and plays motion that starts after it mounts.
   `InlineAnimation` under a timeline leaves its clock to it
   ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)).
-- `demo new` and `lab route` wait until their route answers on a running
-  dev server (the port of `scripts.dev`, or `--url`), up to `--timeout`
-  (120 s), and print the URLs to hand over, with a warning for each host
+- `demo new` and `lab route` wait until their route answers on this
+  clone's running `next dev` (the one `.next/dev/lock` names, on whichever
+  port, or the server `--url` names), up to `--timeout` (120 s), and print
+  the URLs to hand over, with a warning for each host
   `ALLOWED_DEV_ORIGINS` lacks. A route that answers 5xx prints the error's
   tail and exits 1, where the command used to exit 0 before the route had
-  compiled. With no dev server running, each prints `pnpm kit serve` and
-  exits 0, as before; `--no-wait` asks nothing. Their `--json` gains
-  `urls`, `ready` and `status` (and `demo new`'s a `kind`).
+  compiled. Another server on the `scripts.dev` port, such as another
+  checkout's, is named at once and exits 1. With no dev server running,
+  each prints `pnpm kit serve` and exits 0, as before; `--no-wait` asks
+  nothing. Their `--json` gains `urls`, `ready` and `status` (and
+  `demo new`'s a `kind`).
 - `lab serve` lists real network addresses only: no container or VM bridge
   (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
   prints each scene's own page, `/scene/<name>`, on every address.

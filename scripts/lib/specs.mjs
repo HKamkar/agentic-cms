@@ -22,11 +22,11 @@ const seedJson = "seed: { storage, sessionStorage, at } | null";
 const scheme = (help) => ({ type: "string", choices: ["light", "dark"], help: `${help}; default the first of the profile's schemes (src/config/harness.ts), else light` });
 // The lab server's port: lab serve listens on it, urls and setup look for it there.
 const LAB_PORT = 8001;
-// A route a command writes for the owner, handed over (scripts/lib/handover.mjs): the wait on the running dev server, then its URLs.
+// A route a command writes for the owner, handed over (scripts/lib/handover.mjs): the wait on this clone's running next dev, then its URLs.
 const handover = (route) => ({
-  "no-wait": { type: "boolean", help: `write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, ${route} is asked until it stops answering 404 — which compiles it too — and then its URLs are printed)` },
+  "no-wait": { type: "boolean", help: `write it and ask no server (by default, with this clone's next dev running — the one .next/dev/lock names, on whichever port — ${route} is asked until it stops answering 404, which compiles it too, and then its URLs are printed; another server on the port of package.json's scripts.dev is named at once and asked nothing)` },
   timeout: { type: "number", default: 120, value: "<s>", help: `how long ${route} may take to answer, in seconds` },
-  url: { type: "string", value: "<base>", help: "the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev)" },
+  url: { type: "string", value: "<base>", help: "the dev server to ask, http://host:port, whatever it is: no lock is read (default: this clone's next dev, on the port its .next/dev/lock names, else localhost on the port of package.json's scripts.dev)" },
   "no-public": { type: "boolean", help: "do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside)" },
 });
 
@@ -487,7 +487,7 @@ export const SPECS = {
         exit: { 0: "stopped", 2: "the port is taken, a --scenes path that does not exist, or usage" },
       },
       route: {
-        command: "lab route", summary: "writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with the dev server running, waits until /lab-demo answers and prints its URLs to hand over",
+        command: "lab route", summary: "writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with this clone's next dev running, waits until /lab-demo answers and prints its URLs to hand over",
         usage: "agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]",
         flags: {
           force: { type: "boolean", help: "overwrite a route that is already there" },
@@ -495,7 +495,7 @@ export const SPECS = {
           json: { type: "boolean", help: "print { file, path, urls, ready, status }" },
         },
         examples: ["agentic-cms lab route                      # with the dev server running: waits for /lab-demo, prints its URLs", "agentic-cms lab route --no-wait            # write it, ask nothing"],
-        exit: { 0: "written (and /lab-demo answered, or no dev server runs, or --no-wait)", 1: "written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout", 2: "the route exists (pass --force), or usage" },
+        exit: { 0: "written (and /lab-demo answered, or no dev server runs, or --no-wait)", 1: "written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once)", 2: "the route exists (pass --force), or usage" },
         json: "{ file, path, urls: [{ where, url }], ready: true|false|null, status }",
       },
       render: {
@@ -540,7 +540,7 @@ export const SPECS = {
     usage: "agentic-cms demo <new | clean> …",
     subcommands: {
       new: {
-        command: "demo new", summary: "writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with the dev server running, waits until the route answers and prints the URLs to hand over",
+        command: "demo new", summary: "writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with this clone's next dev running, waits until the route answers and prints the URLs to hand over",
         usage: "agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]",
         positionals: [{ name: "name", required: true, help: "the route is src/app/<name>-demo; lowercase letters, digits and hyphens" }],
         flags: {
@@ -554,7 +554,7 @@ export const SPECS = {
           json: { type: "boolean", help: "print the report" },
         },
         examples: ["agentic-cms demo new services --section home-service        # with the dev server running: waits for /services-demo, prints its URLs", "agentic-cms demo new band --section about-story --page sections-about --candidates 3 --timeline", "agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props", "agentic-cms demo new library --showcase --component src/components/ui/Button.tsx --component src/components/ui/Panel.tsx --timeline"],
-        exit: { 0: "written (and the route answered, or no dev server runs, or --no-wait)", 1: "written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout", 2: "neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage" },
+        exit: { 0: "written (and the route answered, or no dev server runs, or --no-wait)", 1: "written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once)", 2: "neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage" },
         json: "{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }",
       },
       clean: {

@@ -855,7 +855,7 @@ agentic-cms lab serve --scenes public/images/home --scenes public/images/ui --si
 
 #### `lab route`
 
-Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with the dev server running, waits until /lab-demo answers and prints its URLs to hand over.
+Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with this clone's next dev running, waits until /lab-demo answers and prints its URLs to hand over.
 
 ```bash
 agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
@@ -864,13 +864,13 @@ agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no
 | flag | what |
 |---|---|
 | `--force` | overwrite a route that is already there |
-| `--no-wait` | write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, /lab-demo is asked until it stops answering 404 — which compiles it too — and then its URLs are printed) |
+| `--no-wait` | write it and ask no server (by default, with this clone's next dev running — the one .next/dev/lock names, on whichever port — /lab-demo is asked until it stops answering 404, which compiles it too, and then its URLs are printed; another server on the port of package.json's scripts.dev is named at once and asked nothing) |
 | `--timeout <s>` | how long /lab-demo may take to answer, in seconds (default `120`) |
-| `--url <base>` | the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev) |
+| `--url <base>` | the dev server to ask, http://host:port, whatever it is: no lock is read (default: this clone's next dev, on the port its .next/dev/lock names, else localhost on the port of package.json's scripts.dev) |
 | `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
 | `--json` | print { file, path, urls, ready, status } |
 
-Exit: `0` written (and /lab-demo answered, or no dev server runs, or --no-wait); `1` written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout; `2` the route exists (pass --force), or usage.
+Exit: `0` written (and /lab-demo answered, or no dev server runs, or --no-wait); `1` written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once); `2` the route exists (pass --force), or usage.
 
 `--json` prints `{ file, path, urls: [{ where, url }], ready: true|false|null, status }`.
 
@@ -954,7 +954,7 @@ agentic-cms demo <new | clean> …
 
 #### `demo new`
 
-Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with the dev server running, waits until the route answers and prints the URLs to hand over.
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with this clone's next dev running, waits until the route answers and prints the URLs to hand over.
 
 ```bash
 agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
@@ -970,13 +970,13 @@ agentic-cms demo new <name> <--section <type> | --component <file> | --showcase 
 | `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props; with --showcase, each piece the page shows (repeat it), never removed by demo clean (repeatable) |
 | `--showcase` | a review page that is not a section's candidates — the library's primitives, a motion layer, a set of states — a block per --component (or one to fill), inside the site's own layout; demo clean removes it and every file only it uses |
 | `--timeline` | wrap each block (the candidates, the current version, a showcase's pieces) in <LabTimeline label><div data-lab-drive>, so its motion can be paused, stepped and replayed (docs/lab.md § Inspecting motion) |
-| `--no-wait` | write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, /<name>-demo is asked until it stops answering 404 — which compiles it too — and then its URLs are printed) |
+| `--no-wait` | write it and ask no server (by default, with this clone's next dev running — the one .next/dev/lock names, on whichever port — /<name>-demo is asked until it stops answering 404, which compiles it too, and then its URLs are printed; another server on the port of package.json's scripts.dev is named at once and asked nothing) |
 | `--timeout <s>` | how long /<name>-demo may take to answer, in seconds (default `120`) |
-| `--url <base>` | the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev) |
+| `--url <base>` | the dev server to ask, http://host:port, whatever it is: no lock is read (default: this clone's next dev, on the port its .next/dev/lock names, else localhost on the port of package.json's scripts.dev) |
 | `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
 | `--json` | print the report |
 
-Exit: `0` written (and the route answered, or no dev server runs, or --no-wait); `1` written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout; `2` neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage.
+Exit: `0` written (and the route answered, or no dev server runs, or --no-wait); `1` written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once); `2` neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage.
 
 `--json` prints `{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }`.
 

@@ -3,11 +3,15 @@
 // the hosts ALLOWED_DEV_ORIGINS lacks. A route `demo new` or `lab route` has
 // just written answers 404 until next dev has seen its file, then compiles
 // on the first request that reaches it, so the wait is the warm-up too: the
-// owner's first look is neither a 404 nor a cold compile. `demo new`, `lab
-// route` and `serve` print it; lib/hosts.mjs finds the addresses. fetch, the
-// clock and the network come in, so a test stubs them.
+// owner's first look is neither a 404 nor a cold compile. The server asked
+// is this clone's own next dev, wherever its lock says it runs: another
+// server on the dev port (another checkout's, another project's) never
+// serves the route, so it is named at once instead of waited on. `demo new`,
+// `lab route` and `serve` print it; lib/hosts.mjs finds the addresses.
+// fetch, the clock, the port probe, the lock's pid test and the network come
+// in, so a test stubs them.
 import path from "node:path";
-import { STALE_CACHE } from "./dev-server.mjs";
+import { DEV_LOCK, STALE_CACHE, ownDevServer } from "./dev-server.mjs";
 import { ENV_FILE, ORIGINS_KEY, devPort, isUp, lanAddresses, publicAddress, readOrigins, urlsOn } from "./hosts.mjs";
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,11 +68,33 @@ export function errorTail(body, { lines = 12 } = {}) {
   return text.replace(ANSI, "").split("\n").map((line) => line.trimEnd()).filter((line) => line.trim()).slice(0, lines).join("\n");
 }
 
+/** localhost on a port. */
+const local = (port) => ({ origin: `http://localhost:${port}`, host: "localhost", port });
+
 /** Where the dev server is: --url's origin, else localhost on the port of package.json's scripts.dev; null with neither. */
 export function devBase({ url, scripts }) {
   if (url) { const u = new URL(url); return { origin: u.origin, host: u.hostname, port: Number(u.port) || (u.protocol === "https:" ? 443 : 80) }; }
   const port = devPort(scripts);
-  return port ? { origin: `http://localhost:${port}`, host: "localhost", port } : null;
+  return port ? local(port) : null;
+}
+
+/**
+ * The server a route is handed over on: { base, server: up|down|unasked|other }. --url's is whatever it names, asked
+ * only whether it answers. Without it, this clone's own next dev on whichever port its lock names (ownDevServer); with
+ * none running, the port of scripts.dev is `other` when something else answers there and `down` when nothing does.
+ * `wait` false asks no server: the lock's live pid alone names the port.
+ */
+export async function devServerFor({ root, url, scripts, wait = true, fs, up = isUp, kill = process.kill }) {
+  if (url) {
+    const base = devBase({ url });
+    return { base, server: !wait ? "unasked" : (await up(base.port, { host: base.host })) ? "up" : "down" };
+  }
+  const own = await ownDevServer({ root, fs, up: wait ? up : async () => true, kill });
+  if (own) return { base: local(own.port), server: wait ? "up" : "unasked" };
+  const base = devBase({ scripts });
+  if (!base) return { base, server: "down" };
+  if (!wait) return { base, server: "unasked" };
+  return { base, server: (await up(base.port, { host: base.host })) ? "other" : "down" };
 }
 
 /** The URLs a route is handed over at: from a loopback base, localhost, each LAN address and the public one on its port; from any other, that base alone. */
@@ -85,41 +111,51 @@ export function missingOrigins(root, urls, fs) {
 }
 
 /**
- * A route just written, handed over: whether a dev server listens (on --url, else the port of scripts.dev), the wait
- * until the route answers (none with `wait` false), and its URLs with the hosts the origins lack.
- * { base, server: up|down|unasked, ready: true|false|null, status, tail, reached, timedOut, timeout, urls, missing }
+ * A route just written, handed over: the server to ask (devServerFor: --url's, else this clone's own next dev), the
+ * wait until the route answers there (none with `wait` false, none on another server), and its URLs with the hosts
+ * the origins lack. `named` says --url chose the server, `devPort` is the port of scripts.dev.
+ * { base, server: up|down|unasked|other, named, devPort, ready: true|false|null, status, tail, reached, timedOut, timeout, urls, missing }
  */
-export async function handover({ root, route, url, scripts, wait = true, timeout = 120000, lookupPublic = true, fs, fetch = globalThis.fetch, interfaces, up = isUp, sleep, now }) {
-  const base = devBase({ url, scripts });
-  const result = { base, server: "down", ready: false, status: null, tail: null, reached: false, timedOut: false, timeout, urls: [], missing: [] };
-  if (!base || (wait && !(await up(base.port, { host: base.host })))) return result;
+export async function handover({ root, route, url, scripts, wait = true, timeout = 120000, lookupPublic = true, fs, fetch = globalThis.fetch, interfaces, up = isUp, kill = process.kill, sleep, now }) {
+  const { base, server } = await devServerFor({ root, url, scripts, wait, fs, up, kill });
+  const result = { base, server, named: Boolean(url), devPort: devPort(scripts), ready: false, status: null, tail: null, reached: false, timedOut: false, timeout, urls: [], missing: [] };
+  if (server === "down" || server === "other") return result;
   const lan = lanAddresses(interfaces);
   const publicIp = lookupPublic && LOOPBACK.has(base.host) ? await publicAddress({ fetch }) : null;
   const urls = routeUrls(base, route, { lan, publicIp });
   const listed = { ...result, urls, missing: missingOrigins(root, urls, fs) };
-  if (!wait) return { ...listed, server: "unasked", ready: null };
-  return { ...listed, server: "up", ...(await waitForRoute(`${base.origin}${route}`, { fetch, timeout, sleep, now })) };
+  if (server === "unasked") return { ...listed, ready: null };
+  return { ...listed, ...(await waitForRoute(`${base.origin}${route}`, { fetch, timeout, sleep, now })) };
 }
 
 /** The line a stale Turbopack cache gets, wherever it shows. */
 export const STALE_CACHE_FIX = "next dev is reading the caches a production build left (docs/design.md § When the dev server will not serve): pnpm kit serve --fix-cache restarts it with .next/dev and .next/cache/turbopack cleared — or stop it, rm -rf .next/dev .next/cache/turbopack, and start it again";
 const firewall = (port) => `answers only where a firewall opens ${port}, to the viewer's IP only`;
+/** This clone's next dev, found by its lock on another port than scripts.dev's: named, since every URL carries that port. */
+const elsewhere = (h) => (!h.named && h.devPort && h.base.port !== h.devPort ? `this clone's next dev on port ${h.base.port} (package.json's scripts.dev names ${h.devPort})` : null);
 
-/** The hand-over for a person: { out, err, exit } — the URLs on stdout; a failure, an error's tail and each missing origin on stderr; exit 1 when the route failed. */
+/** The hand-over for a person: { out, err, exit } — the URLs on stdout; a failure, an error's tail and each missing origin on stderr; exit 1 when the route failed or another server holds the port. */
 export function formatHandover(h, route) {
   const out = [], err = [];
   if (h.server === "down") {
     out.push(`no dev server answers ${h.base ? `on port ${h.base.port}` : "(package.json's scripts.dev names no port; --url names a server)"}: pnpm kit serve starts it, waits for ${route} and prints the URLs to hand over`);
     return { out, err, exit: 0 };
   }
+  if (h.server === "other") {
+    err.push(`port ${h.base.port} answers, but not as this clone's next dev (${DEV_LOCK} names none running), so ${route} is not served there: stop what holds the port (docs/dev-server.md § Stopping a server), or serve this clone on another port (pnpm kit serve --port <n> waits for ${route} and prints its URLs)`);
+    return { out, err, exit: 1 };
+  }
   if (h.ready === false) {
+    const seconds = Math.round(h.timeout / 1000);
     if (h.tail !== null) err.push(`${route} answered ${h.status} on ${h.base.origin}:`, ...h.tail.split("\n").map((line) => `  ${line}`));
-    else if (h.reached) err.push(`${route} still answers ${h.status} on ${h.base.origin} after ${Math.round(h.timeout / 1000)} s: is the server on port ${h.base.port} this site's next dev? (.next/dev/lock names the one this site runs)`);
-    else err.push(`${h.base.origin} did not answer ${route} within ${Math.round(h.timeout / 1000)} s (--timeout for longer)`);
+    else if (h.reached && h.named) err.push(`${route} still answers ${h.status} on ${h.base.origin} after ${seconds} s: is the server on port ${h.base.port} this site's next dev? (${DEV_LOCK} names the one this site runs)`);
+    else if (h.reached) err.push(`${route} still answers ${h.status} on this clone's next dev (${h.base.origin}) after ${seconds} s (--timeout for longer)`);
+    else err.push(`${h.base.origin} did not answer ${route} within ${seconds} s (--timeout for longer)`);
     if (STALE_CACHE.test(h.tail ?? "")) err.push(STALE_CACHE_FIX);
     return { out, err, exit: 1 };
   }
-  out.push(h.ready ? `${route} answers ${h.status} on the dev server; hand over:` : `${route} not asked for (--no-wait); hand over, once it answers:`);
+  const server = elsewhere(h);
+  out.push(h.ready ? `${route} answers ${h.status} on ${server ?? "the dev server"}; hand over:` : `${route} not asked for (--no-wait); hand over, once it answers${server ? ` on ${server}` : ""}:`);
   for (const u of h.urls) out.push(`  ${u.where.padEnd(10)} ${u.url}${u.where === "public" ? `   ${firewall(h.base.port)}` : ""}`);
   for (const host of h.missing) err.push(`warning: ${ORIGINS_KEY} in ${ENV_FILE} lacks ${host}: a browser there gets a page that never hydrates; pnpm urls --write adds it (then restart the dev server)`);
   return { out, err, exit: 0 };
