@@ -29,7 +29,8 @@ Then look, not guess: `pnpm build` and `pnpm kit shot / --width 1440`,
 Design lands in this order, each step its own branch, its own look on the
 dev server and its own commit; never all at once.
 
-1. **Tokens.** Colours (each a `light-dark()` pair so both themes follow),
+1. **Tokens.** Colours (in each scheme the profile names — `schemes` in
+   `src/config/harness.ts`; a `light-dark()` pair on a site with two),
    the fonts (self-hosted or system; the build fetches nothing), the type
    scale, the spacing rhythm, and — re-enabled as tokens, not utilities —
    radius, shadow, blur, easing. A colour becomes a token at its second use.

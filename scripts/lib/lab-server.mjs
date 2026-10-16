@@ -10,7 +10,7 @@ import http from "node:http";
 import path from "node:path";
 import { lanAddresses } from "./hosts.mjs";
 import { LAB_DIR, animates, listScenes, sceneDuration, sceneMeta, siteTokens, stripAnimation } from "./lab.mjs";
-import { bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
+import { LAB_SCHEMES, bareHtml, indexHtml, sceneHtml } from "./lab-page.mjs";
 
 const NO_STORE = { "cache-control": "no-store" };
 /** The sizes an icon-sized scene is shown at when the lab is given none; a bigger scene is shown at its own size only. */
@@ -26,8 +26,8 @@ const send = (res, status, type, body) => { res.writeHead(status, { "content-typ
 const html = (res, body) => send(res, 200, "text/html; charset=utf-8", body);
 const notFound = (res) => send(res, 404, "text/plain", "not found");
 
-/** Starts the server; { url, port, urls, close }. `extra` are more scene files or folders; `watch` streams changes to the pages; `sizes` apply to every scene (null: ICON_SIZES for an icon-sized one). */
-export function startLabServer({ root = process.cwd(), extra = [], host = "127.0.0.1", port = 0, watch = false, sizes = null } = {}) {
+/** Starts the server; { url, port, urls, close }. `extra` are more scene files or folders; `watch` streams changes to the pages; `sizes` apply to every scene (null: ICON_SIZES for an icon-sized one); `schemes` are the grounds a scene is shown on (the site's profile's; light and dark without one). */
+export function startLabServer({ root = process.cwd(), extra = [], host = "127.0.0.1", port = 0, watch = false, sizes = null, schemes = LAB_SCHEMES } = {}) {
   let scenes = listScenes(root, { extra });
   const tokens = siteTokens(root);
   const clients = new Set();
@@ -41,7 +41,7 @@ export function startLabServer({ root = process.cwd(), extra = [], host = "127.0
     if (p === "/") {
       relist();
       const metas = new Map([...scenes].map(([id, file]) => [id, metaOf(file)]));
-      return html(res, indexHtml(new Map([...scenes].map(([id, file]) => [id, path.relative(root, file)])), { tokens, metas }));
+      return html(res, indexHtml(new Map([...scenes].map(([id, file]) => [id, path.relative(root, file)])), { tokens, metas, schemes }));
     }
     if (p === "/favicon.ico") { res.writeHead(204, NO_STORE); return res.end(); }
     if (p === "/events") {
@@ -62,7 +62,7 @@ export function startLabServer({ root = process.cwd(), extra = [], host = "127.0
     if (p.startsWith("/files/")) return send(res, 200, "image/svg+xml", svg);
     let meta;
     try { meta = sceneMeta(svg); } catch (error) { return send(res, 200, "text/plain", `${id}: ${error.message}`); }
-    if (url.searchParams.get("bare") !== "1") return html(res, sceneHtml(id, { file: path.relative(root, file), meta, tokens, sizes: sizesFor(meta), animated: animates(source), still, duration: sceneDuration(source) }));
+    if (url.searchParams.get("bare") !== "1") return html(res, sceneHtml(id, { file: path.relative(root, file), meta, tokens, sizes: sizesFor(meta), animated: animates(source), still, duration: sceneDuration(source), schemes }));
     const width = Number(url.searchParams.get("width")) || meta.width;
     const height = Number(url.searchParams.get("height")) || Math.max(1, Math.round((width * meta.height) / meta.width));
     return html(res, bareHtml(id, svg, { tokens, scheme: url.searchParams.get("scheme") === "dark" ? "dark" : "light", background: url.searchParams.get("background") === "paper" ? "paper" : "transparent", width, height, pad: url.searchParams.get("pad"), fit: url.searchParams.get("fit") === "1" }));

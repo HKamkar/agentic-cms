@@ -31,14 +31,15 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   `currentColor` and carry no colour, font or easing of any site.
 - **`lab serve`** shows every scene on the site's own tokens — read from the
   `@theme` block of `src/app/globals.css`, so no build is needed and a
-  fork's palette follows — **inline in a light and a dark box** (each box
-  sets its own `color-scheme`, and `light-dark()`, `currentColor` and
-  `var(--color-*)` resolve inside it), at the natural size and at
+  fork's palette follows — **inline in a box per scheme the site has**
+  (the profile's `schemes` in `src/config/harness.ts`, light and dark
+  without one; each box sets its own `color-scheme`, and `light-dark()`,
+  `currentColor` and `var(--color-*)` resolve inside it), at the natural size and at
   `--sizes` — the sizes it ships at, for a scene of any width; without the
   flag an icon-sized scene (up to 96 px wide) is shown at 24, 40 and 64 and
   a bigger one at its own size — and **enlarged**, one pair that fits the
   screen up to 640 px wide (none for a scene already that wide); then
-  **the same file as an `<img>`** on both grounds, which is what a page
+  **the same file as an `<img>`** on each ground, which is what a page
   embedding the file really gets: `currentColor` is black, a `var()`
   without a fallback is the initial paint, and the scheme is the
   browser's, not the box's. A saved file reloads the page.
@@ -68,8 +69,8 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
 
 ## The route — the lab on the site's theme
 
-The lab's page shows a scene on the site's tokens, in a light and a dark
-box. To judge it on the site's real theme — its background, its type, its
+The lab's page shows a scene on the site's tokens, in a box per scheme the
+site has. To judge it on the site's real theme — its background, its type, its
 surfaces, next to the real chrome — there is a second window: a throwaway
 route inside the site.
 

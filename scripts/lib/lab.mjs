@@ -80,10 +80,10 @@ export function readThemeTokens(css) {
 // of the kit's: the lab shows a site's tokens or none.
 const SYSTEM_TOKENS = { "--color-paper": "Canvas", "--color-ink": "CanvasText", "--color-fill": "ButtonFace", "--color-muted": "GrayText", "--font-sans": "system-ui, sans-serif", "--font-label": "ui-monospace, monospace" };
 
-/** The tokens as a :root block with `color-scheme: light dark`, so light-dark() values follow the color-scheme of any element. */
-export function tokensCss(tokens) {
+/** The tokens as a :root block with the site's schemes as its `color-scheme` (`light dark` by default), so light-dark() values follow the color-scheme of any element. */
+export function tokensCss(tokens, schemes = ["light", "dark"]) {
   const own = Object.keys(tokens).length ? tokens : SYSTEM_TOKENS;
-  return `:root {\n  color-scheme: light dark;\n${Object.entries(own).map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}`;
+  return `:root {\n  color-scheme: ${schemes.join(" ")};\n${Object.entries(own).map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}`;
 }
 
 /** The site's tokens (src/app/globals.css under root), or {} without one. */

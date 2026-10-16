@@ -1,8 +1,9 @@
 // The lab's pages as HTML strings, on the site's tokens and nothing of the
 // site's design: the bare page (one scene alone, in one scheme — what the
 // scene page frames and what a render photographs), the scene page (the
-// scene inline in a light and a dark box at its sizes and enlarged, under
-// one timeline; the same file as an <img> on both grounds; a switch to its
+// scene inline in a box per scheme the site has — light and dark, or the
+// profile's, src/config/harness.ts — at its sizes and enlarged, under one
+// timeline; the same file as an <img> on each ground; a switch to its
 // still; a reload on every save) and the index. The bare page's clock
 // (LAB_API, which `lab render` sets frame by frame) and the timeline that
 // drives every frame of the scene page (mountTimeline, inlined: this page
@@ -55,10 +56,10 @@ td, th { text-align: left; vertical-align: top; padding: 8px 16px 8px 0; border-
 th { font: 500 12px/1.3 ${LABEL}; }
 code { font: 12px/1.4 ${LABEL}; }`;
 
-const shell = (title, tokens, body) => `<!doctype html>
+const shell = (title, tokens, schemes, body) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escape(title)} · lab</title>
 <style>
-${tokensCss(tokens)}
+${tokensCss(tokens, schemes)}
 ${PAGE_CSS}
 </style></head>
 <body>${body}</body></html>`;
@@ -79,11 +80,15 @@ const IMG_REPLAY_JS = `(() => {
 })();`;
 
 const box = (scheme, inner) => `<div class="lab-box" data-scheme="${scheme}">${inner}</div>`;
+/** One box per scheme, in the order given: the grounds the site has. */
+const grounds = (schemes, inner) => schemes.map((scheme) => box(scheme, inner(scheme))).join("");
+/** The lab's grounds without a profile: both. */
+export const LAB_SCHEMES = ["light", "dark"];
 const sizeOf = (meta, width) => ({ width, height: Math.max(1, Math.round((width * meta.height) / meta.width)) });
 const encode = (id) => id.split("/").map(encodeURIComponent).join("/");
 
-/** The scene page: inline in both schemes at the natural size, the given sizes and enlarged (framed bare pages) under one timeline over `duration` (the scene's cycle), as an <img> on both grounds, the animated / still switch (`still`: every copy without its animation), the render hint. */
-export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true, still = false, duration = meta.duration } = {}) {
+/** The scene page: inline in each of `schemes` at the natural size, the given sizes and enlarged (framed bare pages) under one timeline over `duration` (the scene's cycle), as an <img> on each ground, the animated / still switch (`still`: every copy without its animation), the render hint. */
+export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated = true, still = false, duration = meta.duration, schemes = LAB_SCHEMES } = {}) {
   const moving = animated && !still;
   const stillQuery = still ? "&still=1" : "";
   const widths = [...new Set([meta.width, ...sizes])].filter((w) => w > 0).sort((a, b) => a - b);
@@ -93,17 +98,17 @@ export function sceneHtml(scene, { file, meta, tokens = {}, sizes = [], animated
     const { height } = sizeOf(meta, width);
     return `<iframe class="lab-frame" title="${escape(scene)} ${scheme} ${width}px" src="${bare(scheme, `width=${width}&pad=8`)}" width="${width + 16}" height="${height + 16}"></iframe>`;
   };
-  const inline = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", frame("light", w))}${box("dark", frame("dark", w))}</div>`).join("");
+  const inline = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${grounds(schemes, (scheme) => frame(scheme, w))}</div>`).join("");
   const big = (scheme) => `<iframe class="lab-frame" title="${escape(scene)} ${scheme} enlarged" src="${bare(scheme, "fit=1")}" style="aspect-ratio: ${meta.width} / ${meta.height}"></iframe>`;
-  const enlarged = Math.max(...widths) < ENLARGED ? `<div class="lab-row lab-enlarged"><span class="lab-label">enlarged, up to ${ENLARGED} px</span>${box("light", big("light"))}${box("dark", big("dark"))}</div>` : "";
+  const enlarged = Math.max(...widths) < ENLARGED ? `<div class="lab-row lab-enlarged"><span class="lab-label">enlarged, up to ${ENLARGED} px</span>${grounds(schemes, big)}</div>` : "";
   const image = (w) => `<img class="lab-img" src="/files/${encode(scene)}.svg${still ? "?still=1" : ""}" width="${w}" height="${sizeOf(meta, w).height}" alt="">`;
-  const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${box("light", image(w))}${box("dark", image(w))}</div>`).join("");
+  const asImg = widths.map((w) => `<div class="lab-row"><span class="lab-label">${label(w)}</span>${grounds(schemes, () => image(w))}</div>`).join("");
   const page = `/scene/${encode(scene)}`;
   const mode = still ? `<a href="${page}">animated</a> · <strong>still</strong>` : `<strong>animated</strong> · <a href="${page}?still=1">still</a>`;
   const bar = animated ? `<div class="lab-controls"><span>${mode}</span></div>` : "";
   // One timeline over every inline copy (each a frame with its own clock, sought from this one); the <img> rows are outside it.
   const framed = moving ? `<div data-lab-timeline role="group" aria-label="${escape(scene)}: timeline"><div class="lab-timeline" data-lab-controls>${timelineControlsHtml({ duration })}</div>${inline}${enlarged}</div>` : `${inline}${enlarged}`;
-  return shell(scene, tokens, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
+  return shell(scene, tokens, schemes, `<header><h1><a href="/">lab</a> / ${escape(scene)}</h1><span class="lab-note">${escape(file)} · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}</span></header>
 ${still ? `<p class="lab-note">still — every copy without its animation: the -still.svg a render writes beside a loop, the &lt;picture&gt;'s fallback, what a reduced-motion reader gets</p>` : ""}
 <h2>inline — currentColor and var(--color-*) follow each box's scheme</h2>
 ${bar}
@@ -114,15 +119,15 @@ ${asImg}
 <script>${moving ? timelineScript("[data-lab-timeline]", { duration }) + IMG_REPLAY_JS : ""}new EventSource("/events").onmessage = () => location.reload();</script>`);
 }
 
-/** The index: every scene by name and file, as an <img> on both grounds, linked to its page. */
-export function indexHtml(scenes, { tokens = {}, metas = new Map() } = {}) {
+/** The index: every scene by name and file, as an <img> on each ground, linked to its page. */
+export function indexHtml(scenes, { tokens = {}, metas = new Map(), schemes = LAB_SCHEMES } = {}) {
   const rows = [...scenes].map(([id, file]) => {
     const meta = metas.get(id);
-    const thumb = (scheme) => box(scheme, `<img src="/files/${encode(id)}.svg" width="64" height="${meta ? sizeOf(meta, 64).height : 64}" alt="">`);
-    return `<tr><td><a href="/scene/${encode(id)}">${escape(id)}</a></td><td class="lab-note">${escape(file)}${meta ? ` · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}` : ""}</td><td><div class="lab-row">${thumb("light")}${thumb("dark")}</div></td></tr>`;
+    const thumb = () => `<img src="/files/${encode(id)}.svg" width="64" height="${meta ? sizeOf(meta, 64).height : 64}" alt="">`;
+    return `<tr><td><a href="/scene/${encode(id)}">${escape(id)}</a></td><td class="lab-note">${escape(file)}${meta ? ` · ${meta.width}×${meta.height}${meta.duration ? ` · ${meta.duration}s` : ""}` : ""}</td><td><div class="lab-row">${grounds(schemes, thumb)}</div></td></tr>`;
   });
   const body = rows.length ? `<table><tr><th>scene</th><th>file</th><th>as &lt;img&gt;</th></tr>${rows.join("")}</table>` : `<p>No scenes yet.</p>`;
-  return shell("scenes", tokens, `<header><h1>lab</h1><span class="lab-note">${scenes.size} scene(s)</span></header>
+  return shell("scenes", tokens, schemes, `<header><h1>lab</h1><span class="lab-note">${scenes.size} scene(s)</span></header>
 ${body}
 <p class="lab-note">pnpm kit lab new &lt;name&gt; --kind icon|mark|loop · pnpm kit lab serve --scenes public/images/&lt;page&gt; · pnpm kit lab render &lt;name&gt; --out &lt;file&gt; · pnpm kit lab clean</p>
 <script>new EventSource("/events").onmessage = () => location.reload();</script>`);

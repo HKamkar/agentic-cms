@@ -59,7 +59,7 @@ are in `STANDARD.md`):
   `blog/PostBody.module.css`; a second one is justified only by something
   utilities cannot say. Every change that must not move a pixel is proven
   with `agentic-cms visual-parity`.
-- Four colour values, each a `light-dark()` pair — `paper`, `ink`, `fill`,
+- Four colour values<!-- dark-mode:start -->, each a `light-dark()` pair<!-- dark-mode:end --> — `paper`, `ink`, `fill`,
   `muted` — and role tokens that alias them (`panel`, `line`, `on-ink`): a
   component uses the role where one exists (`border-line` for every
   hairline, `bg-panel` for a box with a ground of its own, `text-on-ink` on
@@ -67,10 +67,10 @@ are in `STANDARD.md`):
   exist only as role tokens (`rounded-panel`, `rounded-control`,
   `shadow-panel`, `shadow-glow`) held at the wireframe's `0` / none; no
   other radius, shadow, blur, gradient, transition or animation utility
-  exists. The type scale is `text-h1`…`text-h6` and `text-body`.
+  exists. The type scale is `text-h1`…`text-h6` and `text-body`.<!-- dark-mode:start -->
 - A component never reads the theme. `color-scheme` on `:root`, overridden
   by `data-theme` on `<html>`, decides which side of every `light-dark()`
-  pair applies.
+  pair applies.<!-- dark-mode:end -->
 - Text, links and images come in through props or `src/config/site.ts`,
   never hard-coded inside a shared component.
 - The wireframe has no motion: no `Fx`, no `OnView`, no `Reveal`, no
@@ -139,9 +139,9 @@ overlay's ground).
 
 | Component | What it is | Props | Notes |
 |---|---|---|---|
-| `Navbar` | The site header | — | `"use client"`; rendered once in `app/layout.tsx`. `<header>` with a `<nav aria-label="Main">`; the brand, `site.nav`, `site.signIn`, `site.cta` and the theme switch. Below 992 px the links and actions hide (`max-lg:hidden`) behind a `Menu` button (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
-| `NavLink` | A link in the chrome | `href`, `label`, `className?` | `"use client"`. An `http(s)` href renders a plain `<a>`; everything else `next/link`, marked `aria-current="page"` only when the href is exactly the current path — so a section anchor is never "current". |
-| `ThemeToggle` | The theme switch | — | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |
+| `Navbar` | The site header | — | `"use client"`; rendered once in `app/layout.tsx`. `<header>` with a `<nav aria-label="Main">`; the brand, `site.nav`, `site.signIn`, `site.cta`<!-- dark-mode:start --> and the theme switch<!-- dark-mode:end -->. Below 992 px the links and actions hide (`max-lg:hidden`) behind a `Menu` button (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
+| `NavLink` | A link in the chrome | `href`, `label`, `className?` | `"use client"`. An `http(s)` href renders a plain `<a>`; everything else `next/link`, marked `aria-current="page"` only when the href is exactly the current path — so a section anchor is never "current". |<!-- dark-mode:start -->
+| `ThemeToggle` | The theme switch | — | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |<!-- dark-mode:end -->
 | `Footer` | The site footer | — | `<footer>` with one `Panel`: the brand, `site.tagline`, the `<address>`, the e-mail, and the `Quick links` and `Follow us` columns from `site.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
 | `ConsentBanner` | The consent banner | — | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
 | `CookieSettingsButton` | Opens the consent banner again | `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`; the footer renders it, and any page may. |
@@ -481,8 +481,8 @@ its presentation by position.
    metadata, breadcrumb and sitemap entry follow from the page file's `seo`
    block (`src/lib/seo/README.md`).
 6. Verify: `pnpm lint`, `pnpm test`, `pnpm content:lint`, `pnpm build`,
-   `pnpm preview`. Before touching an existing page, capture it with
-   `pnpm kit visual-parity capture before` (and
-   `--scheme dark`, plus `--states` when hover / focus / checked / open
-   change) and compare after. Add every new shared component to this file
+   `pnpm preview`. A change to an existing page is proven with
+   `pnpm kit visual-parity proof` once built (a pass in each scheme the
+   profile names, `src/config/harness.ts`; `--states` when hover / focus /
+   checked / open change). Add every new shared component to this file
    in the same commit.

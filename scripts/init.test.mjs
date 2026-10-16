@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { parse as parseYaml } from "yaml";
-import { agentFiles, ALLOW_BUILDS, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
+import { agentFiles, ALLOW_BUILDS, EXAMPLE, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
+import { LightOnlyError } from "./lib/light-only.mjs";
+import { readSiteProfile } from "./lib/storage-seed.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "..");
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "init-"));
@@ -135,6 +137,54 @@ test("the setup script is written once, then kept as the site has it, and hands 
   fs.writeFileSync(path.join(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
   assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes("scripts/setup.sh"));
   assert.equal(read(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
+});
+
+/** Every file under a directory, relative to it. */
+const filesUnder = (root, dir = root) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? filesUnder(root, path.join(dir, e.name)) : [path.relative(root, path.join(dir, e.name))]));
+
+test("--light-only lays out a site without dark mode: one scheme in the profile, single colours under color-scheme light, no theme script, no toggle, no dark lines in the docs", async () => {
+  const target = path.join(tmp(), "light");
+  const result = scaffold(target, { kitRoot: KIT, version: "0.8.0", lightOnly: true, ...quiet });
+  assert.equal(result.lightOnly, true);
+  assert.ok(!fs.existsSync(path.join(target, "src/components/ui/ThemeToggle.tsx")), "no toggle component");
+  const layout = read(target, "src/app/layout.tsx");
+  assert.doesNotMatch(layout, /THEME_SCRIPT|suppressHydrationWarning|data-theme/, "no theme script, nothing to suppress");
+  assert.match(layout, /export const viewport: Viewport = \{ colorScheme: "light" \};/);
+  assert.match(layout, /<html lang=\{site\.locale\}>/);
+  const base = read(target, "src/styles/base.css");
+  assert.match(base, /^:root \{ color-scheme: light; \}$/m);
+  assert.doesNotMatch(base, /data-theme|light dark|light-dark/);
+  const globals = read(target, "src/app/globals.css");
+  assert.doesNotMatch(globals, /light-dark/);
+  assert.match(globals, /--color-paper: #ffffff;\n {2}--color-ink: #000000;/, "each colour its light value");
+  assert.deepEqual((await readSiteProfile(target)).schemes, ["light"], "the profile names one scheme");
+  for (const file of filesUnder(path.join(target, "src")).filter((f) => /\.(tsx?|css|md)$/.test(f))) assert.doesNotMatch(read(target, `src/${file}`), /ThemeToggle|THEME_SCRIPT|data-theme|light-dark\(/, `src/${file}: nothing of the theme`);
+  const standard = read(target, "STANDARD.md");
+  assert.doesNotMatch(standard, /dark-mode:|light-only:|\| Dark \||ThemeToggle|data-theme|light-dark\(/, "STANDARD without its dark lines or the markers");
+  assert.match(standard, /^### The scheme$/m);
+  assert.match(standard, /^\| Value \| Colour \| What it is \|$/m);
+  assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
+  assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
+  assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{site\.cta\.href\}/, "the navbar keeps everything else");
+
+  const both = path.join(tmp(), "both");
+  scaffold(both, { kitRoot: KIT, version: "0.8.0", ...quiet });
+  assert.ok(fs.existsSync(path.join(both, "src/components/ui/ThemeToggle.tsx")), "without the flag the example keeps its theme");
+  assert.match(read(both, "src/app/layout.tsx"), /THEME_SCRIPT/);
+  assert.deepEqual((await readSiteProfile(both)).schemes, ["light", "dark"]);
+});
+
+test("a light-only edit that misses its place in the example fails before anything is written", () => {
+  const kit = tmp();
+  for (const entry of EXAMPLE) {
+    const full = path.join(kit, entry);
+    if (/\.[a-z]+$|^\.[a-z]+$/.test(path.basename(entry))) { fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, ""); } else fs.mkdirSync(full, { recursive: true });
+  }
+  fs.writeFileSync(path.join(kit, "src/app/layout.tsx"), "export const viewport = { colorScheme: \"light dark\" };\n");
+  fs.writeFileSync(path.join(kit, "STANDARD.md"), "# Standard\n\nFour values<!-- dark-mode:start -->, each a pair<!-- dark-mode:end -->.\n");
+  const target = path.join(tmp(), "never");
+  assert.throws(() => scaffold(target, { kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/app\/layout\.tsx: the theme script and the comment above it not found/.test(error.message));
+  assert.ok(!fs.existsSync(target), "nothing written");
 });
 
 test("the site's CI workflow is written once, then kept as the site has it", () => {

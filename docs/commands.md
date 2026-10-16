@@ -334,18 +334,18 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 |---|---|
 | `--motion` | play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation |
 | `--states` | hover, focus, checked and open states, located by role and text |
-| `--scheme light|dark` | prefers-color-scheme for the capture (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme for the capture; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--url <base>` | capture a served site instead of serving .next (print its git log -1 first) |
 | `--build` | run the site's `pnpm build` first (log: .parity/<label>.build.log) |
 | `--ref <git ref>` | capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, the tree's .env.local copied in, installed, built (reused for the same sha and .env.local once a build finished), served and captured |
-| `--widths w,w` | viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion) |
+| `--widths w,w` | viewport widths; default the profile's widths (src/config/harness.ts), else 1920,1440,1280,1100,992,800,767,390; --motion takes 1440,390 and --states 1440 without it; the home page's menu is opened at each of the profile's widths where its button shows (767 and 390 without a profile) |
 | `--pages /a,/b` | only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here |
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--sample <n>` | a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare |
 | `--third-party hold|allow` | other origins' scripts and connections (analytics, beacons, widgets) on a build the harness serves: held back by the page's Content-Security-Policy, or allowed; their images, fonts and stylesheets load either way; a --url site is captured as it serves itself (one of `hold`, `allow`) (default `hold`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
@@ -395,32 +395,33 @@ agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed
 A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
 
 ```bash
-agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
 
 | flag | what |
 |---|---|
-| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha) (default `develop`) |
+| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha); default the profile's proof.ref (src/config/harness.ts), else develop |
 | `--motion` | add the --motion pass |
 | `--states` | add the --states pass |
 | `--all` | all three passes: static, --motion and --states |
 | `--build` | run the site's `pnpm build` before the first after capture |
-| `--scheme light|dark` | prefers-color-scheme for every capture (one of `light`, `dark`) (default `light`) |
-| `--pages /a,/b` | only these routes, on every capture and compare |
+| `--scheme light|dark` | prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light (one of `light`, `dark`) |
+| `--widths w,w` | the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own |
+| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page |
 | `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample) |
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
 | `--storage <key>=<value>` | a localStorage key on both sides of every pass (capture --storage); the site's src/config/harness.ts is read by both without it (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (capture --session-storage) (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts on both sides (capture --no-storage) |
+| `--no-storage` | leave out the site's seed on both sides (capture --no-storage) |
 | `--json` | print the proof as JSON: each pass's captures and compare report |
 
 Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, or captures of two schemes.
 
-`--json` prints `{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }`.
+`--json` prints `{ label, ref, schemes, passes: [{ pass, scheme, before, after, report, seconds }], exit, failed? }`.
 
 ```bash
 agentic-cms visual-parity proof
@@ -472,7 +473,7 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--url <base>` | a served site (a dev server) instead of the build under .next |
 | `--width <n>` | viewport width in px (default `1440`) |
 | `--height <n>` | viewport height in px (default `900`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
@@ -487,7 +488,7 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--out <file>` | .png or .webp; default .parity/shots/<route>@<width>[--<target>].png |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout (progress goes to stderr) |
 
 Exit: `0` written; `1` the target was not found on the page; `2` usage, no build, no browser, or a seed that does not read.
@@ -516,7 +517,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--url <base>` | a served site (a dev server) instead of the build under .next |
 | `--width <n>` | viewport width in px (default `1440`) |
 | `--height <n>` | viewport height in px (default `900`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
@@ -529,7 +530,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--every <n>` | the timeline's sampling interval in ms (default `100`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 
 Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
@@ -555,11 +556,11 @@ agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--s
 | `--url <base>` | serve img: cells and the site's stylesheets from a served site instead of the build |
 | `--out <png>` | default .parity/sheets/<name>.png |
 | `--scale <n>` | device scale factor (default `2`) |
-| `--scheme light|dark` | prefers-color-scheme (tokens follow it) (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme (tokens follow it); default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--width <n>` | the sheet's width in px (default `1200`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout |
 
 Exit: `0` written; `2` usage, a spec error (the field is named), a missing file, no browser, or a seed that does not read.
@@ -668,13 +669,13 @@ agentic-cms icons audit [--url <base>] [--pages /a,/b] [--max 96] [--out .parity
 | `--pages /a,/b` | only these routes (default: every page of the build but the 404 and the demo routes, /<name>-demo, which are measured only when named here) |
 | `--max <n>` | the largest rendered size counted as an icon, in px (default `96`) |
 | `--width <n>` | viewport width the pages are measured at (default `1440`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--background <colour>` | the sheet's background (default the page's) |
 | `--color <colour>` | the sheet's ink |
 | `--out <png>` | the sheet; the JSON goes beside it (default .parity/icons/audit.png) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print the report |
 
 Exit: `0` written; `2` no build, no browser, or a seed that does not read.
@@ -736,7 +737,7 @@ agentic-cms icons round publish <round> --pick <role=letter,…> [--to public/im
 |---|---|
 | `--pick <role=letter,…>` | the owner's pick per role: retrieval=B,graph=A |
 | `--to <dir>` | where a mark's file and its source go (default `public/images/icons`) |
-| `--scheme light|dark` | the scheme a mark's file resolves the tokens for (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | the scheme a mark's file resolves the tokens for; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--json` | print { round, published: [{ role, letter, files }] } |
 
 Exit: `0` published; `2` no such round, a role or letter it does not have, an icon that is not flat shapes, or usage.
@@ -778,7 +779,7 @@ agentic-cms icons round retire modules --dry-run
 
 ### `lab`
 
-The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done.
+The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, in each of its schemes side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done.
 
 ```bash
 agentic-cms lab <new | serve | route | render | clean> …
@@ -810,7 +811,7 @@ agentic-cms lab new spin --kind loop
 
 #### `lab serve`
 
-Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes and enlarged, as an <img> on both grounds, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
+Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
 
 ```bash
 agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]
@@ -872,7 +873,7 @@ agentic-cms lab render <scene> --out <file> [--at 0] [--animate] [--frames <n>] 
 | `--duration <n>` | one cycle in seconds (default: the scene's data-duration, else what its animations declare) (default `0`) |
 | `--scale <n>` | device pixels per CSS pixel of a raster (2 for a retina asset) (default `1`) |
 | `--width <n>` | the CSS width to render at (default: the scene's own) (default `0`) |
-| `--scheme light|dark` | the scheme the tokens resolve in (a raster is one scheme; render twice for both) (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | the scheme the tokens resolve in (a raster is one scheme; render once per scheme); default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--reduced` | render under prefers-reduced-motion: reduce — what such a reader gets |
 | `--background transparent|paper` | the ground of a raster (.jpg is always on the paper) (one of `transparent`, `paper`) (default `transparent`) |
 | `--lossy` | lossy WebP (quality 82) instead of lossless |
@@ -987,7 +988,7 @@ agentic-cms demo clean                     # every *-demo route
 A site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
-agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]
+agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check] [--force]
 ```
 
 - `<dir>` — where the site goes (default: the current directory)
@@ -997,14 +998,16 @@ agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check
 | `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
 | `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
 | `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
+| `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage.
+Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] }`.
 
 ```bash
 agentic-cms init .
+agentic-cms init my-site --light-only      # a site with one scheme, light
 agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
 agentic-cms init . --agent-files --check  # what drifted, for CI
 ```

@@ -10,8 +10,8 @@ A design decision is the owner's; the round makes it a pick, not a
 conversation. Six steps, three stops, and the candidates are always real:
 components on the branch, in the section's real frame, with the page's real
 copy, on the site's own theme (the demo route renders inside the site's
-layout: its tokens, its chrome, its theme toggle), the current version
-after them. The command is `pnpm kit demo`; the guide is `docs/design.md`
+layout: its tokens and its chrome, in each scheme the profile names), the
+current version after them. The command is `pnpm kit demo`; the guide is `docs/design.md`
 § The round (`node_modules/agentic-cms/docs/design.md` on a site that
 installs the kit).
 

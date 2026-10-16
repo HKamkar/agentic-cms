@@ -10,7 +10,9 @@
 // installed command line; then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries and the class
-// helpers in plain Node) and the tarball's size. Exit 1 on the first failure.
+// helpers in plain Node) and the tarball's size; last, a second site laid
+// out by the installed `init --light-only` builds, lints and tests too, with
+// no theme script in its pages. Exit 1 on the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -107,6 +109,22 @@ async function build(site) {
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
 }
 
+/** 5. A site without dark mode, laid out by the installed init --light-only: it builds, lints and tests, and its pages carry no theme script. */
+async function lightOnly(site, tarball) {
+  const light = path.join(path.dirname(site), "light");
+  run("pnpm", ["exec", "agentic-cms", "init", light, "--light-only"], site);
+  if (fs.existsSync(path.join(light, "src/components/ui/ThemeToggle.tsx"))) fail("init --light-only wrote the theme toggle");
+  const pkg = JSON.parse(fs.readFileSync(path.join(light, "package.json"), "utf8"));
+  pkg.dependencies["agentic-cms"] = `file:${tarball}`;
+  fs.writeFileSync(path.join(light, "package.json"), JSON.stringify(pkg, null, 2));
+  await install(["--prefer-offline", "--no-frozen-lockfile"], light);
+  run("pnpm", ["build"], light);
+  run("pnpm", ["lint"], light);
+  run("pnpm", ["test"], light);
+  const home = fs.readFileSync(path.join(light, ".next/server/app/index.html"), "utf8");
+  if (/data-theme|localStorage\.getItem\(['"]theme/.test(home)) fail("the light-only site's home page still carries the theme script");
+}
+
 /** 4. The installed entries a build does not run. */
 function entries(site) {
   // The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
@@ -172,7 +190,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   layOut(scratch, site, tarball);
   await build(site);
   entries(site);
-  console.log(`pack-smoke: the package builds a site from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+  await lightOnly(site, tarball);
+  console.log(`pack-smoke: the package builds a site, and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
   if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
   else fs.rmSync(scratch, { recursive: true, force: true });
 }

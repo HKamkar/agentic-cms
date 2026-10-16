@@ -18,6 +18,7 @@ import { renderFamily } from "./lib/icons-family.mjs";
 import { updateIcons } from "./lib/icons-source.mjs";
 import { relative } from "./lib/page-command.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { schemeOrExit } from "./lib/profile.mjs";
 import { seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 // lib/sheet.mjs reads agentic-cms/lab: imported once the loader is in place, so a checkout of the kit reads its source.
@@ -65,7 +66,7 @@ if (subcommand === "add" || subcommand === "remove") {
   let report;
   try {
     if (action === "new") report = newRound(root, { round, roles: (flags.roles ?? "").split(",").map((r) => r.trim()).filter(Boolean), candidates: flags.candidates, kind: flags.kind, sizes: flags.sizes.split(",").map(Number) });
-    else if (action === "publish") report = await publishRound(root, round, flags.pick, { to: flags.to, scheme: flags.scheme });
+    else if (action === "publish") report = await publishRound(root, round, flags.pick, { to: flags.to, scheme: await schemeOrExit(flags, "icons round publish") });
     else report = retireRound(root, round, { dryRun: flags["dry-run"], force: flags.force });
   } catch (error) { fail(error.message); }
   if (flags.json) console.log(JSON.stringify(report, null, 1));
@@ -75,6 +76,8 @@ if (subcommand === "add" || subcommand === "remove") {
 } else {
   // audit: the pages a visitor sees after a choice (the seed, as a capture has it), the demo routes only when named
   const seed = await seedOrExit(flags, "icons audit");
+  // --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+  flags.scheme = await schemeOrExit(flags, "icons audit");
   const server = flags.url ? null : await serveStatic({ root });
   const base = (flags.url ?? server.url).replace(/\/$/, "");
   const pages = flags.pages ? flags.pages.split(",").filter(Boolean) : capturePages(listPages(root)).filter((r) => r !== "/_not-found");

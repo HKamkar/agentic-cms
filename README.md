@@ -194,7 +194,7 @@ proof, never a tool in the reader's browser.
 |---|---|
 | `design` | a site from the wireframe to a look of its own: tokens first, then the chrome, then the sections |
 | `design-options` | a design round: three to five ideas, the picked ones built as real components on a throwaway route in the section's own frame with the page's copy (`pnpm kit demo new`), the owner picks by letter; `demo clean` then removes everything the round created that the winner does not use, and says what it keeps and why |
-| `design-graphics` | the site's own drawings as SVG in the lab (`pnpm kit lab`): scenes on the site's tokens in both schemes, at the sizes they ship and on a phone, a timeline to step through a loop, rendered to the file a page ships; a loop that should play when it is seen goes inline (`InlineAnimation`, `readInlineSvg`) |
+| `design-graphics` | the site's own drawings as SVG in the lab (`pnpm kit lab`): scenes on the site's tokens in each of its schemes, at the sizes they ship and on a phone, a timeline to step through a loop, rendered to the file a page ships; a loop that should play when it is seen goes inline (`InlineAnimation`, `readInlineSvg`) |
 | `design-icons` | icons as families: the inventory of every icon beside its copy (`icons audit`), Lucide and Simple Icons maps (`icons add`), marks from primitives (`icons family`), and a round for a set of the site's own (`icons round new / publish / retire`) |
 | `design-measure` | a screenshot claim turned into numbers before an edit: an element's box, styles and stacking chain (`probe`), a crop (`shot`), candidates at their real size on their real grounds (`sheet`) |
 | `design-proof` | the change proven on the pixels (below) |
@@ -207,8 +207,8 @@ the lab, [docs/icons.md](docs/icons.md) the icons,
 
 A refactor must not move a pixel, and a design change must move only the
 pixels it meant to. `agentic-cms visual-parity` photographs every page of
-the production build at eight widths, in either colour scheme, and diffs two
-captures pixel by pixel:
+the production build at the site's widths, in each of its colour schemes,
+and diffs two captures pixel by pixel:
 
 ```bash
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling worktree and captured
@@ -229,7 +229,11 @@ naming the section and its height change, down to a fraction of a pixel.
 What a site shows until a visitor's choice is stored — a consent banner
 over the page — is closed by a seed in `src/config/harness.ts`, written
 into every page's storage before its scripts run, on both sides of a
-proof.
+proof. The same file is the site's profile: the widths it is designed at,
+the schemes it has and what a bare `proof` covers, which every capture
+takes unless a flag says otherwise — so a site without dark mode is never
+proved in one, and `init --light-only` lays out such a site
+([docs/visual-parity.md](docs/visual-parity.md#the-sites-profile)).
 
 A proof costs what the change touched. Every page-width whose build files
 are the same bytes as when it was last photographed is copied from the
@@ -323,7 +327,8 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
    the footer, the calls to action (data only, `satisfies SiteConfig`).
 3. `src/app/globals.css`: the tokens — or start the `design` skill, which
-   begins there. Both themes follow from the `light-dark()` pairs.
+   begins there. Each colour is a `light-dark()` pair, so both themes
+   follow; a site without dark mode starts from `init --light-only`.
 4. Copy `content/_templates/VOICE.md` to `content/VOICE.md` and write your
    rules; the prose and the fenced block say the same thing.
 5. Replace the content: the registries, the reviews, the FAQ sets, the use
@@ -403,8 +408,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
   `wrangler dev` straight after `next build` returns 500s. The ~40 "Failed to
   copy node_modules/…" lines during the OpenNext build are an OpenNext bug and
   harmless.
-- `agentic-cms visual-parity` screenshots every page at eight widths, in
-  either colour scheme, and diffs two captures pixel by pixel: the proof for
+- `agentic-cms visual-parity` screenshots every page at the site's widths,
+  in each of its colour schemes, and diffs two captures pixel by pixel: the proof for
   a refactor that must not move anything. Unchanged pages come from its
   cache and several browsers work at once, so a proof takes minutes.
 
@@ -418,7 +423,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
 2. If the site replaces an existing one, recreate its redirects before the
    DNS change (on the Worker, or in `next.config`'s `redirects()` on a Node
    server). A public URL never changes without one.
-3. `pnpm build`, `pnpm preview`, click through every page in both themes.
+3. `pnpm build`, `pnpm preview`, click through every page in each scheme
+   the site has.
 4. On the example's Cloudflare Worker: `pnpm run deploy`. On a Node server:
    the build runs `agentic-cms critical-css` after `next build` and ends
    with `agentic-cms assemble`, and `.next/standalone` is the package

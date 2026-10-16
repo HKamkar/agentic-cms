@@ -41,7 +41,7 @@ rules for an agent working on the code.
 - [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
   the site's own marks from primitives, the inventory of every icon.
 - [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
-  scenes on the site's tokens, light and dark, on a phone; rendered to the
+  scenes on the site's tokens, in each of its schemes, on a phone; rendered to the
   files a page ships; removed when done.
 - [forms.md](forms.md) — what a form can ask (every ordinary field type,
   notes, groups, a prefill from the URL) and forms that deliver: the

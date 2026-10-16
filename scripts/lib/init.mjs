@@ -14,11 +14,14 @@
 // edit (never clobbered) from a file the kit has since updated. The site's
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
 // needs to find .claude/rules/ (lib/rules-table.mjs), written from the
-// site's rules as they stand, and measured against Codex's 32 KiB.
+// site's rules as they stand, and measured against Codex's 32 KiB. With
+// lightOnly the example is laid out as a site without dark mode
+// (lib/light-only.mjs), every edit made before the first file is written.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
+import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
 
 /** The example, copied as it is. */
@@ -56,10 +59,27 @@ function put(target, file, text, { force, result, log }) {
   return exists ? "updated" : "created";
 }
 
-function copyTree(kitRoot, target, entry, opts) {
-  const from = path.join(kitRoot, entry);
-  if (fs.statSync(from).isFile()) return put(target, entry, fs.readFileSync(from), opts);
-  for (const rel of walk(from)) put(target, `${entry}/${rel}`, fs.readFileSync(path.join(from, rel)), opts);
+/** The example's files under one entry: the entry itself when it is a file. */
+const filesOf = (kitRoot, entry) => (fs.statSync(path.join(kitRoot, entry)).isFile() ? [entry] : walk(path.join(kitRoot, entry)).map((rel) => `${entry}/${rel}`));
+
+/** Copies an entry of the example; a file `changed` names is written as its text there, or not at all for null. */
+function copyTree(kitRoot, target, entry, opts, changed = new Map()) {
+  for (const file of filesOf(kitRoot, entry)) {
+    if (!changed.has(file)) put(target, file, fs.readFileSync(path.join(kitRoot, file)), opts);
+    else if (changed.get(file) !== null) put(target, file, changed.get(file), opts);
+  }
+}
+
+/** The files --light-only writes otherwise than the example has them: each to its text, or to null for one it leaves out. Throws a LightOnlyError, before anything is written, when an edit misses. */
+function lightOnlyExample(kitRoot, standard) {
+  const changed = new Map();
+  for (const file of EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter(editsText)) {
+    const text = fs.readFileSync(path.join(kitRoot, file), "utf8");
+    const out = lightOnlyFile(file, text);
+    if (out !== text) changed.set(file, out);
+  }
+  changed.set("STANDARD.md", lightOnlyFile("STANDARD.md", standard));
+  return changed;
 }
 
 const kitPackage = (kitRoot) => JSON.parse(fs.readFileSync(path.join(kitRoot, "package.json"), "utf8"));
@@ -153,14 +173,15 @@ function putWorkspace(target, { result, log }) {
   return "merged";
 }
 
-/** Lays the site out under target; { created, updated, kept }. */
-export function scaffold(target, { kitRoot, version, force = false, log = console.log }) {
-  const result = { created: [], updated: [], kept: [] };
+/** Lays the site out under target — with lightOnly, as a site without dark mode; { created, updated, kept, lightOnly }. */
+export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, log = console.log }) {
+  const result = { created: [], updated: [], kept: [], lightOnly };
   const opts = { force, result, log };
-  fs.mkdirSync(target, { recursive: true });
-  for (const entry of EXAMPLE) copyTree(kitRoot, target, entry, opts);
   const standard = fs.readFileSync(path.join(kitRoot, "STANDARD.md"), "utf8").replace(/^(# .*\n)/, `$1\n${STANDARD_NOTE}`);
-  put(target, "STANDARD.md", standard, opts);
+  const changed = lightOnly ? lightOnlyExample(kitRoot, standard) : new Map();
+  fs.mkdirSync(target, { recursive: true });
+  for (const entry of EXAMPLE) copyTree(kitRoot, target, entry, opts, changed);
+  put(target, "STANDARD.md", changed.get("STANDARD.md") ?? standard, opts);
   for (const [from, to] of Object.entries(TEMPLATES)) put(target, to, fs.readFileSync(path.join(kitRoot, "templates/site", from), "utf8"), opts);
   const pkg = sitePackage(target, { kitRoot, version });
   if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log(`merged   package.json${pkg.notes.length ? ` (${pkg.notes.join("; ")})` : ""}`); } else put(target, "package.json", pkg.text, opts);

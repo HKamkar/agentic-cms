@@ -2,7 +2,7 @@
 
 `agentic-cms visual-parity` is the proof that a change moved no pixel — or
 moved exactly the pixels it meant to. It renders every prerendered page of
-the production build at several widths, makes the rendering deterministic,
+the production build at the site's widths, makes the rendering deterministic,
 and diffs two captures pixel by pixel. The flags and exit codes are in
 [commands.md](commands.md#visual-parity); this page is what the captures
 contain, how to read a compare, and the traps a long run meets.
@@ -29,7 +29,12 @@ counts, each side's time and how much the shot cache reused — and one exit:
 `0` when every pass is identical, `1` on any difference or a failed capture.
 Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
 so a pass that differs is read like any compare. `--json` prints every
-pass's captures and report.
+pass's captures and report. What it runs on — the ref, the schemes, the
+widths, the pages — is the site's profile unless a flag says otherwise
+([below](#the-sites-profile)): a site with two schemes gets every pass in
+each, the dark one's captures ending in `-dark` (`proof-before-dark`,
+`proof-after-states-dark`); `--widths` reaches the static pass alone, as
+`--sample` does.
 
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
@@ -43,6 +48,50 @@ and sha in `meta.json` — for the site's own build also the checkout it was
 seeded with (`seed`, [below](#a-visitors-choice-seeded)); `compare` refuses
 two captures of different schemes or seeded differently, and prints the
 baseline it is judging against.
+
+## The site's profile
+
+A site says once what it is, in the `harness` export of
+`src/config/harness.ts` beside its seed ([below](#a-visitors-choice-seeded)),
+and every command takes that as its default:
+
+```ts
+export const harness = {
+  storage: { /* the seed */ },
+  widths: [390, 768, 1440, 1920],          // the widths it is designed and proved at
+  schemes: ["light"],                       // or ["light", "dark"]
+  proof: { pages: ["/"], ref: "develop" },  // what a bare proof covers, and its baseline
+};
+```
+
+A flag wins, then the profile, then the built-in default — the value the
+command had before profiles existed, so a site without one, or a key it
+leaves out, gets what it always got:
+
+| Setting | Flag | Profile | Built-in |
+|---|---|---|---|
+| a static capture's widths | `--widths` | `widths` | 1920, 1440, 1280, 1100, 992, 800, 767, 390 |
+| the home page's menu, opened and shot | — | each of `widths` where the menu button shows | 767 and 390, where it shows |
+| one command's scheme (`capture`, `shot`, `probe`, `sheet`, `icons audit`, `icons round publish`, `lab render`) | `--scheme` | the first of `schemes` | light |
+| `proof`'s schemes | `--scheme` (one) | a pass in each of `schemes` | light |
+| `proof`'s pages, on every capture and compare | `--pages` (or `--sample`) | `proof.pages` | every page |
+| `proof`'s baseline | `--ref` | `proof.ref` | `develop` |
+| `lab serve`'s grounds | — | a box per scheme in `schemes` | light and dark |
+
+`--motion` keeps its own widths (1440 and 390) and `--states` its 1440,
+whatever the profile says. The menu shots are taken at the widths below the
+site's menu breakpoint, found where the button shows rather than named: 390
+and 768 for the example's four widths and its menu below 992. The profile is
+read from the tree like the seed, so a `--ref` baseline is captured at the
+tree's widths and in its schemes even when the ref predates the profile. A
+key of the wrong shape exits 2 naming it: widths are whole pixels, schemes
+are `light` and `dark` (each once), pages are routes starting with `/`.
+
+A site without dark mode says `schemes: ["light"]` and is never proved in a
+scheme it does not have; `init --light-only` writes that profile with a
+light-only example ([init.md](init.md)). A site whose widths change
+recaptures its baselines: a capture at the old widths and one at the new
+compare as `MISSING` files.
 
 ## Where the build comes from
 
@@ -224,11 +273,12 @@ and `--pages` names its own. Off by default.
 
 ## Three modes
 
-**Static** (the default) photographs every page at eight widths — 1920,
-1440, 1280, 1100, 992, 800, 767 and 390 — as a full-page shot,
-`<page>@<width>.png` (`home` for `/`, `/` → `__` elsewhere:
-`blog-post__pages-are-files@1440.png`), and the home page's menu open at
-767 and 390 (`home@767--menu.png`, viewport only). The rendering is made
+**Static** (the default) photographs every page at the site's widths (the
+profile's; without one, eight: 1920, 1440, 1280, 1100, 992, 800, 767 and
+390) as a full-page shot, `<page>@<width>.png` (`home` for `/`, `/` → `__`
+elsewhere: `blog-post__pages-are-files@1440.png`), and the home page's menu
+open at each of the profile's widths where its button shows (without a
+profile, 767 and 390), `home@390--menu.png`, viewport only. The rendering is made
 deterministic: `prefers-reduced-motion` (the reveals snap to their end
 state, and the play-once layer arms nothing, so its parts are at rest from
 the first paint), every CSS animation and transition disabled, infinite loops
@@ -272,7 +322,8 @@ config and page files (`src/kit.ts`), never by class, so the same list
 works before and after a markup rewrite. Each shot is the element's box
 with a margin, at 1440 (`home@1440--state-cta-hover.png`).
 
-`--scheme dark` renders any mode under `prefers-color-scheme: dark`.
+`--scheme dark` renders any mode under `prefers-color-scheme: dark`; without
+the flag a capture takes the first of the profile's schemes, else light.
 `--url <base>` captures a served site instead of the build under `.next`
 (print its `git log -1` first: a baseline from a checkout that had moved on
 proves nothing). `--pages /a,/b` captures only those routes; pass the same
@@ -383,11 +434,13 @@ falls through after 10 s.
 
 ## Traps a long run meets
 
-- A proof is as short as the change allows: the site's widths
-  (`--widths`), the pages the change touches (`--pages`, the same on both
-  captures and the compare), one page per template (`--sample 1`) only when
-  the change is site-wide, `--states` / `--motion` only when hover or
-  animation changed, never a scheme the site does not have. A page is left
+- A proof is as short as the change allows: the site's widths and its
+  schemes, which the profile gives every capture without a flag (never a
+  scheme the site does not have), the pages the change touches (`--pages`,
+  the same on both captures and the compare; `proof.pages` for what a bare
+  proof covers), one page per template (`--sample 1`) only when the change
+  is site-wide, `--states` / `--motion` only when hover or animation
+  changed. A page is left
   out because the change cannot reach it, never to save time: every
   page-width whose build files did not change is copied from
   `.parity/shot-cache/`, and several browsers work at once, so a wider

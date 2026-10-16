@@ -13,10 +13,13 @@ const dryRun = { type: "boolean", help: "print what would change; write nothing"
 const seed = {
   storage: { type: "string", multiple: true, value: "<key>=<value>", help: "a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds" },
   "session-storage": { type: "string", multiple: true, value: "<key>=<value>", help: "the same for sessionStorage" },
-  "no-storage": { type: "boolean", help: "ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit)" },
+  "no-storage": { type: "boolean", help: "leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit)" },
 };
 const seedUsage = "[--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]";
 const seedJson = "seed: { storage, sessionStorage, at } | null";
+// A flag without a default yields to the site's profile, src/config/harness.ts (scripts/lib/profile.mjs): a
+// default here would be filled in by the parser and always win. Each help names what stands in.
+const scheme = (help) => ({ type: "string", choices: ["light", "dark"], help: `${help}; default the first of the profile's schemes (src/config/harness.ts), else light` });
 // The lab server's port: lab serve listens on it, urls and setup look for it there.
 const LAB_PORT = 8001;
 
@@ -99,11 +102,11 @@ export const SPECS = {
         flags: {
           motion: { type: "boolean", help: "play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation" },
           states: { type: "boolean", help: "hover, focus, checked and open states, located by role and text" },
-          scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme for the capture" },
+          scheme: scheme("prefers-color-scheme for the capture"),
           url: { type: "string", value: "<base>", help: "capture a served site instead of serving .next (print its git log -1 first)" },
           build: { type: "boolean", help: "run the site's `pnpm build` first (log: .parity/<label>.build.log)" },
           ref: { type: "string", value: "<git ref>", help: "capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, the tree's .env.local copied in, installed, built (reused for the same sha and .env.local once a build finished), served and captured" },
-          widths: { type: "string", value: "w,w", help: "viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion)" },
+          widths: { type: "string", value: "w,w", help: "viewport widths; default the profile's widths (src/config/harness.ts), else 1920,1440,1280,1100,992,800,767,390; --motion takes 1440,390 and --states 1440 without it; the home page's menu is opened at each of the profile's widths where its button shows (767 and 390 without a profile)" },
           pages: { type: "string", value: "/a,/b", help: "only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here" },
           settle: { type: "number", default: 2000, help: "with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle=\"<ms>\" raises it while that element is in view" },
           sample: { type: "number", value: "<n>", help: "a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare" },
@@ -134,28 +137,29 @@ export const SPECS = {
       },
       proof: {
         command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference",
-        usage: `agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] ${seedUsage}`,
+        usage: `agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] ${seedUsage}`,
         positionals: [{ name: "label", help: "the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof" }],
         flags: {
-          ref: { type: "string", value: "<git ref>", default: "develop", help: "the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha)" },
+          ref: { type: "string", value: "<git ref>", help: "the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha); default the profile's proof.ref (src/config/harness.ts), else develop" },
           motion: { type: "boolean", help: "add the --motion pass" },
           states: { type: "boolean", help: "add the --states pass" },
           all: { type: "boolean", help: "all three passes: static, --motion and --states" },
           build: { type: "boolean", help: "run the site's `pnpm build` before the first after capture" },
-          scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme for every capture" },
-          pages: { type: "string", value: "/a,/b", help: "only these routes, on every capture and compare" },
+          scheme: { type: "string", choices: ["light", "dark"], help: "prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light" },
+          widths: { type: "string", value: "w,w", help: "the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own" },
+          pages: { type: "string", value: "/a,/b", help: "only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page" },
           sample: { type: "number", value: "<n>", help: "the static pass photographs the first n pages of each template (capture --sample)" },
           jobs: { type: "number", value: "<n>", help: "browsers at once, for every capture (capture --jobs)" },
           fresh: { type: "boolean", help: "take every shot again, reusing none (capture --fresh)" },
           "third-party": { type: "string", choices: ["hold", "allow"], help: "other origins' scripts and connections on every capture (capture --third-party)" },
           storage: { ...seed.storage, help: "a localStorage key on both sides of every pass (capture --storage); the site's src/config/harness.ts is read by both without it" },
           "session-storage": { ...seed["session-storage"], help: "the same for sessionStorage (capture --session-storage)" },
-          "no-storage": { ...seed["no-storage"], help: "ignore the site's src/config/harness.ts on both sides (capture --no-storage)" },
+          "no-storage": { ...seed["no-storage"], help: "leave out the site's seed on both sides (capture --no-storage)" },
           json: { type: "boolean", help: "print the proof as JSON: each pass's captures and compare report" },
         },
         examples: ["agentic-cms visual-parity proof", "agentic-cms visual-parity proof nav-fix --states --build", "agentic-cms visual-parity proof --all --ref main --json"],
         exit: { 0: "every pass identical within the thresholds", 1: "a difference in any pass, or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, a seed that does not read, or captures of two schemes" },
-        json: "{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }",
+        json: "{ label, ref, schemes, passes: [{ pass, scheme, before, after, report, seconds }], exit, failed? }",
       },
       clean: {
         command: "visual-parity clean", summary: "removes old captures from .parity/visual/ — all but the newest, and every compare of a removed capture — and, with --cache, the shot cache; a capture still running is kept",
@@ -181,7 +185,7 @@ export const SPECS = {
       url: { type: "string", value: "<base>", help: "a served site (a dev server) instead of the build under .next" },
     width: { type: "number", default: 1440, help: "viewport width in px" },
     height: { type: "number", default: 900, help: "viewport height in px" },
-    scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme" },
+    scheme: scheme("prefers-color-scheme"),
     motion: { type: "boolean", help: "play the animations (reveals at their start state, sequences running) instead of freezing them at the end state" },
     wait: { type: "number", default: 0, help: "extra milliseconds to wait before measuring or photographing" },
     scroll: { type: "string", value: "<y|into-view>", help: "scroll the page to y px, or the target into view (the default with a target under --motion)" },
@@ -209,7 +213,7 @@ export const SPECS = {
       url: { type: "string", value: "<base>", help: "a served site (a dev server) instead of the build under .next" },
     width: { type: "number", default: 1440, help: "viewport width in px" },
     height: { type: "number", default: 900, help: "viewport height in px" },
-    scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme" },
+    scheme: scheme("prefers-color-scheme"),
     motion: { type: "boolean", help: "play the animations (reveals at their start state, sequences running) instead of freezing them at the end state" },
     wait: { type: "number", default: 0, help: "extra milliseconds to wait before measuring or photographing" },
     scroll: { type: "string", value: "<y|into-view>", help: "scroll the page to y px, or the target into view (the default with a target under --motion)" },
@@ -234,7 +238,7 @@ export const SPECS = {
       url: { type: "string", value: "<base>", help: "serve img: cells and the site's stylesheets from a served site instead of the build" },
       out: { type: "string", value: "<png>", help: "default .parity/sheets/<name>.png" },
       scale: { type: "number", default: 2, help: "device scale factor" },
-      scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme (tokens follow it)" },
+      scheme: scheme("prefers-color-scheme (tokens follow it)"),
       width: { type: "number", default: 1200, help: "the sheet's width in px" },
       ...seed,
       json: { type: "boolean", help: "print one JSON document on stdout" },
@@ -245,17 +249,18 @@ export const SPECS = {
   },
   init: {
     command: "init", script: "init", group: "site", summary: "a site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files",
-    usage: "agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]",
+    usage: "agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check] [--force]",
     positionals: [{ name: "dir", help: "where the site goes (default: the current directory)" }],
     flags: {
       "agent-files": { type: "boolean", help: "only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept" },
       check: { type: "boolean", help: "with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing" },
       force: { type: "boolean", help: "overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten)" },
+      "light-only": { type: "boolean", help: "a site without dark mode: the profile's schemes are [\"light\"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines" },
       json: { type: "boolean", help: "print the result as JSON" },
     },
-    examples: ["agentic-cms init .", "agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills", "agentic-cms init . --agent-files --check  # what drifted, for CI"],
-    exit: { 0: "written, or every agent file as the kit ships it", 1: "--check found drift", 2: "usage" },
-    json: "{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }",
+    examples: ["agentic-cms init .", "agentic-cms init my-site --light-only      # a site with one scheme, light", "agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills", "agentic-cms init . --agent-files --check  # what drifted, for CI"],
+    exit: { 0: "written, or every agent file as the kit ships it", 1: "--check found drift", 2: "usage, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report)" },
+    json: "{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] }",
   },
   setup: {
     command: "setup", script: "setup", group: "site", summary: "a clone made ready to work on, the steps after scripts/setup.sh got Node checked, pnpm and the dependencies: the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests, then the URLs; each step keeps what is there, so a re-run takes seconds",
@@ -361,7 +366,7 @@ export const SPECS = {
           pages: { type: "string", value: "/a,/b", help: "only these routes (default: every page of the build but the 404 and the demo routes, /<name>-demo, which are measured only when named here)" },
           max: { type: "number", default: 96, help: "the largest rendered size counted as an icon, in px" },
           width: { type: "number", default: 1440, help: "viewport width the pages are measured at" },
-          scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "prefers-color-scheme" },
+          scheme: scheme("prefers-color-scheme"),
           background: { type: "string", value: "<colour>", help: "the sheet's background (default the page's)" },
           color: { type: "string", value: "<colour>", help: "the sheet's ink" },
           out: { type: "string", value: "<png>", help: "the sheet; the JSON goes beside it (default .parity/icons/audit.png)" },
@@ -398,7 +403,7 @@ export const SPECS = {
             flags: {
               pick: { type: "string", value: "<role=letter,…>", help: "the owner's pick per role: retrieval=B,graph=A" },
               to: { type: "string", default: "public/images/icons", value: "<dir>", help: "where a mark's file and its source go" },
-              scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "the scheme a mark's file resolves the tokens for" },
+              scheme: scheme("the scheme a mark's file resolves the tokens for"),
               json: { type: "boolean", help: "print { round, published: [{ role, letter, files }] }" },
             },
             examples: ["agentic-cms icons round publish modules --pick retrieval=B,graph=A,query=C"],
@@ -423,7 +428,7 @@ export const SPECS = {
     },
   },
   lab: {
-    command: "lab", script: "lab", group: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done",
+    command: "lab", script: "lab", group: "lab", summary: "the design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, in each of its schemes side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done",
     usage: "agentic-cms lab <new | serve | route | render | clean> …",
     subcommands: {
       new: {
@@ -436,7 +441,7 @@ export const SPECS = {
         json: "{ scene, file, kind }",
       },
       serve: {
-        command: "lab serve", summary: "serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes and enlarged, as an <img> on both grounds, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C",
+        command: "lab serve", summary: "serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C",
         usage: "agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]",
         flags: {
           host: { type: "string", default: "0.0.0.0", value: "<address>", help: "the interface to listen on (0.0.0.0: every one, so a phone on the LAN can open it; 127.0.0.1: this machine only)" },
@@ -468,7 +473,7 @@ export const SPECS = {
           duration: { type: "number", default: 0, help: "one cycle in seconds (default: the scene's data-duration, else what its animations declare)" },
           scale: { type: "number", default: 1, help: "device pixels per CSS pixel of a raster (2 for a retina asset)" },
           width: { type: "number", default: 0, help: "the CSS width to render at (default: the scene's own)" },
-          scheme: { type: "string", default: "light", choices: ["light", "dark"], help: "the scheme the tokens resolve in (a raster is one scheme; render twice for both)" },
+          scheme: scheme("the scheme the tokens resolve in (a raster is one scheme; render once per scheme)"),
           reduced: { type: "boolean", help: "render under prefers-reduced-motion: reduce — what such a reader gets" },
           background: { type: "string", default: "transparent", choices: ["transparent", "paper"], help: "the ground of a raster (.jpg is always on the paper)" },
           lossy: { type: "boolean", help: "lossy WebP (quality 82) instead of lossless" },

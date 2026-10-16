@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { SEED_STORAGE, SeedError, expand, mergeSeed, parsePairs, readSiteSeed, resolveSeed, sameSeed, seedLine, seedRecord, validateSiteSeed } from "./storage-seed.mjs";
+import { SEED_STORAGE, SeedError, expand, mergeSeed, parsePairs, readSiteProfile, readSiteSeed, resolveSeed, sameSeed, seedLine, seedRecord, validateProfile, validateSiteSeed } from "./storage-seed.mjs";
 
 const NOW = new Date("2026-10-02T12:00:00.000Z");
 const CONSENT = '{"analytics":"denied","at":"{now}","version":1}';
@@ -65,12 +65,44 @@ test("a site file that exports no harness, or a harness of the wrong shape, is a
     fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const other = 1;\n");
     await assert.rejects(readSiteSeed(root), (error) => error instanceof SeedError && /src\/config\/harness\.ts exports no harness/.test(error.message));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
-  assert.throws(() => validateSiteSeed({ localStorage: {} }), (error) => error instanceof SeedError && /harness\.localStorage is not a setting \(storage, sessionStorage\)/.test(error.message));
+  assert.throws(() => validateSiteSeed({ localStorage: {} }), (error) => error instanceof SeedError && /harness\.localStorage is not a setting \(storage, sessionStorage, widths, schemes, proof\)/.test(error.message));
   assert.throws(() => validateSiteSeed({ storag: {} }), (error) => /harness\.storag is not a setting — did you mean storage\?/.test(error.message));
   assert.throws(() => validateSiteSeed({ storage: ["a"] }), (error) => /harness\.storage is a map of keys to values/.test(error.message));
   assert.throws(() => validateSiteSeed({ storage: { a: () => 1 } }), (error) => /harness\.storage\.a is a string or a JSON value, not a function/.test(error.message));
   assert.throws(() => validateSiteSeed([]), (error) => /export const harness = /.test(error.message));
   assert.deepEqual(validateSiteSeed({ storage: { n: 1, b: false, o: null } }), { storage: { n: "1", b: "false", o: "null" }, sessionStorage: {} });
+});
+
+test("the seed still reads beside the profile's keys, and the profile reads from the same file; a site without the file has neither", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "seed-profile-"));
+  try {
+    assert.equal(await readSiteProfile(root), null);
+    fs.mkdirSync(path.join(root, "src/config"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src/config/harness.ts"), `export const harness = {\n  storage: { consent: { analytics: "denied", at: "{now}", version: 1 } },\n  widths: [390, 768, 1440, 1920],\n  schemes: ["light"],\n  proof: { pages: ["/"], ref: "develop" },\n};\n`);
+    assert.deepEqual(await readSiteSeed(root), { storage: { consent: CONSENT }, sessionStorage: {} });
+    assert.deepEqual(await readSiteProfile(root), { widths: [390, 768, 1440, 1920], schemes: ["light"], proof: { pages: ["/"], ref: "develop" } });
+    const seed = await resolveSeed({}, { root, now: NOW });
+    assert.deepEqual(seed.templates, { storage: { consent: CONSENT }, sessionStorage: {} }, "the profile is never seeded");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  assert.deepEqual(validateProfile({ storage: {} }), { widths: undefined, schemes: undefined, proof: { pages: undefined, ref: undefined } }, "a seed without a profile: every key left to its default");
+  assert.deepEqual(validateSiteSeed({ schemes: ["light", "dark"], proof: { ref: "main" } }), { storage: {}, sessionStorage: {} }, "a profile without a seed");
+});
+
+test("a profile of the wrong shape is a SeedError naming the key and the form: whole widths, schemes within light and dark, pages that are routes", () => {
+  const fails = (harness, pattern) => assert.throws(() => validateSiteSeed(harness), (error) => error instanceof SeedError && pattern.test(error.message), JSON.stringify(harness));
+  fails({ widths: [390.5] }, /harness\.widths is a list of whole viewport widths in px/);
+  fails({ widths: ["390"] }, /harness\.widths is a list of whole viewport widths/);
+  fails({ widths: [] }, /harness\.widths is a list/);
+  fails({ widths: [0] }, /harness\.widths is a list/);
+  fails({ schemes: ["sepia"] }, /harness\.schemes is "light", "dark" or both, each once/);
+  fails({ schemes: ["light", "light"] }, /each once/);
+  fails({ schemes: "light" }, /harness\.schemes is/);
+  fails({ proof: { pages: ["about"] } }, /harness\.proof\.pages is a list of routes, each starting with \//);
+  fails({ proof: { pages: [] } }, /harness\.proof\.pages is a list of routes/);
+  fails({ proof: { ref: "" } }, /harness\.proof\.ref is a git ref/);
+  fails({ proof: { page: ["/"] } }, /harness\.proof\.page is not a setting — did you mean pages\? \(pages, ref\)/);
+  fails({ proof: ["/"] }, /harness\.proof is \{ pages/);
+  fails({ width: [390] }, /harness\.width is not a setting — did you mean widths\?/);
 });
 
 test("two records seed alike when their keys and templates agree, whatever the time and the order; absent is no seed", () => {

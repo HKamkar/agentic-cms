@@ -12,11 +12,14 @@
 import { parseOrExit } from "./lib/args.mjs";
 import { FX_START_STATE, REVEALS, STACKING } from "./lib/browser.mjs";
 import { openTarget, requireMatch, targetOf } from "./lib/page-command.mjs";
+import { schemeOrExit } from "./lib/profile.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const DEFAULT_PROPS = ["opacity", "transform", "position", "z-index", "display", "visibility", "overflow", "color", "background-color", "font-size", "line-height", "width", "height", "margin", "padding"];
 
 const { positionals: [target], flags } = parseOrExit(SPECS.probe, process.argv.slice(2));
+// --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+flags.scheme = await schemeOrExit(flags, "probe");
 if (!flags.select && !flags.heading) { console.error("probe: name the element with --select <css> or --heading <regex>; run agentic-cms probe --help"); process.exit(2); }
 if (flags.timeline && !flags.motion) { console.error("probe: --timeline samples a playing animation; add --motion"); process.exit(2); }
 const props = [...DEFAULT_PROPS, ...(flags.props ?? "").split(",").map((p) => p.trim()).filter(Boolean)];

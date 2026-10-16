@@ -12,6 +12,13 @@ kit — the modes, the file names, the waits, the traps — and
 the compare's report says what moved, where, and whether the rest of the
 page survived.
 
+A site says once what it is — the widths it is designed at, its schemes,
+the pages a bare proof covers, the ref it proves against — in its profile,
+`src/config/harness.ts` (`docs/visual-parity.md` § The site's profile), so
+`pnpm kit visual-parity proof` with no flag is the site's short proof. A
+site without one gets the built-in eight widths in light: write the profile
+before the first proof.
+
 ## Read first
 
 `docs/visual-parity.md` § Reading a compare; the change's diff (`git diff
@@ -31,8 +38,10 @@ whether `--motion` or `--states` is part of the proof.
 
    (A served build standing in for a commit — `--url` — has its `git log
    -1` printed first.) With animation changed, also `--motion`; with
-   hover, focus, checked or open states touched, also `--states`; on a
-   site with a dark theme, `--scheme dark` as well. Only a first capture
+   hover, focus, checked or open states touched, also `--states`. The
+   widths and the scheme are the site's profile (`src/config/harness.ts`),
+   so no flag names them; a site with two schemes captures the second
+   with `--scheme` as well, or lets `proof` run both. Only a first capture
    of a large site needs the background (every later one copies the
    unchanged pages); a capture is finished when
    `.parity/visual/<label>/capture.json` exists.
@@ -46,19 +55,24 @@ whether `--motion` or `--states` is part of the proof.
 
    Or steps 1 and 2 in one, once the change is built:
    `pnpm kit visual-parity proof [--motion] [--states] [--ref <base>]` —
-   each pass's baseline, after capture and compare, one summary, exit 1 on
-   any difference; its captures are `proof-before` / `proof-after`
-   (`-motion`, `-states`), read like any compare in step 3.
+   each pass's baseline, after capture and compare in each scheme the
+   profile names, one summary, exit 1 on any difference; its captures are
+   `proof-before` / `proof-after` (`-motion`, `-states`, and `-dark` for
+   the dark scheme of a site with two), read like any compare in step 3.
 
    Keep the proof as short as the change allows:
-   - the site's widths (`--widths w,w` on both captures);
+   - the site's widths and schemes, which the profile says once
+     (`widths`, `schemes` in `src/config/harness.ts`) and every capture
+     takes without a flag — `--widths w,w` or `--scheme` only for a run
+     that needs another;
    - the pages the change touches (`--pages /a,/b`, the same on both
-     captures and the compare; `proof --pages` passes it to every step),
+     captures and the compare; `proof --pages` passes it to every step,
+     and the profile's `proof.pages` is what a bare `proof` covers),
      and one page per template (`--sample 1`) only when the change is
      site-wide: a token, the chrome, a shared component;
    - `--states` only when hover, focus, checked or open states changed,
      `--motion` only when animation did;
-   - never a scheme the site does not have.
+   - each scheme the profile names, never one the site does not have.
 
    A page is left out because the change cannot reach it, never to save
    time: a page whose build files did not change is copied from

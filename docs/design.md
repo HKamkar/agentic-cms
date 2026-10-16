@@ -69,8 +69,8 @@ How a section gets its design, as it runs in practice (the
    `<Name>A.tsx`, `<Name>B.tsx`, edited into its idea. The route reads the
    page's copy from its file on every render and shows each candidate in
    the section's real frame **inside the site's own layout** — its tokens,
-   its chrome, its theme toggle, so a design is judged against the theme
-   it will live in — lettered with one line on what differs, and the
+   its chrome, in each scheme the profile names, so a design is judged
+   against the theme it will live in — lettered with one line on what differs, and the
    current version last. A candidate that moves gets the lab's timeline
    there — `<LabStudy file>` for an animated file, `<LabTimeline>` around
    a component — so the owner can pause it, step it 0.01 s at a time and
@@ -142,8 +142,8 @@ grows from picks, not from plans.
 - the candidates carry the page's real copy, the current version last,
   each lettered with one line on what differs, and a timeline on anything
   that moves (§ The round);
-- they are measured at the site's widths (for a new site 390, 768, 1440
-  and 1920): overflow, tap targets, the numbers behind anything that
+- they are measured at the site's widths (the profile's, `widths` in
+  `src/config/harness.ts`; for a new site 390, 768, 1440 and 1920): overflow, tap targets, the numbers behind anything that
   looks off (§ Measure, don't guess);
 - their interactions are run in WebKit too, not only in Chromium
   ([browsers.md](browsers.md));

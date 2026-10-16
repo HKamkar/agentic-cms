@@ -210,6 +210,40 @@ changes what a capture writes says **recapture baselines**.
   wireframe, and have no ground of their own, as the boxes they replace
   had none (a design adds `bg-panel` to `solid`): the proof is identical
   in both schemes, with `--states`.
+- The site profile: `src/config/harness.ts` says once what a site is,
+  beside its seed — `widths`, `schemes` and `proof: { pages, ref }` —
+  and every command takes it as its default. A flag wins, then the
+  profile, then the built-in default, which is what the command took
+  before: `--scheme` (capture, proof, shot, probe, sheet, icons audit,
+  icons round publish, lab render) and proof's `--ref` lose the defaults
+  the parser used to fill in, and each command's help names its fallback.
+  A capture takes the profile's widths (`--motion` keeps 1440 and 390,
+  `--states` 1440) and opens the home page's menu at each of them where
+  its button shows; `proof` runs a pass in each of the profile's schemes
+  (the dark one's captures end in `-dark`), takes `--widths` for its
+  static pass alone and defaults `--pages` to the profile's; `lab serve`
+  shows a ground per scheme. A key of the wrong shape exits 2 naming it
+  (`docs/visual-parity.md` § The site's profile). Without a profile a bare
+  command does what it did, so nothing to recapture there.
+- The example's profile proves at 390, 768, 1440 and 1920, in light and
+  dark, against `develop`, in place of the eight built-in widths: the
+  kit's own captures change — **recapture baselines** taken at the eight.
+  Nothing on a page moved (identical at the old eight widths, in both
+  schemes, before the switch).
+- `init --light-only` lays a site out without dark mode: `schemes:
+  ["light"]` in its profile, each colour a single value under
+  `color-scheme: light`, no theme script, no `suppressHydrationWarning`,
+  no `ThemeToggle`, and `STANDARD.md` and the components catalogue
+  without their dark-mode passages, which the kit now marks
+  (`<!-- dark-mode:start -->` … `<!-- dark-mode:end -->`). An edit that
+  finds nothing to change stops `init` (exit 2) before a file is written.
+  `pnpm test:pack` builds, lints and tests a light-only site from the
+  tarball too (`docs/init.md`, `docs/migrating-to-0.8.0.md` § 3.4).
+- The design skills say "each scheme the profile names" where they said
+  "both themes" (`design`, `design-proof`, `design-options`,
+  `design-graphics`); `design-proof`, the styling rule and a new site's
+  `AGENTS.md` § Parity harness make a bare `proof` the site's proof,
+  read from the profile.
 
 ## [0.7.6] — 2026-10-13
 

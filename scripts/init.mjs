@@ -4,12 +4,14 @@
 // designs from the first session with nothing installed), the config and a
 // manifest; `--agent-files` refreshes only the rules and skills of an
 // existing site, keeping the site's own edits, and `--check` reports what
-// drifted instead of writing. lib/init.mjs is the scaffold; docs/init.md
-// says what a new site does next.
+// drifted instead of writing; `--light-only` lays the example out as a site
+// without dark mode (lib/light-only.mjs). lib/init.mjs is the scaffold;
+// docs/init.md says what a new site does next.
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { agentFiles, scaffold } from "./lib/init.mjs";
+import { LightOnlyError } from "./lib/light-only.mjs";
 import { CODEX_LIMIT } from "./lib/rules-table.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
@@ -19,6 +21,7 @@ const version = JSON.parse(fs.readFileSync(path.join(kitRoot, "package.json"), "
 const target = path.resolve(dir);
 const log = flags.json ? () => {} : console.log;
 
+if (flags["agent-files"] && flags["light-only"]) { console.error("init: --light-only lays out a new site; --agent-files refreshes the rules and skills, which are the same for every site"); process.exit(2); }
 if (flags["agent-files"]) {
   const report = agentFiles(target, { kitRoot, version, check: flags.check, force: flags.force, log });
   const drift = report.filter((f) => f.status !== "ok");
@@ -33,11 +36,16 @@ if (flags["agent-files"]) {
   for (const f of report.filter((entry) => entry.status === "too big")) console.error(`init: AGENTS.md is ${f.bytes} bytes, past the ${CODEX_LIMIT} Codex reads by default — move detailed procedures into linked docs`);
 } else {
   if (flags.check) { console.error("init: --check goes with --agent-files"); process.exit(2); }
-  const result = scaffold(target, { kitRoot, version, force: flags.force, log });
+  let result;
+  try { result = scaffold(target, { kitRoot, version, force: flags.force, lightOnly: flags["light-only"], log }); } catch (error) {
+    if (!(error instanceof LightOnlyError)) throw error;
+    console.error(`init --light-only: ${error.message}; nothing was written`);
+    process.exit(2);
+  }
   if (flags.json) console.log(JSON.stringify({ target, version, ...result }, null, 1));
   else {
     const where = path.relative(process.cwd(), target);
-    console.log(`init: ${result.created.length} created, ${result.updated.length} updated, ${result.kept.length} kept in ${where || "."}`);
+    console.log(`init: ${result.created.length} created, ${result.updated.length} updated, ${result.kept.length} kept in ${where || "."}${result.lightOnly ? " — light only: one scheme, no theme toggle" : ""}`);
     console.log(`next: ${where ? `cd ${where} && ` : ""}bash scripts/setup.sh && pnpm dev — then src/config/site.ts, src/app/globals.css, content/VOICE.md, and the design skill`);
   }
 }
