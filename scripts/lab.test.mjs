@@ -1,10 +1,11 @@
 // lab route and lab clean through the bin, in a throwaway site root: the
 // route written from the template, refused twice, removed with the lab, and
-// a site's own page at that path left alone; lab serve's --sizes, given and
-// not.
+// a site's own page at that path left alone; another server on the dev port
+// named instead of waited on; lab serve's --sizes, given and not.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -47,6 +48,28 @@ test("lab route writes the template once (--force again); lab clean removes the 
     assert.match(run(root, ["clean"]).stdout, /nothing to remove; src\/app\/lab-demo\/page\.tsx kept \(not the kit's route/);
     assert.ok(fs.existsSync(path.join(root, ROUTE)));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("lab route: another server on the port of scripts.dev is named at once, its route asked of nobody, exit 1; the route stays written", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "lab-"));
+  const asked = [];
+  const server = http.createServer((req, res) => { asked.push(req.url); res.writeHead(404); res.end(); });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  try {
+    fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${port}` } }));
+    const r = await new Promise((resolve) => {
+      const child = spawn(process.execPath, [BIN, "lab", "route", "--no-public"], { cwd: root });
+      let stdout = "", stderr = "";
+      child.stdout.on("data", (chunk) => { stdout += chunk; });
+      child.stderr.on("data", (chunk) => { stderr += chunk; });
+      child.on("exit", (status) => resolve({ status, stdout, stderr }));
+    });
+    assert.equal(r.status, 1, r.stderr);
+    assert.match(r.stderr, new RegExp(`^port ${port} answers, but not as this clone's next dev \\(\\.next/dev/lock names none running\\), so /lab-demo is not served there: stop what holds the port`));
+    assert.deepEqual(asked, []);
+    assert.ok(fs.existsSync(path.join(root, ROUTE)));
+  } finally { await new Promise((resolve) => server.close(resolve)); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 /** lab serve on a free loopback port until the page is read: { body } of `page`, and what serve printed ({ out }) at { base }. */

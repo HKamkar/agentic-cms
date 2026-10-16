@@ -119,11 +119,16 @@ hand over the page itself: the route, or each scene's /scene/<name>; Ctrl-C stop
 - `--no-public` skips the public address; `--json` prints each table as
   one JSON line.
 
-`demo new` and `lab route` do the same for the route they write. With the
-dev server running, each waits until its route answers, prints its URLs,
-and warns about each host missing from `ALLOWED_DEV_ORIGINS`. A 5xx prints
-the error's tail and exits 1. With no server running, each says `pnpm kit
-serve`. `--no-wait` asks nothing, and `--url` names another server.
+`demo new` and `lab route` do the same for the route they write, on this
+clone's `next dev`: the one `.next/dev/lock` names, on whichever port it
+runs. With it running, each waits until its route answers, prints its
+URLs, and warns about each host missing from `ALLOWED_DEV_ORIGINS`. A 5xx
+prints the error's tail and exits 1. When the port of `scripts.dev`
+answers, but not as this clone's `next dev`, each says so at once and
+exits 1 with the route written: that server never serves it, so stop what
+holds the port, or `pnpm kit serve --port <n>`. With no server running,
+each says `pnpm kit serve`. `--no-wait` asks nothing, and `--url` names
+another server, whatever it is, with no lock read.
 
 ## Letting `next dev` serve that address
 

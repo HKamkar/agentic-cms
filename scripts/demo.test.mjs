@@ -245,6 +245,31 @@ test("demo new waits for its route on the running dev server: asked until it sto
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("demo new without --url: another server on the port of scripts.dev is named at once and asked nothing (exit 1); this clone's, by its lock, is waited on", async () => {
+  const root = site();
+  const server = await stubServer((url, nth) => ({ status: nth < 2 ? 404 : 200 }));
+  put(root, "package.json", JSON.stringify({ scripts: { dev: `next dev -p ${server.port}` } }));
+  try {
+    const started = Date.now();
+    const other = await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--no-public"]);
+    assert.equal(other.status, 1, other.stderr);
+    assert.ok(Date.now() - started < 30000, "no wait for --timeout");
+    assert.equal(other.stderr, `port ${server.port} answers, but not as this clone's next dev (.next/dev/lock names none running), so /hero-card-demo is not served there: stop what holds the port (docs/dev-server.md § Stopping a server), or serve this clone on another port (pnpm kit serve --port <n> waits for /hero-card-demo and prints its URLs)\n`);
+    assert.deepEqual(server.asked, [], "the route is not asked of another server");
+    assert.ok(fs.existsSync(path.join(root, "src/app/hero-card-demo/page.tsx")), "the route stays written");
+    assert.equal(run(root, ["clean", "hero-card"]).status, 0);
+
+    // next dev's lock, naming a live pid (this test's) on the stand-in's port: this clone's own server
+    put(root, ".next/dev/lock", JSON.stringify({ pid: process.pid, port: server.port, hostname: "localhost", appUrl: `http://localhost:${server.port}` }));
+    const own = await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--no-public", "--json"]);
+    assert.equal(own.status, 0, own.stderr);
+    const report = JSON.parse(own.stdout);
+    assert.deepEqual([report.ready, report.status, report.urls[0]], [true, 200, { where: "localhost", url: `http://localhost:${server.port}/hero-card-demo` }]);
+    assert.equal(server.asked.filter((u) => u === "/hero-card-demo").length, 2, "asked until it answered");
+    assert.equal(run(root, ["clean", "hero-card"]).status, 0);
+  } finally { await server.close(); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("demo new --showcase: a review page of the pieces named, each in a block of its own; its manifest; the errors name the fix", () => {
   const root = site();
   try {
