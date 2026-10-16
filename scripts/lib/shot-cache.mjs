@@ -37,6 +37,14 @@ export function digester(resolve, buildId) {
 /** The key of everything but the page's files that decides its pixels: the harness's sources, the browser, the settings. */
 export const settingsKey = ({ harness, browser, settings }) => sha(JSON.stringify({ harness, browser, settings })).slice(0, 16);
 
+/**
+ * One page-width's key: the capture's settings, with `menu: true` on a page-width that opens the home page's
+ * menu. Never the list of menu widths, which decides the home page's shots at those widths alone: as a setting of
+ * the whole capture it put every page under a new key whenever it changed, and a profile written with the
+ * widths a flag had named retook every shot of the site.
+ */
+export const shotKey = ({ harness, browser, settings }, { menu = false } = {}) => settingsKey({ harness, browser, settings: menu ? { ...settings, menu } : settings });
+
 /** The digest of every harness source file that decides a shot; a change to any of them retires the whole cache. */
 export const harnessDigest = (files) => sha(files.map((file) => `${path.basename(file)}\n${fs.readFileSync(file, "utf8")}`).join("\0"));
 
@@ -80,18 +88,21 @@ export function store(root, key, name, deps, from, files) {
 export const filesOf = (dir, name) => fs.readdirSync(dir).filter((f) => f.startsWith(`${name}.`) || f.startsWith(`${name}--`)).sort();
 
 /**
- * One capture's use of the cache. take(name, dir, run) copies the shots of a page-width (or state) into `dir`
+ * One capture's use of the cache. take(name, dir, run, shot) copies the shots of a page-width (or state) into `dir`
  * when every build file they loaded is unchanged, and returns how many PNGs that was; otherwise it runs
  * run(watch) — watch(page), called before the page loads, records the build files the page requests — and stores
  * what the run wrote. Request events are the record: measured on a warm browser context, where most files come
  * from the browser's cache, every build file a page used was still requested (the favicon alone was not, and it
  * is not in the page). A prefetch (an RSC request) is left out: the router fetches it, the page does not show it.
- * With `fresh`, nothing is reused and everything is stored.
+ * With `fresh`, nothing is reused and everything is stored. `key` is the capture's, or a function of `shot` (what
+ * this page-width alone sets, shotKey's `menu`) giving each page-width its own.
  */
 export function createShotCache({ root, key, resolve, buildId, origin, fresh = false }) {
   const digestOf = digester(resolve, buildId);
   const counts = { reused: 0, taken: 0 };
-  const take = async (name, dir, run) => {
+  const keyOf = typeof key === "function" ? key : () => key;
+  const take = async (name, dir, run, shot) => {
+    const key = keyOf(shot);
     const hit = fresh ? null : lookup(root, key, name, digestOf, buildId);
     if (hit) { counts.reused++; reuse(hit, dir); return hit.files.filter((f) => f.endsWith(".png")).length; }
     const served = [];

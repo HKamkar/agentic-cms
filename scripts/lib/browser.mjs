@@ -380,6 +380,11 @@ export async function imagesReady(page) {
 // load timing; hold them at their first frame. Finite animations keep playing.
 export const PAUSE_LOOPS = () => { for (const a of document.getAnimations()) { if (a.effect?.getTiming().iterations === Infinity && a.playState !== "paused") { a.pause(); a.currentTime = 0; } } };
 
+// The same test on the DevTools protocol's report of an animation, which
+// cannot say Infinity: JSON has no such number, and Chromium sends an infinite
+// effect with no `iterations` at all. Anything but a finite count is a loop.
+export const isLoop = (iterations) => typeof iterations !== "number" || !Number.isFinite(iterations);
+
 // SMIL is not in document.getAnimations(): neither FREEZE_CSS nor PAUSE_LOOPS
 // reaches an inline <svg>'s <animate>, whose clock would be photographed at a
 // time that depends on load timing. Each outermost inline svg that animates

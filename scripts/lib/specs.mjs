@@ -155,7 +155,7 @@ export const SPECS = {
           scheme: { type: "string", choices: ["light", "dark"], help: "prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light" },
           widths: { type: "string", value: "w,w", help: "the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own" },
           pages: { type: "string", value: "/a,/b", help: "only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page" },
-          sample: { type: "number", value: "<n>", help: "the static pass photographs the first n pages of each template (capture --sample)" },
+          sample: { type: "number", value: "<n>", help: "the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages is given" },
           jobs: { type: "number", value: "<n>", help: "browsers at once, for every capture (capture --jobs)" },
           fresh: { type: "boolean", help: "take every shot again, reusing none (capture --fresh)" },
           "third-party": { type: "string", choices: ["hold", "allow"], help: "other origins' scripts and connections on every capture (capture --third-party)" },

@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
-import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
+import { LOOP_PAGE, SPIN_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -36,12 +36,13 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-test("the site's profile names a capture's widths and scheme, a flag still wins, and the menu is shot at each profile width where its button shows", { skip }, () => {
+test("the site's profile names a capture's widths and scheme, a flag still wins, the menu is shot at each profile width where its button shows, and the widths a flag named keep the shot cache", { skip }, () => {
   const root = fixtureSite();
   try {
     // the menu button hides from 700 px up, as a site's does above its menu breakpoint
     const home = path.join(root, ".next/server/app/index.html");
     fs.writeFileSync(home, fs.readFileSync(home, "utf8").replace("</head>", "<style>@media (min-width: 700px) { header button { display: none; } }</style></head>"));
+    assert.equal(run(root, ["capture", "w", "--widths", "800,390", "--scheme", "dark"]).status, 0, "before the profile: its widths as a flag");
     fs.mkdirSync(path.join(root, "src/config"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [800, 390], schemes: [\"dark\", \"light\"] };\n");
     const profiled = run(root, ["capture", "p", "--json"]);
@@ -50,6 +51,7 @@ test("the site's profile names a capture's widths and scheme, a flag still wins,
     assert.deepEqual(summary.widths, [800, 390], "the profile's widths");
     assert.equal(summary.meta.scheme, "dark", "the profile's first scheme");
     assert.deepEqual(files(root, "p").filter((f) => f.includes("--menu")), ["home@390--menu.png"], "no menu where its button does not show");
+    assert.deepEqual(summary.reused, { shots: 3, of: 4 }, "the same widths reuse the cache: only the home page at 800, where the menu is now tried, is taken again");
     const flagged = JSON.parse(run(root, ["capture", "f", "--widths", "390", "--scheme", "light", "--json"]).stdout);
     assert.deepEqual([flagged.widths, flagged.meta.scheme], [[390], "light"], "the flags win");
     fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [390.5] };\n");
@@ -201,6 +203,23 @@ test("an inline SMIL loop is held: two static captures agree, two motion capture
     assert.equal(smil[0].duration, 2);
     assert.equal(smil[0].rest, 1.2);
     assert.deepEqual([smil[0].target.w, smil[0].target.h], [200, 100]);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("an infinite CSS loop never enters the animation inventory, however often its observer restarts it: three motion captures list the same finite animations", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    addPage(root, "/spin", SPIN_PAGE);
+    const inventories = ["l1", "l2", "l3"].map((label) => {
+      assert.equal(run(root, ["capture", label, "--motion", "--widths", "800", "--pages", "/spin", "--fresh"]).status, 0);
+      return JSON.parse(fs.readFileSync(path.join(root, ".parity/visual", label, "spin@800.animations.json"), "utf8"));
+    });
+    assert.deepEqual(inventories[0].filter((a) => a.name === "spin"), [], "no loop, whatever CDP sends for its iterations");
+    assert.ok(inventories[0].length > 0 && inventories[0].every((a) => a.name === "fade" && a.iterations === 1), "the fades are still recorded, with their count");
+    assert.deepEqual(inventories[1], inventories[0], "the same inventory on a second capture");
+    assert.deepEqual(inventories[2], inventories[0], "and a third");
+    const r = run(root, ["compare", "l1", "l2", "--pages", "/spin", "--json"]);
+    assert.equal(JSON.parse(r.stdout).files.find((f) => f.name === "spin@800.animations.json")?.status, "ok", r.stderr);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

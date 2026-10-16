@@ -61,6 +61,7 @@ export const harness = {
   widths: [390, 768, 1440, 1920],          // the widths it is designed and proved at
   schemes: ["light"],                       // or ["light", "dark"]
   proof: { pages: ["/"], ref: "develop" },  // what a bare proof covers, and its baseline
+  // or proof: { sample: 1, ref: "develop" } — one page of each template
 };
 ```
 
@@ -75,6 +76,7 @@ leaves out, gets what it always got:
 | one command's scheme (`capture`, `shot`, `probe`, `sheet`, `icons audit`, `icons round publish`, `lab render`) | `--scheme` | the first of `schemes` | light |
 | `proof`'s schemes | `--scheme` (one) | a pass in each of `schemes` | light |
 | `proof`'s pages, on every capture and compare | `--pages` (or `--sample`) | `proof.pages` | every page |
+| `proof`'s sample, the first n pages of each template on the static pass | `--sample` (or `--pages`) | `proof.sample` | every page |
 | `proof`'s baseline | `--ref` | `proof.ref` | `develop` |
 | `lab serve`'s grounds | — | a box per scheme in `schemes` | light and dark |
 
@@ -83,15 +85,22 @@ whatever the profile says. The menu shots are taken at the widths below the
 site's menu breakpoint, found where the button shows rather than named: 390
 and 768 for the example's four widths and its menu below 992. The profile is
 read from the tree like the seed, so a `--ref` baseline is captured at the
-tree's widths and in its schemes even when the ref predates the profile. A
-key of the wrong shape exits 2 naming it: widths are whole pixels, schemes
-are `light` and `dark` (each once), pages are routes starting with `/`.
+tree's widths and in its schemes even when the ref predates the profile.
+`proof.pages` and `proof.sample` are two ways of choosing a proof's pages,
+like the flags: a profile sets one, and either flag sets aside the
+profile's choice. A key of the wrong shape exits 2 naming it: widths are
+whole pixels, schemes are `light` and `dark` (each once), pages are routes
+starting with `/`, a sample is a whole number from 1, and pages and sample
+together are refused.
 
 A site without dark mode says `schemes: ["light"]` and is never proved in a
 scheme it does not have; `init --light-only` writes that profile with a
 light-only example ([init.md](init.md)). A site whose widths change
 recaptures its baselines: a capture at the old widths and one at the new
-compare as `MISSING` files.
+compare as `MISSING` files. A site that writes into its profile the widths
+it used to pass as a flag keeps its shot cache: the first proof after it
+retakes only the home page, at the widths where the menu is now tried
+([below](#unchanged-shots-are-reused)).
 
 ## Where the build comes from
 
@@ -240,10 +249,13 @@ Only the build is an input: a third-party script or image, an analytics
 beacon, is not; nor is a router prefetch, which shows nothing. A change to
 the harness's own sources, the browser, the scheme, the motion settings, the
 seed or (for `--states`) the site's config starts from nothing, and a `--url`
-capture reuses nothing. `--fresh` takes every shot again and refreshes the
-cache: to prove a frame deterministic, or whenever a copied shot is in
-doubt. Four entries are kept per page-width, the least recently used going
-first; `visual-parity clean --cache` empties it.
+capture reuses nothing. The menu is a setting of the page-widths that open
+it alone — the home page of a static capture at the menu's widths — so a
+change to those widths retakes the home page there and reuses every other
+page-width. `--fresh` takes every shot again and refreshes the cache: to
+prove a frame deterministic, or whenever a copied shot is in doubt. Four
+entries are kept per page-width, the least recently used going first;
+`visual-parity clean --cache` empties it.
 
 ## Several browsers at once
 
@@ -312,7 +324,11 @@ during the scroll-through is recorded with its timing and its target's
 position (`<page>@<width>.animations.json`), and so is every inline SMIL
 loop (`type: "smil"`, its cycle, its rest, its box), and compared exactly,
 which catches a retimed or missing animation even when the frames happen to
-agree. Motion mode covers every page of the build and its first post.
+agree. An infinite CSS or Web Animation loop is left out, read from its
+effect's timing in the page (DevTools reports one with no iteration count
+at all): how often a page starts or restarts a loop, from an observer or a
+timer, depends on timing, and the frames show it held at its first frame.
+Motion mode covers every page of the build and its first post.
 
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a
@@ -438,8 +454,9 @@ falls through after 10 s.
   schemes, which the profile gives every capture without a flag (never a
   scheme the site does not have), the pages the change touches (`--pages`,
   the same on both captures and the compare; `proof.pages` for what a bare
-  proof covers), one page per template (`--sample 1`) only when the change
-  is site-wide, `--states` / `--motion` only when hover or animation
+  proof covers), one page per template (`--sample 1`, or `proof.sample` for
+  a site whose bare proof is that) only when the change is site-wide,
+  `--states` / `--motion` only when hover or animation
   changed. A page is left
   out because the change cannot reach it, never to save time: every
   page-width whose build files did not change is copied from

@@ -32,7 +32,10 @@ own version.
   `develop` pushed.
 - **No baseline to take by hand.** `visual-parity proof --ref develop` builds
   `develop`, whose lockfile still pins 0.7.6, so the proof compares the old
-  kit against the new one.
+  kit against the new one. It is `develop` as pushed: a branch name
+  resolves to `origin/<ref>` first, after a fetch, and to the local branch
+  only when origin has none, so a stale local `develop` is never the
+  baseline, and a commit you have not pushed is not in it.
 - **Know what your site wrote itself.** Read the table in § 4 first: each of
   those files is deleted only after the step that replaces it.
 
@@ -278,8 +281,11 @@ export const harness = {
 };
 ```
 
-Every key is optional; one you leave out keeps the built-in default. Then
-make the profile the site's proof in `AGENTS.md`, where it gives the
+Every key is optional; one you leave out keeps the built-in default. A
+site whose short proof is one page of each template says
+`proof: { sample: 1 }` in place of `pages` (one or the other: both exit 2),
+and `--pages` or `--sample` on the command line sets it aside for a run.
+Then make the profile the site's proof in `AGENTS.md`, where it gives the
 screenshot harness's rules: after the line that names their contract,
 `node_modules/agentic-cms/docs/visual-parity.md`, add
 "The site's profile in `src/config/harness.ts` says once what every
@@ -296,7 +302,11 @@ have").
 widths, pages and schemes (one pass per scheme), and opens the menu at each
 width below the menu breakpoint (where its button shows). A key of the
 wrong shape exits 2 naming it. Baselines taken at other widths no longer
-compare: recapture them.
+compare: recapture them. The shot cache carries over: with the widths the
+site passed as a flag before, this first proof retakes only the home page,
+at the widths where the menu is now tried, and copies every other
+page-width; with new widths it takes every shot, as long as a first
+capture.
 
 **If you wrote your own short-proof script:** delete it, and point the
 package script, if you keep one, at `agentic-cms visual-parity proof`:

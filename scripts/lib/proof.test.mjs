@@ -46,15 +46,27 @@ test("two schemes in the profile run every pass once in each, the dark one's cap
 
 test("precedence: a flag, then the site's profile, then the built-in default", () => {
   const profile = { widths: [390, 768, 1440, 1920], schemes: ["light", "dark"], proof: { pages: ["/", "/blog"], ref: "main" } };
-  assert.deepEqual(proofSettings({}, profile), { ref: "main", schemes: ["light", "dark"], pages: "/,/blog" }, "the profile");
-  assert.deepEqual(proofSettings({ ref: "HEAD~1", scheme: "dark", pages: "/about" }, profile), { ref: "HEAD~1", schemes: ["dark"], pages: "/about" }, "the flags");
-  assert.equal(proofSettings({ sample: 1 }, profile).pages, undefined, "--sample picks the pages: the profile's give way");
-  assert.deepEqual(proofSettings({}, { widths: [390], schemes: undefined, proof: { pages: undefined, ref: undefined } }), { ref: "develop", schemes: ["light"], pages: undefined }, "a key the profile leaves out is the default");
+  assert.deepEqual(proofSettings({}, profile), { ref: "main", schemes: ["light", "dark"], pages: "/,/blog", sample: undefined }, "the profile");
+  assert.deepEqual(proofSettings({ ref: "HEAD~1", scheme: "dark", pages: "/about" }, profile), { ref: "HEAD~1", schemes: ["dark"], pages: "/about", sample: undefined }, "the flags");
+  assert.deepEqual(proofSettings({ sample: 1 }, profile), { ref: "main", schemes: ["light", "dark"], pages: undefined, sample: 1 }, "--sample picks the pages: the profile's give way");
+  assert.deepEqual(proofSettings({}, { widths: [390], schemes: undefined, proof: { pages: undefined, ref: undefined, sample: undefined } }), { ref: "develop", schemes: ["light"], pages: undefined, sample: undefined }, "a key the profile leaves out is the default");
   assert.equal(schemeOf("dark", profile), "dark");
   assert.equal(schemeOf(undefined, { schemes: ["dark", "light"] }), "dark", "one capture takes the profile's first scheme");
   assert.deepEqual(captureWidths({ flag: "800,1200", profile }), [800, 1200]);
   assert.deepEqual(captureWidths({ profile }), [390, 768, 1440, 1920]);
   assert.deepEqual(menuWidths(profile), [390, 768, 1440, 1920], "the menu is tried at every profile width and opened where its button shows");
+});
+
+test("the profile's proof.sample is the static pass's --sample: a --sample flag wins, a --pages flag sets it aside, and neither reaches --motion or --states", () => {
+  const profile = { widths: [390, 1440], schemes: ["light"], proof: { pages: undefined, ref: undefined, sample: 1 } };
+  assert.deepEqual(proofSettings({}, profile), { ref: "develop", schemes: ["light"], pages: undefined, sample: 1 }, "the profile's sample");
+  assert.equal(proofSettings({ sample: 3 }, profile).sample, 3, "the flag wins");
+  assert.deepEqual([proofSettings({ pages: "/about" }, profile).pages, proofSettings({ pages: "/about" }, profile).sample], ["/about", undefined], "--pages names its own pages: the profile's sample gives way");
+  const { ref, schemes, pages, sample } = proofSettings({}, profile);
+  const steps = plan({ ref, schemes, passes: ["static", "motion", "states"], pages: forwarded({ pages }, ["pages"]), sample: forwarded({ sample }, ["sample"]) });
+  assert.deepEqual(steps.filter((s) => s.args.includes("--sample")).map((s) => [s.label, s.args[s.args.indexOf("--sample") + 1]]), [["proof-before", "1"], ["proof-after", "1"]], "the static pass's two captures, as --sample does");
+  assert.ok(steps.every((s) => !s.args.includes("--pages")), "no --pages beside it");
+  assert.match(SPECS["visual-parity"].subcommands.proof.flags.sample.help, /default the profile's proof\.sample \(src\/config\/harness\.ts\) unless --pages is given/);
 });
 
 test("without a profile, a bare command does what it did: the parser fills no scheme and no ref, and the fallbacks are the old defaults", () => {
@@ -66,7 +78,7 @@ test("without a profile, a bare command does what it did: the parser fills no sc
     assert.match(spec.flags.scheme.help, /default the first of the profile's schemes \(src\/config\/harness\.ts\), else light/, `${spec.command}'s help names the fallback`);
   }
   assert.match(SPECS["visual-parity"].subcommands.proof.flags.ref.help, /default the profile's proof\.ref \(src\/config\/harness\.ts\), else develop/);
-  assert.deepEqual(proofSettings(bare, null), { ref: "develop", schemes: ["light"], pages: undefined });
+  assert.deepEqual(proofSettings(bare, null), { ref: "develop", schemes: ["light"], pages: undefined, sample: undefined });
   assert.equal(schemeOf(undefined, null), "light");
   assert.deepEqual(captureWidths({ profile: null }), DEFAULT_WIDTHS);
   assert.deepEqual(DEFAULT_WIDTHS, [1920, 1440, 1280, 1100, 992, 800, 767, 390]);
