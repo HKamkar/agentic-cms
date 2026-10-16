@@ -14,7 +14,7 @@
 // so the plan and the run are tested without a server; docs/dev-server.md
 // is the guide.
 import { listDemos } from "./demo.mjs";
-import { DEV_LOCK, STALE_CACHE, STALE_CACHE_DIRS, clearStaleCache, processAlive, readDevLock, startDevServer } from "./dev-server.mjs";
+import { DEV_LOCK, STALE_CACHE, STALE_CACHE_DIRS, clearStaleCache, ownDevServer, startDevServer } from "./dev-server.mjs";
 import { STALE_CACHE_FIX, waitForRoute } from "./handover.mjs";
 import { ENV_FILE, ORIGINS_KEY, devPort, isUp, lanAddresses, originsStatus, publicAddress } from "./hosts.mjs";
 
@@ -33,8 +33,8 @@ export function servePlan({ root, flags, scripts = {}, scenes = [] }) {
 
 /** This site's next dev when one runs (its lock names a live pid and a port that answers), else a new one on the port; a ServeError when something else holds it. */
 async function findOrStart({ root, port, fs, up, kill, start }) {
-  const lock = readDevLock(root, fs);
-  if (lock && processAlive(lock.pid, kill) && (await up(lock.port))) return { port: lock.port, pid: lock.pid, reused: true, server: null };
+  const own = await ownDevServer({ root, fs, up, kill });
+  if (own) return { port: own.port, pid: own.pid, reused: true, server: null };
   if (await up(port)) throw new ServeError(`port ${port} answers, but not as this site's next dev (${DEV_LOCK} names none running): stop what holds it (docs/dev-server.md § Stopping a server), or pass --port <another>`);
   const server = await start(port);
   return { port, pid: server.pid, reused: false, server };

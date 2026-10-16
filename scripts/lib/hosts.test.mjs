@@ -111,14 +111,21 @@ function site({ envLocal, example = "# Copy to .env.local\nALLOWED_DEV_ORIGINS=\
   if (envLocal !== undefined) fs.writeFileSync(path.join(root, ".env.local"), envLocal);
   return root;
 }
-const net0 = { interfaces: INTERFACES, fetch: fakeFetch({ "https://api.ipify.org": "203.0.113.5" }).fetch, up: async (port) => port === 8000 };
+/** next dev's lock in the folder, as a running server writes it; pid 4242 is the one `alive` keeps running. */
+function lock(root, { pid = 4242, port }) {
+  fs.mkdirSync(path.join(root, ".next/dev"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".next/dev/lock"), JSON.stringify({ pid, port, hostname: "localhost", appUrl: `http://localhost:${port}`, startedAt: 1 }));
+}
+const alive = (pid) => { if (pid !== 4242) throw Object.assign(new Error("ESRCH"), { code: "ESRCH" }); };
+const net0 = { interfaces: INTERFACES, fetch: fakeFetch({ "https://api.ipify.org": "203.0.113.5" }).fetch, up: async (port) => port === 8000, kill: alive };
 
 test("urlsReport: the URLs on every address, which server answers, the origins it lacks — and --write fills them from .env.example, once", async () => {
   const root = site();
+  lock(root, { port: 8000 });
   try {
     const before = await urlsReport({ root, port: 8000, labPort: 8001, fs, ...net0 });
     assert.deepEqual(before.addresses, { lan: ["192.0.2.10", "198.51.100.7"], public: "203.0.113.5", publicLookedUp: true });
-    assert.deepEqual(before.dev, { port: 8000, up: true, urls: [{ where: "localhost", url: "http://localhost:8000" }, { where: "LAN", url: "http://192.0.2.10:8000" }, { where: "LAN", url: "http://198.51.100.7:8000" }, { where: "public", url: "http://203.0.113.5:8000" }] });
+    assert.deepEqual(before.dev, { port: 8000, up: true, own: true, ownPort: 8000, urls: [{ where: "localhost", url: "http://localhost:8000" }, { where: "LAN", url: "http://192.0.2.10:8000" }, { where: "LAN", url: "http://198.51.100.7:8000" }, { where: "public", url: "http://203.0.113.5:8000" }] });
     assert.equal(before.lab.up, false);
     assert.deepEqual(before.origins, { file: ".env.local", exists: false, listed: [], missing: ["192.0.2.10", "198.51.100.7", "203.0.113.5"], written: [] });
     assert.equal(fs.existsSync(path.join(root, ".env.local")), false, "without --write nothing is written");
@@ -126,7 +133,7 @@ test("urlsReport: the URLs on every address, which server answers, the origins i
     assert.match(text, /^dev server, port 8000: running\n {2}localhost {2}http:\/\/localhost:8000\n/);
     assert.match(text, /public {5}http:\/\/203\.0\.113\.5:8000 {3}answers only where a firewall opens 8000, to the viewer's IP only/);
     assert.match(text, /lab, port 8001: not running \(pnpm kit lab serve starts it\)/);
-    assert.match(text, /\.env\.local is missing, so ALLOWED_DEV_ORIGINS lacks 192\.0\.2\.10, 198\.51\.100\.7, 203\.0\.113\.5: a browser there gets a page that never hydrates\. pnpm urls --write adds them/);
+    assert.match(text, /\.env\.local is missing, so ALLOWED_DEV_ORIGINS lacks 192\.0\.2\.10, 198\.51\.100\.7, 203\.0\.113\.5: a browser there gets a page that never hydrates\. pnpm urls --write adds them \(then restart the dev server\)$/);
 
     const written = await urlsReport({ root, port: 8000, labPort: 8001, write: true, fs, ...net0 });
     assert.deepEqual(written.origins.written, ["192.0.2.10", "198.51.100.7", "203.0.113.5"]);
@@ -141,18 +148,45 @@ test("urlsReport: the URLs on every address, which server answers, the origins i
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("urlsReport: a port another checkout's server holds answers, but not as this clone's next dev — named so, its URLs this port's, and nothing tells the owner to restart it", async () => {
+  const root = site();
+  try {
+    const other = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, fs, ...net0 });
+    assert.deepEqual([other.dev.up, other.dev.own, other.dev.ownPort], [true, false, null]);
+    const text = formatUrls(other).join("\n");
+    assert.match(text, /^dev server, port 8000: answers, but not as this clone's next dev \(\.next\/dev\/lock names none on it\): stop what holds it before pnpm dev \(docs\/dev-server\.md § Stopping a server\), or serve this clone on another port \(pnpm kit serve --port <n>\)\n {2}localhost {2}http:\/\/localhost:8000\n/);
+    assert.doesNotMatch(text, /8000: running|restart/);
+    const written = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, write: true, fs, ...net0 });
+    assert.match(formatUrls(written).join("\n"), /added 192\.0\.2\.10, 198\.51\.100\.7 to ALLOWED_DEV_ORIGINS in \.env\.local$/, "the other server reads its own .env.local: no restart applies these");
+
+    lock(root, { pid: 4343, port: 8000 });
+    const stale = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, fs, ...net0 });
+    assert.deepEqual([stale.dev.up, stale.dev.own], [true, false], "a lock left behind by a server that exited is no server");
+
+    lock(root, { port: 8002 });
+    const elsewhere = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, fs, ...net0, up: async (port) => port === 8000 || port === 8002 });
+    assert.deepEqual([elsewhere.dev.up, elsewhere.dev.own, elsewhere.dev.ownPort], [true, false, 8002]);
+    assert.match(formatUrls(elsewhere).join("\n"), /^dev server, port 8000: answers, but not as this clone's next dev \(\.next\/dev\/lock names none on it\); this clone's next dev runs on port 8002 \(pnpm urls --port 8002\)$/m);
+    fs.rmSync(path.join(root, ".env.local"));
+    const freed = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, write: true, fs, ...net0, up: async (port) => port === 8002 });
+    const freedText = formatUrls(freed).join("\n");
+    assert.match(freedText, /^dev server, port 8000: not running; this clone's next dev runs on port 8002 \(pnpm urls --port 8002\)$/m);
+    assert.match(freedText, /; restart the dev server to apply it$/, "this clone's next dev runs, on another port: a restart applies the origins");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("urlsReport --no-public asks no service, and the public address is neither a URL nor a missing origin; a running lab lists its URLs", async () => {
   const root = site({ envLocal: "GOOGLE_TAG_ID=\nALLOWED_DEV_ORIGINS=192.0.2.10\n" });
   const quiet = fakeFetch({ "https://api.ipify.org": "203.0.113.5" });
   try {
-    const report = await urlsReport({ root, port: 8100, labPort: 8101, lookupPublic: false, fs, interfaces: INTERFACES, fetch: quiet.fetch, up: async () => true });
+    const report = await urlsReport({ root, port: 8100, labPort: 8101, lookupPublic: false, fs, interfaces: INTERFACES, fetch: quiet.fetch, up: async () => true, kill: alive });
     assert.deepEqual(quiet.asked, []);
     assert.deepEqual(report.addresses, { lan: ["192.0.2.10", "198.51.100.7"], public: null, publicLookedUp: false });
     assert.deepEqual(report.origins.missing, ["198.51.100.7"]);
     const text = formatUrls(report).join("\n");
     assert.match(text, /public {5}not looked up \(--no-public\)/);
     assert.match(text, /lab, port 8101: running, each scene at \/scene\/<name>\n {2}localhost {2}http:\/\/localhost:8101\n {2}LAN {8}http:\/\/192\.0\.2\.10:8101/);
-    assert.match(text, /ALLOWED_DEV_ORIGINS in \.env\.local lacks 198\.51\.100\.7:/);
+    assert.match(text, /ALLOWED_DEV_ORIGINS in \.env\.local lacks 198\.51\.100\.7: a browser there gets a page that never hydrates\. pnpm urls --write adds them$/, "8100 answers, but no lock: no restart named");
     const written = await urlsReport({ root, port: 8100, labPort: 8101, lookupPublic: false, write: true, fs, interfaces: INTERFACES, fetch: quiet.fetch, up: async () => false });
     assert.equal(fs.readFileSync(path.join(root, ".env.local"), "utf8"), "GOOGLE_TAG_ID=\nALLOWED_DEV_ORIGINS=192.0.2.10,198.51.100.7\n");
     assert.doesNotMatch(formatUrls(written).join("\n"), /restart/, "no server running: nothing to restart");

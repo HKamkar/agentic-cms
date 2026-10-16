@@ -5,9 +5,10 @@
 // the port. `serve` runs it for the owner's devices; the browser tests
 // (scripts/browser/dev-server.mjs) on a free loopback port. Also what tells
 // this site's server from another one on the port (next dev's own lock,
-// .next/dev/lock, names its pid and port), and the stale Turbopack cache a
-// production build leaves behind (docs/design.md § When the dev server will
-// not serve). The spawn and the signals come in, so a test fakes the child.
+// .next/dev/lock, names its pid and port), for serve, urls and setup alike,
+// and the stale Turbopack cache a production build leaves behind
+// (docs/design.md § When the dev server will not serve). The spawn and the
+// signals come in, so a test fakes the child.
 import { spawn as nodeSpawn } from "node:child_process";
 import { createRequire } from "node:module";
 import net from "node:net";
@@ -41,6 +42,16 @@ export function readDevLock(root, fs) {
 /** Whether a process runs: signal 0 tests without sending; EPERM is a process of another user's, alive. */
 export function processAlive(pid, kill = process.kill) {
   try { kill(pid, 0); return true; } catch (error) { return error.code === "EPERM"; }
+}
+
+/**
+ * This site's own next dev while it runs, as its lock ({ pid, port, … }), else null: the lock names a live pid and
+ * its port answers to `up` (hosts.mjs's isUp). Whatever else answers on a port, another checkout's server or
+ * another project's, is not it: serve reuses this one and refuses the rest, urls and setup call only this one running.
+ */
+export async function ownDevServer({ root, fs, up, kill = process.kill }) {
+  const lock = readDevLock(root, fs);
+  return lock && processAlive(lock.pid, kill) && (await up(lock.port)) ? lock : null;
 }
 
 /** Removes the caches a production build leaves next dev to misread; the folders that were there. */

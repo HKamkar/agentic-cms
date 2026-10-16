@@ -103,7 +103,28 @@ test("--check reports every gap, writes nothing and runs nothing but the version
   const clean = await run(ready, done, { check: true });
   assert.equal(clean.exit, 0);
   assert.equal(clean.ready, true);
+
+  const devPortDetail = (report) => report.steps.find((s) => s.step === "dev port").detail;
+  const held = await run(ready, done, { check: true }, { net: { ...NET, up: async (port) => port === 8000 } });
+  assert.equal(devPortDetail(held), "8000 answers, but not as this clone's next dev: pnpm dev needs the port, so stop what holds it first (docs/dev-server.md § Stopping a server)", "another checkout's server, no lock here");
+  assert.deepEqual([held.urls.dev.up, held.urls.dev.own], [true, false]);
+  const kill = (pid) => { if (pid !== 4242) throw Object.assign(new Error("ESRCH"), { code: "ESRCH" }); };
+  done.store.set(`${ROOT}/.next/dev/lock`, JSON.stringify({ pid: 4242, port: 8000 }));
+  const own = await run(ready, done, { check: true }, { net: { ...NET, up: async (port) => port === 8000, kill } });
+  assert.equal(devPortDetail(own), "this clone's next dev runs on 8000");
+  assert.equal(own.exit, 0);
   assert.deepEqual(done.writes, []);
+});
+
+test("the origins written while another checkout's server holds the dev port: no restart named, since that server reads its own .env.local; this clone's own next dev gets one", async () => {
+  const kill = (pid) => { if (pid !== 4242) throw Object.assign(new Error("ESRCH"), { code: "ESRCH" }); };
+  const net = { ...NET, up: async (port) => port === 8000, kill };
+  const originsDetail = (report) => report.steps.find((s) => s.step === "origins").detail;
+  const other = await run(machine({ installed: ["chromium", "webkit"], libraries: true }), memfs(), {}, { net });
+  assert.equal(originsDetail(other), "added 192.0.2.10, 203.0.113.5 to ALLOWED_DEV_ORIGINS");
+  const mine = memfs({ "package.json": PKG, ".env.example": EXAMPLE, ".next/dev/lock": JSON.stringify({ pid: 4242, port: 8000 }) });
+  const own = await run(machine({ installed: ["chromium", "webkit"], libraries: true }), mine, {}, { net });
+  assert.equal(originsDetail(own), "added 192.0.2.10, 203.0.113.5 to ALLOWED_DEV_ORIGINS; restart the dev server to apply it");
 });
 
 test("--deps installs WebKit's libraries with sudo, through this Node and playwright-core's cli, and checks WebKit launches after", async () => {

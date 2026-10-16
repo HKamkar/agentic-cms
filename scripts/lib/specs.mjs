@@ -290,10 +290,10 @@ export const SPECS = {
     json: "{ ready, check, steps: [{ step, status: ok|done|skipped|gap|todo|failed, detail, command? }], todo: [command], urls: <urls --json> | null }",
   },
   urls: {
-    command: "urls", script: "urls", group: "site", summary: "this machine's URLs for the dev server and the lab — localhost, the LAN, the public address — whether each server answers, and whether ALLOWED_DEV_ORIGINS in .env.local covers every address, without which a page opened there never hydrates; --write adds the missing ones",
+    command: "urls", script: "urls", group: "site", summary: "this machine's URLs for the dev server and the lab — localhost, the LAN, the public address — whether each server answers (the dev server said running only when it is this clone's own next dev, by its .next/dev/lock as serve reads it; another checkout's server on the port is named as such), and whether ALLOWED_DEV_ORIGINS in .env.local covers every address, without which a page opened there never hydrates; --write adds the missing ones",
     usage: "agentic-cms urls [--write] [--no-public] [--port <n>] [--lab-port <n>] [--json]",
     flags: {
-      write: { type: "boolean", help: "add the missing addresses to ALLOWED_DEV_ORIGINS in .env.local (made from .env.example when absent), as hostnames, keeping the file's other lines; then restart the dev server" },
+      write: { type: "boolean", help: "add the missing addresses to ALLOWED_DEV_ORIGINS in .env.local (made from .env.example when absent), as hostnames, keeping the file's other lines; then restart this clone's dev server" },
       "no-public": { type: "boolean", help: "do not look up the public address (api.ipify.org, then ifconfig.me; 4 s each)" },
       port: { type: "number", value: "<n>", help: "the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000)" },
       "lab-port": { type: "number", default: LAB_PORT, help: "the lab server's port (lab serve's)" },
@@ -301,7 +301,7 @@ export const SPECS = {
     },
     examples: ["agentic-cms urls                           # the URLs to hand over, and a missing origin named", "agentic-cms urls --write                   # the missing origins into .env.local", "agentic-cms urls --no-public --json"],
     exit: { 0: "every address is in ALLOWED_DEV_ORIGINS (or was written)", 1: "an address is missing from it, or .env.local is, and --write was not given", 2: "no dev port (no package.json's scripts.dev to read it from, and no --port), or usage" },
-    json: "{ addresses: { lan, public, publicLookedUp }, dev: { port, up, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }",
+    json: "{ addresses: { lan, public, publicLookedUp }, dev: { port, up, own, ownPort, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }",
   },
   serve: {
     command: "serve", script: "serve", group: "site", summary: "the dev server and the lab for the owner's devices, started or found running, and every URL to hand over once each route answers: the origins checked first, next dev on the site's port on every interface, the lab when .parity/lab has scenes, every *-demo route and the root waited for, then one table — localhost, LAN and public × the routes, the lab's index and each /scene/<name> — until Ctrl-C stops both",
