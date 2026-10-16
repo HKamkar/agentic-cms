@@ -23,6 +23,7 @@ own version.
 | 3.6 | `variants()`, tokens by role, the example's primitives | a site that wants them | it depends |
 | 3.7 | The component library, enforced | a site ready to freeze its components | an hour |
 | 3.8 | The know-how pointers | every site | minutes |
+| 3.9 | Pages as content files | a site with hand-written page routes | an hour per page |
 | 4 | Delete what your site wrote itself | a site with its own tools | minutes per tool |
 | 5 | Check | every site | a proof |
 
@@ -58,7 +59,7 @@ the candidate's `"commit"` from the lockfile beside it.
 table in `AGENTS.md`.
 - **Skills:** `design-proof`, `design-options`, `design-graphics`, `design`,
   and the new `setup`.
-- **Rules:** `styling`, `design`.
+- **Rules:** `styling`, `design`, and the new `pages`.
 
 A file you edited is kept. `--check` reports it `modified` when the kit's
 text of it has not changed since your site took it (nothing to take; the
@@ -113,6 +114,10 @@ that step: once you `--accept`, `--diff` no longer shows them.
     frame (`ui/Panel` on a site that has the example's).
 - **The components rule:** 3.7. It is new, and `--agent-files` writes it
   only once the site has `src/config/components.json`.
+- **The pages rule:** § 1. It is new, written whole: a page is a content
+  file, a new one `/editorial:new-page`, a page's copy never in a
+  component. Its guard sentence opens "Where the site runs the guard"
+  (3.7), and its last line points a site with hand-written pages at 3.9.
 - **`design`:**
   - § 1: the owner's look is `pnpm kit serve`, handing over the URLs it
     printed, in place of `pnpm dev`.
@@ -171,7 +176,22 @@ that step: once you `--accept`, `--diff` no longer shows them.
 
 **`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
 these lines by hand, as a new site's `AGENTS.md` carries them. After the
-bullet that names the engines' contracts:
+bullet on content (`Content is files under content/ …`):
+
+```md
+- **Every page is a content file.** It is `content/pages/<slug>.yaml`,
+  rendered by the catch-all route through the section registry; a new page
+  is `/editorial:new-page` (or the page template), a new section type a
+  schema, a component and a registry entry, together. A page's copy
+  (headings, body, labels, alt text, the SEO fields) never lives in a
+  component, a `page.tsx` or `src/config/` (the chrome is configured in
+  `site.ts`, a form in `forms.ts`). A route outside the content engine
+  (the API, the feed, a design round's `*-demo`, `lab-demo`) is a named
+  exception with its reason, in `src/config/components.json` where the
+  site runs the guard. The pages rule has the rest.
+```
+
+After the bullet that names the engines' contracts:
 
 ```md
 - The kit's know-how is under `node_modules/agentic-cms/docs/`, read
@@ -546,22 +566,30 @@ the imports.
 
 **Why:** UI is made only in the library, and ESLint and CI keep it that way:
 - the layers: `motion ← ui ← patterns ← sections`;
-- no raw elements, styles or visual classes in a section;
+- no raw elements, styles or visual classes in a section, and no copy (3.9);
 - every primitive catalogued;
-- `src/app` holds route files only.
+- `src/app` holds route files only, in the content engine's folders and
+  the named exceptions'.
 
 **Do:**
 1. Add the guard's config, `src/config/components.json`, with the same
    folders as step 2's options (`motion`, `ui`, `patterns`, `sections`,
-   `registry`, `ignores`; `null` for a layer you do not have) and your
-   route folders under `routes`, then run the guard:
+   `registry`, `ignores`; `null` for a layer you do not have), the content
+   engine's route folders under `routes` and every other route folder
+   under `exceptions`, each with the reason it stays outside the engine,
+   then run the guard:
 
    ```json
    {
      "motion": null,
      "patterns": null,
      "sections": ["sections"],
-     "routes": ["src/app", "src/app/[[...slug]]", "src/app/blog-post/[slug]", "src/app/api/forms/[id]", "src/app/feed.xml"],
+     "routes": ["src/app", "src/app/[[...slug]]"],
+     "exceptions": {
+       "src/app/blog-post/[slug]": "the blog engine: a post is content/blog/<slug>.md, rendered by the post template",
+       "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
+       "src/app/feed.xml": "the RSS feed, written from the posts"
+     },
      "inherited": []
    }
    ```
@@ -645,6 +673,42 @@ Point your `AGENTS.md` at the kit's guide for the rest.
 finds nothing your site does not keep on purpose, and your `AGENTS.md`
 names the five guides.
 
+### 3.9 Pages as content files
+
+**Why:** a page in the content engine is a file the build checks: its
+`seo` block audited, its copy linted against `content/VOICE.md`, its
+sections validated, the next page one `/editorial:new-page` away. A
+hand-written `src/app/<page>/page.tsx` with its copy inside gets none of
+that, and once the site runs 3.7 the lint and the guard refuse it.
+
+**Do,** one page per commit, each proven before the next:
+1. For each block of the page, take the section type in
+   `src/components/sections/schemas.ts` that fits. Where none does, add
+   one: its schema (copy only, every field described), its component in a
+   section folder taking that copy as props, and its entry in `render.tsx`.
+   Move the block's markup into the component as it is; only its words
+   leave.
+2. Write `content/pages/<slug>.yaml` from `content/_templates/page.yaml`:
+   `seo` from the route's metadata (`seo.path` is its URL, unchanged),
+   `jsonld`, and the sections in order with the copy the route held, word
+   for word.
+3. Delete the route's folder, `src/app/<page>/`: the catch-all renders the
+   page at the same URL.
+4. Prove it against the commit before, on that page alone, and commit:
+
+   ```bash
+   pnpm kit visual-parity proof page-<slug> --ref HEAD --pages /<path> --build
+   ```
+
+With every page moved, adopt the exceptions (3.7) for what stays outside
+the engine: `routes` keeps the app folder and the catch-all, and each
+other route folder (an API route, the feed, the post template) goes under
+`exceptions` with its reason.
+
+**Check:** `pnpm lint` and `pnpm build` pass, each page's proof was
+identical, and `git ls-files 'src/app/**/page.tsx'` lists the catch-all
+and the named exceptions' pages alone.
+
 ## 4. Delete what your site wrote itself
 
 Each row goes only after its step works.
@@ -661,16 +725,18 @@ Each row goes only after its step works.
 | hand-written review routes (a page of every primitive, of every motion) | `demo new <name> --showcase --component <file>…` (`--timeline` for motion), removed by `demo clean` with every file only it uses | 1 |
 | a script that starts the dev server and the lab, waits for a route, prints its URLs, or clears Turbopack's cache | `pnpm kit serve` (`--fix-cache`); `demo new` and `lab route` wait themselves | 3.2 |
 | copies of the gotchas, browser, dev-server or setup guides, or a primitives spec | the kit's docs, plus your site-only lines | 3.8 |
+| hand-written page routes (`src/app/<page>/page.tsx` with the copy inside) | `content/pages/<slug>.yaml` through the section registry; every other route folder an `exception` with its reason | 3.9 |
 
 ## Two paths, worked
 
 - **A site that wrote its own versions of what 0.8.0 brings:** § 1, then
-  the steps that replace them (3.1, 3.2, 3.5, 3.6, 3.7), deleting each § 4
-  row as its step lands. Then 3.8 and § 5.
+  the steps that replace them (3.1, 3.2, 3.5, 3.6, 3.7, and 3.9 for its
+  hand-written pages), deleting each § 4 row as its step lands. Then 3.8
+  and § 5.
 - **A site on `Fx` that wrote none of it:** § 1, then 3.1, 3.2 and 3.8.
   Keep `Fx`. Take 3.3 only for the agent-files check, if it has CI.
   Take 3.7 when the owner wants it, with every existing component in
-  `inherited`. Then § 5.
+  `inherited`, and 3.9 for any page that is a hand-written route. Then § 5.
 
 ## 5. Check
 

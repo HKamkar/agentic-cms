@@ -110,6 +110,7 @@ when the last job has landed, tagged `v0.8.0`. `package.json` stays at
 | 8 | A play-once motion layer in `agentic-cms/ix` | every site writing `Reveal`/`Sequence` again |
 | 9 | Tokens by role, `variants()`, day-one primitives | rebuilding the primitives from a pasted spec |
 | 10 | The component library, enforced | every site writing its own guard and lint |
+| 11 | The content engine is the standard | pages written as `page.tsx` files with the copy in their components |
 | R | Release 0.8.0 | |
 | S | The sites on 0.7.6 follow | a site's local copies of what moved into the kit |
 
@@ -127,6 +128,10 @@ beside 7 → 8 → 9 → 10, and 10 starts only after 5 has landed (both change
 - 10a: the ESLint preset and the components rule;
 - 10b: `check-components`, the lint script `init` writes, and the
   conditional agent files.
+
+Job 11 was added on 2026-10-16, after 10 landed and the gate had run once:
+it builds on 10's preset and guard. The gate's re-run waits for it, as it
+waits for the fixes the first run found.
 
 **Decided** marks a choice the owner settled when reviewing this plan
 (2026-10-15), each the recommendation the plan gave. A job that finds a
@@ -920,6 +925,51 @@ Safari?". Tests: `tools/agent-files.test.mjs` (the skill shape), hygiene,
     caught by the tool meant for it (ESLint or the guard);
   - `init` writes the lint script;
   - pack-smoke's `pnpm lint` (job 3) passes on a fresh site.
+
+### 11 — The content engine is the standard
+
+A site's agent could build its pages as hand-written `page.tsx` files with
+the copy inside the components, and nothing in the kit objected: `init`
+copies the catch-all route and the editorial plugin, and the site's
+`AGENTS.md` describes pages as content files, but nothing says it as a
+rule, the content rule loads only where content is edited, the preset bans
+raw elements and visual classes but not copy, and the guard lets a site
+allow any route folder with no reason. One pull request:
+
+1. **An always-loaded rule** in the template's `AGENTS.md`, mirrored in the
+   kit's where it is not already said: every page is
+   `content/pages/<slug>.yaml`, rendered through the section registry; a
+   new page is `/editorial:new-page` (or the page template); a new section
+   type is a schema, a component and a registry entry; a page's copy
+   (headings, body, labels, alt text, the SEO fields) never lives in a
+   component, a `page.tsx` or `src/config/` beyond the chrome's `site.ts`
+   (and a form's `forms.ts`); a route outside the content engine (the API,
+   the feed, a design round's `*-demo`, `lab-demo`) is a named exception.
+   Short: the template stays under 16 KiB, the kit's under 32 KiB.
+2. **The content rule loads where pages are written:** a short `pages`
+   rule in both trees, scoped to `src/app/**`, `src/components/**` and
+   `content/pages/**`; then `pnpm docs:rules`.
+3. **A lint rule against copy in components,** in `componentRules()`: in
+   sections and patterns, no JSX text with a letter or a digit, and no
+   string in a copy-bearing prop (`title`, `alt`, `aria-label`,
+   `placeholder`, `label`, `children`) or a data array's field of that
+   name. The message names the route the copy takes: the page's file, the
+   section's schema field, the prop. Configurable (`copy: { props,
+   decorations }`, or `false`), with a narrow escape for a symbol and a
+   decoration (`aria-hidden` text; the props of `Placeholder` and
+   `TypeTag`). The example passes; tested against planted violations.
+4. **The guard's named route exceptions:** `src/config/components.json`
+   keeps the content engine's folders under `routes` (the app folder, its
+   catch-all) and lists every other route folder under `exceptions` with
+   its reason; a bare one fails, its message naming the fix. The kit's
+   defaults carry their reasons, so a config from before still reads, and
+   `init` writes the example's set. Unit tests cover each case.
+5. **A guide step** (`docs/migrating-to-0.8.0.md` § 3.9) for a site whose
+   pages are hand-written: each page's copy into
+   `content/pages/<slug>.yaml` and each block into the registry (schema,
+   component, entry), one page per commit, each proven identical with a
+   short proof; then the exceptions for what stays outside. Its § 4 row and
+   its place in "Two paths, worked".
 
 ### R — Release 0.8.0
 

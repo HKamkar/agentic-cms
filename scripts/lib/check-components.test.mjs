@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { test } from "node:test";
 import { Linter } from "eslint";
-import { catalogued, checkComponents, componentExports, CONFIG_FILE, formatReport, globRegex, GuardConfigError, readConfig } from "./check-components.mjs";
+import { catalogued, checkComponents, componentExports, CONFIG_FILE, EXCEPTIONS, formatReport, globRegex, GuardConfigError, readConfig, ROUTES } from "./check-components.mjs";
 import { componentRules } from "./component-lint.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "../..");
@@ -123,14 +123,44 @@ test("registry: a component in a section folder the registry does not import is 
   assert.deepEqual(planted(home, pages), [], "a page folder is a section folder, imported relatively");
 });
 
-test("routes: src/app holds route files in the known route folders; a *-demo folder (a round's, the lab's) is free", () => {
+test("routes: src/app holds route files in the content engine's folders and the named exceptions'; a *-demo folder (a round's, the lab's) is free", () => {
   const helper = only({ "src/app/[[...slug]]/Promo.tsx": "export function Promo() {}\n" });
   assert.equal(helper.check, "routes");
   assert.match(helper.problem, /not a route file/);
-  assert.match(helper.fix, /content\/pages\/<slug>\.yaml.* "routes" in src\/config\/components\.json, in its own pull request/);
+  assert.match(helper.fix, /^a page is a file, content\/pages\/<slug>\.yaml, .* a component belongs in the library$/);
   const pricing = only({ "src/app/pricing/page.tsx": "export default function Page() {}\n" });
-  assert.match(pricing.problem, /in src\/app\/pricing\/, which is not a known route folder/);
+  assert.match(pricing.problem, /in src\/app\/pricing\/, which is neither the content engine's route nor a named exception/);
+  assert.match(pricing.fix, /content\/pages\/<slug>\.yaml.*; a route outside the content engine is a named exception, "exceptions": \{ "src\/app\/pricing": "<why it is not a content\/pages file>" \} in src\/config\/components\.json, in its own pull request$/);
   assert.deepEqual(planted({ "src/app/hero-demo/page.tsx": "x", "src/app/hero-demo/HeroA.tsx": "x", "src/app/lab-demo/page.tsx": "x", "src/app/not-found.tsx": "x", "src/app/sitemap.ts": "x", "src/app/icon.svg": "x" }), []);
+});
+
+test("exceptions: a route outside the content engine passes with its reason; a bare one, in routes or with an empty reason, is a finding naming the fix", () => {
+  const feed = { "src/app/feed.xml/route.ts": "export function GET() {}\n" };
+  const named = { routes: ROUTES, exceptions: { "src/app/feed.xml": "the RSS feed, written from the posts" } };
+  assert.deepEqual(planted(feed, named), [], "named, with its reason");
+  const bare = only(feed, { routes: [...ROUTES, "src/app/feed.xml"], exceptions: {} });
+  assert.equal(bare.check, "routes");
+  assert.equal(bare.file, "src/app/feed.xml");
+  assert.match(bare.problem, /in "routes" with no reason: "routes" holds the content engine's folders \(the app folder, its catch-all\), and this is neither/);
+  assert.match(bare.fix, /^a route outside the content engine is a named exception, "exceptions": \{ "src\/app\/feed\.xml": "<why it is not a content\/pages file>" \} in src\/config\/components\.json, out of "routes"$/);
+  for (const reason of ["", "  ", null, true]) {
+    const blank = only(feed, { routes: ROUTES, exceptions: { "src/app/feed.xml": reason } });
+    assert.equal(blank.problem, "a named exception with no reason", JSON.stringify(reason));
+    assert.match(blank.fix, /"exceptions": \{ "src\/app\/feed\.xml": "<why/);
+  }
+  assert.deepEqual(planted({ "src/app/[locale]/[[...slug]]/page.tsx": "x", "src/app/docs/[...path]/page.tsx": "x" }, { routes: [...ROUTES, "src/app/[locale]/[[...slug]]", "src/app/docs/[...path]"] }), [], "a catch-all is the engine's, bare");
+  assert.throws(() => readConfig("/site", memfs({ [CONFIG_FILE]: '{ "exceptions": ["src/app/feed.xml"] }' })), (e) => e instanceof GuardConfigError && /exceptions is \{ "<route folder>": "<reason>" \}/.test(e.message), "a list of bare folders does not read");
+});
+
+test("an older config, its five routes bare, still loads: the kit's own reasons cover its three, a folder of the site's own is a finding", () => {
+  const old = { routes: ["src/app", "src/app/[[...slug]]", "src/app/blog-post/[slug]", "src/app/api/forms/[id]", "src/app/feed.xml"] };
+  assert.deepEqual(Object.keys(EXCEPTIONS).sort(), old.routes.slice(2).sort());
+  assert.ok(Object.values(EXCEPTIONS).every((reason) => reason.length > 10), "the defaults carry their reasons");
+  const files = { "src/app/blog-post/[slug]/page.tsx": "x", "src/app/api/forms/[id]/route.ts": "x", "src/app/feed.xml/route.ts": "x" };
+  assert.deepEqual(planted(files, old), []);
+  const own = only({ ...files, "src/app/pricing/page.tsx": "x" }, { routes: [...old.routes, "src/app/pricing"] });
+  assert.equal(own.file, "src/app/pricing");
+  assert.match(own.problem, /in "routes" with no reason/);
 });
 
 test("components: a .tsx outside src/components and src/app is caught; an ignored folder is left out of every check", () => {
@@ -205,12 +235,15 @@ const ESLINT_BASE = { files: ["**/*.{js,jsx,mjs,ts,tsx}"], plugins: { react }, l
 const eslint = (file, code) => new Linter({ cwd: "/site" }).verify(code, [ESLINT_BASE, ...componentRules()], { filename: `/site/${file}` }).map((m) => m.ruleId);
 
 test("each planted violation is caught by the tool meant for it: a raw element by ESLint, a stray file by the guard", () => {
-  const rawButton = 'export function Hero() { return <button type="button">Go</button>; }\n';
+  const rawButton = 'export function Hero({ label }) { return <button type="button">{label}</button>; }\n';
   assert.deepEqual(eslint("src/components/sections/Hero.tsx", rawButton), ["react/forbid-elements"]);
   assert.deepEqual(planted({ "src/components/sections/Hero.tsx": rawButton }), [], "the guard does not judge markup");
-  const promo = 'import { Button } from "@/components/ui/Button";\nexport function Promo() { return <Button href="/">Go</Button>; }\n';
+  const promo = 'import { Button } from "@/components/ui/Button";\nexport function Promo({ cta }) { return <Button href="/">{cta}</Button>; }\n';
   assert.deepEqual(eslint("src/components/sections/Promo.tsx", promo), [], "ESLint finds nothing wrong inside it");
   assert.deepEqual(planted({ "src/components/sections/Promo.tsx": promo }).map((f) => f.check), ["registry"]);
+  const copy = 'export function Hero() { return <Heading>Get started</Heading>; }\n';
+  assert.deepEqual(eslint("src/components/sections/Hero.tsx", copy), ["no-restricted-syntax"], "copy in a section, by ESLint");
+  assert.deepEqual(planted({ "src/app/pricing/page.tsx": "x" }, { routes: ROUTES }).map((f) => f.check), ["routes"], "a hand-written page route, by the guard");
 });
 
 test("the kit's example passes the guard with its own config", () => {

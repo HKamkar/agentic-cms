@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { Linter } from "eslint";
-import { componentRules, defaultElements } from "./component-lint.mjs";
+import { componentRules, copySyntax, defaultElements, resolveOptions } from "./component-lint.mjs";
 
 // The rules run as a site runs them: the `react` plugin is the one
 // eslint-config-next registers, the planted files are linted by their path.
@@ -117,4 +117,62 @@ test("options: the elements map overrides a message or allows an element, and th
   assert.match(one("app/ui-kit/blocks/Hero.tsx", "export function Hero() { return <button />; }", moved), /Button \(a link\).*from app\/ui-kit\/ui/);
   assert.match(one("app/ui-kit/ui/Card.tsx", 'import { Hero } from "../blocks/Hero";', moved), /A primitive cannot depend on/);
   assert.equal(defaultElements("x/ui").h1, "Headings are Heading from x/ui (its level apart from its size); Section renders the section's own.");
+});
+
+const COPY = /^no-restricted-syntax: No copy in a section or a pattern: it goes in the page's file, content\/pages\/<slug>\.yaml → a field of the section \(its schema in src\/components\/sections\/schemas\.ts\) → a prop here/;
+const COPY_PROP = /^no-restricted-syntax: No copy in a string prop \(title, alt, aria-label, placeholder, label, children\): it goes in the page's file, content\/pages\/<slug>\.yaml/;
+
+test("no copy in a section: JSX text with a letter or a digit, written straight, as {…}, in a template or a fallback, in an element or a fragment", () => {
+  for (const jsx of ["<p>Get started</p>", "<p>{heading} today</p>", "<p>{\"Read more\"}</p>", "<p>{`${count} customers`}</p>", "<p>{label ?? \"Untitled\"}</p>", "<><b>{n}</b> years</>", "<p>24/7</p>"]) {
+    const messages = section(jsx);
+    assert.equal(messages.length, 1, `${jsx}: ${messages.join("\n")}`);
+    assert.match(messages[0], COPY, jsx);
+  }
+  const both = section('<p>{open ? "Close" : "Open"}</p>');
+  assert.equal(both.length, 2, "one finding per string");
+  assert.ok(both.every((message) => COPY.test(message)), both.join("\n"));
+});
+
+test("no copy in a copy-bearing prop: title, alt, aria-label, placeholder, label and children, written straight or as {…}", () => {
+  for (const jsx of ['<Media alt="A dashboard" />', '<Section title="Why us" />', '<IconButton aria-label="Close menu" />', '<Field placeholder={"Your email"} />', "<Eyebrow label={`Step ${n}`} />", '<Button children="Go" />', '<Media alt={alt || "A dashboard"} />']) {
+    const messages = section(jsx);
+    assert.equal(messages.length, 1, `${jsx}: ${messages.join("\n")}`);
+    assert.match(messages[0], COPY_PROP, jsx);
+  }
+  assert.match(one("src/components/patterns/Split.tsx", 'export function Split() { return <Media alt="Team" />; }'), COPY_PROP, "a pattern too");
+});
+
+test("no copy in a section's data: a field named as a copy prop, in an array at the top of the file or inline; keys and other fields pass", () => {
+  const cards = 'const CARDS = [{ key: "fast", title: "Fast", "aria-label": `Read ${n}`, icon: "bolt" }];\nexport function Hero() { return <ul>{CARDS.map((c) => <li key={c.key}>{c.title}</li>)}</ul>; }';
+  const messages = lint("src/components/home/Hero.tsx", cards);
+  assert.equal(messages.length, 2, messages.join("\n"));
+  assert.ok(messages.every((m) => /^no-restricted-syntax: No copy in a section's data \(a title, alt, aria-label, placeholder, label, children field\): it goes in the page's file/.test(m)), messages.join("\n"));
+  assert.deepEqual(lint("src/components/home/Hero.tsx", 'const CARDS = ["first", "second"];\nconst SIZES = { title: 4, label: "" };\nexport function Hero() { return <ul>{CARDS.map((c) => <li key={c} />)}</ul>; }'), []);
+});
+
+test("copy from props passes, and so do symbols, whitespace, keys, class strings, other props and an aria-hidden decoration", () => {
+  const clean = [
+    "<Section heading={heading} eyebrow={eyebrow}><p>{body}</p><Media alt={image.alt} /></Section>",
+    "<ul>{items.map((item) => <li key={item.id}>{item.title} · {item.text}</li>)}</ul>",
+    '<p> → {" "} &amp; &nbsp; × </p>',
+    '<p className="p-4 text-muted" id="intro" data-section="hero">{fn("key")}{String(i).padStart(2, "0")}</p>',
+    '<Media alt="" href="/blog" type="button" />',
+    '<span aria-hidden="true">01</span>',
+    '<IconButton aria-hidden label="Decorative" />',
+    '<Placeholder ratio="aspect-video" label="hero board" />',
+    "<TypeTag label={`group · ${variant}`} />",
+  ];
+  for (const jsx of clean) assert.deepEqual(section(jsx), [], jsx);
+  assert.match(section('<p><Icon aria-hidden="true" />Get started</p>')[0], COPY, "an aria-hidden child does not hide its parent's text");
+});
+
+test("the copy rule is configurable: other props, other decorations, or off; the message names the registry's schemas", () => {
+  assert.match(section('<Card caption="Hi" />', { ...EVERY_LAYER, copy: { props: ["caption"] } })[0], /No copy in a string prop \(caption\)/);
+  assert.deepEqual(section('<Section title="Why us" />', { ...EVERY_LAYER, copy: { props: ["caption"] } }), [], "the props list replaces the default");
+  assert.deepEqual(section('<Badge label="new" />', { ...EVERY_LAYER, copy: { decorations: ["Badge"] } }), []);
+  assert.match(section('<Placeholder label="hero board" />', { ...EVERY_LAYER, copy: { decorations: [] } })[0], COPY_PROP, "no decorations: Placeholder's label is copy");
+  assert.deepEqual(section("<p>Get started</p>", { ...EVERY_LAYER, copy: false }), []);
+  assert.deepEqual(lint("src/components/home/Hero.tsx", 'const A = [{ title: "Fast" }];\nexport function Hero() { return <p>{A[0].title}</p>; }', { ...EVERY_LAYER, copy: false }), []);
+  assert.deepEqual(lint("src/components/ui/Button.tsx", "export function Button() { return <button>Go</button>; }"), [], "a primitive is not a section");
+  assert.match(copySyntax(resolveOptions({ root: "app/ui-kit", registry: "blocks/registry.tsx" }))[0].message, /its schema in app\/ui-kit\/blocks\/schemas\.ts/);
 });

@@ -53,7 +53,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   validated at build time and rendered by `src/app/[[...slug]]/page.tsx`
   through the section registry (`src/components/sections/render.tsx`).
   Presentation (sizes, ratios, class strings) stays in the components, keyed
-  by position.
+  by position. That is the standard, for the example and every site: a new
+  page is `/editorial:new-page`, never a `page.tsx`, and a page's copy
+  never lives in a component, a `page.tsx` or `src/config/` (the chrome is
+  configured in `site.ts`, a form in `forms.ts`). A route outside the
+  content engine (the API, the feed, the post template, a design round's
+  `*-demo`, `lab-demo`) is a named exception with its reason
+  (`exceptions` in `src/config/components.json`); `pnpm lint` fails any
+  other, and copy in a section or a pattern. The pages rule has the rest.
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
@@ -84,6 +91,7 @@ paths. The table is written from the rules' frontmatter by
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/components/**`, `content/pages/**` | [Pages](.claude/rules/pages.md) |
 | `src/app/**`, `src/config/site.ts`, `src/lib/seo/**`, `src/kit.ts`, `scripts/check-seo.mjs`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->

@@ -9,8 +9,10 @@
 //     the catalogue (src/components/README.md); a component is a PascalCase
 //     name with a lowercase letter, so an ALL_CAPS constant is none;
 //   - every component file in a section folder is imported by the registry;
-//   - src/app holds route files only, in the known route folders (a *-demo
-//     folder — a design round's route, the lab's lab-demo — is free);
+//   - src/app holds route files only, in the content engine's route folders
+//     (the app folder and its catch-all) or a named exception's: a folder
+//     outside the engine listed with the reason it stays there (a *-demo
+//     folder — a design round's route, the lab's lab-demo — is one by name);
 //   - no component (.tsx, .jsx) outside src/components and src/app;
 //   - CSS modules only in ui and the motion layer, @keyframes only in the
 //     motion layer and src/styles/motion.css.
@@ -26,10 +28,16 @@ import { DEFAULTS as LINT_DEFAULTS, resolveOptions } from "./component-lint.mjs"
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
 export const CONFIG_FILE = "src/config/components.json";
-/** The route folders of the kit's example: what a site that names none has. */
-export const ROUTES = ["src/app", "src/app/[[...slug]]", "src/app/blog-post/[slug]", "src/app/api/forms/[id]", "src/app/feed.xml"];
+/** The content engine's route folders: the app folder (the layout, the root metadata) and the catch-all that renders content/pages/<slug>.yaml. */
+export const ROUTES = ["src/app", "src/app/[[...slug]]"];
+/** The kit example's routes outside the content engine, each with the reason it stays there: what a site that names none has. */
+export const EXCEPTIONS = {
+  "src/app/blog-post/[slug]": "the blog engine: a post is content/blog/<slug>.md, rendered by the post template",
+  "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
+  "src/app/feed.xml": "the RSS feed, written from the posts",
+};
 /** The guard's keys beyond componentRules()'s, with their defaults; `catalogue` is under `root`. */
-export const GUARD_DEFAULTS = { catalogue: "README.md", app: "src/app", routes: ROUTES, motionCss: "src/styles/motion.css", inherited: [] };
+export const GUARD_DEFAULTS = { catalogue: "README.md", app: "src/app", routes: ROUTES, exceptions: EXCEPTIONS, motionCss: "src/styles/motion.css", inherited: [] };
 const KEYS = new Set([...Object.keys(LINT_DEFAULTS), ...Object.keys(GUARD_DEFAULTS)]);
 /** The files Next.js reads in a route folder: the route's own files and its metadata, plus the root layout's stylesheet. */
 export const ROUTE_FILE = /^(?:(?:page|layout|template|loading|error|global-error|not-found|forbidden|unauthorized|default|route)\.(?:tsx|ts|jsx|js)|(?:sitemap|robots|manifest)\.(?:ts|js|xml|txt|json|webmanifest)|(?:icon|apple-icon|opengraph-image|twitter-image)\d*\.(?:ico|jpe?g|png|gif|svg|tsx|ts|jsx|js)|(?:opengraph-image|twitter-image)\d*\.alt\.txt|favicon\.ico|globals\.css)$/;
@@ -51,6 +59,7 @@ export function readConfig(root, fs) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new GuardConfigError(`${CONFIG_FILE}: an object of options, not ${JSON.stringify(config)}`);
   for (const key of Object.keys(config)) if (!key.startsWith("$") && !KEYS.has(key)) throw new GuardConfigError(`${CONFIG_FILE}: no option ${key}${suggest(key, [...KEYS])} (a key starting with $ is a comment)`);
   for (const key of ["sections", "ignores", "routes", "inherited"]) if (key in config && !(Array.isArray(config[key]) && config[key].every((v) => typeof v === "string"))) throw new GuardConfigError(`${CONFIG_FILE}: ${key} is a list of paths`);
+  if ("exceptions" in config && (!config.exceptions || typeof config.exceptions !== "object" || Array.isArray(config.exceptions))) throw new GuardConfigError(`${CONFIG_FILE}: exceptions is { "<route folder>": "<reason>" } — each route outside the content engine, with the reason it stays there`);
   return config;
 }
 
@@ -58,7 +67,7 @@ export function readConfig(root, fs) {
 export function resolveGuard(config = {}) {
   const layers = resolveOptions(config);
   const own = { ...GUARD_DEFAULTS, ...config };
-  return { ...layers, catalogue: `${layers.root}/${own.catalogue}`, app: own.app, routes: own.routes, motionCss: own.motionCss, inherited: own.inherited, ignores: layers.ignores };
+  return { ...layers, catalogue: `${layers.root}/${own.catalogue}`, app: own.app, routes: own.routes, exceptions: own.exceptions, motionCss: own.motionCss, inherited: own.inherited, ignores: layers.ignores };
 }
 
 /** A glob (`**`, `*`, `?`) as a regex over a root-relative path. */
@@ -152,14 +161,32 @@ function checkRegistry(g, tree, exempt) {
   return files.filter((file) => !imported.has(file.replace(COMPONENT, ""))).map((file) => finding("registry", file, "a component in a section folder that the registry does not import", `a section folder holds the components the registry renders: register it in ${g.registry} (its type and schema beside the others), or move a piece sections share to ${shared}/ with its catalogue entry`));
 }
 
-/** src/app holds route files only, in the known route folders; a *-demo folder is a round's or the lab's. */
+/** A folder the content engine renders through: the app folder, or a catch-all ([[...slug]], [...slug]) under it. */
+export const engineRoute = (g, folder) => folder === g.app || (within(folder, g.app) && /^\[\[?\.\.\.[^\]]+\]\]?$/.test(path.posix.basename(folder)));
+const PAGE_FIX = "a page is a file, content/pages/<slug>.yaml, that the catch-all route renders from registered sections, and a component belongs in the library";
+const exceptionFix = (folder) => `a route outside the content engine is a named exception, "exceptions": { "${folder}": "<why it is not a content/pages file>" } in ${CONFIG_FILE}`;
+
+/** Every route folder outside the content engine carries its reason: a bare one in `routes`, or an exception with none, is a finding. */
+function checkExceptions(g) {
+  const bare = g.routes.filter((folder) => !engineRoute(g, folder) && !Object.hasOwn(g.exceptions, folder));
+  const blank = Object.entries(g.exceptions).filter(([, reason]) => typeof reason !== "string" || !reason.trim()).map(([folder]) => folder);
+  return [
+    ...bare.map((folder) => finding("routes", folder, `in "routes" with no reason: "routes" holds the content engine's folders (the app folder, its catch-all), and this is neither`, `${exceptionFix(folder)}, out of "routes"`)),
+    ...blank.map((folder) => finding("routes", folder, "a named exception with no reason", exceptionFix(folder))),
+  ];
+}
+
+/** src/app holds route files only, in the content engine's route folders and the named exceptions'; a *-demo folder is a round's or the lab's. */
 function checkRoutes(g, tree, exempt) {
+  const known = new Set([...g.routes, ...Object.keys(g.exceptions)]);
   const files = tree.files.filter((f) => within(f, g.app) && !exempt.has(f) && !DEMO_FOLDER.test(f.slice(g.app.length + 1).split("/")[0]));
-  const stray = files.filter((file) => !(g.routes.includes(path.posix.dirname(file)) && ROUTE_FILE.test(path.posix.basename(file))));
-  return stray.map((file) => {
-    const known = g.routes.includes(path.posix.dirname(file));
-    return finding("routes", file, known ? "not a route file (page, layout, route, not-found, the metadata files)" : `in ${path.posix.dirname(file)}/, which is not a known route folder`, `a page is a file, content/pages/<slug>.yaml, that the catch-all route renders from registered sections, and a component belongs in the library; a new route is an architecture change — its folder goes into "routes" in ${CONFIG_FILE}, in its own pull request`);
+  const stray = files.filter((file) => !(known.has(path.posix.dirname(file)) && ROUTE_FILE.test(path.posix.basename(file))));
+  const found = stray.map((file) => {
+    const folder = path.posix.dirname(file);
+    if (known.has(folder)) return finding("routes", file, "not a route file (page, layout, route, not-found, the metadata files)", PAGE_FIX);
+    return finding("routes", file, `in ${folder}/, which is neither the content engine's route nor a named exception`, `${PAGE_FIX}; ${exceptionFix(folder)}, in its own pull request`);
   });
+  return [...checkExceptions(g), ...found];
 }
 
 /** No component outside the layers' root and the app folder. */
