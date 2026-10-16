@@ -23,14 +23,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, addStyle, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, addStyle, capturePages, fontsReady, imagesReady, isLoop, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
-import { captureWidths, menuWidths, profileOrExit, proofSettings, schemeOf } from "./lib/profile.mjs";
+import { captureWidths, menuWidths, opensMenu, profileOrExit, proofSettings, schemeOf } from "./lib/profile.mjs";
 import { forwarded, passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
-import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
+import { createShotCache, harnessDigest, noShotCache, shotKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
 import { SITE_SEED, sameSeed, seedLine, seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
@@ -55,6 +55,7 @@ const MOTION_FRAMES_MS = [150, 500];
 const widths = captureWidths({ flag: flags.widths, motion, profile });
 // The home page's menu is opened at these widths wherever its button shows: the site's own widths below its menu breakpoint.
 const MENU_WIDTHS = menuWidths(profile);
+const menuAt = (pagePath, width) => opensMenu({ pagePath, width, menuWidths: MENU_WIDTHS, motion, states });
 const MENU_BUTTON = ".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]";
 const threshold = flags.threshold ?? 0.02;
 const thresholdMid = flags["threshold-mid"] ?? 20;
@@ -97,8 +98,14 @@ const motionPages = (root = ROOT) => {
 // geometry, which transforms do not move, since the element is already
 // mid-flight when the event arrives). Compared as data, so it is immune to
 // frame jitter: a missing, extra or retimed animation is a diff even when the
-// screenshots happen to agree. The inline SMIL loops, which the browser does
-// not report as animations, join them from SMIL_INVENTORY.
+// screenshots happen to agree. An infinite loop is left out: how often a page
+// starts or restarts one (an observer, a timer) depends on timing, so the
+// count would, and its frames are held at its first anyway (PAUSE_LOOPS). The
+// effect's own timing in the page says which is a loop, as PAUSE_LOOPS reads
+// it; the protocol's report (isLoop) when the page no longer holds the
+// animation. The inline SMIL loops, which the browser does not report as
+// animations and whose list is the page's markup, join them from
+// SMIL_INVENTORY.
 const byPlace = (a, b) => (a.target?.top ?? 0) - (b.target?.top ?? 0) || JSON.stringify(a).localeCompare(JSON.stringify(b));
 async function recordAnimations(page) {
   const cdp = await page.context().newCDPSession(page);
@@ -107,9 +114,18 @@ async function recordAnimations(page) {
   await cdp.send("Animation.enable");
   const seen = new Set();
   const records = [];
+  const loops = async (animation) => {
+    try {
+      const { remoteObject } = await cdp.send("Animation.resolveAnimation", { animationId: animation.id });
+      const { result } = await cdp.send("Runtime.callFunctionOn", { objectId: remoteObject.objectId, returnByValue: true, functionDeclaration: "function () { return this.effect?.getTiming().iterations === Infinity; }" });
+      if (typeof result.value === "boolean") return result.value;
+    } catch { /* gone from the page: the protocol's report decides */ }
+    return isLoop(animation.source?.iterations);
+  };
   cdp.on("Animation.animationStarted", async ({ animation }) => {
     if (seen.has(animation.id)) return;
     seen.add(animation.id);
+    if (await loops(animation)) return;
     const src = animation.source ?? {};
     let target = null;
     try {
@@ -122,7 +138,7 @@ async function recordAnimations(page) {
   return async () => {
     await page.waitForTimeout(200);
     await cdp.detach().catch(() => {});
-    return records.filter((r) => r.iterations !== Infinity);
+    return records;
   };
 }
 
@@ -236,7 +252,7 @@ async function shootPage(page, { dir, name, pagePath, width }) {
   await page.evaluate(HOLD_SMIL, { rest: true });
   await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
   fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
-  if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
+  if (!menuAt(pagePath, width)) return 1;
   const menu = page.locator(MENU_BUTTON).first();
   if (!(await menu.isVisible())) return 1;
   await menu.click();
@@ -247,13 +263,14 @@ async function shootPage(page, { dir, name, pagePath, width }) {
 
 // What decides a shot besides the page's own files: the harness's sources (this file, the browser library and
 // the seed), the browser's version and the capture's settings — the seed's templates among them, never the time
-// {now} became — for --states also the site's config, whose labels the states look for. A served --url site has no files of ours to digest, so nothing is reused there.
+// {now} became — for --states also the site's config, whose labels the states look for; and, for the page-widths
+// that open the home page's menu alone, that they do (shotKey). A served --url site has no files of ours to digest, so nothing is reused there.
 const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs"), path.join(import.meta.dirname, "lib/storage-seed.mjs")];
 function shotCacheFor({ browser, root, baseUrl, build, kit }) {
   if (flags.url) return noShotCache();
-  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
-  const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
-  return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
+  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
+  const base = { harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings };
+  return createShotCache({ root: ROOT, key: (shot) => shotKey(base, shot), resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
 }
 const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shot-cache: every build file they load is unchanged)` : "");
 
@@ -303,7 +320,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   const left = new Map(pages.map((pagePath) => [pagePath, widths.length]));
   await inPool(tasks, { slots: JOBS, open, work: async ({ pagePath, width, name }, { context }) => {
     // taken before it is added: `count += await …` reads count first, and two workers would lose each other's shots
-    const taken = await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))));
+    const taken = await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))), { menu: menuAt(pagePath, width) });
     count += taken;
     left.set(pagePath, left.get(pagePath) - 1);
     if (!left.get(pagePath)) say(`${pagePath} `);
@@ -356,9 +373,9 @@ function clean() {
 async function proof() {
   const label = labels[0] ?? "proof";
   // the seed's flags go to both sides of every pass, and each capture reads the site's src/config/harness.ts from this tree
-  // a flag, then the site's profile, then the built-in default: the ref, a pass in each scheme, the pages
-  const { ref, schemes, pages } = proofSettings(flags, profile);
-  const steps = plan({ label, ref, passes: passesOf(flags), schemes, build: flags.build, shared: forwarded(flags, ["jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded({ pages }, ["pages"]), widths: forwarded(flags, ["widths"]), sample: forwarded(flags, ["sample"]) });
+  // a flag, then the site's profile, then the built-in default: the ref, a pass in each scheme, the pages or the sample
+  const { ref, schemes, pages, sample } = proofSettings(flags, profile);
+  const steps = plan({ label, ref, passes: passesOf(flags), schemes, build: flags.build, shared: forwarded(flags, ["jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded({ pages }, ["pages"]), widths: forwarded(flags, ["widths"]), sample: forwarded({ sample }, ["sample"]) });
   const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
   // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
   const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });

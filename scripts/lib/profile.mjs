@@ -8,7 +8,7 @@
 //     storage: { … },
 //     widths: [390, 768, 1440, 1920],
 //     schemes: ["light"],                  // or ["light", "dark"]
-//     proof: { pages: ["/"], ref: "develop" },
+//     proof: { pages: ["/"], ref: "develop" },   // or { sample: 1 }: one page of each template
 //   };
 //
 // A flag wins, then the profile, then the built-in default — the value every
@@ -50,12 +50,18 @@ export function captureWidths({ flag, motion = false, profile = null }) {
 /** The widths at which the home page's menu is opened and shot, where its button shows: the profile's widths, else the built-in two. */
 export const menuWidths = (profile) => profile?.widths ?? MENU_WIDTHS;
 
+/** Whether a capture opens the home page's menu at a page-width: a static capture of the home page, at one of the menu widths. */
+export const opensMenu = ({ pagePath, width, menuWidths: at, motion = false, states = false }) => !motion && !states && pagePath === "/" && at.includes(width);
+
 /**
- * What a proof runs on: the ref its baseline is built from, the schemes it runs a pass in each of, and the
- * pages of every capture and compare (undefined: every page). A flag wins, then the profile, then the default;
- * --sample chooses the pages itself, so the profile's pages give way to it.
+ * What a proof runs on: the ref its baseline is built from, the schemes it runs a pass in each of, the pages
+ * of every capture and compare, and the sample of each template its static pass takes (both undefined: every
+ * page). A flag wins, then the profile, then the default; --pages and --sample are two ways of choosing the
+ * pages, so either flag sets aside both of the profile's (which sets one at most).
  */
 export function proofSettings(flags, profile = null) {
-  const pages = flags.pages ?? (flags.sample === undefined ? profile?.proof?.pages?.join(",") : undefined);
-  return { ref: flags.ref ?? profile?.proof?.ref ?? DEFAULT_REF, schemes: flags.scheme ? [flags.scheme] : profile?.schemes ?? DEFAULT_SCHEMES, pages };
+  const chosen = flags.pages !== undefined || flags.sample !== undefined;
+  const pages = flags.pages ?? (chosen ? undefined : profile?.proof?.pages?.join(","));
+  const sample = flags.sample ?? (chosen ? undefined : profile?.proof?.sample);
+  return { ref: flags.ref ?? profile?.proof?.ref ?? DEFAULT_REF, schemes: flags.scheme ? [flags.scheme] : profile?.schemes ?? DEFAULT_SCHEMES, pages, sample };
 }

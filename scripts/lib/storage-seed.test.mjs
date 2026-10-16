@@ -80,15 +80,16 @@ test("the seed still reads beside the profile's keys, and the profile reads from
     fs.mkdirSync(path.join(root, "src/config"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/config/harness.ts"), `export const harness = {\n  storage: { consent: { analytics: "denied", at: "{now}", version: 1 } },\n  widths: [390, 768, 1440, 1920],\n  schemes: ["light"],\n  proof: { pages: ["/"], ref: "develop" },\n};\n`);
     assert.deepEqual(await readSiteSeed(root), { storage: { consent: CONSENT }, sessionStorage: {} });
-    assert.deepEqual(await readSiteProfile(root), { widths: [390, 768, 1440, 1920], schemes: ["light"], proof: { pages: ["/"], ref: "develop" } });
+    assert.deepEqual(await readSiteProfile(root), { widths: [390, 768, 1440, 1920], schemes: ["light"], proof: { pages: ["/"], ref: "develop", sample: undefined } });
     const seed = await resolveSeed({}, { root, now: NOW });
     assert.deepEqual(seed.templates, { storage: { consent: CONSENT }, sessionStorage: {} }, "the profile is never seeded");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
-  assert.deepEqual(validateProfile({ storage: {} }), { widths: undefined, schemes: undefined, proof: { pages: undefined, ref: undefined } }, "a seed without a profile: every key left to its default");
+  assert.deepEqual(validateProfile({ storage: {} }), { widths: undefined, schemes: undefined, proof: { pages: undefined, ref: undefined, sample: undefined } }, "a seed without a profile: every key left to its default");
+  assert.deepEqual(validateProfile({ proof: { sample: 1, ref: "main" } }).proof, { pages: undefined, ref: "main", sample: 1 }, "a sample of each template in place of the pages");
   assert.deepEqual(validateSiteSeed({ schemes: ["light", "dark"], proof: { ref: "main" } }), { storage: {}, sessionStorage: {} }, "a profile without a seed");
 });
 
-test("a profile of the wrong shape is a SeedError naming the key and the form: whole widths, schemes within light and dark, pages that are routes", () => {
+test("a profile of the wrong shape is a SeedError naming the key and the form: whole widths, schemes within light and dark, pages that are routes, a sample of 1 or more", () => {
   const fails = (harness, pattern) => assert.throws(() => validateSiteSeed(harness), (error) => error instanceof SeedError && pattern.test(error.message), JSON.stringify(harness));
   fails({ widths: [390.5] }, /harness\.widths is a list of whole viewport widths in px/);
   fails({ widths: ["390"] }, /harness\.widths is a list of whole viewport widths/);
@@ -100,7 +101,9 @@ test("a profile of the wrong shape is a SeedError naming the key and the form: w
   fails({ proof: { pages: ["about"] } }, /harness\.proof\.pages is a list of routes, each starting with \//);
   fails({ proof: { pages: [] } }, /harness\.proof\.pages is a list of routes/);
   fails({ proof: { ref: "" } }, /harness\.proof\.ref is a git ref/);
-  fails({ proof: { page: ["/"] } }, /harness\.proof\.page is not a setting — did you mean pages\? \(pages, ref\)/);
+  fails({ proof: { page: ["/"] } }, /harness\.proof\.page is not a setting — did you mean pages\? \(pages, ref, sample\)/);
+  for (const sample of [0, -1, 1.5, "1", true]) fails({ proof: { sample } }, /harness\.proof\.sample is a whole number of pages per template, 1 or more/);
+  fails({ proof: { pages: ["/"], sample: 1 } }, /harness\.proof\.pages and harness\.proof\.sample both choose a proof's pages; set one/);
   fails({ proof: ["/"] }, /harness\.proof is \{ pages/);
   fails({ width: [390] }, /harness\.width is not a setting — did you mean widths\?/);
 });

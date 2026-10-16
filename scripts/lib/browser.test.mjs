@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { DEMO_ROUTE, ENGINES, NO_BUILD, capturePages, sampleRoutes, templatesOf, webkitPath } from "./browser.mjs";
+import { DEMO_ROUTE, ENGINES, NO_BUILD, capturePages, isLoop, sampleRoutes, templatesOf, webkitPath } from "./browser.mjs";
 
 test("a capture leaves the demo routes out of the build's pages, unless --pages names one", () => {
   const routes = ["/", "/_not-found", "/blog", "/hero-demo", "/lab-demo", "/sections/about", "/x-demo/nested", "/demo", "/demos"];
@@ -43,4 +43,9 @@ test("webkitPath: playwright-core's own WebKit build first, else the newest webk
     assert.match(NO_BUILD.chromium, /^agentic-cms: no Chromium build found — run `bash scripts\/setup\.sh`/);
     assert.match(NO_BUILD.webkit, /no WebKit build found — run `bash scripts\/setup\.sh`/);
   } finally { fs.rmSync(cache, { recursive: true, force: true }); }
+});
+
+test("isLoop: an animation the DevTools protocol reports without a finite iteration count is a loop, however it says so", () => {
+  for (const iterations of [undefined, null, Infinity, "Infinity", Number.NaN]) assert.equal(isLoop(iterations), true, String(iterations));
+  for (const iterations of [1, 3, 0.5, 0]) assert.equal(isLoop(iterations), false, String(iterations));
 });

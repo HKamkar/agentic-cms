@@ -431,7 +431,7 @@ agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] 
 | `--scheme light|dark` | prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light (one of `light`, `dark`) |
 | `--widths w,w` | the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own |
 | `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page |
-| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample) |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages is given |
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
