@@ -73,6 +73,13 @@ They are listed here *(each job adds its lines)*:
   never archived or kept "for later".
 - **The styling rule:** the site is designed, looked at and measured at
   its widths, for a new site 390, 768, 1440 and 1920.
+- **`design-options`, `design-graphics`, `design`, `setup`:** the dev
+  server is `pnpm kit serve`, and the hand-over is "the URLs it printed"
+  (`demo new`, `lab route`, `lab serve` and `serve` print them); a public
+  URL only where the firewall opens the port to the viewer's IP only;
+  `demo new --timeline` in place of wrapping a moving candidate in
+  `<LabTimeline>` by hand, and `--showcase` for a review page of pieces;
+  `pnpm kit serve --fix-cache` for Turbopack's stale cache.
 
 **`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
 these lines by hand, as a new site's `AGENTS.md` carries them. After the
@@ -130,11 +137,17 @@ does not have
   only), and finds, measures and plays motion that starts after it mounts.
   `InlineAnimation` under a timeline leaves its clock to it
   ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)).
-- `demo new` waits until its route answers on a running dev server and
-  prints the URLs to hand over *(job 6)*.
+- `demo new` and `lab route` wait until their route answers on a running
+  dev server (the port of `scripts.dev`, or `--url`), up to `--timeout`
+  (120 s), and print the URLs to hand over, with a warning for each host
+  `ALLOWED_DEV_ORIGINS` lacks. A route that answers 5xx prints the error's
+  tail and exits 1, where the command used to exit 0 before the route had
+  compiled. With no dev server running, each prints `pnpm kit serve` and
+  exits 0, as before; `--no-wait` asks nothing. Their `--json` gains
+  `urls`, `ready` and `status` (and `demo new`'s a `kind`).
 - `lab serve` lists real network addresses only: no container or VM bridge
-  (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It will also
-  print each scene's URL *(job 6)*.
+  (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
+  prints each scene's own page, `/scene/<name>`, on every address.
 
 **Check:** the verify block, then `pnpm kit visual-parity proof upgrade --ref develop --build`.
 It must be identical. If it isn't, that is a kit bug: report it with the
@@ -196,7 +209,7 @@ package script, if you keep one, at `agentic-cms visual-parity proof`:
 `--sample 1` is one page per template, and `--pages` the pages a change
 touches.
 
-### 3.2 `setup`, `urls`, `serve` *(serve: job 6)*
+### 3.2 `setup`, `urls`, `serve`
 
 **Why:** a co-worker, or their agent in Claude Code or Codex, sets the site
 up from a fresh clone with one command, and the owner's phone gets URLs
@@ -233,14 +246,24 @@ renders and never hydrates.
    "(`ALLOWED_DEV_ORIGINS`; `pnpm urls` prints the URLs to hand over and
    `--write` adds the missing hosts; `dev-server.md`)". The `setup` skill
    comes with `init --agent-files` (§ 1).
-5. From then on, `pnpm urls` prints the URLs to hand over and says which
-   address `ALLOWED_DEV_ORIGINS` lacks; `pnpm urls --write` adds it.
-   *(job 6:)* `pnpm kit serve` starts the dev server and the lab and prints
-   every URL.
+5. From then on, `pnpm kit serve` starts the dev server for a look, in
+   place of `pnpm dev`: `next dev` on the port of `scripts.dev`, the lab
+   when `.parity/lab` has a scene, every demo route waited for, and every
+   URL to hand over in one table, naming each address
+   `ALLOWED_DEV_ORIGINS` lacks (`--write-origins` adds it before the
+   server starts). Ctrl-C stops both. It runs through the `kit` script
+   `init` writes (`"kit": "agentic-cms"`); a site without one runs
+   `pnpm exec agentic-cms serve`. `pnpm urls` prints the same URLs with no
+   server started, and `pnpm urls --write` adds a missing origin. In
+   `AGENTS.md`, the addresses bullet's "`pnpm urls` prints the URLs to
+   hand over and" becomes "`pnpm kit serve` starts the dev server and
+   prints the URLs to hand over, `pnpm urls` prints them alone and", as a
+   new site's has it.
 
 **Check:** `pnpm exec agentic-cms setup --check` exits 0 (it writes,
-installs and runs nothing), `pnpm urls` exits 0, and the owner's phone
-loads a page that hydrates (a menu opens).
+installs and runs nothing), `pnpm urls` exits 0, `pnpm kit serve` prints
+its table with a `200` on every route, and the owner's phone loads a page
+from it that hydrates (a menu opens).
 
 **If you wrote your own setup or addresses script:** delete it once this
 works, with any package script that ran it. Keep your site-only steps as a
@@ -491,7 +514,8 @@ Each row goes only after its step works.
 | a play-once motion layer | `agentic-cms/ix` | 3.5 |
 | `variants()` | `agentic-cms/cx` | 3.6 |
 | a placement guard, component lint rules, a components rule | `agentic-cms check-components`, `agentic-cms/eslint`, the kit's rule | 3.7 |
-| hand-written review routes (a page of every primitive, of every motion) | `demo new <name> --showcase`, removed by `demo clean` | — |
+| hand-written review routes (a page of every primitive, of every motion) | `demo new <name> --showcase --component <file>…` (`--timeline` for motion), removed by `demo clean` with every file only it uses | 1 |
+| a script that starts the dev server and the lab, waits for a route, prints its URLs, or clears Turbopack's cache | `pnpm kit serve` (`--fix-cache`); `demo new` and `lab route` wait themselves | 3.2 |
 | copies of the gotchas, browser, dev-server or setup guides, or a primitives spec | the kit's docs, plus your site-only lines | 3.8 |
 
 ## Two paths, worked
@@ -522,4 +546,5 @@ Each row goes only after its step works.
 | The proof differs after § 1 alone | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |
 | `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` misses the `allowBuilds` key the error names, or lists it under `onlyBuiltDependencies`, which pnpm no longer reads: add it under `allowBuilds` as `<name>: true`. A new site's `init` writes the kit's three keys and merges them into a workspace it finds |
 | `pnpm lint` fails everywhere after 3.7 | Components missing from `inherited`: list them, then replace them one pull request at a time |
-| A page on the owner's phone renders but nothing works | Its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart the dev server |
+| A page on the owner's phone renders but nothing works | Its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart the dev server (or `pnpm kit serve --write-origins`, which writes it before the server starts) |
+| `serve: port 8000 answers, but not as this site's next dev` | Something else holds the port (another project's dev server, `pnpm preview`): stop it if it is yours, or `pnpm kit serve --port <another>` |

@@ -44,7 +44,8 @@ a patch under `node_modules`.
   the traps by topic, before touching an area it lists.
 - A machine's address never goes into the repo: it is found when needed,
   per developer, and lives in the gitignored `.env.local`
-  (`ALLOWED_DEV_ORIGINS`; `pnpm urls` prints the URLs to hand over and
+  (`ALLOWED_DEV_ORIGINS`; `pnpm kit serve` starts the dev server and
+  prints the URLs to hand over, `pnpm urls` prints them alone and
   `--write` adds the missing hosts; `dev-server.md`).
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do

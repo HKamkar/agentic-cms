@@ -10,8 +10,8 @@ Codex follows this page, through the `setup` skill.
 
 ```bash
 bash scripts/setup.sh                      # Node, pnpm, the install, then agentic-cms setup
-pnpm dev                                   # the dev server, on the port of scripts.dev
-pnpm urls                                  # this machine's URLs, and the origins next dev serves
+pnpm kit serve                             # the dev server on the port of scripts.dev (and the lab), and every URL to hand over
+pnpm urls                                  # this machine's URLs, and the origins next dev serves, with no server started
 ```
 
 `scripts/setup.sh` is the site's copy of the kit's
@@ -72,8 +72,10 @@ one line each, nothing changed.
    audit last).
 8. **The URLs** (`agentic-cms setup`, and `pnpm urls` any time after):
    localhost, the LAN and the public address on the dev server's port and
-   the lab's, each server said running or not. Then `pnpm dev`, and the URL
-   for the device that will look ([dev-server.md](dev-server.md)).
+   the lab's, each server said running or not. Then `pnpm kit serve`,
+   which starts the dev server, waits for its pages and prints the URLs,
+   and hand over the one for the device that will look
+   ([dev-server.md](dev-server.md)).
 
 Two steps need the machine's owner, and an agent stops for them rather
 than working around them: `sudo` for WebKit's system libraries, and a
@@ -89,9 +91,10 @@ cloud VM's firewall when the owner's devices must reach the dev server.
 | `browsers ✗ the browser install failed` | the network or the disk: the install's own output says which; run the setup again when it is fixed |
 | `no Chromium build found` from a kit command | `bash scripts/setup.sh`, or `CHROME_PATH` pointing at a Chrome you have |
 | `webkit libraries ! WebKit does not launch` | the owner runs the line it prints (`sudo "$(command -v node)" node_modules/playwright-core/cli.js install-deps webkit`), or `bash scripts/setup.sh --deps` |
-| every dev page fails with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build | stop the dev server, `rm -rf .next/dev .next/cache/turbopack`, start it again ([design.md § When the dev server will not serve](design.md#when-the-dev-server-will-not-serve)) |
-| a route you just created answers 404 | the dev server's watcher has not seen it yet: wait a second or two and reload (the first request also compiles it) |
-| a page on another device renders but nothing on it works | its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart `pnpm dev` ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)) |
+| every dev page fails with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build | `pnpm kit serve --fix-cache`; or stop the dev server, `rm -rf .next/dev .next/cache/turbopack`, start it again ([design.md § When the dev server will not serve](design.md#when-the-dev-server-will-not-serve)) |
+| a route you just created answers 404 | the dev server's watcher has not seen it yet: wait a second or two and reload (the first request also compiles it). `demo new` and `lab route` wait for it themselves while a dev server runs |
+| a page on another device renders but nothing on it works | its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm kit serve --write-origins` (or `pnpm urls --write`, then restart the dev server) ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)) |
+| `serve: port 8000 answers, but not as this site's next dev` | something else holds the port (another project's dev server, `pnpm preview`): stop it if it is yours ([dev-server.md § Stopping a server](dev-server.md#stopping-a-server)), or `pnpm kit serve --port <another>` |
 | `pnpm lint` fails naming the component to use instead | read the message: the library comes first (`src/components/README.md`), so use the primitive it names rather than loosening the rule |
 
 ## What to read next

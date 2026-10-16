@@ -87,7 +87,8 @@ already stated. For anything that moves, `references/svg-motion.md`.
    reference says how: origins, mask regions, joins, the handoff, the rest
    frame).
 4. **Look, then pick.** Two windows. `pnpm kit lab serve --sizes <the
-   sizes it ships at>` and hand the owner the LAN URL it prints: each
+   sizes it ships at>` and hand the owner the URLs it prints, each
+   scene's own `/scene/<name>` (the LAN one for a phone): each
    scene's page shows it inline in a box per scheme the profile names at
    those sizes and enlarged, the same file as an `<img>` on each ground (what an embed
    really gets), the timeline over its animation (Play / Pause, Replay, a
@@ -95,18 +96,21 @@ already stated. For anything that moves, `references/svg-motion.md`.
    0.01 s an arrow key, the time and the cycle in seconds), and a switch to
    its still (`?still=1`: what a reduced-motion reader gets through the
    `<picture>`) — the review surface a loop is judged on, per candidate.
-   And `pnpm kit lab route` then `/lab-demo` on the dev server: the same
-   scenes on the site's own grounds — its page, its cards, its panels, as
+   And `pnpm kit lab route`, which waits until `/lab-demo` answers on the
+   dev server (`pnpm kit serve` starts it, the lab beside it) and prints
+   its URLs: the same scenes on the site's own grounds — its page, its cards, its panels, as
    the route's `GROUNDS` list says — inside the real chrome, each animated
    scene with a timeline of its own; `pnpm kit shot /lab-demo --url <dev
    server>` photographs it seeded, with the site's banner closed. When animated candidates are judged
    on a design round's demo route instead, they get the same timeline
    there — `<LabStudy file>` for a file, `<LabTimeline>` around a component
-   (`docs/lab.md` § Inspecting motion) — never an `<img>` of the animated
+   (`demo new --timeline` wraps every block; `docs/lab.md` § Inspecting
+   motion) — never an `<img>` of the animated
    file alone, which the page can neither pause nor seek; the file ships
    unchanged and the study offers it as a download. The message carries
-   the direct URL of each candidate (`/scene/<name>`, or the demo route),
-   not the index. Candidates are scenes `a`, `b`, `c` beside the current
+   the URLs the commands printed, each candidate's own (`/scene/<name>`,
+   or the demo route), not the index; a public one answers only where the
+   firewall opens the port to the viewer's IP only. Candidates are scenes `a`, `b`, `c` beside the current
    version: two to four, or every idea when the owner asked for all
    (`design-options`). A letter names its candidate for the whole round:
    a "more" is a change on that file and a second look; alternatives the

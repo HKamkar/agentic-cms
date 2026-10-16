@@ -100,7 +100,7 @@ dev server and its own commit; never all at once.
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build    # 0 failures
 pnpm kit visual-parity capture before --ref develop && pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after --json
-pnpm dev                                                      # the owner's look; stop it afterwards
+pnpm kit serve                                                # the owner's look: hand over the URLs it printed; Ctrl-C stops it
 ```
 
 ## Stop for the user

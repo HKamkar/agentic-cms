@@ -13,7 +13,7 @@ in `package.json` or in a route. The flags are in
 
 ```bash
 pnpm kit lab new hero-mark --kind mark        # .parity/lab/hero-mark.svg from a template
-pnpm kit lab serve                            # http://localhost:8001 and the LAN URLs
+pnpm kit lab serve                            # http://localhost:8001, the LAN URLs, and each scene's /scene/<name>
 pnpm kit lab serve --sizes 32,160              # every scene also at the sizes it ships at
 pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a page ships
 ```
@@ -57,8 +57,11 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   reader gets), inline and as the `<img>`; the switch is in the URL, so a
   reload on save keeps it.
 - Each scene has its own page (`/scene/<name>`: the URL to hand over, one
-  per scene, rather than the index) and a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
-  `&still=1` for its still).
+  per scene, rather than the index; `lab serve` prints each one on every
+  address it listens on) and a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
+  `&still=1` for its still). `pnpm kit serve` starts the lab beside the
+  dev server whenever `.parity/lab` has a scene, and lists the same pages
+  ([dev-server.md](dev-server.md#both-servers-and-every-url-pnpm-kit-serve)).
 - The server listens on `0.0.0.0:8001` by default and prints every LAN
   address (the machine's real interfaces, as `pnpm urls` lists them: no
   container bridge), so the owner opens the same page on a phone; it serves only the
@@ -75,10 +78,16 @@ surfaces, next to the real chrome — there is a second window: a throwaway
 route inside the site.
 
 ```bash
-pnpm kit lab route          # src/app/lab-demo/page.tsx from the kit's template
-pnpm dev                    # then /lab-demo (on the LAN address too)
+pnpm kit serve              # the dev server and the lab, and every URL to hand over (dev-server.md)
+pnpm kit lab route          # src/app/lab-demo/page.tsx from the kit's template; waits until /lab-demo answers, prints its URLs
 pnpm kit lab clean          # removes the route with the lab
 ```
+
+With the dev server running, `lab route` asks for `/lab-demo` until it
+answers (which compiles it), then prints its URLs on localhost, the LAN
+and the public address, and warns about a host `ALLOWED_DEV_ORIGINS`
+lacks; with none running it says `pnpm kit serve`, and `--no-wait` asks
+nothing.
 
 The route renders `LabScenes` from `agentic-cms/lab`: every scene under
 `.parity/lab` (and the `folders` given, like `--scenes`) inline on the
@@ -223,7 +232,11 @@ pauses off screen under `[data-lab-timeline]`, and the timeline plays,
 pauses and seeks it.
 
 On a **demo route** (`pnpm kit demo new`, the `design-options` round), an
-animated candidate gets the same inspection. A file — a mark, a loop — is
+animated candidate gets the same inspection. `demo new … --timeline`
+writes the route with every block — each candidate and the current
+version, or each piece of a `--showcase` — wrapped in `<LabTimeline
+label><div data-lab-drive>`, so motion made of HTML and CSS is driven with
+no hand edit. A file — a mark, a loop — is
 a `LabStudy`: the file inline at the sizes it ships at, on the grounds
 the route passes, under one timeline, with the still a render wrote
 beside it and a link that downloads the original:
