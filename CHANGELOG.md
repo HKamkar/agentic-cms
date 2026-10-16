@@ -343,6 +343,22 @@ changes what a capture writes says **recapture baselines**.
   lasts a minute, so no runner sees it end. A timeline that sought the
   reveal without pausing it, which the old test let through, now fails
   it. The timeline is unchanged.
+- `init --agent-files` tells a site's edit of the kit's current text from
+  one the kit has moved past, so a site that keeps its own edits can have a
+  clean `--check`. The manifest's hash for each file is its base, the kit's
+  text the site last took. `--check` passes a file the site edited while
+  the kit's text is still its base (`modified`) and fails one the kit
+  changed since (`modified, kit changed`); before, it failed every edit.
+  `--diff <file>` prints the kit's change since the base alone, as a
+  unified diff that `git apply` reads, so a merge no longer mixes the
+  site's edits with the kit's changes. `--accept <file>` records the kit's
+  current text as the base once the site has merged by hand. The base text
+  of each edited file is kept in `.agentic-cms/base/`, recovered from the
+  site's git history the first time. The manifest also records the kit
+  `commit` the lockfile installed, because a pin between releases still
+  carries the last release's version. A 0.7.6 manifest reads as before.
+  Found by running the migration guide on a site on 0.7.6
+  (`docs/init.md` § After a kit upgrade, `docs/migrating-to-0.8.0.md` § 1).
 
 ## [0.7.6] — 2026-10-13
 

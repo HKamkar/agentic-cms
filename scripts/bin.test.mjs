@@ -140,6 +140,45 @@ test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("init --agent-files: --check fails a site's edit with no base, --diff prints the kit's text against it (exit 1), --accept makes it the site's edit of the kit's text and --check passes; the modes go with --agent-files, one at a time", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--json"]).status, 0);
+    const nothing = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
+    assert.equal(nothing.status, 0, nothing.stderr);
+    assert.equal(nothing.stdout, "");
+    assert.match(nothing.stderr, /^init: \.claude\/rules\/seo\.md — nothing to merge: it is the kit's text$/m);
+    // the site's own seo rule, from before the manifest: no base
+    const manifest = JSON.parse(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"));
+    delete manifest.files[".claude/rules/seo.md"];
+    fs.writeFileSync(path.join(site, ".agentic-cms.json"), JSON.stringify(manifest));
+    fs.appendFileSync(path.join(site, ".claude/rules/seo.md"), "\n- The site's own line.\n");
+    const gap = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(gap.status, 1);
+    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md$/m);
+    assert.match(gap.stdout, /modified, kit changed: the site edited it and the kit's text changed since the site took it \(agentic-cms init --agent-files --diff <file>, merge the change by hand, then --accept <file>\)/);
+    const diff = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
+    assert.equal(diff.status, 1);
+    assert.match(diff.stdout, /^--- a\/\.claude\/rules\/seo\.md\n\+\+\+ b\/\.claude\/rules\/seo\.md\n@@ /);
+    assert.match(diff.stdout, /^-- The site's own line\.$/m);
+    assert.match(diff.stderr, /has no base \(the site wrote it before the manifest\)/);
+    const accepted = run(["init", site, "--agent-files", "--accept", ".claude/rules/seo.md"]);
+    assert.equal(accepted.status, 0, accepted.stderr);
+    assert.match(accepted.stdout, /^accepted \.claude\/rules\/seo\.md — its base is the kit's current text; --check: modified$/m);
+    const clean = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, /^init: \d+ agent files in line with the kit — \d+ as it ships them, 1 the site's own edits of its current text \(modified\)$/m);
+    const wrong = run(["init", site, "--agent-files", "--diff", "STANDARD.md"]);
+    assert.equal(wrong.status, 2);
+    assert.match(wrong.stderr, /^init: STANDARD\.md is not one of this site's agent files/);
+    assert.match(run(["init", site, "--accept", ".claude/rules/seo.md"]).stderr, /^init: --accept goes with --agent-files$/m);
+    const both = run(["init", site, "--agent-files", "--check", "--accept", ".claude/rules/seo.md"]);
+    assert.equal(both.status, 2);
+    assert.match(both.stderr, /^init: --check and --accept are separate runs: one at a time$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("visual-parity clean keeps the newest captures, takes the compares of the ones it removes, leaves a running capture, and --dry-run removes nothing", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "parity-clean-cli-"));
   const put = (file, hoursAgo) => { const full = path.join(dir, ".parity/visual", file); fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, "{}"); const t = new Date(Date.now() - hoursAgo * 3600e3); fs.utimesSync(full, t, t); };

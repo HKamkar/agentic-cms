@@ -51,7 +51,8 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   only beside the guard's config, which the example brings), `.claude/skills/` and
   `.agents/skills/` (the design skills), `.claude/settings.json` (the
   editorial plugin from the kit's marketplace), and `.agentic-cms.json`, the
-  manifest of the agent files as written.
+  manifest of the agent files: the kit's text each one was written from
+  ([§ After a kit upgrade](#after-a-kit-upgrade)).
 - **The config**: `package.json` (the scripts a build needs — `lint` runs
   ESLint, then the component guard, and fails on either:
   `eslint; s=$?; agentic-cms check-components || s=1; exit $s` — and the
@@ -147,12 +148,31 @@ every URL to hand over in one table ([dev-server.md](dev-server.md)).
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm exec agentic-cms init . --agent-files          # the new rules and skills; the site's own edits are kept
 pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit 1 on drift)
+pnpm exec agentic-cms init . --agent-files --diff <file>    # a file the site edited: the kit's change since the site took it
+pnpm exec agentic-cms init . --agent-files --accept <file>  # merged by hand: the kit's current text is the file's base
 ```
 
-A rule is `ok`, `modified` (the site edited it: kept, never overwritten),
-`stale` (the kit has a newer one) or `missing`; `--check` exits 1 on
-anything but `ok`, a site's own edit included, and the CI workflow `init`
-writes runs it on every pull request. A rule for a tool the site has not
+`.agentic-cms.json` records each agent file's base, the hash of the kit's
+text the site last took (written by `init`, or accepted after a hand
+merge), with the kit's `version` and, for a pin between releases (which
+still carries the last release's version), the `commit` the site's
+lockfile installed. Against its base a rule is `ok` (the kit's text),
+`modified` (the site edited the kit's current text: kept, never
+overwritten), `modified, kit changed` (the site edited it and the kit's
+text changed since its base, or the manifest records no base, for a rule
+the site wrote before it), `stale` (the site never touched it and the kit
+has a newer one) or `missing`. `--check` exits 1 on the last three, so a
+site that keeps its own edits keeps a clean check, and the CI workflow
+`init` writes runs it on every pull request. A `modified, kit changed`
+file is merged by hand: `--diff <file>` prints the kit's change alone, from
+the base to the kit's current text, as a unified diff (`git apply` takes it
+where the site's edits sit apart from it), and `--accept <file>` then
+records the kit's current text as the file's base. The text of the base of
+each file the site edited is kept in `.agentic-cms/base/`, under the file's
+path without its leading dot so no agent loads the copies as rules or
+skills; the first time, it comes from the site's git history (the commit
+that has the file as the kit wrote it). Commit the folder with the
+manifest. A rule for a tool the site has not
 adopted is neither written nor checked: the components rule needs the
 component guard's config, `src/config/components.json`, so a site that
 predates the guard is never told the rule is missing
