@@ -427,6 +427,20 @@ changes what a capture writes says **recapture baselines**.
 - A new `pages` rule, which `init --agent-files` writes for every site, loads on `src/app/**`, `src/components/**` and `content/pages/**`: every page is a content file, a new one is `/editorial:new-page`, and a page's copy never lives in a component, a `page.tsx` or `src/config/`. The site template's `AGENTS.md` says it in one always-loaded bullet, which § 1 of the migration guide lists for existing sites.
 - `docs/migrating-to-0.8.0.md` § 3.9, pages as content files: for a site whose pages are hand-written routes, one page per commit, each proven identical, then the exceptions for what stays outside the engine.
 - The example's FAQ section marks its `variant:` note `aria-hidden`, a wireframe note like a `TypeTag`; no pixel moves.
+- The example's chrome takes its words from `chrome` in
+  `src/config/site.ts`, an `as const` block beside `consentBanner`. That
+  covers the skip link, the navbar's landmark name and menu button, the
+  theme toggle's label in each state, the footer's column titles, the
+  404's label, title and sentence, and the post template's eyebrow,
+  reading time and "Read next" heading. The 404's sentence is its parts in
+  reading order (strings and `{ label, href }` links), and the reading
+  time is a function of the minutes. `SiteConfig` is unchanged. `init
+  --light-only` leaves the toggle's labels out of `site.ts`. No pixel
+  moves.
+- A static capture never photographs an image before it arrives. The wait for images now decodes each one that shows (`img.decode()`) after it has arrived, for up to 10 s, and listens beside the page's own `load` handlers instead of replacing them; it used to give up after 5 s without a word. A page that still has an image loading at the shot is loaded again once; if the second load still has one, the shot is taken, the images are listed in `<page>@<width>.unloaded.json`, the shot is kept out of the shot cache, and the compare calls a difference on it `FLAKY` (retake that page with `--fresh`). Found by running the migration guide on a site on 0.7.6: 3 of 194 static shots changed by 4 to 6 % where a lazy image below the fold was blank on one side, and identical on a `--fresh` re-run. **Recapture baselines** taken before this change if a page of yours has lazy images: a baseline may hold such a blank.
+- Every line of a compare that is not `ok` has a `cause:` line under it: the section that moved, else the section whose content changed in place; the image that had not arrived (`FLAKY`); what a shot without geometry shows (the menu, a motion step, a state's box); why a file is in one capture alone; an inventory's first difference, a settle record's changed step. `--json` gives every such file its `cause`, and the summary a `flaky` count.
+- A `--states` capture puts the post FAQ state on the first post whose body has a FAQ (the kit's own test), not the first post, and drops it when no post has one; a state whose target does not show within 10 s is skipped and listed in `capture.json` (`skipped`), and the compare's `MISSING` line says which side skipped it. A build whose posts had no FAQ used to time out twice and end the run.
+- `docs/migrating-to-0.8.0.md` § 1: the check runs `--all` and says what each pass must show; the `--ref` baseline's sibling worktree, `../<checkout>-ref-<sha>`, is named with its cleanup.
 
 ## [0.7.6] — 2026-10-13
 
