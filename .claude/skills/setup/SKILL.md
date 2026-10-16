@@ -12,7 +12,11 @@ Three commands do the work: `bash scripts/setup.sh` (Node, pnpm, the
 install, then `agentic-cms setup`), `pnpm kit serve` (the dev server and
 the lab started, and this machine's URLs printed once the pages answer)
 and `pnpm urls` (the same URLs and the origins `next dev` serves, with no
-server started).
+server started). On a site from before 0.8.0 that has not taken § 3.2 of
+the kit's `docs/migrating-to-0.8.0.md`, where `scripts/setup.sh` is
+missing the first is `pnpm install --frozen-lockfile`, then
+`pnpm exec agentic-cms setup`, and where `package.json` has no `urls`
+script the last is `pnpm exec agentic-cms urls`.
 
 ## Read first
 
@@ -31,7 +35,9 @@ server started).
    `--no-public` on a machine no viewer reaches from outside. It is
    idempotent: after fixing what a step reported, run it again. In a
    checkout of the kit itself it is `pnpm install --frozen-lockfile`, then
-   `pnpm kit setup` with the same flags.
+   `pnpm kit setup` with the same flags; on a site without the script,
+   `pnpm install --frozen-lockfile`, then `pnpm exec agentic-cms setup`
+   with them.
 3. **When a step fails**, fix the cause its line names (the Node version,
    pnpm, the network for the browsers) and run it again. Never edit the
    lockfile, skip `pnpm lint` or a test, or loosen a rule to get through.

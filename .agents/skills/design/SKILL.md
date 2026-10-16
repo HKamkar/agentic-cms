@@ -36,24 +36,32 @@ dev server and its own commit; never all at once.
    radius, shadow, blur, easing. A colour becomes a token at its second use.
    The wireframe's four colours are the seed; a design has more, named for
    what they are for (`paper`, `ink`, `accent`), never for their hue. Where
-   the site has role tokens (a site from `init` starts with `panel`, `line`,
-   `on-ink`, the radius and shadow roles, the headings' letter-spacing and
-   `--tracking-label`, all at the wireframe's values), the design gives the
-   roles their values first: every component that asks for a role follows.
+   the site has role tokens (`panel`, `line`, `on-ink`, the radius and
+   shadow roles, the headings' letter-spacing and `--tracking-label`: a
+   site from `init` since 0.8.0 starts with them at the wireframe's values,
+   an older one has them once it added them), the design gives the roles
+   their values first: every component that asks for a role follows.
 2. **The chrome.** The navbar, the footer, the buttons, the title block:
    shared once in `src/components/ui/`, never pasted into a page. Every
    state (hover, focus, current page, open menu) is part of it.
 3. **The sections**, one at a time, in the order a visitor meets them. Each
-   section's card content is its own; the card frame is `ui/Panel`, and a
-   card is not a generic component.
-4. **Motion**, last, with `agentic-cms/ix` (`STANDARD.md` §7 says which
-   layer): the play-once layer (`Reveal`, `RevealGroup`, `Sequence`,
-   `part()`) by default, armed by `motionScript()` and timed by the
-   `--ease-*` / `--motion-*` tokens; `Fx` and `OnView` only where a replay
-   on re-entry is wanted, with `data-ix` targets and every animated
-   component honouring `useReducedMotionPref()`. Start states and keyframes
-   live in `src/styles/motion.css`; a sequence longer than two seconds
-   declares `data-settle` on its section (`settle` on a `Sequence`).
+   section's card content is its own, inside the site's one card frame
+   (`ui/Panel` on a site that has the example's), and a card is not a
+   generic component.
+4. **Motion**, last, with `agentic-cms/ix`, in the layer the site has
+   (its `STANDARD.md` §7). Where the layout renders `motionScript()`, the
+   play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) is the
+   default, timed by the `--ease-*` / `--motion-*` tokens, and `Fx` and
+   `OnView` serve only where a replay on re-entry is wanted. A site that
+   moves with `Fx` and `OnView` and renders no `motionScript()` keeps them
+   — `data-ix` targets, every animated component honouring
+   `useReducedMotionPref()` — and takes the play-once layer only on the
+   owner's word (`docs/migrating-to-0.8.0.md` § 3.5 of the kit). A site
+   with no motion yet starts with the play-once layer: `motionScript()`
+   and the layer's block of `motion.css` first, as that section says.
+   Start states and keyframes live in `src/styles/motion.css`; a sequence
+   longer than two seconds declares `data-settle` on its section (`settle`
+   on a `Sequence`).
 
 ## The loop, per element
 

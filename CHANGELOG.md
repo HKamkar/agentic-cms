@@ -359,6 +359,23 @@ changes what a capture writes says **recapture baselines**.
   carries the last release's version. A 0.7.6 manifest reads as before.
   Found by running the migration guide on a site on 0.7.6
   (`docs/init.md` § After a kit upgrade, `docs/migrating-to-0.8.0.md` § 1).
+- The agent files `init --agent-files` writes describe only what a site
+  has adopted. Before, a site on 0.7.6 that took only § 1 of the migration
+  guide was told that its motion was the play-once layer and its card
+  frame `ui/Panel`. Now the styling rule and the `design` skill make the
+  play-once layer the default only where the layout renders
+  `motionScript()`: a site on `Fx` and `OnView` keeps them, and a site
+  with no motion yet starts on the play-once layer. The design rule and
+  the skill put a section's cards in the site's one card frame, which is
+  `ui/Panel` only on a site that has the example's. The role tokens are
+  named as a site from `init` has them since 0.8.0, and a proof without a
+  profile writes one first. The `setup` skill runs `agentic-cms setup` and
+  `agentic-cms urls` directly on a site without `scripts/setup.sh` or a
+  `urls` script. `docs/migrating-to-0.8.0.md` § 1 lists what `--diff`
+  shows for every rule and skill, each line with the step it belongs to,
+  and § 1 and
+  § 3.1 name the places in a site's `AGENTS.md` by what they hold, not by
+  the template's headings.
 
 ## [0.7.6] — 2026-10-13
 

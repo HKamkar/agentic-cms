@@ -8,7 +8,8 @@ argument-hint: <what to draw> [where it goes: a section, the chrome, a post]
 
 A site's authentic graphics are SVG written as code, designed where they
 can be judged — at the real size, on the real tokens, in each scheme the
-profile names (`schemes` in `src/config/harness.ts`), on
+profile names (`schemes` in `src/config/harness.ts`; light and dark
+without one), on
 the owner's phone — and shipped **pre-rendered**: a file under
 `public/images/`, or inline `Icon` data. Speed and search come first, so
 nothing renders in the reader's browser that a file could carry; the lab is
