@@ -47,7 +47,9 @@ pnpm exec agentic-cms init . --agent-files           # skills, rules, the rules 
 
 **Before the release** there is no tag: a site that runs this guide as the
 release's gate pins the candidate, `github:HKamkar/agentic-cms#<develop sha>`,
-and moves to `#v0.8.0` once the tag exists.
+and moves to `#v0.8.0` once the tag exists. The candidate's `package.json`
+still reads 0.7.6, so `.agentic-cms.json` records `"version": "0.7.6"`, with
+the candidate's `"commit"` from the lockfile beside it.
 
 **What `--agent-files` updates:** the skills, the scoped rules and the rules
 table in `AGENTS.md`.
@@ -55,9 +57,22 @@ table in `AGENTS.md`.
   and the new `setup`.
 - **Rules:** `styling`, `design`.
 
-A file you edited is kept and reported `modified`. Compare it with
-`node_modules/agentic-cms/templates/site/rules/<name>.md` (or the skill under
-`node_modules/agentic-cms/.claude/skills/`) and take the new lines by hand.
+A file you edited is kept. `--check` reports it `modified` when the kit's
+text of it has not changed since your site took it (nothing to take; the
+check passes), and `modified, kit changed` when it has. For each of those,
+take the kit's change by hand, then record the merge:
+
+```bash
+pnpm exec agentic-cms init . --agent-files --diff .claude/rules/styling.md     # the kit's change since your site took it
+pnpm exec agentic-cms init . --agent-files --accept .claude/rules/styling.md   # merged: the kit's text is the file's base
+```
+
+The base, the kit's text your site last took, comes from your site's git
+history the first time (the commit that has the file as `init` wrote it)
+and is kept in `.agentic-cms/base/` from then on: commit that folder with
+`.agentic-cms.json`. `git apply` takes a `--diff` where your edits sit apart
+from it; otherwise merge by hand. `--diff` prints the kit's new lines alone,
+without your edits.
 They are listed here *(each job adds its lines)*:
 
 - **`design-options`:** step 4's hand-over (the LAN or public address with
@@ -285,9 +300,12 @@ cp node_modules/agentic-cms/templates/site/verify.yml .github/workflows/verify.y
 It takes Node from `.nvmrc` and pnpm from `packageManager` in
 `package.json`, as a site from `init` has them. If your site has a
 workflow of its own, add the step
-`pnpm exec agentic-cms init . --agent-files --check` to it. That step exits
-1 on a rule or skill your site edited (`modified`), not only on a stale or
-missing one: a site that keeps edits of its own leaves the step out.
+`pnpm exec agentic-cms init . --agent-files --check` to it. That step
+passes a rule or skill your site edited while the kit's text of it is the
+one your site took (`modified`), and fails on one the kit changed since
+(`modified, kit changed`), a stale one or a missing one: a site that keeps
+edits of its own merges and accepts the kit's changes (§ 1) and keeps the
+step.
 
 **Check:** a pull request runs it, and it passes.
 
@@ -563,7 +581,8 @@ Each row goes only after its step works.
 
 - The verify block: `pnpm lint`, `pnpm test`, `pnpm content:lint` and
   `pnpm build`, 0 failures.
-- `pnpm exec agentic-cms init . --agent-files --check` is clean.
+- `pnpm exec agentic-cms init . --agent-files --check` is clean: every file
+  the kit's text, or your edit of it (`modified`).
 - `pnpm kit visual-parity proof migrate --ref develop --build` is identical,
   except for the design changes you chose and committed apart (3.4's
   toggle).
@@ -573,7 +592,7 @@ Each row goes only after its step works.
 
 | Symptom | Do this |
 |---|---|
-| `init --agent-files` reports a rule or skill `modified` | You edited it: take the new lines by hand (§ 1). `--force` would discard your edits |
+| `init --agent-files --check` reports a rule or skill `modified, kit changed` | You edited it and the kit changed it since: `--diff`, merge by hand, `--accept` (§ 1). `--force` would discard your edits |
 | The proof differs after § 1 alone | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |
 | `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` misses the `allowBuilds` key the error names, or lists it under `onlyBuiltDependencies`, which pnpm no longer reads: add it under `allowBuilds` as `<name>: true`. A new site's `init` writes the kit's three keys and merges them into a workspace it finds |
 | `pnpm lint` fails everywhere after 3.7 | Files the guard finds that the site had before it: list them under `inherited` in `src/config/components.json`, then replace them one pull request at a time. A layer the config names but the site lacks is `null` |

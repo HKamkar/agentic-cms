@@ -8,11 +8,17 @@ pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm install
 pnpm exec agentic-cms init . --agent-files --check  # what differs from the kit's rules and skills
 pnpm exec agentic-cms init . --agent-files          # the kit's new rules and skills in; the site's own edits kept
+pnpm exec agentic-cms init . --agent-files --diff <file>    # each file kept with a kit change: that change alone
+pnpm exec agentic-cms init . --agent-files --accept <file>  # once it is merged by hand
 ```
 
 `--agent-files` rewrites a rule or a skill the site never edited and keeps
-one it did (it says `modified`); a kept file takes the release's change by
-hand, from the list below. `AGENTS.md` is the site's own from the day `init`
+one it did: `kept` when the release left the kit's text of it alone,
+`kept, kit changed` when it changed it. Such a file takes the release's
+change by hand: `--diff` prints it without the site's edits, the list
+below says why it was made, and `--accept` records the merge, so `--check`
+passes again ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+`AGENTS.md` is the site's own from the day `init`
 wrote it and is never rewritten: a release's new lines for it are listed
 too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture

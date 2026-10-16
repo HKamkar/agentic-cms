@@ -1021,28 +1021,32 @@ agentic-cms demo clean                     # every *-demo route
 A site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
-agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check] [--force]
+agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check | --diff <file> | --accept <file>] [--force]
 ```
 
 - `<dir>` — where the site goes (default: the current directory)
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept, and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
-| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept ("kept, kit changed" when the kit's text changed since the site took it), and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
+| `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, kit changed (the site edited it and the kit's text changed since the base the manifest records, or the manifest records none: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any but ok and modified; write nothing |
+| `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/ or the site's git history; for a file with no base, the site's text against the kit's; repeat for more files; write nothing (repeatable) |
+| `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
 | `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
+Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff }] }`.
 
 ```bash
 agentic-cms init .
 agentic-cms init my-site --light-only      # a site with one scheme, light
 agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
 agentic-cms init . --agent-files --check  # what drifted, for CI
+agentic-cms init . --agent-files --diff .claude/rules/styling.md    # the kit's change since the site took it
+agentic-cms init . --agent-files --accept .claude/rules/styling.md  # merged by hand: the kit's text is its base
 ```
 
 ### `setup`
