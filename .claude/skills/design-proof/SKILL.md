@@ -90,8 +90,9 @@ whether `--motion` or `--states` is part of the proof.
    - `SIZE … reflow`, or `CHANGED` rows on every text line below one
      section: first read the `cause:` line under it — a section whose
      height changed by a fraction of a pixel moves everything below by that
-     fraction and repaints it; fix or accept that height. Without a cause,
-     something changed how the compositor paints the whole page —
+     fraction and repaints it; fix or accept that height. When it says no
+     section moved and the rows run through every text line below that
+     section, something changed how the compositor paints the whole page —
      usually a new stacking context (`position: relative`, a `z-index`, a
      `transform`) on a section whose animated elements overflow it.
      `pnpm kit probe / --select "<the section>"` prints the stacking chain;
@@ -105,9 +106,13 @@ whether `--motion` or `--states` is part of the proof.
      as an `<img>`, which no capture can hold).
    - A settled motion frame that keeps differing where a sequence runs long:
      the section declares `data-settle="<ms>"` (`STANDARD.md` §7).
-   - `MISSING`: a page appeared or disappeared, or the compare lacks the
-     `--pages` the capture had (with it, only the named pages are judged,
-     on both sides).
+   - `FLAKY`: one side took that shot with an image still loading, even
+     after a reload; its `cause:` names the image. It proves nothing either
+     way: retake the page with `--pages <route> --fresh` on that side.
+   - `MISSING`: its `cause:` says why — a page appeared or disappeared, a
+     width one side did not take, a state one side skipped for want of its
+     target — or the compare lacks the `--pages` the capture had (with it,
+     only the named pages are judged, on both sides).
 4. **Say what the proof says**, in numbers: how many files, which
    differed, the verdicts, and why each difference is the change. A design
    change is its own commit and says so.

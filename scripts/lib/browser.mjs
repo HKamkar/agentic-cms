@@ -370,11 +370,31 @@ export const hydrated = (page) => inPage(page, "hydration", 15000, () => new Pro
 // markup gave the image, not on anything a visitor can see. Lazy images are
 // switched to eager so they load without scrolling (a scroll would fire the
 // reveals the motion capture is there to photograph) — once the page has
-// hydrated (above), so the switch is never React's to report.
+// hydrated (above), so the switch is never React's to report. Arrived is not
+// painted: the renderer may decode a large image off the main thread and draw
+// its box blank until it has, so each image that shows is decoded too
+// (img.decode()). The wait listens beside the page's own handlers, never in
+// place of them, and gives up after 10 s: what is still loading then is
+// UNLOADED_IMAGES's to report.
+export const IMAGES_MS = 10000;
 export async function imagesReady(page) {
   await hydrated(page);
-  return inPage(page, "images", 8000, () => { for (const i of document.images) i.loading = "eager"; return Promise.race([Promise.all([...document.images].map((i) => i.complete || new Promise((r) => { i.onload = i.onerror = r; }))), new Promise((r) => setTimeout(r, 5000))]); });
+  return inPage(page, "images", IMAGES_MS + 5000, (ms) => {
+    const images = [...document.images];
+    for (const i of images) i.loading = "eager";
+    const arrived = (i) => (i.complete ? Promise.resolve() : new Promise((r) => { i.addEventListener("load", r, { once: true }); i.addEventListener("error", r, { once: true }); }));
+    const painted = (i) => (i.naturalWidth && i.getClientRects().length ? i.decode().catch(() => {}) : undefined);
+    return Promise.race([Promise.all(images.map((i) => arrived(i).then(() => painted(i)))), new Promise((r) => setTimeout(r, ms))]);
+  }, IMAGES_MS);
 }
+
+// In the page: every image that shows (it has a box and a source) and has not
+// arrived — what a shot would photograph as an empty box. A broken image
+// (complete, no pixels) is the build's and is photographed as it is; one
+// still loading is a capture that went too fast, and the capture loads the
+// page again rather than photograph it (visual-parity.mjs: a second time, the
+// shot is recorded as flaky beside it).
+export const UNLOADED_IMAGES = () => [...document.images].filter((img) => (img.currentSrc || img.getAttribute("src")) && !img.complete && img.getClientRects().length).map((img) => { const r = img.getBoundingClientRect(); return { src: img.currentSrc || img.src, top: Math.round(r.top + scrollY), left: Math.round(r.left + scrollX), width: Math.round(r.width), height: Math.round(r.height) }; });
 
 // Infinite CSS/WAAPI loops would be photographed at a phase that depends on
 // load timing; hold them at their first frame. Finite animations keep playing.

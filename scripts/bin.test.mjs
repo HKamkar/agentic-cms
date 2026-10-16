@@ -103,7 +103,8 @@ test("a --json report larger than a pipe's buffer reaches the reader whole, thou
       fs.writeFileSync(path.join(capture, "meta.json"), '{"scheme":"light"}');
       for (let i = 0; i < 1500; i++) fs.writeFileSync(path.join(capture, `page-${i}@390.animations.json`), inventory);
     }
-    const r = run(["visual-parity", "compare", "a", "b", "--json"], dir);
+    // the reader's own buffer past the 1 MB default: every line on stderr carries its cause line under it
+    const r = spawnSync(process.execPath, [BIN, "visual-parity", "compare", "a", "b", "--json"], { cwd: dir, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
     assert.equal(r.status, 1, r.stderr);
     assert.ok(r.stdout.length > 65536, `the report is larger than a pipe's 64 KB (${r.stdout.length} bytes)`);
     const report = JSON.parse(r.stdout);

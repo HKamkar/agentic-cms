@@ -90,8 +90,9 @@ export const filesOf = (dir, name) => fs.readdirSync(dir).filter((f) => f.starts
 /**
  * One capture's use of the cache. take(name, dir, run, shot) copies the shots of a page-width (or state) into `dir`
  * when every build file they loaded is unchanged, and returns how many PNGs that was; otherwise it runs
- * run(watch) — watch(page), called before the page loads, records the build files the page requests — and stores
- * what the run wrote. Request events are the record: measured on a warm browser context, where most files come
+ * run(watch, discard) — watch(page), called before the page loads, records the build files the page requests — and
+ * stores what the run wrote, unless it called discard(): a shot taken with an image still loading, a state whose
+ * target the page lacks, is never copied into a later capture. Request events are the record: measured on a warm browser context, where most files come
  * from the browser's cache, every build file a page used was still requested (the favicon alone was not, and it
  * is not in the page). A prefetch (an RSC request) is left out: the router fetches it, the page does not show it.
  * With `fresh`, nothing is reused and everything is stored. `key` is the capture's, or a function of `shot` (what
@@ -107,13 +108,14 @@ export function createShotCache({ root, key, resolve, buildId, origin, fresh = f
     if (hit) { counts.reused++; reuse(hit, dir); return hit.files.filter((f) => f.endsWith(".png")).length; }
     const served = [];
     const watch = (page) => page.on("request", (request) => { const url = new URL(request.url()); if (url.origin === origin && !request.headers().rsc) served.push(decodeURIComponent(url.pathname)); });
-    const result = await run(watch);
+    let keep = true;
+    const result = await run(watch, () => { keep = false; });
     counts.taken++;
-    store(root, key, name, recordDeps(served, digestOf, buildId), dir, filesOf(dir, name));
+    if (keep) store(root, key, name, recordDeps(served, digestOf, buildId), dir, filesOf(dir, name));
     return result;
   };
   return { take, counts };
 }
 
 /** No cache (a served --url site: its files are not ours to digest): every shot is taken. */
-export const noShotCache = () => ({ take: (name, dir, run) => run(undefined), counts: null });
+export const noShotCache = () => ({ take: (name, dir, run) => run(undefined, () => {}), counts: null });

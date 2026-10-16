@@ -354,7 +354,7 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | flag | what |
 |---|---|
 | `--motion` | play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation |
-| `--states` | hover, focus, checked and open states, located by role and text |
+| `--states` | hover, focus, checked and open states, located by role and text; a state whose target the page lacks is skipped and listed in capture.json |
 | `--scheme light|dark` | prefers-color-scheme for the capture; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--url <base>` | capture a served site instead of serving .next (print its git log -1 first) |
 | `--build` | run the site's `pnpm build` first (log: .parity/<label>.build.log) |
@@ -371,9 +371,9 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
-Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
+Exit: `0` captured (a static shot taken with an image still loading after a reload is recorded beside it as <page>@<width>.unloaded.json, and a compare calls it FLAKY); `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop
@@ -401,9 +401,9 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--mixed-seed` | compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
+Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file or a flaky shot (one taken with an image still loading); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
 
-`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }`.
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional } | { kind: unloaded | in-place | geometry | frame | missing | inventory | settle, … } }] }`.
 
 ```bash
 agentic-cms visual-parity compare before after --json
