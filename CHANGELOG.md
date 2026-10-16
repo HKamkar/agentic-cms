@@ -332,6 +332,17 @@ changes what a capture writes says **recapture baselines**.
   given the rule nor told it is missing, and `--check` stays clean; a new
   site from `init` gets the config, the rule and the lint script together
   (`docs/migrating-to-0.8.0.md` § 3.7).
+- The browser suite's test of a timeline wrapped around a section no
+  longer fails on a slow runner, and runs in WebKit as well as Chromium.
+  It read the section's reveal, waited 300 ms of wall time and asserted
+  100 ms of progress, so a runner slow to draw the reveal's first frame
+  spent the margin first (CI measured 0 → 99.98 ms). It now waits for the
+  reveal's start time, reads the reveal against the page's animation clock
+  (`document.timeline`) on either side of the seek, and asserts that it
+  still runs, kept its start time and moved with that clock; the reveal
+  lasts a minute, so no runner sees it end. A timeline that sought the
+  reveal without pausing it, which the old test let through, now fails
+  it. The timeline is unchanged.
 
 ## [0.7.6] — 2026-10-13
 
