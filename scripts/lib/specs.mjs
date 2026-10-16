@@ -351,6 +351,14 @@ export const SPECS = {
     exit: { 0: "the package holds every file of public/ and .next/static", 1: "a file missing or different, or a copy nested inside the folder it should fill (each named)", 2: "usage, or no standalone build (output: \"standalone\", then next build)" },
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
   },
+  "check-components": {
+    command: "check-components", script: "check-components", group: "build gates", summary: "the component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json",
+    usage: "agentic-cms check-components [--json]",
+    flags: { json: { type: "boolean", help: "print the report as one JSON document" } },
+    examples: ["agentic-cms check-components             # what pnpm lint runs after eslint", "agentic-cms check-components --json | jq '.findings[] | .file'"],
+    exit: { 0: "every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass)", 1: "a finding (each with its file, the check, and the fix)", 2: "no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage" },
+    json: "{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited, file, problem, fix }] }",
+  },
   icons: {
     command: "icons", script: "icons", group: "icons", summary: "the site's icons: a map of Lucide and Simple Icons paths kept from a manifest, a family of marks rendered from primitives, an audit of every icon on the built pages, and a design round for a set of the site's own",
     usage: "agentic-cms icons <add | remove | family | audit | round> …",
