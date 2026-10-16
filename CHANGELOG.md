@@ -244,6 +244,34 @@ changes what a capture writes says **recapture baselines**.
   `design-graphics`); `design-proof`, the styling rule and a new site's
   `AGENTS.md` § Parity harness make a bare `proof` the site's proof,
   read from the profile.
+- `agentic-cms/eslint`: `componentRules(options)`, the component
+  library's lint as flat ESLint configs a site spreads after
+  `eslint-config-next`. The layers import one way (motion ← ui ← patterns
+  ← sections), and only the motion layer imports `motion`, `framer-motion`
+  or `agentic-cms/ix` (with no motion folder, `agentic-cms/ix` is the
+  motion layer). A section or a pattern holds one component per file and
+  no raw button, link, picture, video, heading or form field (no `svg` in
+  a section), no `style`, no arbitrary value and no visual or motion class
+  in its class strings; each message names the primitive to use. The layer
+  folders, the section folders, the forbidden elements with their messages
+  and the files left out are options, and a layer may be missing
+  (`docs/primitives.md` § Enforced). ESLint becomes an optional peer;
+  `pnpm test:pack` loads the export from the tarball.
+- The example lints with it (`eslint.config.mjs`, which a new site from
+  `init` gets), pixel for pixel — the proof is identical in both schemes
+  with `--states`. Its sections write `Heading`, `Media`, `TextLink` and
+  `Panel` where they wrote raw headings, images, a link and bordered boxes;
+  `Media` gains a `size` (`fill`, `icon`, `portrait`, the `media` map),
+  `TextLink` passes every attribute through and draws the post body's
+  links, the corner tag of a section and of a group is one primitive,
+  `ui/TypeTag`, and the two uneven splits are tokens
+  (`lg:grid-cols-2-1`, `lg:grid-cols-1-2-1`). The three sections that held
+  a second component inline it (`docs/migrating-to-0.8.0.md` § 3.7).
+- The kit's own components rule, `.claude/rules/components.md`: the
+  library first, the layers, what a section may contain, primitives
+  extendable by construction, enforcement by the lint and CI, and
+  loosening a rule as its own pull request, said so in its title. A site
+  gets no copy yet: its rule waits for the placement guard it describes.
 
 ## [0.7.6] — 2026-10-13
 

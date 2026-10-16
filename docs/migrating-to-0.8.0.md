@@ -419,7 +419,24 @@ the imports.
    component your site already has under `inherited`: they are frozen, not
    rewritten, and leave the list as you replace them.
 2. Spread `componentRules()` from `agentic-cms/eslint` into
-   `eslint.config.mjs`.
+   `eslint.config.mjs`, after `eslint-config-next` (which registers the
+   `react` plugin two of its rules use):
+
+   ```js
+   import { componentRules } from "agentic-cms/eslint";
+   // in defineConfig([…]), after ...nextVitals and ...nextTs:
+   ...componentRules({ motion: null, patterns: null, sections: ["sections"] }),
+   ```
+
+   Name your section folders in `sections` (the example's are its page
+   folders, `sections/` and `blog/`) and pass `null` for a layer you do not
+   have; with no `motion/` folder, `agentic-cms/ix` is your motion layer
+   ([primitives.md § Enforced](primitives.md#enforced-agentic-cmseslint)
+   has every option). Run `pnpm lint`: each finding names the primitive to
+   use. Move the section onto it, pixel for pixel and proven with
+   `visual-parity proof`: a raw `<img>` becomes `Media`, an `<h3>`
+   `Heading`, a bordered box `Panel`, an arbitrary grid a token. A file you
+   cannot move yet goes into `ignores`, with its reason, until you can.
 3. Change the lint script to
    `eslint; s=$?; agentic-cms check-components || s=1; exit $s`.
 4. Run `init --agent-files`: with the config present, it writes the
