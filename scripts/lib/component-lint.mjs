@@ -8,7 +8,8 @@
 //   - a section or a pattern composes primitives: one component per file, no
 //     raw buttons, links, pictures, headings or form fields (and no svg in a
 //     section), no inline style, no arbitrary value, no visual or motion
-//     class in its className strings — each message naming what to use.
+//     class in its className strings — each message naming what to use;
+//   - and it holds no copy: its words come from the page's content file.
 // The primitives themselves are the site's catalogue, src/components/README.md.
 //
 //   import { componentRules } from "agentic-cms/eslint";
@@ -33,6 +34,7 @@ export const DEFAULTS = {
   sections: ["sections"],
   registry: "sections/render.tsx",
   elements: {},
+  copy: { props: ["title", "alt", "aria-label", "placeholder", "label", "children"], decorations: ["Placeholder", "TypeTag"] },
   ignores: [],
 };
 
@@ -75,6 +77,34 @@ export function compositionSyntax({ ui, motion }) {
     ...inClasses(ARBITRARY).map((selector) => ({ selector, message: "No arbitrary values ([…], (…)): add a token to src/app/globals.css, or a variant to a primitive." })),
     ...inClasses(VISUAL).map((selector) => ({ selector, message: `A section lays pieces out: fills, borders, radii, rings, outlines and shadows belong to a primitive (Panel, Media, a variant in ${ui}).` })),
     ...inClasses(MOTION).map((selector) => ({ selector, message: `Motion is ${animate}, never a transition or animation class.` })),
+  ];
+}
+
+// Copy: text with a letter or a digit in it. A symbol (→, ·, ×) has neither;
+// the text of an aria-hidden element, and the props of a primitive that draws
+// them aria-hidden (`copy.decorations`), are decorations, not something read.
+const WORDS = "/[\\p{L}\\p{N}]/u";
+const HIDDEN = ":has(> JSXAttribute[name.name='aria-hidden'])";
+const WORDED = [`Literal[value=${WORDS}]`, `TemplateLiteral > TemplateElement[value.raw=${WORDS}]`, `:matches(ConditionalExpression, LogicalExpression) > Literal[value=${WORDS}]`];
+
+/** The no-restricted-syntax entries that keep copy out: JSX text, and strings in the copy-bearing props (`copy.props`), written straight, as `{…}` or as a data array's field of that name; none when `copy` is false. */
+export function copySyntax({ copy, registry }) {
+  if (!copy) return [];
+  const { props, decorations } = { ...DEFAULTS.copy, ...copy };
+  const schemas = registry ? `${registry.slice(0, registry.lastIndexOf("/"))}/schemas.ts` : "the sections' schemas";
+  const route = `it goes in the page's file, content/pages/<slug>.yaml → a field of the section (its schema in ${schemas}) → a prop here (a pattern gets it from its section). Symbols pass, and decorations: aria-hidden text${decorations.length ? ` and the props of ${decorations.join(", ")}` : ""}.`;
+  const text = `:matches(JSXElement:not(:has(> JSXOpeningElement${HIDDEN})), JSXFragment)`;
+  const decorated = decorations.length ? `, [name.name=/^(?:${decorations.join("|")})$/]` : "";
+  const names = `/^(?:${props.join("|")})$/`;
+  const prop = props.length ? `JSXOpeningElement:not(${HIDDEN}${decorated}) > JSXAttribute[name.name=${names}]` : null;
+  const field = props.length ? `Property:matches([key.name=${names}], [key.value=${names}]) > :matches(Literal[value=${WORDS}], TemplateLiteral > TemplateElement[value.raw=${WORDS}])` : null;
+  const expressions = (parent) => WORDED.map((part) => `${parent} > JSXExpressionContainer > ${part}`);
+  const inText = [`${text} > JSXText[value=${WORDS}]`, ...expressions(text)];
+  const inProps = prop ? [`${prop} > Literal[value=${WORDS}]`, ...expressions(prop)] : [];
+  return [
+    ...inText.map((selector) => ({ selector, message: `No copy in a section or a pattern: ${route}` })),
+    ...inProps.map((selector) => ({ selector, message: `No copy in a string prop (${props.join(", ")}): ${route}` })),
+    ...(field ? [{ selector: field, message: `No copy in a section's data (a ${props.join(", ")} field): ${route}` }] : []),
   ];
 }
 
@@ -128,7 +158,7 @@ function layerConfigs(opts) {
   return configs;
 }
 
-/** What a section or a pattern may contain: one component per file, no forbidden element, nothing composition forbids. */
+/** What a section or a pattern may contain: one component per file, no forbidden element, nothing composition forbids, no copy. */
 function compositionConfig(files, opts, elements) {
   const forbid = Object.entries(elements).filter(([, message]) => message).map(([element, message]) => ({ element, message }));
   return {
@@ -137,7 +167,7 @@ function compositionConfig(files, opts, elements) {
     rules: {
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
       "react/forbid-elements": ["error", { forbid }],
-      "no-restricted-syntax": ["error", ...compositionSyntax(opts)],
+      "no-restricted-syntax": ["error", ...compositionSyntax(opts), ...copySyntax(opts)],
     },
   };
 }
@@ -150,8 +180,10 @@ function compositionConfig(files, opts, elements) {
  * site does not have), `sections` (the section folders under `root`),
  * `registry` (the section registry under `root`, left out of the section
  * rules: it imports every section), `elements` ({ element: message } over
- * defaultElements(); false allows one) and `ignores` (globs left out of
- * every rule).
+ * defaultElements(); false allows one), `copy` ({ props, decorations }: the
+ * props whose strings are copy, and the primitives that draw theirs
+ * aria-hidden; false turns the copy rule off) and `ignores` (globs left out
+ * of every rule).
  */
 export function componentRules(options = {}) {
   const opts = resolveOptions(options);

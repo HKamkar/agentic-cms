@@ -116,6 +116,15 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
   no arbitrary value (`[…]`, `(…)`); no fill, border, radius, ring, outline,
   divider, shadow, transition or animation class, whether the class string
   is a `className` literal, a template literal or a `cx()` argument.
+- **A section or a pattern holds no copy:** no JSX text with a letter or a
+  digit in it, and no such string in a copy-bearing prop (`title`, `alt`,
+  `aria-label`, `placeholder`, `label`, `children`), written straight, as
+  `{…}`, in a template or a fallback, or as a field of that name in a data
+  array. The copy goes in the page's file, `content/pages/<slug>.yaml`, as
+  a field of the section's schema, and arrives as a prop. A symbol (`→`,
+  `·`) passes, and so does a decoration: the text of an `aria-hidden`
+  element, and the props of a primitive that draws them `aria-hidden`
+  (`Placeholder`, `TypeTag`).
 
 | Option | Default | What it is |
 |---|---|---|
@@ -124,6 +133,7 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
 | `sections` | `["sections"]` | the section folders under `root` |
 | `registry` | `"sections/render.tsx"` | the section registry under `root`, left out of the section rules: it imports every section |
 | `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
+| `copy` | `{ props: [the six above], decorations: ["Placeholder", "TypeTag"] }` | the props whose strings are copy, and the primitives that draw theirs `aria-hidden`; `false` turns the copy rule off |
 | `ignores` | `[]` | globs left out of every rule |
 | `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban covers, and the tsconfig alias for it |
 
@@ -157,9 +167,12 @@ It checks that:
 - **every component in a section folder is a section** the registry
   (`sections/render.tsx`) imports, by the alias or relatively;
 - **`src/app` holds route files only** (`page`, `layout`, `route`,
-  `not-found`, `error`, the metadata files, `globals.css`) in the folders
-  `routes` names. A `*-demo` folder, a design round's or the lab's
-  `lab-demo`, is free: the SEO audit already keeps it out of a build;
+  `not-found`, `error`, the metadata files, `globals.css`), in the content
+  engine's route folders (`routes`) and the named exceptions'
+  (`exceptions`). `routes` holds the app folder and its catch-all; any
+  other folder in it, and an exception with no reason, is a finding. A
+  `*-demo` folder, a design round's or the lab's `lab-demo`, is an
+  exception by its name: the SEO audit already keeps it out of a build;
 - **no component (`.tsx`, `.jsx`) outside `src/components` and `src/app`**;
 - **CSS modules only in `ui/` and the motion layer, `@keyframes` only in
   the motion layer and `src/styles/motion.css`**.
@@ -178,7 +191,8 @@ comment.
 |---|---|---|
 | `root`, `motion`, `ui`, `patterns`, `sections`, `registry`, `ignores`, `src`, `alias` | as in `componentRules()` | the layers, the section folders, the registry, the globs left out of every check |
 | `catalogue` | `"README.md"` | the catalogue, under `root` |
-| `routes` | the example's five | the folders under `src/app` that hold a route's files |
+| `routes` | `["src/app", "src/app/[[...slug]]"]` | the content engine's route folders: the app folder, and the catch-all that renders `content/pages/` |
+| `exceptions` | the example's three, with their reasons | `{ folder: reason }`: each route folder outside the content engine (the post template, the form endpoint, the feed) and why it stays there |
 | `app` | `"src/app"` | the app folder |
 | `motionCss` | `"src/styles/motion.css"` | the stylesheet that holds the motion layer's start states and keyframes |
 | `inherited` | `[]` | files the guard leaves alone, frozen |
@@ -188,5 +202,8 @@ lists every file that does not fit yet, and the list only shrinks. Nothing
 joins it, a file leaves it when the library replaces it, and a listed file
 that is gone is a finding until its line goes. The example's holds the
 blog's post template, which the blog routes render rather than the
-registry. Adding a route folder, an `inherited` file or an `ignores` glob
-loosens the guard: its own pull request, said so in its title.
+registry. Adding a route exception, an `inherited` file or an `ignores`
+glob loosens the guard: its own pull request, said so in its title. A config
+from before the exceptions, its route folders all under `routes`, still
+reads: the kit's reasons cover the example's three, and a folder of the
+site's own is a finding until it moves to `exceptions` with its reason.

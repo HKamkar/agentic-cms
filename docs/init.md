@@ -41,7 +41,8 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   1920), the schemes a proof runs a pass in (light and dark), the ref a
   proof's baseline is built from ([visual-parity.md](visual-parity.md#the-sites-profile)),
   and its `src/config/components.json` is the component guard's config:
-  the layers, the route folders, the frozen `inherited` list
+  the layers, the content engine's route folders and the named exceptions
+  outside it, each with its reason, the frozen `inherited` list
   ([primitives.md § Placed](primitives.md#placed-agentic-cms-check-components)).
 - **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
   it), `.claude/rules/` (path-scoped invariants for the content engine, the

@@ -30,6 +30,16 @@ a patch under `node_modules`.
   `retire-content`), enabled by `.claude/settings.json` from the kit's
   marketplace. Never read `content/` at request time: every page is
   prerendered.
+- **Every page is a content file.** It is `content/pages/<slug>.yaml`,
+  rendered by the catch-all route through the section registry; a new page
+  is `/editorial:new-page` (or the page template), a new section type a
+  schema, a component and a registry entry, together. A page's copy
+  (headings, body, labels, alt text, the SEO fields) never lives in a
+  component, a `page.tsx` or `src/config/` (the chrome is configured in
+  `site.ts`, a form in `forms.ts`). A route outside the content engine
+  (the API, the feed, a design round's `*-demo`, `lab-demo`) is a named
+  exception with its reason, in `src/config/components.json` where the
+  site runs the guard. The pages rule has the rest.
 - The engines' contracts are `node_modules/agentic-cms/src/lib/*/README.md`
   (`content`, `blog`, `seo`, `forms`); the command line is
   `node_modules/agentic-cms/docs/commands.md`, the screenshot harness
@@ -84,6 +94,7 @@ paths. The table is written from the rules' frontmatter by
 | `content/**`, `src/kit.ts`, `src/kit.test.ts`, `src/components/sections/schemas.ts`, `src/components/sections/render.tsx` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Forms](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/components/**`, `content/pages/**` | [Pages](.claude/rules/pages.md) |
 | `src/app/**`, `src/config/site.ts`, `src/kit.ts`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->

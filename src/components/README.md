@@ -24,8 +24,12 @@ Before building anything (a section, a card, a button):
 `eslint.config.mjs`). In a section's file it fails a raw `<button>`, `<a>`,
 `<img>`, `<picture>`, `<video>`, form field, `<h1>`–`<h6>` or `<svg>`, a
 `style` attribute, an arbitrary value (`[…]`, `(…)`), a fill, border,
-radius, ring, outline, shadow, transition or animation class, and a second
-component in the file, each message naming the primitive to use. Anywhere
+radius, ring, outline, shadow, transition or animation class, a second
+component in the file, each message naming the primitive to use, and copy:
+JSX text, or a string in a `title`, `alt`, `aria-label`, `placeholder`,
+`label` or `children`, which comes from the page's file instead (a symbol,
+an `aria-hidden` decoration and the labels of `Placeholder` and `TypeTag`
+pass). Anywhere
 in `src/`, it fails an import that goes the wrong way between the layers:
 
 | Layer | Holds | May import |
@@ -44,13 +48,15 @@ configured in `src/config/components.json`: every file under
 `src/components` sits in a layer; every component `ui/` exports is named
 in this file, in backticks, in the same commit that adds it; every
 component in a section folder is a section `sections/render.tsx` imports;
-`src/app` holds route files only, in its known route folders; no component
+`src/app` holds route files only, in the content engine's route folders
+(the app folder and its catch-all) and the named exceptions' (the post
+template, the form endpoint, the feed, each with its reason); no component
 lives elsewhere in `src/`; CSS modules only in `ui/` (and a motion folder),
 `@keyframes` only in `src/styles/motion.css`. The blog's post template,
 which the blog routes render rather than the registry, is on the guard's
 frozen `inherited` list. A rule the library cannot meet yet is a new
 primitive or option, never a rule turned off in passing: loosening one —
-a rule, a layer, a route folder, an `inherited` file — is its own pull
+a rule, a layer, a route exception, an `inherited` file — is its own pull
 request, said so in its title.
 
 ## Extending a primitive
@@ -505,8 +511,10 @@ title block, `Panel` and the button come from this file, illustrations from
 
 A card's frame is `Panel` (`<Panel as="li">` in a list), and what goes
 inside it is the section's own design: there is no shared `Card`, so a
-section renders its cards from a data array at the top of its file
-(`CARDS.map(...)`), as a `<ul>` when they are a list.
+section renders its cards from the copy its page's file gives it
+(`cards.map(...)`), as a `<ul>` when they are a list; an array at the top
+of its file holds keys or the design's numbers (`CARDS` in `about/Hero`),
+never copy — the lint fails a `title` or a `label` written there.
 When the cards are content someone edits, the array is a collection the
 registry resolves for the section through `withData()` (`UseCaseCards` →
 `kit.content.getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
