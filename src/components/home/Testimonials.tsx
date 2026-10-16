@@ -1,4 +1,5 @@
 import type { SectionProps } from "@/components/sections/schemas";
+import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { Review } from "agentic-cms/content";
@@ -12,7 +13,7 @@ export function Testimonials({ eyebrow, heading, reviews }: SectionProps<"review
       <ul className="grid gap-4 lg:grid-cols-3">
         {reviews.map((review) => (
           <Panel as="li" key={review.name} className={card}>
-            <img src={review.photo} width={80} height={80} alt={review.photoAlt ?? ""} loading="lazy" className="size-20 border border-line" />
+            <Media src={review.photo} width={80} height={80} alt={review.photoAlt ?? ""} size="portrait" />
             <blockquote>
               <p>{review.quote}</p>
             </blockquote>

@@ -1,3 +1,4 @@
+import { Heading } from "@/components/ui/Heading";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
@@ -13,7 +14,7 @@ export function ChooseUs({ eyebrow, heading, points }: SectionProps<"use-cases-c
         <ul className="grid gap-4">
           {points.map((point) => (
             <Panel as="li" key={point.title} className={card}>
-              <h3>{point.title}</h3>
+              <Heading as="h3">{point.title}</Heading>
               <p>{point.text}</p>
             </Panel>
           ))}

@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
+import { Media } from "@/components/ui/Media";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
@@ -17,8 +19,8 @@ export function ChooseUs({ eyebrow, heading, text, cards, cta }: SectionProps<"a
           <ul className="grid gap-4">
             {cards.map((point) => (
               <Panel as="li" key={point.title} className={card}>
-                <img src={point.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
-                <h3>{point.title}</h3>
+                <Media src={point.icon} width={64} height={64} alt="" size="icon" />
+                <Heading as="h3">{point.title}</Heading>
                 <p>{point.text}</p>
               </Panel>
             ))}

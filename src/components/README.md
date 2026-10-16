@@ -19,13 +19,36 @@ Before building anything (a section, a card, a button):
    `Section`, a card's frame is `Panel`, and what goes inside a card is the
    section's own design, from its own copy fields.
 
+`pnpm lint` enforces it, and so does CI on every pull request: ESLint runs
+`componentRules()` from `agentic-cms/eslint` (configured in
+`eslint.config.mjs`). In a section's file it fails a raw `<button>`, `<a>`,
+`<img>`, `<picture>`, `<video>`, form field, `<h1>`–`<h6>` or `<svg>`, a
+`style` attribute, an arbitrary value (`[…]`, `(…)`), a fill, border,
+radius, ring, outline, shadow, transition or animation class, and a second
+component in the file, each message naming the primitive to use. Anywhere
+in `src/`, it fails an import that goes the wrong way between the layers:
+
+| Layer | Holds | May import |
+|---|---|---|
+| motion | the only code that animates: here `agentic-cms/ix` itself, as the example has no `motion/` folder | nothing from the other layers |
+| `ui/` | the primitives | motion |
+| `patterns/` | blocks two or more sections share; the example has none yet | `ui/`, motion |
+| the sections: `home/`, `about/`, `use-cases/`, `contact/`, `sections/`, `blog/` | one component per section type, and the registry `sections/render.tsx` | `ui/`, patterns, motion |
+
+Nothing outside the motion layer imports `motion` or `framer-motion`; a
+site that adds a `motion/` folder wraps `agentic-cms/ix` there too, and the
+lint then keeps it out of the other layers. A rule the library cannot meet yet is a new primitive or option, never a
+rule turned off in passing: loosening one is its own pull request, said so
+in its title.
+
 ## Extending a primitive
 
 A primitive with more than one look declares them in one map with
 `variants()` (§ Class helpers): the base classes, each axis's options, the
 defaults. A new look is **one new option** in the map, never a copy of the
 component and never a class string in a section. The maps are exported
-beside their components (`button`, `panel`, `heading`, `iconButton`), so an
+beside their components (`button`, `panel`, `heading`, `iconButton`,
+`media`), so an
 element a component has to draw itself wears the same classes: the form's
 submit is `buttonClass("solid")`, a card that is a whole link
 `cx(panel(), …)`.
@@ -96,8 +119,8 @@ gutter. Nothing else on a page sets a width.
 ### `Section`
 
 The frame every section renders in: a `<section>` with the page's vertical
-rhythm, a `Container`, and a `Panel` whose corner tag is the section's
-type. Props: `type` (required), `eyebrow?`, `heading?`, `headingAs?`
+rhythm, a `Container`, and a `Panel` whose corner tag (`TypeTag`) is the
+section's type. Props: `type` (required), `eyebrow?`, `heading?`, `headingAs?`
 (`"h1" | "h2"`, default `h2`), `className?`, `children?`.
 
 `type` is the section type from the page file. It does three jobs at once:
@@ -133,6 +156,19 @@ overlay's ground).
 <Panel as="li" className="flex flex-col gap-2 p-4">…</Panel>   // a card in a <ul>
 <Panel variant="dashed" data-section={`group-${variant}`}>…</Panel>
 <Link href={href} className={cx(panel(), "flex flex-col gap-3 p-4 no-underline")}>…</Link>
+```
+
+### `TypeTag`
+
+The tag in a box's corner that names what drew it, in the label font on
+the `fill` ground: `Section` prints the section's type with it,
+`sections/Group` its variant, so a reader of the wireframe sees which
+component renders what. `aria-hidden`: the box's heading carries the
+meaning. Props: `label`, `className?` (its spacing in the box).
+
+```tsx
+<TypeTag label={type} className="mb-4" />
+<TypeTag label={`group · ${variant}`} className="m-4" />
 ```
 
 ## Chrome and actions (`src/components/ui/`)
@@ -183,7 +219,7 @@ Two functions with no React, so they load in server and client components
 and under `node:test` alike.
 
 - **`cx(...parts)`** joins class names and skips the falsy ones:
-  `cx(styles.faq, "mb-8 border border-line")`, `cx(control, className)`.
+  `cx(styles.faq, panel(), "mb-8")`, `cx(control, className)`.
 - **`variants({ base, variants, defaults, compound? })`** declares a
   component's looks as one typed map and returns the function that picks
   one: the base, each axis's option or its default, then every `compound`
@@ -222,17 +258,21 @@ A picture the copy actually describes is `Media` instead.
 
 ## `Media` (`src/components/ui/Media.tsx`)
 
-A picture the copy describes, so a section never writes `<img>`: `block
-h-auto w-full`, with the hairline (`border border-line`) unless
+A picture the copy describes, so a section never writes `<img>`: in the
+box its `size` names, with the hairline (`border border-line`) unless
 `framed={false}`. Props: `src`, `alt` (`""` only for decoration), `width`
 and `height` (the file's own size, so the box is reserved before it loads),
-`eager?`, `framed?`, `className?`. Below the fold, the default, it is an
-`<img loading="lazy">`; `eager` renders `EagerImage` for a picture above
-the fold in a server component, so it stays out of other pages' prefetches
-(`STANDARD.md` §4).
+`size?` (`"fill"`, default: `block h-auto w-full`, the column's width at the
+file's ratio; `"icon"`: a card's 64 px `size-16`; `"portrait"`: a review's
+80 px `size-20`), `eager?`, `framed?`, `className?`. Below the fold, the
+default, it is an `<img loading="lazy">`; `eager` renders `EagerImage` for a
+picture above the fold in a server component, so it stays out of other
+pages' prefetches (`STANDARD.md` §4). Its sizes are the `media` map: a new
+box is a new option there.
 
 ```tsx
 <Media src={dashboard.image} width={1200} height={750} alt={dashboard.imageAlt} />
+<Media src={entry.icon} width={64} height={64} alt="" size="icon" />
 <Media src={post.image} width={1600} height={900} alt={post.imageAlt} eager />
 ```
 
@@ -278,11 +318,13 @@ nothing moves.
 ### `TextLink`
 
 A link in running copy, so a section never writes `<a>`. Props: `href`,
-`className?`, `children`. A path or an anchor (`/…`, `#…`) renders
-`next/link`; an `http(s)` address opens in a new tab (`target="_blank"
-rel="noopener noreferrer"`); anything else (`mailto:`, `tel:`) is a plain
-`<a>`. It keeps the page's underline. A link that looks like a button is
-`Button`; a link in the chrome is `NavLink`.
+`children`, and every other attribute of an `<a>` (`className`, a post
+body's `id`, `title` or aria), passed through. A path or an anchor (`/…`,
+`#…`) renders `next/link`; an `http(s)` address opens in a new tab
+(`target="_blank" rel="noopener noreferrer"`); anything else (`mailto:`,
+`tel:`) is a plain `<a>`. It keeps the page's underline. A link that looks
+like a button is `Button`; a link in the chrome is `NavLink`; a post body's
+links are `TextLink` too (`blog/mdxComponents`).
 
 ```tsx
 <TextLink href={site.links.blog}>the blog</TextLink>
@@ -426,7 +468,7 @@ conventions, pipeline) is **`src/lib/blog/README.md`**.
 | `BlogCard` | `post: PostMeta`, `excerpt?` | The post card — a whole-card `next/link` (`no-underline`) holding the 820×696 thumbnail, the category chip, the date, the title as `<h3 class="text-h4">`, and the excerpt on the index. |
 | `BlogIndex` | the `blog-index` section's copy plus `posts: PostMeta[]` | The hero (`blog-index`) and the card grid (`blog-index-list`), newest first; its button is the current page. |
 | `PostBody` | `children` | Wraps a rendered body and wires the FAQ accordion. Exports `postBlocks`, the class names `rehype-post-blocks` puts on the blocks it builds (the prose run, the quote box, the inline image, the FAQ block). |
-| `mdxComponents` | — | Element overrides for post bodies: `<fx>` (the wrapper `rehype-post-blocks` emits) renders as the element it names and drops the delay, internal links go through `next/link`, external ones get `target="_blank" rel="noopener noreferrer"`. |
+| `mdxComponents` | — | Element overrides for post bodies: `<fx>` (the wrapper `rehype-post-blocks` emits) renders as the element it names and drops the delay, and every link is a `TextLink` (internal ones through `next/link`, external ones with `target="_blank" rel="noopener noreferrer"`). |
 
 ## Page sections
 
@@ -447,7 +489,7 @@ Each is a server component unless it needs the browser, renders inside
 `ui/Section`, takes its copy as `SectionProps<"<type>">`, and builds its
 content from the shared strings in `STANDARD.md` §6 — `Container`, the
 title block, `Panel` and the button come from this file, illustrations from
-`Placeholder`, content images from `<img>`.
+`Placeholder`, content images and icons from `Media`.
 
 A card's frame is `Panel` (`<Panel as="li">` in a list), and what goes
 inside it is the section's own design: there is no shared `Card`, so a
