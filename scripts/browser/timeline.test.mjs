@@ -193,31 +193,41 @@ for (const engine of ENGINES) {
 
 // A timeline wrapped around a whole section, as a demo route may: the section's own reveal (a Web Animation the way the
 // reveal library runs one, on an element outside the SVG) must keep its clock while the timeline holds the SVG's frame.
-test("a timeline around a section drives its SVG and leaves the section's reveal running", { skip: ENGINES[0].skip, timeout: 60000 }, async () => {
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>scope</title></head><body>
+// Its clock is the page's (document.timeline), which moves a frame at a time: a loaded runner may draw the reveal's
+// first frame late or few frames in a span of wall time, so the test reads the reveal against that clock, never the wall's;
+// and the reveal lasts as long as the test may run, so no runner is slow enough to see it end.
+for (const engine of ENGINES) {
+  test(`timeline, ${engine.name}: a timeline around a section drives its SVG and leaves the section's reveal running`, { skip: engine.skip, timeout: 60000 }, async () => {
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>scope</title></head><body>
 <div data-lab-timeline>${String.raw`<div data-lab-controls>`}<button data-lab-play>Play</button><button data-lab-replay>Replay</button><input type="range" data-lab-time min="0" max="1.6" step="0.01" value="0"><span data-lab-readout></span></div>
 <section><h2 id="reveal">A heading the section reveals</h2>${A}</section></div>
-<script>document.getElementById("reveal").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 4000, fill: "both" });
+<script>document.getElementById("reveal").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 60000, fill: "both" });
 window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-timeline]"), { autoplay: false });</script></body></html>`;
-  const server = http.createServer((req, res) => { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(html); });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const browser = await ENGINES[0].launch();
-  try {
-    const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${server.address().port}/`);
-    await page.evaluate(() => window.timeline.seek(0.8));
-    const first = await page.evaluate(() => ({ svg: document.querySelector("svg").getCurrentTime(), reveal: document.getElementById("reveal").getAnimations()[0] }));
-    assert.ok(Math.abs(first.svg - 0.8) < 1e-6, `the SVG held at 0.8 s: ${first.svg}`);
-    const reveal = () => page.evaluate(() => { const a = document.getElementById("reveal").getAnimations()[0]; return { time: a.currentTime, state: a.playState }; });
-    const before = await reveal();
-    await page.waitForTimeout(300);
-    const after = await reveal();
-    assert.equal(after.state, "running", "the reveal was not paused");
-    assert.ok(after.time > before.time + 100, `the reveal kept its own clock: ${before.time} → ${after.time}`);
-    const cycle = await page.evaluate(() => window.timeline.duration());
-    assert.ok(Math.abs(cycle - 1.6) < 1e-5, `the cycle is the SVG's, not the 4 s reveal's: ${cycle}`);
-  } finally { await browser.close(); server.close(); }
-});
+    const server = http.createServer((req, res) => { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(html); });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const browser = await engine.launch();
+    try {
+      const page = await browser.newPage();
+      await page.goto(`http://127.0.0.1:${server.address().port}/`);
+      const reveal = () => page.evaluate(() => { const a = document.getElementById("reveal").getAnimations()[0]; return { time: a.currentTime, start: a.startTime, state: a.playState, clock: document.timeline.currentTime }; });
+      // Started: its start time resolved on a frame the page drew. Then the seek, between the two readings.
+      await page.evaluate(() => document.getElementById("reveal").getAnimations()[0].ready.then(() => null));
+      const before = await reveal();
+      await page.evaluate(() => window.timeline.seek(0.8));
+      const svg = await page.evaluate(() => document.querySelector("svg").getCurrentTime());
+      assert.ok(Math.abs(svg - 0.8) < 1e-6, `the SVG held at 0.8 s: ${svg}`);
+      await page.waitForFunction((from) => document.timeline.currentTime > from + 100, before.clock);
+      const after = await reveal();
+      assert.equal(after.state, "running", "the reveal was not paused");
+      assert.equal(after.start, before.start, "the reveal was not sought: its start time stands");
+      // To the engine's rounding: WebKit gives both times in whole milliseconds.
+      const ran = after.time - before.time, passed = after.clock - before.clock;
+      assert.ok(Math.abs(ran - passed) < 2, `the reveal kept its own clock: ${before.time} → ${after.time} ms while the page's moved ${passed} ms`);
+      const cycle = await page.evaluate(() => window.timeline.duration());
+      assert.ok(Math.abs(cycle - 1.6) < 1e-5, `the cycle is the SVG's, not the reveal's minute: ${cycle}`);
+    } finally { await browser.close(); server.close(); }
+  });
+}
 
 // A timeline over two copies four screens apart and a part that slides in from far off screen, in both engines:
 // playing, the frames set no animation's time; the copy far below is stopped until it is scrolled to, then joins the
