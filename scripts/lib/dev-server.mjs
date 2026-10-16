@@ -27,12 +27,37 @@ export function nextBin(root) {
   try { return createRequire(path.join(root, "package.json")).resolve("next/dist/bin/next"); } catch { return null; }
 }
 
-/** A port nothing listens on, from the system. */
-export const freePort = (host = "127.0.0.1") => new Promise((resolve, reject) => {
+/**
+ * Where free ports are picked: below every system's ephemeral range (Linux 32768 and up, macOS and Windows 49152 and
+ * up), so no port-0 bind or outgoing connection, another test's or a browser's, is handed the port in the seconds
+ * between the pick and the server listening on it.
+ */
+export const FREE_PORT_RANGE = [20000, 32767];
+
+/** A listener on the port (every interface without a host), or null when something holds it. */
+const hold = (port, host) => new Promise((resolve) => {
   const server = net.createServer();
-  server.once("error", reject);
-  server.listen(0, host, () => { const { port } = server.address(); server.close(() => resolve(port)); });
+  server.once("error", () => resolve(null));
+  server.listen({ port, host, exclusive: true }, () => resolve(server));
 });
+
+/** `count` distinct ports nothing listens on, every interface by default: each held until all are found, then all closed for the caller to start on. */
+export async function freePorts(count, { host, range = FREE_PORT_RANGE, random = Math.random, tries = 200 } = {}) {
+  const held = [];
+  try {
+    for (let i = 0; held.length < count; i++) {
+      if (i === tries) throw new Error(`${held.length} of ${count} free ports found between ${range[0]} and ${range[1]} in ${tries} tries`);
+      const server = await hold(range[0] + Math.floor(random() * (range[1] - range[0] + 1)), host);
+      if (server) held.push(server);
+    }
+    return held.map((server) => server.address().port);
+  } finally {
+    await Promise.all(held.map((server) => new Promise((resolve) => server.close(resolve))));
+  }
+}
+
+/** A port nothing listens on (freePorts). */
+export const freePort = async (host) => (await freePorts(1, { host }))[0];
 
 /** next dev's lock in the site, parsed: { pid, port, appUrl, … }, or null. */
 export function readDevLock(root, fs) {
@@ -60,6 +85,9 @@ export function clearStaleCache(root, fs) {
   for (const dir of removed) fs.rmSync(path.join(root, dir), { recursive: true, force: true });
   return removed;
 }
+
+/** next dev's log says another socket holds its port. */
+const taken = (log) => /\bEADDRINUSE\b/.test(log);
 
 /** A signal to the child's whole process group (it was spawned detached, so it leads one); the child alone where groups do not exist. */
 const signalGroup = (child, signal, kill) => { try { kill(-child.pid, signal); } catch { try { child.kill(signal); } catch { /* gone already */ } } };
@@ -99,6 +127,6 @@ export function startDevServer({ root, port, host = null, env = {}, timeout = 12
     child.stdout.on("data", read);
     child.stderr.on("data", read);
     child.once("error", (error) => { clearTimeout(timer); reject(error); });
-    exited.then((code) => { if (!ready) { clearTimeout(timer); reject(new Error(`next dev exited (${code}) before it was ready:\n${tail()}`)); } });
+    exited.then((code) => { if (!ready) { clearTimeout(timer); reject(new Error(`next dev exited (${code}) before it was ready${taken(log) ? `: port ${port} is taken, something else listens on it` : ""}:\n${tail()}`)); } });
   });
 }

@@ -14,7 +14,7 @@ import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
-import { freePort, processAlive, readDevLock } from "../lib/dev-server.mjs";
+import { freePort, freePorts, processAlive, readDevLock } from "../lib/dev-server.mjs";
 import { isUp } from "../lib/hosts.mjs";
 import { devServer } from "./dev-server.mjs";
 
@@ -158,7 +158,7 @@ test("demo new against the running dev server: it waits until its route answers,
 test("serve on free ports: next dev and the lab started, the table printed once the root answers, and a Ctrl-C stops both — the ports are free again", { skip, timeout: 240000 }, async (t) => {
   const lock = readDevLock(ROOT, fs);
   if (lock && processAlive(lock.pid)) { t.skip(`this checkout's next dev runs (pid ${lock.pid}): serve would reuse it`); return; }
-  const [port, labPort] = [await freePort(), await freePort()];
+  const [port, labPort] = await freePorts(2);   // distinct, and outside the range other tests' port-0 binds draw from
   const child = spawn(process.execPath, [BIN, "serve", "--port", String(port), "--lab-port", String(labPort), "--lab", "--no-public"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
   let out = "", err = "";
   child.stdout.on("data", (chunk) => { out += chunk; });
