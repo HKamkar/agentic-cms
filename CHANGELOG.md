@@ -441,6 +441,7 @@ changes what a capture writes says **recapture baselines**.
 - Every line of a compare that is not `ok` has a `cause:` line under it: the section that moved, else the section whose content changed in place; the image that had not arrived (`FLAKY`); what a shot without geometry shows (the menu, a motion step, a state's box); why a file is in one capture alone; an inventory's first difference, a settle record's changed step. `--json` gives every such file its `cause`, and the summary a `flaky` count.
 - A `--states` capture puts the post FAQ state on the first post whose body has a FAQ (the kit's own test), not the first post, and drops it when no post has one; a state whose target does not show within 10 s is skipped and listed in `capture.json` (`skipped`), and the compare's `MISSING` line says which side skipped it. A build whose posts had no FAQ used to time out twice and end the run.
 - `docs/migrating-to-0.8.0.md` § 1: the check runs `--all` and says what each pass must show; the `--ref` baseline's sibling worktree, `../<checkout>-ref-<sha>`, is named with its cleanup.
+- Fixed: the `serve` browser test no longer fails on a port taken by a parallel test. Its ports come from `freePorts()`, which picks distinct ports below the ephemeral range, and next dev's EADDRINUSE exit is reported as a taken port.
 
 ## [0.7.6] — 2026-10-13
 
