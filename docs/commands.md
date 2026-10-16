@@ -1028,7 +1028,7 @@ agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept, and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
 | `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
 | `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |

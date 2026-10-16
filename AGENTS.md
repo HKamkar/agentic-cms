@@ -80,7 +80,7 @@ paths. The table is written from the rules' frontmatter by
 | Paths | Read and follow |
 | --- | --- |
 | `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
-| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `scripts/lib/component-lint.mjs` | [Components](.claude/rules/components.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
@@ -221,9 +221,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `footer.quickLinks` in `src/config/site.ts` together if it belongs there
   (they are separate lists). A new section type is a schema + a component +
   a registry entry.
-- Verify = `pnpm lint` + `pnpm build` (which starts with the content lint
-  and ends with the SEO audit) + `pnpm preview`, with `pnpm test` (the
-  `node:test` suites, about a second) and `pnpm content:lint` when `content/`
+- Verify = `pnpm lint` (ESLint, then the component guard) + `pnpm build`
+  (which starts with the content lint and ends with the SEO audit) +
+  `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
+  and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
   schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
   or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
