@@ -5,6 +5,7 @@ import { mdxComponents } from "@/components/blog/mdx";
 import { PostBody, postBlocks } from "@/components/blog/PostBody";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
+import { chrome } from "@/config/site";
 import { kit } from "@/kit";
 import { renderPostBody } from "agentic-cms/blog";
 import { EagerImage, JsonLd } from "agentic-cms/components";
@@ -43,7 +44,7 @@ export default async function PostPage({ params }: Props) {
       {faqLd && <JsonLd data={faqLd} />}
 
       <article>
-        <Section type="post-hero" eyebrow="blog post" heading={post.title} headingAs="h1">
+        <Section type="post-hero" eyebrow={chrome.post.eyebrow} heading={post.title} headingAs="h1">
           {/* Above the fold in a server component: EagerImage keeps the preload hint out of the RSC payload. */}
           {post.image && <EagerImage src={post.image} width={1600} height={900} alt={post.imageAlt || ""} className="block h-auto w-full border border-line" />}
         </Section>
@@ -52,14 +53,14 @@ export default async function PostPage({ params }: Props) {
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <p className={eyebrowText}>{formatDate(post.date)}</p>
             <p className="text-muted">
-              {post.author.name} · {post.readingMinutes} min read
+              {post.author.name} · {chrome.post.readingTime(post.readingMinutes)}
             </p>
           </div>
           <PostBody>{body}</PostBody>
         </Section>
 
         {related.length > 0 && (
-          <Section type="post-related" heading="Read next">
+          <Section type="post-related" heading={chrome.post.related}>
             <ul className="grid gap-4 lg:grid-cols-3">
               {related.map((p) => (
                 <li key={p.slug}>

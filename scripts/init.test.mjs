@@ -172,6 +172,9 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
   assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
   assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{site\.cta\.href\}/, "the navbar keeps everything else");
+  const config = read(target, "src/config/site.ts");
+  assert.doesNotMatch(config, /themeToggle|ThemeToggle/, "no labels for a toggle the site does not have");
+  assert.match(config, /^ {2}navbar: \{ label: "Main", menu: "Menu" \},\n {2}\/\*\* ui\/Footer's/m, "the chrome's other words stay, and so does the comment above the next");
   assert.deepEqual(checkComponents({ root: target, fs }).findings, [], "the guard passes without the toggle and its entry");
 
   const both = path.join(tmp(), "both");

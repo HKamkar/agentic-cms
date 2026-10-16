@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { chrome } from "@/config/site";
 
 type Theme = "system" | "light" | "dark";
 
@@ -26,7 +27,7 @@ export function ThemeToggle() {
 
   return (
     <button type="button" onClick={cycle} className="border border-line px-3 py-1 font-label text-h6">
-      {`Theme: ${theme}`}
+      {chrome.themeToggle[theme]}
     </button>
   );
 }
