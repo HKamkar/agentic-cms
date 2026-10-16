@@ -148,18 +148,23 @@ by `pnpm test:browser`.
   `lib/icons-source.mjs`, `lib/icons-family.mjs`, `lib/icons-audit.mjs`,
   `lib/icons-round.mjs`).
 - `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
-  [--candidates 2]` scaffolds the design round's throwaway route,
+  [--candidates 2] [--timeline]` scaffolds the design round's throwaway route,
   `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the
   section's component beside it, from the registry) reading the page's real
   copy from its file, in the section's frame inside the site's own layout,
-  the current version last; `demo clean [name]` removes the route, every
-  component file it alone imported and next dev's stale route types
-  (`docs/design.md` § The round; `lib/demo.mjs`).
+  the current version last (`--timeline`: each block under the lab's
+  timeline); `--showcase [--component <file>]…` writes a review page of
+  pieces instead. With the dev server running it waits until the route
+  answers and prints its URLs (`lib/handover.mjs`); `demo clean [name]`
+  removes the route, every component file it alone imported and next
+  dev's stale route types (`docs/design.md` § The round; `lib/demo.mjs`).
 - `lab` — `pnpm kit lab new <name> --kind icon|mark|loop` writes an SVG
   scene under `.parity/lab/` to start from; `lab serve` shows every scene
   on the site's tokens (in each of its schemes, inline and as an `<img>`, with a
   scrubber over its animations) on this machine and the LAN, reloading on
-  every save; `lab clean` removes the lab. The design canvas for the site's
+  every save, and prints each scene's `/scene/<name>`; `lab route` writes
+  the throwaway route and waits for it like `demo new`; `lab clean`
+  removes the lab. The design canvas for the site's
   own icons, graphics and short 2D loops, opened when a drawing is needed
   and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
   `lib/lab-page.mjs`, `lib/lab-server.mjs`).
@@ -183,6 +188,17 @@ by `pnpm test:browser`.
   keeping the file's other lines; exit 1 on a missing one without it
   (`docs/dev-server.md`; `lib/hosts.mjs`, which the lab server lists its
   LAN URLs from too).
+- `serve` — `pnpm kit serve [--port <n>] [--lab] [--write-origins]
+  [--fix-cache] [--no-public]` (`serve.mjs`) starts next dev on the site's
+  port on every interface (or reuses this site's, found by
+  `.next/dev/lock`; anything else on the port is refused) and the lab when
+  `.parity/lab` has scenes, waits until the root and every `*-demo` route
+  answer, prints one table of localhost, LAN and public × the routes and
+  the lab's pages, restarts next dev with a cleared cache on Turbopack's
+  stale-cache error (`--fix-cache`), and stops both on Ctrl-C
+  (`docs/dev-server.md`; `lib/serve.mjs`, `lib/dev-server.mjs` — next dev
+  started, watched and stopped by process group, which the browser tests
+  run too — and `lib/handover.mjs`, the wait and the URLs).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at the site's widths (its profile,

@@ -54,23 +54,33 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
    palette, a type sample) goes on a sheet (`pnpm kit sheet`,
    `docs/shot-probe-sheet.md`) in the same round. A candidate that moves
    gets the lab's timeline on the route, so the owner can pause, step and
-   replay it: `<LabStudy file>` for an animated file, `<LabTimeline>`
-   around a component — it drives the component's inline SVGs and
-   anything marked `data-lab-drive`, never the reveals around them, and
-   motion that plays once when seen plays at once under it
-   (`docs/lab.md` § Inspecting motion). `pnpm dev`;
-   hand over the route's URL on the dev server: the LAN or public address
-   for a phone, with its hostname in `ALLOWED_DEV_ORIGINS`
-   (`docs/dev-server.md`), the candidates measured at the site's widths and
-   their interactions run in WebKit too, and what the machine cannot show
-   named for the owner's Safari (`docs/browsers.md`; the checklist is
-   `docs/design.md` § Handing over and merging). Your own look at it is
+   replay it: `--timeline` wraps every block (each candidate and the
+   current version) in `<LabTimeline label><div data-lab-drive>`, and
+   `<LabStudy file>` shows an animated file — the timeline drives inline
+   SVGs and anything marked `data-lab-drive`, never the reveals around
+   them, and motion that plays once when seen plays at once under it
+   (`docs/lab.md` § Inspecting motion). A review page that is not one
+   section's candidates (the library's primitives, a motion layer's parts)
+   is `demo new <name> --showcase --component <file>…`, which `demo clean`
+   removes like a round. Start the dev server where it can be stopped
+   (`pnpm kit serve`: next dev and the lab, every URL in one table); with
+   it running, `demo new` waits until the route answers and prints its
+   URLs. Hand over the URLs it printed: the LAN or public one for a
+   phone, with its hostname in `ALLOWED_DEV_ORIGINS` (a warning names one
+   that is missing; `pnpm kit serve --write-origins` adds it;
+   `docs/dev-server.md`), a public one only where the firewall opens the
+   port to the viewer's IP only, the candidates measured at the site's
+   widths and their interactions run in WebKit too, and what the machine
+   cannot show named for the owner's Safari (`docs/browsers.md`; the
+   checklist is `docs/design.md` § Handing over and merging). Your own
+   look at it is
    `pnpm kit shot /<name>-demo --url <dev server>`, seeded like a capture, so a banner the site shows until a
    visitor's choice is stored stays closed over the candidates (the owner
-   closes it once in their own browser). A dev server restarted after a `pnpm build` that fails every page
-   with `Can't resolve '@vercel/turbopack-next/internal/…'` is reading the
-   build's caches: stop it, `rm -rf .next/dev .next/cache/turbopack`, start
-   it again (`docs/design.md` § When the dev server will not serve).
+   closes it once in their own browser). A dev server that fails every
+   page with `Can't resolve '@vercel/turbopack-next/internal/…'` after a
+   `pnpm build` is reading the build's caches: `pnpm kit serve --fix-cache`
+   restarts it with them cleared (`docs/design.md` § When the dev server
+   will not serve).
 5. **The look and the pick.** The owner looks on desktop and phone and
    picks by letter, or edits the pick in words ("merge B and C", "no
    icons", "change the radio colour too", "better wording for that row").

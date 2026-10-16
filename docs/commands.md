@@ -811,7 +811,7 @@ agentic-cms lab new spin --kind loop
 
 #### `lab serve`
 
-Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
+Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs, and each scene's own page (/scene/<name>, the URL to hand over), and runs until Ctrl-C.
 
 ```bash
 agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]
@@ -834,23 +834,28 @@ agentic-cms lab serve --scenes public/images/home --scenes public/images/ui --si
 
 #### `lab route`
 
-Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it).
+Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with the dev server running, waits until /lab-demo answers and prints its URLs to hand over.
 
 ```bash
-agentic-cms lab route [--force] [--json]
+agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
 ```
 
 | flag | what |
 |---|---|
 | `--force` | overwrite a route that is already there |
-| `--json` | print { file, path } |
+| `--no-wait` | write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, /lab-demo is asked until it stops answering 404 — which compiles it too — and then its URLs are printed) |
+| `--timeout <s>` | how long /lab-demo may take to answer, in seconds (default `120`) |
+| `--url <base>` | the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev) |
+| `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
+| `--json` | print { file, path, urls, ready, status } |
 
-Exit: `0` written; `2` the route exists (pass --force), or usage.
+Exit: `0` written (and /lab-demo answered, or no dev server runs, or --no-wait); `1` written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout; `2` the route exists (pass --force), or usage.
 
-`--json` prints `{ file, path }`.
+`--json` prints `{ file, path, urls: [{ where, url }], ready: true|false|null, status }`.
 
 ```bash
-agentic-cms lab route                      # then pnpm dev and /lab-demo
+agentic-cms lab route                      # with the dev server running: waits for /lab-demo, prints its URLs
+agentic-cms lab route --no-wait            # write it, ask nothing
 ```
 
 #### `lab render`
@@ -928,10 +933,10 @@ agentic-cms demo <new | clean> …
 
 #### `demo new`
 
-Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last.
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with the dev server running, waits until the route answers and prints the URLs to hand over.
 
 ```bash
-agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slug>] [--candidates 2] [--json]
+agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
 ```
 
 - `<name>` — the route is src/app/<name>-demo; lowercase letters, digits and hyphens
@@ -940,18 +945,25 @@ agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slu
 |---|---|
 | `--section <type>` | the section type (a key of the registry, src/components/sections/render.tsx); the route then reads the page's copy and passes it to every candidate |
 | `--page <slug>` | the page file whose copy the route reads (default: the first under content/pages carrying the section); only with --section |
-| `--candidates <n>` | how many candidates, A onward (1 to 8) (default `2`) |
-| `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props |
+| `--candidates <n>` | how many candidates, A onward (1 to 8; default 2); not with --showcase |
+| `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props; with --showcase, each piece the page shows (repeat it), never removed by demo clean (repeatable) |
+| `--showcase` | a review page that is not a section's candidates — the library's primitives, a motion layer, a set of states — a block per --component (or one to fill), inside the site's own layout; demo clean removes it and every file only it uses |
+| `--timeline` | wrap each block (the candidates, the current version, a showcase's pieces) in <LabTimeline label><div data-lab-drive>, so its motion can be paused, stepped and replayed (docs/lab.md § Inspecting motion) |
+| `--no-wait` | write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, /<name>-demo is asked until it stops answering 404 — which compiles it too — and then its URLs are printed) |
+| `--timeout <s>` | how long /<name>-demo may take to answer, in seconds (default `120`) |
+| `--url <base>` | the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev) |
+| `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
 | `--json` | print the report |
 
-Exit: `0` written; `2` neither --section nor --component, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, or usage.
+Exit: `0` written (and the route answered, or no dev server runs, or --no-wait); `1` written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout; `2` neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage.
 
-`--json` prints `{ route, path, section, page, component, candidates: [{ letter, file }], data }`.
+`--json` prints `{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }`.
 
 ```bash
-agentic-cms demo new services --section home-service
-agentic-cms demo new band --section about-story --page sections-about --candidates 3
+agentic-cms demo new services --section home-service        # with the dev server running: waits for /services-demo, prints its URLs
+agentic-cms demo new band --section about-story --page sections-about --candidates 3 --timeline
 agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props
+agentic-cms demo new library --showcase --component src/components/ui/Button.tsx --component src/components/ui/Panel.tsx --timeline
 ```
 
 #### `demo clean`
@@ -981,7 +993,7 @@ agentic-cms demo clean                     # every *-demo route
 
 ## site
 
-`init` · `setup` · `urls`
+`init` · `setup` · `urls` · `serve`
 
 ### `init`
 
@@ -1067,6 +1079,36 @@ Exit: `0` every address is in ALLOWED_DEV_ORIGINS (or was written); `1` an addre
 agentic-cms urls                           # the URLs to hand over, and a missing origin named
 agentic-cms urls --write                   # the missing origins into .env.local
 agentic-cms urls --no-public --json
+```
+
+### `serve`
+
+The dev server and the lab for the owner's devices, started or found running, and every URL to hand over once each route answers: the origins checked first, next dev on the site's port on every interface, the lab when .parity/lab has scenes, every *-demo route and the root waited for, then one table — localhost, LAN and public × the routes, the lab's index and each /scene/<name> — until Ctrl-C stops both.
+
+```bash
+agentic-cms serve [--port <n>] [--lab] [--lab-port <n>] [--write-origins] [--fix-cache] [--no-public] [--timeout <s>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000); this site's next dev already running there, or on the port its lock (.next/dev/lock) names, is reused and left running, and anything else on the port is refused |
+| `--lab` | start the lab server even when .parity/lab has no scene (it starts by itself when it has one) |
+| `--lab-port <n>` | the lab server's port (lab serve's); when it is taken, serve goes on without the lab and says so (default `8001`) |
+| `--write-origins` | add the addresses ALLOWED_DEV_ORIGINS lacks to .env.local before next dev starts, so they apply (urls --write's edit) |
+| `--fix-cache` | when the dev log shows Turbopack's stale cache (Can't resolve '@vercel/turbopack-next/internal/…', after a production build), stop the server serve started, clear .next/dev and .next/cache/turbopack and start it again, once |
+| `--no-public` | do not look up the public address (offline, or a machine no viewer reaches from outside) |
+| `--timeout <s>` | how long next dev may take to be ready, and each route to answer, in seconds (default `120`) |
+| `--json` | print each table as one JSON document per line instead (the progress goes to stderr) |
+
+Exit: `0` stopped with Ctrl-C; `1` next dev exited on its own, or was not ready within --timeout (its log's tail is printed); `2` no dev port, the port held by something that is not this site's next dev, next not installed, or usage.
+
+`--json` prints `{ dev: { port, pid, started, reused }, lab: { port, started, taken, urls, scenes: [{ name, urls }] } | null, hosts: [{ where, host }], routes: [{ path, ready, status, tail, urls: [{ where, url }] }], origins: { file, exists, listed, missing, written }, restarted }`.
+
+```bash
+agentic-cms serve                          # then hand over the URLs it printed; Ctrl-C stops it
+agentic-cms serve --write-origins          # a new address of this machine, added before next dev starts
+agentic-cms serve --fix-cache              # after a production build broke the dev server's compile
+agentic-cms serve --lab --no-public --port 8002
 ```
 
 <!-- commands-doc:end -->

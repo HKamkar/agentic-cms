@@ -289,7 +289,7 @@ own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
 pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
-cd my-site && bash scripts/setup.sh && pnpm dev
+cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
 The kit is a git dependency that builds its `dist/` as it installs, which
@@ -382,10 +382,11 @@ pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
-pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last
+pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last; waits for it on the dev server and prints its URLs
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
 pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
 pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
+pnpm kit serve       # next dev and the lab for a look: every demo route waited for, every URL (localhost, LAN, public) in one table; Ctrl-C stops both
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit critical-css   # each prerendered page paints from its own inlined rules, its stylesheets no longer block
 pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked

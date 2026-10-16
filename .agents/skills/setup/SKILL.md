@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up a site built on agentic-cms on a fresh clone or a new machine - Node and pnpm, the dependencies, the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests - by running `bash scripts/setup.sh` as docs/setup.md describes, then the dev server and the URL to hand over (`pnpm urls`). Use when asked to set up, install, bootstrap or "get the project running", right after cloning, or when pnpm, the dev server or a browser command fails for a missing tool.
+description: Set up a site built on agentic-cms on a fresh clone or a new machine - Node and pnpm, the dependencies, the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests - by running `bash scripts/setup.sh` as docs/setup.md describes, then the dev server and the URL to hand over (`pnpm kit serve`). Use when asked to set up, install, bootstrap or "get the project running", right after cloning, or when pnpm, the dev server or a browser command fails for a missing tool.
 argument-hint: [--build] [--deps]
 ---
 
@@ -8,9 +8,11 @@ argument-hint: [--build] [--deps]
 
 The procedure is `docs/setup.md` (under `node_modules/agentic-cms/docs/` on
 a site, `docs/` in a checkout of the kit); this skill runs it and reports.
-Two commands do the work: `bash scripts/setup.sh` (Node, pnpm, the install,
-then `agentic-cms setup`) and `pnpm urls` (this machine's URLs and the
-origins `next dev` serves).
+Three commands do the work: `bash scripts/setup.sh` (Node, pnpm, the
+install, then `agentic-cms setup`), `pnpm kit serve` (the dev server and
+the lab started, and this machine's URLs printed once the pages answer)
+and `pnpm urls` (the same URLs and the origins `next dev` serves, with no
+server started).
 
 ## Read first
 
@@ -34,13 +36,15 @@ origins `next dev` serves).
    pnpm, the network for the browsers) and run it again. Never edit the
    lockfile, skip `pnpm lint` or a test, or loosen a rule to get through.
 4. **Start the dev server** where the person can see and stop it (a
-   terminal of theirs, not a hidden background job): `pnpm dev`. Then
-   `pnpm urls`: it finds this machine's addresses now, says which server
-   answers and whether `ALLOWED_DEV_ORIGINS` covers every address
-   (`pnpm urls --write` adds the missing ones; restart the dev server
-   after). Hand over the URL the person can reach: localhost on their own
-   machine, the LAN address for a phone on the same network, the public
-   address of a cloud VM whose firewall opens the port.
+   terminal of theirs, not a hidden background job): `pnpm kit serve`. It
+   starts `next dev` (and the lab, when there are scenes), waits until the
+   pages answer, and prints this machine's URLs in one table, with a line
+   when `ALLOWED_DEV_ORIGINS` lacks an address (`pnpm kit serve
+   --write-origins` adds the missing ones before the server starts;
+   `pnpm urls` reports the same any time). Hand over a URL it printed that
+   the person can reach: localhost on their own machine, the LAN address
+   for a phone on the same network, the public address of a cloud VM whose
+   firewall opens the port to the viewer's IP only.
 5. **Report** in a few lines: what was installed, what was already there,
    what is left for the person with the command for it, and the URL.
 

@@ -6,7 +6,7 @@ it lay the site out, in one line:
 
 ```bash
 pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.7.6 init my-site
-cd my-site && bash scripts/setup.sh && pnpm dev
+cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
 `pnpm dlx` installs the kit in a temporary place and runs its `init`, which
@@ -115,6 +115,8 @@ A site already laid out goes light-only by hand, as the migration guide's
 
 `bash scripts/setup.sh` first ([setup.md](setup.md)): the install, the
 browsers, `.env.local`, the checks, and the URLs `pnpm dev` answers on.
+Then `pnpm kit serve`: the dev server (and the lab, once it has a scene),
+every URL to hand over in one table ([dev-server.md](dev-server.md)).
 
 1. `src/config/site.ts`: the brand, the URL, the address, the nav, the
    footer, the calls to action (data only).

@@ -272,6 +272,40 @@ changes what a capture writes says **recapture baselines**.
   extendable by construction, enforcement by the lint and CI, and
   loosening a rule as its own pull request, said so in its title. A site
   gets no copy yet: its rule waits for the placement guard it describes.
+- `agentic-cms serve` (`pnpm kit serve`) is the one command before a look.
+  It checks `ALLOWED_DEV_ORIGINS` first (`--write-origins` adds the
+  missing hosts before next dev starts), starts `next dev` on the site's
+  port on every interface — or reuses this site's own, found by
+  `.next/dev/lock`, and refuses anything else on the port, never stopping
+  it — and starts the lab in-process when `.parity/lab` has a scene (or
+  with `--lab`). It waits until the root and every `*-demo` route answer,
+  then prints one table: localhost, LAN and public × the routes, the lab's
+  index and each `/scene/<name>`, with the firewall note. It watches the
+  dev log for Turbopack's stale cache (`--fix-cache` clears `.next/dev`
+  and `.next/cache/turbopack` and restarts, once) and stops both servers
+  on Ctrl-C (`docs/dev-server.md`). `init`'s next-steps line and `setup`'s
+  last line name it.
+- `demo new` and `lab route` wait for their route. With the dev server
+  running (on the port of `scripts.dev`, or `--url`), the route is asked
+  until it stops answering 404, which compiles it too; then its URLs are
+  printed, with a warning for each host `ALLOWED_DEV_ORIGINS` lacks. A 5xx
+  prints the error's tail and exits 1. With no server running they say
+  `pnpm kit serve`. New flags: `--no-wait`, `--timeout`, `--url`,
+  `--no-public`. `--json` adds `urls`, `ready` and `status`, and `demo
+  new`'s report its `kind`.
+- `demo new <name> --showcase [--component <file>]…` writes a review page
+  that is not a section's candidates (the library's primitives, a motion
+  layer): a block per piece inside the site's layout, and a manifest
+  (`kind: "showcase"`), so `demo clean` removes it with every file only it
+  uses and keeps the pieces. `--component` repeats for a showcase only.
+- `demo new --timeline` wraps each block — every candidate and the current
+  version, or each piece of a showcase — in `<LabTimeline label><div
+  data-lab-drive>`, the edit `docs/lab.md` asked for by hand.
+- `lab serve` prints each scene's own page, `/scene/<name>`, on every
+  address it listens on.
+- The browser suite's dev server runs on `scripts/lib/dev-server.mjs`, the
+  helper `serve` uses (next dev started, watched and stopped by process
+  group); its `stop()` now resolves once the server exited.
 
 ## [0.7.6] — 2026-10-13
 

@@ -1,14 +1,31 @@
 // demo new and demo clean through the bin, in a throwaway site: a registry,
 // a page file and a component the way a site lays them out.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
 const run = (root, args) => spawnSync(process.execPath, [BIN, "demo", ...args], { cwd: root, encoding: "utf8" });
+/** The bin without blocking this process, so a server the test runs can answer it. */
+const runAsync = (root, args) => new Promise((resolve) => {
+  const child = spawn(process.execPath, [BIN, "demo", ...args], { cwd: root });
+  let stdout = "", stderr = "";
+  child.stdout.on("data", (chunk) => { stdout += chunk; });
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  child.on("exit", (status) => resolve({ status, stdout, stderr }));
+});
+/** A stand-in for next dev on a free loopback port: each path answered by `answer(path, nth)`; what it was asked, in order. */
+async function stubServer(answer) {
+  const asked = [];
+  const server = http.createServer((req, res) => { asked.push(req.url); const { status, body = "" } = answer(req.url, asked.filter((u) => u === req.url).length); res.writeHead(status, { "content-type": "text/html" }); res.end(body); });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  return { url: `http://127.0.0.1:${port}`, port, asked, close: () => new Promise((resolve) => server.close(resolve)) };
+}
 const put = (root, file, text) => { fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), text); };
 
 function site() {
@@ -35,7 +52,7 @@ test("demo new: the route and a candidate per letter from the registry's compone
     const r = run(root, ["new", "hero-card", "--section", "home-hero", "--json"]);
     assert.equal(r.status, 0, r.stderr);
     const report = JSON.parse(r.stdout);
-    assert.deepEqual(report, { route: "src/app/hero-card-demo/page.tsx", path: "/hero-card-demo", section: "home-hero", page: "home", component: "src/components/home/Hero.tsx", candidates: [{ letter: "A", file: "src/components/home/HeroA.tsx" }, { letter: "B", file: "src/components/home/HeroB.tsx" }], data: false });
+    assert.deepEqual(report, { route: "src/app/hero-card-demo/page.tsx", path: "/hero-card-demo", kind: "candidates", section: "home-hero", page: "home", component: "src/components/home/Hero.tsx", candidates: [{ letter: "A", file: "src/components/home/HeroA.tsx" }, { letter: "B", file: "src/components/home/HeroB.tsx" }], data: false, urls: [], ready: false, status: null }, "no dev server (no package.json here): nothing asked, nothing to hand over yet");
     const route = fs.readFileSync(path.join(root, report.route), "utf8");
     assert.match(route, /export const metadata = \{ robots: \{ index: false \} \};/);
     assert.match(route, /import \{ Hero \} from "@\/components\/home\/Hero";\nimport \{ HeroA \} from "@\/components\/home\/HeroA";\nimport \{ HeroB \} from "@\/components\/home\/HeroB";/);
@@ -73,7 +90,7 @@ test("demo new --component alone: a props-free route for a piece of the chrome, 
     const r = run(root, ["new", "footer", "--component", "src/components/ui/Footer.tsx", "--json"]);
     assert.equal(r.status, 0, r.stderr);
     const report = JSON.parse(r.stdout);
-    assert.deepEqual(report, { route: "src/app/footer-demo/page.tsx", path: "/footer-demo", section: null, page: null, component: "src/components/ui/Footer.tsx", candidates: [{ letter: "A", file: "src/components/ui/FooterA.tsx" }, { letter: "B", file: "src/components/ui/FooterB.tsx" }], data: false });
+    assert.deepEqual(report, { route: "src/app/footer-demo/page.tsx", path: "/footer-demo", kind: "candidates", section: null, page: null, component: "src/components/ui/Footer.tsx", candidates: [{ letter: "A", file: "src/components/ui/FooterA.tsx" }, { letter: "B", file: "src/components/ui/FooterB.tsx" }], data: false, urls: [], ready: false, status: null });
     const route = fs.readFileSync(path.join(root, report.route), "utf8");
     assert.match(route, /candidates for Footer, a piece of the site's chrome — its copy comes\n\/\/ from the site's config \(src\/config\/site\.ts\), not a page file/);
     assert.match(route, /import type { ComponentType } from "react";\nimport { Footer } from "@\/components\/ui\/Footer";\nimport { FooterA }/);
@@ -188,5 +205,123 @@ test("demo clean without a name takes only the routes demo new wrote: a site's o
     assert.deepEqual(r.kept.filter((k) => k.startsWith("src/app/")), ["src/app/gallery-demo (not a route demo new wrote: demo clean gallery removes it)", "src/app/lab-demo (not a route demo new wrote: demo clean lab removes it)"]);
     assert.ok(fs.existsSync(path.join(root, "src/app/gallery-demo/page.demo.tsx")), "the site's gallery stays");
     assert.deepEqual(JSON.parse(run(root, ["clean", "gallery", "--json"]).stdout).removed, ["src/app/gallery-demo"], "named, it goes");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("demo new waits for its route on the running dev server: asked until it stops answering 404, then its URLs; a 5xx prints its tail and exits 1; none running says pnpm kit serve", async () => {
+  const root = site();
+  const server = await stubServer((url, nth) => (url === "/broken-demo" ? { status: 500, body: `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ err: { message: "Error: boom in the route\n  at Page" } })}</script>` } : { status: nth < 3 ? 404 : 200 }));
+  try {
+    const r = await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--url", server.url, "--no-public", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    const report = JSON.parse(r.stdout);
+    assert.deepEqual([report.ready, report.status], [true, 200]);
+    assert.deepEqual(report.urls[0], { where: "localhost", url: `http://localhost:${server.port}/hero-card-demo` });
+    assert.ok(report.urls.every((u) => u.url.endsWith(`:${server.port}/hero-card-demo`) && u.where !== "public"), "the same port on every host; no public address with --no-public");
+    assert.deepEqual(server.asked.filter((u) => u === "/hero-card-demo").length, 3, "asked until it answered");
+    assert.equal(run(root, ["clean", "hero-card"]).status, 0);
+
+    const text = await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--url", server.url, "--no-public"]);
+    assert.equal(text.status, 0, text.stderr);
+    assert.match(text.stdout, new RegExp(`\n/hero-card-demo answers 200 on the dev server; hand over:\n {2}localhost {2}http://localhost:${server.port}/hero-card-demo\n`));
+    assert.match(text.stdout, /edit each candidate into one idea and its note in the route; demo clean hero-card removes it all\n$/);
+    assert.equal(run(root, ["clean", "hero-card"]).status, 0);
+
+    const broken = await runAsync(root, ["new", "broken", "--section", "home-hero", "--url", server.url, "--no-public"]);
+    assert.equal(broken.status, 1);
+    assert.match(broken.stderr, new RegExp(`^/broken-demo answered 500 on ${server.url.replaceAll(".", "\\.")}:\n {2}Error: boom in the route\n {4}at Page\n`));
+    assert.ok(fs.existsSync(path.join(root, "src/app/broken-demo/page.tsx")), "the route stays written, to be fixed");
+    assert.equal(run(root, ["clean", "broken"]).status, 0);
+
+    const unasked = JSON.parse((await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--url", server.url, "--no-wait", "--no-public", "--json"])).stdout);
+    assert.deepEqual([unasked.ready, unasked.status, unasked.urls[0].url], [null, null, `http://localhost:${server.port}/hero-card-demo`]);
+    assert.equal(server.asked.filter((u) => u === "/hero-card-demo").length, 4, "--no-wait asked nothing");
+    assert.equal(run(root, ["clean", "hero-card"]).status, 0);
+  } finally { await server.close(); }
+  try {
+    const none = await runAsync(root, ["new", "hero-card", "--section", "home-hero", "--url", server.url, "--no-public"]);
+    assert.equal(none.status, 0, none.stderr);
+    assert.match(none.stdout, new RegExp(`\nno dev server answers on port ${server.port}: pnpm kit serve starts it, waits for /hero-card-demo and prints the URLs to hand over\n`));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("demo new --showcase: a review page of the pieces named, each in a block of its own; its manifest; the errors name the fix", () => {
+  const root = site();
+  try {
+    put(root, "src/components/ui/Button.tsx", "export function Button() {\n  return <button />;\n}\n");
+    put(root, "src/components/ui/Panel.tsx", "export const Panel = () => null;\n");
+    put(root, "src/components/ui/Bare.tsx", "export default function Bare() { return null; }\n");
+    const r = run(root, ["new", "library", "--showcase", "--component", "src/components/ui/Button.tsx", "--component", "src/components/ui/Panel.tsx", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(JSON.parse(r.stdout), { route: "src/app/library-demo/page.tsx", path: "/library-demo", kind: "showcase", section: null, page: null, component: null, components: ["src/components/ui/Button.tsx", "src/components/ui/Panel.tsx"], candidates: [], data: false, urls: [], ready: false, status: null });
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, "src/app/library-demo/demo.json"), "utf8"));
+    assert.deepEqual({ ...manifest, base: undefined, untracked: undefined }, { demo: "library", kind: "showcase", component: null, components: ["src/components/ui/Button.tsx", "src/components/ui/Panel.tsx"], base: undefined, untracked: undefined, created: [] });
+    const route = fs.readFileSync(path.join(root, "src/app/library-demo/page.tsx"), "utf8");
+    assert.match(route, /^\/\/ Throwaway showcase route \(agentic-cms demo new --showcase\)/);
+    assert.match(route, /import \{ Button \} from "@\/components\/ui\/Button";\nimport \{ Panel \} from "@\/components\/ui\/Panel";/);
+    assert.match(route, /export const metadata = \{ robots: \{ index: false \} \};/);
+    assert.match(route, /<div data-showcase="Button">\n {8}<p style=\{chip\}><span style=\{letterStyle\}>Button<\/span> src\/components\/ui\/Button\.tsx: each look and state it has, with real copy<\/p>\n {8}<div style=\{column\}><Button \/><\/div>/);
+    assert.ok(route.indexOf('data-showcase="Button"') < route.indexOf('data-showcase="Panel"'), "in the order named");
+    assert.match(route, /export default function LibraryDemo\(\)/);
+    assert.match(route, /^\/\/ `agentic-cms demo new library --showcase`, removed with every file only it uses \(the pieces it shows stay\) by$/m);
+    assert.doesNotMatch(route, /^import \{ LabTimeline|<div data-lab-drive>|CANDIDATES|data-candidate=/m, "no timeline without --timeline, nothing of a candidates route");
+    assert.match(run(root, ["new", "library", "--showcase"]).stderr, /src\/app\/library-demo\/page\.tsx exists/);
+
+    const fails = (args, re) => { const f = run(root, ["new", "x", ...args]); assert.equal(f.status, 2); assert.match(f.stderr, re); assert.ok(!fs.existsSync(path.join(root, "src/app/x-demo")), "nothing written"); };
+    fails(["--showcase", "--section", "home-hero"], /--showcase is a review page of its own and --section a section's candidates: pass one of them/);
+    fails(["--showcase", "--candidates", "3"], /--candidates is for a section's or a piece's candidates; a showcase has a block per --component instead/);
+    fails(["--showcase", "--page", "home"], /--page names the page file a section's copy is read from; a showcase reads none/);
+    fails(["--showcase", "--component", "src/components/ui/Nope.tsx"], /src\/components\/ui\/Nope\.tsx: no such file \(a piece the showcase shows\)/);
+    fails(["--showcase", "--component", "src/components/ui/Bare.tsx"], /src\/components\/ui\/Bare\.tsx has no `export function Bare` \(or `export const Bare`\) for the showcase to render/);
+    fails(["--showcase", "--component", "src/components/ui/Panel.tsx", "--component", "src/components/ui/Panel.tsx"], /Panel is named twice/);
+    fails(["--component", "src/components/ui/Button.tsx", "--component", "src/components/ui/Panel.tsx"], /--component names one file, the component the candidates are copied from; several are the pieces of a --showcase/);
+
+    const empty = run(root, ["new", "states", "--showcase", "--timeline"]);
+    assert.equal(empty.status, 0, empty.stderr);
+    assert.match(empty.stdout, /\/states-demo: a showcase, one block to fill/);
+    const timed = fs.readFileSync(path.join(root, "src/app/states-demo/page.tsx"), "utf8");
+    assert.match(timed, /import \{ LabTimeline \} from "agentic-cms\/lab";\n\nexport const metadata/);
+    assert.match(timed, /<div data-showcase="1">[\s\S]*<div style=\{column\}><LabTimeline label="1"><div data-lab-drive>\{\/\* the piece under review/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("demo new --timeline: every candidate and the current version under its own LabTimeline, driving data-lab-drive", () => {
+  const root = site();
+  try {
+    assert.equal(run(root, ["new", "hero-card", "--section", "home-hero", "--timeline"]).status, 0);
+    const route = fs.readFileSync(path.join(root, "src/app/hero-card-demo/page.tsx"), "utf8");
+    assert.match(route, /import type \{ ReactNode \} from "react";[\s\S]*import \{ LabTimeline \} from "agentic-cms\/lab";\nimport \{ Hero \} from "@\/components\/home\/Hero";/);
+    assert.ok(route.includes("<LabTimeline label={letter}><div data-lab-drive><Candidate {...props} /></div></LabTimeline>"), route);
+    assert.ok(route.includes('<LabTimeline label="now"><div data-lab-drive><Hero {...props} /></div></LabTimeline>'));
+    put(root, "src/components/ui/Footer.tsx", "export function Footer() {\n  return <footer />;\n}\n");
+    assert.equal(run(root, ["new", "footer", "--component", "src/components/ui/Footer.tsx", "--timeline"]).status, 0);
+    const chrome = fs.readFileSync(path.join(root, "src/app/footer-demo/page.tsx"), "utf8");
+    assert.ok(chrome.includes("<LabTimeline label={letter}><div data-lab-drive><Candidate /></div></LabTimeline>") && chrome.includes('<LabTimeline label="now"><div data-lab-drive><Footer /></div></LabTimeline>'));
+    assert.doesNotMatch(fs.readFileSync(path.join(root, "src/components/home/HeroA.tsx"), "utf8"), /LabTimeline/, "the candidates themselves stay copies of the component");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("demo clean of a showcase: the route and the files only it uses go; the pieces it shows stay, a new one named before the round included", () => {
+  const root = site();
+  const git = (...args) => spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" });
+  try {
+    put(root, "src/components/ui/Button.tsx", "export function Button() {\n  return <button />;\n}\n");
+    assert.equal(git("init", "-q").status, 0);
+    assert.equal(git("add", "src", "content").status, 0);
+    assert.equal(git("commit", "-q", "-m", "base").status, 0);
+    put(root, "src/components/ui/Panel.tsx", "export const Panel = () => null;\n");
+    assert.equal(run(root, ["new", "library", "--showcase", "--component", "src/components/ui/Button.tsx", "--component", "src/components/ui/Panel.tsx"]).status, 0);
+    // the round: a grid of states the showcase alone uses, with its stylesheet
+    put(root, "src/components/ui/StateGrid.tsx", 'import s from "./StateGrid.module.css";\nexport const StateGrid = () => s;\n');
+    put(root, "src/components/ui/StateGrid.module.css", ".grid { display: grid }\n");
+    const file = path.join(root, "src/app/library-demo/page.tsx");
+    fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace('import { Button }', 'import { StateGrid } from "@/components/ui/StateGrid";\nimport { Button }'));
+    const r = run(root, ["clean", "library", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(JSON.parse(r.stdout), {
+      removed: ["src/app/library-demo", "src/components/ui/StateGrid.tsx", "src/components/ui/StateGrid.module.css"],
+      kept: ["src/components/ui/Button.tsx (a piece the showcase shows)", "src/components/ui/Panel.tsx (a piece the showcase shows)"],
+    });
+    assert.ok(fs.existsSync(path.join(root, "src/components/ui/Button.tsx")) && fs.existsSync(path.join(root, "src/components/ui/Panel.tsx")));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

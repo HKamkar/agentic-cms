@@ -72,10 +72,19 @@ How a section gets its design, as it runs in practice (the
    its chrome, in each scheme the profile names, so a design is judged
    against the theme it will live in — lettered with one line on what differs, and the
    current version last. A candidate that moves gets the lab's timeline
-   there — `<LabStudy file>` for an animated file, `<LabTimeline>` around
-   a component — so the owner can pause it, step it 0.01 s at a time and
-   replay it (`docs/lab.md` § Inspecting motion). The agent hands over the
-   dev-server URL (§ Handing over and merging).
+   there, so the owner can pause it, step it 0.01 s at a time and replay
+   it (`docs/lab.md` § Inspecting motion): `--timeline` wraps every block,
+   each candidate and the current version, in `<LabTimeline label><div
+   data-lab-drive>`, and `<LabStudy file>` shows an animated file. With
+   the dev server running (`pnpm kit serve`), `demo new` waits until the
+   route answers and prints its URLs; the agent hands over the URLs it
+   printed (§ Handing over and merging).
+   A review page that is not one section's candidates — the library's
+   primitives, the parts of a motion layer — is `--showcase`, with a
+   `--component <file>` for each piece it shows (repeat the flag): a block
+   per piece inside the site's layout, rendered bare to start from, for the
+   agent to give the props, looks and states under review. `demo clean`
+   removes it and every file only it uses, and keeps the pieces.
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
@@ -147,10 +156,15 @@ grows from picks, not from plans.
   looks off (§ Measure, don't guess);
 - their interactions are run in WebKit too, not only in Chromium
   ([browsers.md](browsers.md));
-- the URL is the LAN or the public one `pnpm urls` printed, with its
-  hostname allowed in `ALLOWED_DEV_ORIGINS` (`pnpm urls --write`;
-  [dev-server.md](dev-server.md)); for the lab,
+- the URLs are the ones `demo new`, `lab route` or `pnpm kit serve`
+  printed, the LAN or the public one for a phone, with its hostname
+  allowed in `ALLOWED_DEV_ORIGINS` (`pnpm kit serve --write-origins`, or
+  `pnpm urls --write`; [dev-server.md](dev-server.md)); for the lab,
   each scene's own `/scene/<name>`, not the index;
+- a public URL answers only once the machine's firewall opens the port
+  (8000, and 8001 for the lab) **to the viewer's IP only**: neither server
+  has a sign-in. Opening it is the owner's step; the viewer finds their IP
+  at <https://ifconfig.me>, in the browser they will look with;
 - what the machine cannot show (a backdrop blur, real touch, Apple's
   fonts) is named, with a request to check it in Safari.
 
@@ -177,9 +191,10 @@ one-line fix:
   '@vercel/turbopack-next/internal/font/google/font'`** (or another
   `@vercel/turbopack-next/internal/…` path) right after a production
   build: `next dev` is reading caches a `next build` left behind. Stop the
-  server, `rm -rf .next/dev .next/cache/turbopack`, start it again. (Do
-  not delete `.next` whole while an audit is reading it, or before a
-  capture has printed its `snapshot:` line.)
+  server, `rm -rf .next/dev .next/cache/turbopack`, start it again;
+  `pnpm kit serve --fix-cache` does all three when its log shows the
+  error. (Do not delete `.next` whole while an audit is reading it, or
+  before a capture has printed its `snapshot:` line.)
 - **A removed route still fails the next production build's type check**
   (`Cannot find module '../../../src/app/<name>-demo/page.js'`): `next
   dev` wrote `.next/dev/types/validator.ts` for it and the build reads it.

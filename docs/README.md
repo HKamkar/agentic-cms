@@ -22,7 +22,9 @@ rules for an agent working on the code.
   doctor (`setup --check`), and what to do when a step fails.
 - [dev-server.md](dev-server.md) — serving previews to the owner's
   devices: the ports, which address to hand over (`agentic-cms urls`),
-  `ALLOWED_DEV_ORIGINS` (`urls --write`), stopping a server, old proof
+  both servers and every URL in one table (`agentic-cms serve`; `demo
+  new` and `lab route` waiting for their route), `ALLOWED_DEV_ORIGINS`
+  (`urls --write`, `serve --write-origins`), stopping a server, old proof
   baselines.
 - [browsers.md](browsers.md) — Chrome and Safari, who checks what:
   headless Chromium, headless WebKit as a stand-in, the owner's Safari;

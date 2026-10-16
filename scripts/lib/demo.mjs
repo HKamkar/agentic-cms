@@ -4,8 +4,10 @@
 // of that component beside it (an export renamed, a header line), the route
 // written to show them lettered in the section's real frame with the page's
 // real copy — or, for a piece of the chrome (`--component` alone), with no
-// props at all — the current version last, and the removal of all of it —
-// the route, every component file it alone imported, and next dev's
+// props at all — the current version last; or a showcase (`--showcase`), a
+// review page of pieces that are not one section's candidates. Each block
+// can sit under the lab's timeline (`--timeline`). And the removal of all
+// of it — the route, every component file it alone imported, and next dev's
 // generated route types while they still name the route. The procedure
 // around it is the design-options skill; docs/design.md § The round.
 import fs from "node:fs";
@@ -58,20 +60,24 @@ export function candidateSource(source, name, letter, demo) {
 
 const alias = (file) => `@/${file.replace(/^src\//, "").replace(/\.tsx?$/, "")}`;
 
-/** The lettered blocks and the current version last, the part both kinds of route share. */
-function routeBody(name, props) {
-  const render = (tag) => `<${tag}${props ? ` ${props}` : ""} />`;
+/** A block's content under the lab's timeline (--timeline): its motion paused, stepped and replayed with the others' left alone. */
+const timed = (label, jsx) => `<LabTimeline label=${label}><div data-lab-drive>${jsx}</div></LabTimeline>`;
+const TIMELINE_IMPORT = `import { LabTimeline } from "agentic-cms/lab";\n`;
+
+/** The lettered blocks and the current version last, the part both kinds of candidates route share. */
+function routeBody(name, props, timeline) {
+  const render = (tag, label) => { const jsx = `<${tag}${props ? ` ${props}` : ""} />`; return timeline ? timed(label, jsx) : jsx; };
   return `  return (
     <>
       {CANDIDATES.map(({ letter, note, Candidate }) => (
         <div key={letter} data-candidate={letter}>
           <p style={chip}><span style={letterStyle}>{letter}</span> {note}</p>
-          ${render("Candidate")}
+          ${render("Candidate", "{letter}")}
         </div>
       ))}
       <div data-candidate="now">
         <p style={chip}><span style={letterStyle}>now</span> the current version</p>
-        ${render(name)}
+        ${render(name, '"now"')}
       </div>
     </>
   );
@@ -84,19 +90,57 @@ const CHIP = `// The chip that names a block, in the page's column: a hairline i
 const chip = { display: "flex", alignItems: "baseline", gap: ".5rem", maxWidth: "var(--container-page, 72rem)", margin: "3rem auto .5rem", padding: "0 1rem", font: ".75rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", letterSpacing: ".06em" } as const;
 const letterStyle = { border: "1px solid currentColor", padding: ".1rem .5rem", fontWeight: 700 } as const;`;
 
-const removal = (demo) => `// \`agentic-cms demo new ${demo}\`, removed with the losing candidates by
+const removal = (demo, what = "the losing candidates", how = "") => `// \`agentic-cms demo new ${demo}${how}\`, removed with ${what} by
 // \`agentic-cms demo clean ${demo}\`; never merged — the build's SEO audit
 // fails a route without a seo block, which is the guard. An animated
-// candidate is inspected on the lab's timeline: <LabStudy file="…"> for a
-// file, <LabTimeline label="…"> around a component, which drives its inline
-// SVGs and whatever carries data-lab-drive, not the reveals around them
-// (agentic-cms/lab; docs/lab.md § Inspecting motion).`;
+// block is inspected on the lab's timeline: <LabStudy file="…"> for a
+// file, <LabTimeline label="…"> around a component (what --timeline writes),
+// which drives its inline SVGs and whatever carries data-lab-drive, not the
+// reveals around them (agentic-cms/lab; docs/lab.md § Inspecting motion).`;
 
-/** The route's source: with a section, the page's copy read at render; without one, each candidate rendered with no props (a piece of the chrome, whose copy is the site's config). Lettered blocks, the current version last, inside the site's own layout. */
-export function routeSource({ demo, type, slug, component, letters, data = false }) {
+/** The column a showcase's piece sits in, the page's own, so a primitive is seen at the width the page gives it. */
+const COLUMN = `const column = { maxWidth: "var(--container-page, 72rem)", margin: "0 auto", padding: "0 1rem" } as const;`;
+
+/** A showcase's source: a block per piece — its name and file on the chip, the piece rendered bare to start from — or one block to fill, inside the site's own layout. */
+function showcaseSource({ demo, components, timeline }) {
+  const imports = components.map((c) => `import { ${c.name} } from "${alias(c.file)}";`).join("\n");
+  const blocks = (components.length ? components : [null]).map((c) => {
+    const label = c ? c.name : "1";
+    const piece = c ? `<${c.name} />` : "{/* the piece under review: a primitive in each of its states, a motion layer's parts, … */}";
+    const note = c ? `${c.file}: each look and state it has, with real copy` : "what this block shows, in one line";
+    return `      <div data-showcase="${label}">
+        <p style={chip}><span style={letterStyle}>${label}</span> ${note}</p>
+        <div style={column}>${timeline ? timed(`"${label}"`, piece) : piece}</div>
+      </div>`;
+  }).join("\n");
+  return `// Throwaway showcase route (agentic-cms demo new --showcase): a review
+// page that is not a section's candidates — the library's primitives, a
+// motion layer, a set of states — a block per piece, each rendered bare to
+// start from (give it the props, looks and states to review), inside the
+// site's own layout so it is judged on its theme. Written by
+${removal(demo, "every file only it uses (the pieces it shows stay)", " --showcase")}
+${timeline ? TIMELINE_IMPORT : ""}${imports}${imports ? "\n" : ""}
+export const metadata = { robots: { index: false } };
+
+${CHIP}
+${COLUMN}
+
+export default function ${pascal(demo)}Demo() {
+  return (
+    <>
+${blocks}
+    </>
+  );
+}
+`;
+}
+
+/** The route's source: with a section, the page's copy read at render; without one, each candidate rendered with no props (a piece of the chrome, whose copy is the site's config); with showcase, a review page of pieces. Lettered blocks, the current version last, inside the site's own layout; each under the lab's timeline with `timeline`. */
+export function routeSource({ demo, type, slug, component, letters, data = false, showcase = false, components = [], timeline = false }) {
+  if (showcase) return showcaseSource({ demo, components, timeline });
   const { name, file } = component;
   const candidates = letters.map((letter) => ({ letter, name: `${name}${letter}` }));
-  const imports = [`import { ${name} } from "${alias(file)}";`, ...candidates.map((c) => `import { ${c.name} } from "${alias(file)}${c.letter}";`)].join("\n");
+  const imports = [...(timeline ? [TIMELINE_IMPORT.trimEnd()] : []), `import { ${name} } from "${alias(file)}";`, ...candidates.map((c) => `import { ${c.name} } from "${alias(file)}${c.letter}";`)].join("\n");
   const rows = candidates.map((c) => `  { letter: "${c.letter}", note: "what differs, in one line", Candidate: ${c.name} },`).join("\n");
   if (!type) {
     return `// Throwaway demo route of the design round (the design-options skill):
@@ -117,7 +161,7 @@ ${rows}
 ${CHIP}
 
 export default function ${pascal(demo)}Demo() {
-${routeBody(name, "")}`;
+${routeBody(name, "", timeline)}`;
   }
   const dataNote = data ? `\n  // This section is a withData entry of the registry: the page also reads a collection for it (its resolve).\n  // Pass that here as well, the way render.tsx does, or the candidates render without it.` : "";
   return `// Throwaway demo route of the design round (the design-options skill):
@@ -152,40 +196,83 @@ function copyOf(sections: SectionOf<"group">["sections"]): Props | null {
 export default function ${pascal(demo)}Demo() {
   const props = copyOf(kit.content.getPage("${slug}").sections);
   if (!props) throw new Error('content/pages/${slug}.yaml carries no "${type}" section');${dataNote}
-${routeBody(name, "{...props}")}`;
+${routeBody(name, "{...props}", timeline)}`;
 }
 
 const pascal = (name) => name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
 
-/** Writes the route, its candidates and the manifest (base: the commit the round starts from, untracked: the files git did not track then); { route, path, section, page, component, candidates, data }. Throws with the fix. */
-export function writeDemo(root, { name, type, page, count = 2, component: override, base = null, untracked = [] }) {
+const writeManifest = (route, manifest) => fs.writeFileSync(path.join(path.dirname(route), MANIFEST), `${JSON.stringify(manifest, null, 1)}\n`);
+
+/** Writes the route, its candidates and the manifest (base: the commit the round starts from, untracked: the files git did not track then), or with `showcase` a review page and its manifest. The report: { route, path, kind, section, page, component, components?, candidates, data }. Throws with the fix. */
+export function writeDemo(root, options) {
+  const { name, type, page, count, components = [], showcase = false } = options;
   if (!isDemoName(name)) throw new Error(`${name}: a demo's name is lowercase letters, digits and hyphens`);
-  if (!type && !override) throw new Error(`name what the candidates are for: --section <type> for a section (the route reads the page's copy), or --component <file> for a piece of the chrome (no page copy)`);
+  if (fs.existsSync(path.join(root, demoFile(name)))) throw new Error(`${demoFile(name)} exists; edit it, or remove it with demo clean ${name}`);
+  if (!showcase) {
+    if (components.length > 1) throw new Error("--component names one file, the component the candidates are copied from; several are the pieces of a --showcase");
+    return writeCandidates(root, { ...options, component: components[0], count: count ?? 2 });
+  }
+  if (type) throw new Error("--showcase is a review page of its own and --section a section's candidates: pass one of them");
+  if (page) throw new Error("--page names the page file a section's copy is read from; a showcase reads none");
+  if (count !== undefined) throw new Error("--candidates is for a section's or a piece's candidates; a showcase has a block per --component instead");
+  return writeShowcase(root, options);
+}
+
+/** A section's or a chrome piece's candidates: the component copied once per letter beside it, the route, the manifest. */
+function writeCandidates(root, { name, type, page, count, component: override, timeline = false, base = null, untracked = [] }) {
+  if (!type && !override) throw new Error(`name what the candidates are for: --section <type> for a section (the route reads the page's copy), or --component <file> for a piece of the chrome (no page copy); --showcase for a review page of pieces`);
   if (!(count >= 1 && count <= LETTERS.length)) throw new Error(`--candidates is 1 to ${LETTERS.length}, not ${count}`);
   const route = path.join(root, demoFile(name));
-  if (fs.existsSync(route)) throw new Error(`${demoFile(name)} exists; edit it, or remove it with demo clean ${name}`);
   // A section's component comes from the registry unless --component names one; a chrome piece is the file alone.
   const entry = type ? readRegistry(root).get(type) : null;
   if (type && !entry && !override) { const known = [...readRegistry(root).keys()].join(", "); throw new Error(`${type}: no such section in ${REGISTRY} (${known}); pass --component <file> for one outside the registry`); }
   const component = override ? { name: path.basename(override).replace(/\.tsx?$/, ""), file: rel(root, path.resolve(root, override)), data: false } : entry;
   const source = fs.existsSync(path.join(root, component.file)) ? fs.readFileSync(path.join(root, component.file), "utf8") : null;
   if (source === null) throw new Error(`${component.file}: no such file (${type ? `the component of "${type}"` : "the component the candidates start from"})`);
-  let slug = null;
-  if (type) {
-    const pages = pagesWith(root, type);
-    slug = page ?? pages[0]?.slug;
-    if (!slug) throw new Error(`no page under ${PAGES}/ carries a "${type}" section; pass --page <slug> for one that will, or add the section to a page file first`);
-    if (page && !pages.some((p) => p.slug === page)) throw new Error(`${PAGES}/${page}.yaml carries no "${type}" section`);
-  } else if (page) throw new Error("--page names the page file a section's copy is read from; without --section there is no page copy to read");
+  const slug = type ? pageOf(root, type, page) : null;
+  if (!type && page) throw new Error("--page names the page file a section's copy is read from; without --section there is no page copy to read");
   const letters = [...LETTERS.slice(0, count)];
   const candidates = letters.map((letter) => ({ letter, file: component.file.replace(/\.tsx$/, `${letter}.tsx`) }));
   for (const c of candidates) if (fs.existsSync(path.join(root, c.file))) throw new Error(`${c.file} exists; a candidate of an earlier round? demo clean, or another name`);
   for (const c of candidates) fs.writeFileSync(path.join(root, c.file), candidateSource(source, component.name, c.letter, name));
   fs.mkdirSync(path.dirname(route), { recursive: true });
-  fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data) }));
-  const manifest = { demo: name, component: component.file, base, untracked, created: candidates.map((c) => c.file) };
-  fs.writeFileSync(path.join(path.dirname(route), MANIFEST), `${JSON.stringify(manifest, null, 1)}\n`);
-  return { route: demoFile(name), path: `/${name}-demo`, section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
+  fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data), timeline }));
+  writeManifest(route, { demo: name, kind: "candidates", component: component.file, base, untracked, created: candidates.map((c) => c.file) });
+  return { route: demoFile(name), path: `/${name}-demo`, kind: "candidates", section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
+}
+
+/** The page whose copy a section's route reads: --page, checked to carry it, else the first that does. */
+function pageOf(root, type, page) {
+  const pages = pagesWith(root, type);
+  const slug = page ?? pages[0]?.slug;
+  if (!slug) throw new Error(`no page under ${PAGES}/ carries a "${type}" section; pass --page <slug> for one that will, or add the section to a page file first`);
+  if (page && !pages.some((p) => p.slug === page)) throw new Error(`${PAGES}/${page}.yaml carries no "${type}" section`);
+  return slug;
+}
+
+/** A showcase's pieces: each --component file, which must exist and export the component it is named after, once each. */
+function showcasePieces(root, files) {
+  const names = new Set();
+  return files.map((file) => {
+    const piece = { name: path.basename(file).replace(/\.tsx?$/, ""), file: rel(root, path.resolve(root, file)) };
+    const full = path.join(root, piece.file);
+    if (!fs.existsSync(full)) throw new Error(`${piece.file}: no such file (a piece the showcase shows)`);
+    if (!new RegExp(`export (function|const) ${piece.name}\\b`).test(fs.readFileSync(full, "utf8"))) throw new Error(`${piece.file} has no \`export function ${piece.name}\` (or \`export const ${piece.name}\`) for the showcase to render`);
+    if (names.has(piece.name)) throw new Error(`${piece.name} is named twice; a showcase shows each piece once`);
+    names.add(piece.name);
+    return piece;
+  });
+}
+
+/** A review page that is not a section's candidates: the route, a block per piece, and the manifest demo clean reads (the pieces are the site's, never removed). */
+function writeShowcase(root, { name, components = [], timeline = false, base = null, untracked = [] }) {
+  const pieces = showcasePieces(root, components);
+  const route = path.join(root, demoFile(name));
+  fs.mkdirSync(path.dirname(route), { recursive: true });
+  fs.writeFileSync(route, routeSource({ demo: name, showcase: true, components: pieces, timeline }));
+  const files = pieces.map((p) => p.file);
+  writeManifest(route, { demo: name, kind: "showcase", component: null, components: files, base, untracked, created: [] });
+  return { route: demoFile(name), path: `/${name}-demo`, kind: "showcase", section: null, page: null, component: null, components: files, candidates: [], data: false };
 }
 
 const SOURCES = /\.(tsx?|mjs|js)$/;
@@ -255,13 +342,14 @@ function candidatePlan(root, dir, inDemo) {
 
 /**
  * The files a round takes with it: from the demo folder, imports followed through the files the round created only — an
- * existing file (the section's component, a ui piece, the kit) stops the walk, so promoted work and the rest of the app
- * are never reached — then, until nothing changes, every file something outside the round still imports dropped (the
- * piece the promoted section now uses stays, and what it needs). { files, kept }
+ * existing file (the section's component, a ui piece, the kit) and a showcase's pieces stop the walk, so promoted work
+ * and the rest of the app are never reached — then, until nothing changes, every file something outside the round still
+ * imports dropped (the piece the promoted section now uses stays, and what it needs). { files, kept }
  */
 function roundPlan(root, inDemo, manifest, isNew) {
+  const pieces = new Set([manifest.component, ...(manifest.components ?? [])].filter(Boolean));
   const found = [], seen = new Set(inDemo), queue = [...inDemo];
-  while (queue.length) for (const dep of importsOf(root, queue.shift())) { if (seen.has(dep)) continue; seen.add(dep); if (dep !== manifest.component && isNew(dep)) { found.push(dep); queue.push(dep); } }
+  while (queue.length) for (const dep of importsOf(root, queue.shift())) { if (seen.has(dep)) continue; seen.add(dep); if (!pieces.has(dep) && isNew(dep)) { found.push(dep); queue.push(dep); } }
   const set = new Set(found), kept = [];
   for (let changed = true; changed;) {
     changed = false;
@@ -269,7 +357,8 @@ function roundPlan(root, inDemo, manifest, isNew) {
   }
   const files = [...new Set([...set].flatMap((file) => [file, ...cssOf(root, file, new Set([...set, ...inDemo]))]))];
   const source = manifest.component && fs.existsSync(path.join(root, manifest.component)) ? [`${manifest.component} (the component the candidates started from)`] : [];
-  return { files, kept: [...source, ...kept] };
+  const shown = (manifest.components ?? []).filter((file) => fs.existsSync(path.join(root, file))).map((file) => `${file} (a piece the showcase shows)`);
+  return { files, kept: [...source, ...shown, ...kept] };
 }
 
 const readManifest = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, MANIFEST), "utf8")); } catch { return null; } };

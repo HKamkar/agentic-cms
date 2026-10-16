@@ -18,7 +18,7 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
   assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
-  assert.match(r.stdout, /\n {2}site\s+init · setup · urls\n/);
+  assert.match(r.stdout, /\n {2}site\s+init · setup · urls · serve\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -180,6 +180,28 @@ test("urls: this machine's URLs and its origins, --write fills .env.local once, 
     else assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no LAN address: nothing to write");
     fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${dev}` } }));
     assert.match(run(["urls", "--no-public", "--lab-port", lab], dir).stdout, new RegExp(`^dev server, port ${dev}: running`), "the port from scripts.dev");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("serve: no dev port and a port something else holds are usage errors, named with the fix; nothing is started or stopped", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "serve-cli-"));
+  const servers = await listening();
+  const [held, lab] = servers.map((s) => String(s.address().port));
+  try {
+    const bare = run(["serve", "--no-public"], dir);
+    assert.equal(bare.status, 2);
+    assert.match(bare.stderr, /^serve: no dev port: package\.json's scripts\.dev runs no next dev here; pass --port\n$/);
+    assert.match(run(["serve", "--fix-cach"], dir).stderr, /unknown flag --fix-cach — did you mean --fix-cache\?/);
+    assert.match(run(["serve", "--help"]).stdout, /--write-origins {10}add the addresses ALLOWED_DEV_ORIGINS lacks to \.env\.local before next dev starts/);
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${held}` } }));
+    const refused = run(["serve", "--no-public", "--lab-port", lab], dir);
+    assert.equal(refused.status, 2, refused.stderr);
+    assert.match(refused.stderr, new RegExp(`serve: port ${held} answers, but not as this site's next dev \\(\\.next/dev/lock names none running\\): stop what holds it \\(docs/dev-server\\.md § Stopping a server\\), or pass --port <another>\n$`));
+    assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no --write-origins: .env.local untouched");
+    await new Promise((resolve) => servers[0].close(resolve));
+    const bare2 = run(["serve", "--no-public", "--lab-port", lab], dir);
+    assert.equal(bare2.status, 2, bare2.stderr);
+    assert.match(bare2.stderr, /serve: next is not installed here: pnpm install \(or bash scripts\/setup\.sh\) first\n$/, "the port free, no next to start: the fix");
   } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
