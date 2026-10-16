@@ -106,7 +106,8 @@ pnpm exec agentic-cms init my-site --light-only
 - `src/app/layout.tsx` has no theme script and no
   `suppressHydrationWarning` on `<html>`, and its viewport says
   `colorScheme: "light"`;
-- there is no `ThemeToggle`, in the navbar or anywhere else;
+- there is no `ThemeToggle`, in the navbar or anywhere else, and no
+  `themeToggle` labels in `src/config/site.ts`'s `chrome`;
 - `STANDARD.md` and `src/components/README.md` lose their dark-mode
   passages, which the kit marks `<!-- dark-mode:start -->` …
   `<!-- dark-mode:end -->` (with `<!-- light-only: … -->` for the text a

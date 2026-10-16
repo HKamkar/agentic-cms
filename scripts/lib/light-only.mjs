@@ -6,7 +6,8 @@
 // Every edit is anchored on what stays put whatever else changes around it:
 // in the code, the theme machinery's own names (the profile's `schemes`,
 // `THEME_SCRIPT`, `suppressHydrationWarning`, `colorScheme`, `light-dark()`,
-// `data-theme`, `ThemeToggle`) and the comment written directly above them;
+// `data-theme`, `ThemeToggle`, the chrome's `themeToggle` labels) and the
+// comment written directly above them;
 // in the Markdown, the markers around each dark-mode passage —
 // `<!-- dark-mode:start -->` … `<!-- dark-mode:end -->`, anywhere in a line
 // or across lines, removed with what they hold, and `<!-- light-only: … -->`,
@@ -21,7 +22,7 @@ export class LightOnlyError extends Error {}
 export const LIGHT_ONLY_DROPS = ["src/components/ui/ThemeToggle.tsx"];
 
 /** The names of the theme machinery: none is left in a file --light-only writes. */
-const LEFTOVERS = ["ThemeToggle", "THEME_SCRIPT", "data-theme", "light-dark(", "dark-mode:start", "dark-mode:end"];
+const LEFTOVERS = ["ThemeToggle", "themeToggle", "THEME_SCRIPT", "data-theme", "light-dark(", "dark-mode:start", "dark-mode:end"];
 
 /** The Markdown files that hold dark-mode passages, so must carry markers. */
 const MARKED = ["STANDARD.md", "src/components/README.md"];
@@ -36,6 +37,9 @@ const edit = (what, pattern, by) => ({ what, pattern, by });
 const EDITS = {
   "src/config/harness.ts": [
     edit("the profile's schemes", /^([ \t]*)schemes: \[[^\]]*\]/m, '$1schemes: ["light"]'),
+  ],
+  "src/config/site.ts": [
+    edit("the theme toggle's labels in the chrome's words and the comment above them", new RegExp(`${COMMENT_ABOVE}^[ \\t]*themeToggle: \\{[^}]*\\},\\n`, "m"), ""),
   ],
   "src/app/layout.tsx": [
     edit("the theme script and the comment above it", new RegExp(`${COMMENT_ABOVE}^const THEME_SCRIPT\\b[^\\n]*\\n\\n?`, "m"), ""),

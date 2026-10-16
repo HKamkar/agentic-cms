@@ -572,7 +572,10 @@ hand-write head tags.
 
 - **Brand data, URLs, navigation, footer**: `src/config/site.ts` — the name, the
   tagline, the address, the e-mail, the logo, `links`, `nav`, `signIn`, `cta`,
-  `footer`. Every page is served by this app, so entries stay relative.
+  `footer`. Every page is served by this app, so entries stay relative. The
+  chrome's own words sit beside them: `chrome` (the skip link, the header's,
+  the footer's column titles,<!-- dark-mode:start --> the theme switch's,<!-- dark-mode:end -->
+  the 404, the post template's) and `consentBanner`.
 - **Pages, with their metadata, structured data and copy**:
   `content/pages/<slug>.yaml` (the SEO contract, `src/lib/seo/README.md`; the
   section types and their fields, `src/lib/content/README.md`).

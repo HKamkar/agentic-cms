@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { NavLink } from "@/components/ui/NavLink";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { site } from "@/config/site";
+import { chrome, site } from "@/config/site";
 
 const DESKTOP = "(min-width: 992px)";
 const MENU_ID = "mobile-menu";
@@ -103,7 +103,7 @@ export function Navbar() {
       <Container>
         <div className="flex items-center justify-between gap-4 py-3">
           <NavLink href="/" label={site.shortName} className="font-semibold no-underline" />
-          <nav aria-label="Main" className="max-lg:hidden">
+          <nav aria-label={chrome.navbar.label} className="max-lg:hidden">
             <ul className="flex gap-4">
               <NavItems />
             </ul>
@@ -112,7 +112,7 @@ export function Navbar() {
             <Actions />
           </div>
           <button ref={buttonRef} type="button" className="border border-line px-3 py-1 lg:hidden" aria-expanded={open} aria-controls={MENU_ID} onClick={() => setOpenedOn(open ? null : pathname)}>
-            Menu
+            {chrome.navbar.menu}
           </button>
         </div>
       </Container>

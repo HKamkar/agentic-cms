@@ -60,6 +60,38 @@ export const site = {
 } as const satisfies SiteConfig;
 
 /**
+ * The chrome's own words: what the layout, the header, the footer, the 404
+ * and the post template say around a page's copy (the page's is its file in
+ * content/pages/, a post's its markdown; the consent banner's is
+ * consentBanner, below). A sentence with links in it is its parts in reading
+ * order, text and links, so the words around the links are written here too
+ * and a translation can reorder them; a line with a number in it is a
+ * function of the number.
+ */
+export const chrome = {
+  /** The link a keyboard reaches first, to skip the header (app/layout.tsx). */
+  skipLink: "Skip to content",
+  /** ui/Navbar: the name of its navigation landmark, and the button that discloses the links below 992px. */
+  navbar: { label: "Main", menu: "Menu" },
+  /** ui/ThemeToggle's label in each of its three states. */
+  themeToggle: { system: "Theme: system", light: "Theme: light", dark: "Theme: dark" },
+  /** ui/Footer's column titles, over footer.quickLinks and footer.social. */
+  footer: { quickLinks: "Quick links", social: "Follow us" },
+  /** app/not-found.tsx: the hero's label and heading, and the sentence under them. */
+  notFound: {
+    label: "404",
+    title: "We couldn't find that page.",
+    text: ["The page may have moved. ", { label: "Browse the latest posts", href: site.links.blog }, " or head ", { label: "home", href: site.links.home }, "."],
+  },
+  /** The post template (app/blog-post/[slug]/page.tsx): the hero's eyebrow, the reading time beside the author, the related posts' heading. */
+  post: {
+    eyebrow: "blog post",
+    readingTime: (minutes: number) => `${minutes} min read`,
+    related: "Read next",
+  },
+} as const;
+
+/**
  * The consent banner's copy (ui/ConsentBanner; the mechanics are
  * agentic-cms/consent and src/config/analytics.ts). The banner shows only
  * when a Google tag id is set, and says what it asks: the tag, the cookies,

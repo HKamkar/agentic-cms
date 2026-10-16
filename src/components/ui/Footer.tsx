@@ -3,7 +3,7 @@ import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
 import { Panel } from "./Panel";
 import { analytics } from "@/config/analytics";
-import { site } from "@/config/site";
+import { chrome, site } from "@/config/site";
 
 const columnTitle = "font-label uppercase";
 
@@ -43,8 +43,8 @@ export function Footer() {
               {site.email}
             </a>
           </div>
-          <LinkColumn title="Quick links" links={site.footer.quickLinks} />
-          <LinkColumn title="Follow us" links={site.footer.social} />
+          <LinkColumn title={chrome.footer.quickLinks} links={site.footer.quickLinks} />
+          <LinkColumn title={chrome.footer.social} links={site.footer.social} />
           <p className="text-muted lg:col-span-3">
             © {new Date().getFullYear()} {site.name}
           </p>

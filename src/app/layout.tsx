@@ -4,7 +4,7 @@ import { ConsentBanner } from "@/components/ui/ConsentBanner";
 import { Footer } from "@/components/ui/Footer";
 import { Navbar } from "@/components/ui/Navbar";
 import { analytics } from "@/config/analytics";
-import { site } from "@/config/site";
+import { chrome, site } from "@/config/site";
 import { kit } from "@/kit";
 import "./globals.css";
 
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {analytics.tagId && <script id="consent-default" dangerouslySetInnerHTML={{ __html: consentDefaultScript(analytics.consent) }} />}
         {/* Keyboard skip link: invisible until focused */}
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:border focus:border-line focus:bg-panel focus:px-3 focus:py-2">
-          Skip to content
+          {chrome.skipLink}
         </a>
         {analytics.tagId && <ConsentBanner />}
         <Navbar />
