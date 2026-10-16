@@ -375,16 +375,6 @@ changes what a capture writes says **recapture baselines**.
   shows for every rule and skill, each line with the step it belongs to,
   and § 1 and § 3.1 name the places in a site's `AGENTS.md` by what they
   hold, not by the template's headings.
-- `urls` and `setup` tell this clone's `next dev` from another server on
-  its port, as `serve` already did. With another checkout of the same site
-  serving on the `scripts.dev` port, both said `running`, listed that
-  server's URLs as this clone's, and `setup` asked for a restart of a
-  server that never reads this clone's `.env.local`. Now the dev server is
-  running only when `.next/dev/lock` names a live pid on the port; else
-  the port `answers, but not as this clone's next dev`, and no restart is
-  named. When this clone's `next dev` runs on another port, the line names
-  that port. `urls --json` adds `dev.own` and `dev.ownPort`. `serve` now
-  asks the same function (`ownDevServer`), and behaves as before.
 
 ## [0.7.6] — 2026-10-13
 
