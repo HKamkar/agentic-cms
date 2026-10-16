@@ -18,7 +18,8 @@ test("lab route writes the template once (--force again); lab clean removes the 
   try {
     const first = run(root, ["route", "--json"]);
     assert.equal(first.status, 0, first.stderr);
-    assert.deepEqual(JSON.parse(first.stdout), { file: ROUTE, path: "/lab-demo" });
+    assert.deepEqual(JSON.parse(first.stdout), { file: ROUTE, path: "/lab-demo", urls: [], ready: false, status: null }, "no dev server (no package.json here): nothing asked");
+    assert.match(run(root, ["route", "--force"]).stdout, /no dev server answers \(package\.json's scripts\.dev names no port; --url names a server\): pnpm kit serve starts it, waits for \/lab-demo and prints the URLs to hand over/);
     const page = fs.readFileSync(path.join(root, ROUTE), "utf8");
     assert.match(page, /import \{ LabScenes, type Ground \} from "agentic-cms\/lab";/);
     assert.match(page, /robots: \{ index: false \}/);
@@ -48,16 +49,16 @@ test("lab route writes the template once (--force again); lab clean removes the 
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-/** lab serve on a free loopback port until the page is read; the body of `page`. */
+/** lab serve on a free loopback port until the page is read: { body } of `page`, and what serve printed ({ out }) at { base }. */
 async function servePage(root, args, page) {
   const child = spawn(process.execPath, [BIN, "lab", "serve", "--host", "127.0.0.1", "--port", "0", ...args], { cwd: root });
   try {
-    const base = await new Promise((resolve, reject) => {
-      let out = "";
-      child.stdout.on("data", (chunk) => { out += chunk; const url = out.match(/http:\/\/127\.0\.0\.1:\d+/); if (url) resolve(url[0]); });
+    const { base, out } = await new Promise((resolve, reject) => {
+      let text = "";
+      child.stdout.on("data", (chunk) => { text += chunk; const url = text.match(/http:\/\/127\.0\.0\.1:\d+/); if (url && /hand over each scene's own page|no scene yet/.test(text)) resolve({ base: url[0], out: text }); });
       child.on("exit", (code) => reject(new Error(`lab serve exited ${code}`)));
     });
-    return await (await fetch(`${base}${page}`)).text();
+    return { body: await (await fetch(`${base}${page}`)).text(), out, base };
   } finally { child.kill("SIGTERM"); }
 }
 
@@ -67,9 +68,10 @@ test("lab serve: --sizes applies to a scene of any width; without it a wide scen
     fs.mkdirSync(path.join(root, ".parity/lab"), { recursive: true });
     fs.writeFileSync(path.join(root, ".parity/lab/wide.svg"), '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" viewBox="0 0 400 100"><rect/></svg>');
     const given = await servePage(root, ["--sizes", "32,160"], "/scene/wide");
-    assert.match(given, /width=32&pad=8[\s\S]*width=160&pad=8[\s\S]*width=400&pad=8/);
+    assert.match(given.body, /width=32&pad=8[\s\S]*width=160&pad=8[\s\S]*width=400&pad=8/);
+    assert.ok(given.out.includes(`hand over each scene's own page:\n       wide  ${given.base}/scene/wide\n`), `each scene's URL printed:\n${given.out}`);
     const plain = await servePage(root, [], "/scene/wide");
-    assert.doesNotMatch(plain, /width=(24|40|64)&pad=8/, "the icon sizes are for an icon-sized scene");
+    assert.doesNotMatch(plain.body, /width=(24|40|64)&pad=8/, "the icon sizes are for an icon-sized scene");
     const bad = run(root, ["serve", "--sizes", "32,big"]);
     assert.equal(bad.status, 2);
     assert.match(bad.stderr, /--sizes: big is not a size in whole pixels/);

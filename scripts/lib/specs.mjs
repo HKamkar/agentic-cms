@@ -22,6 +22,13 @@ const seedJson = "seed: { storage, sessionStorage, at } | null";
 const scheme = (help) => ({ type: "string", choices: ["light", "dark"], help: `${help}; default the first of the profile's schemes (src/config/harness.ts), else light` });
 // The lab server's port: lab serve listens on it, urls and setup look for it there.
 const LAB_PORT = 8001;
+// A route a command writes for the owner, handed over (scripts/lib/handover.mjs): the wait on the running dev server, then its URLs.
+const handover = (route) => ({
+  "no-wait": { type: "boolean", help: `write it and ask the dev server nothing (by default, with next dev answering on the port of package.json's scripts.dev, ${route} is asked until it stops answering 404 — which compiles it too — and then its URLs are printed)` },
+  timeout: { type: "number", default: 120, value: "<s>", help: `how long ${route} may take to answer, in seconds` },
+  url: { type: "string", value: "<base>", help: "the dev server to ask, http://host:port (default: localhost on the port of package.json's scripts.dev)" },
+  "no-public": { type: "boolean", help: "do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside)" },
+});
 
 export const SPECS = {
   lint: {
@@ -294,6 +301,23 @@ export const SPECS = {
     exit: { 0: "every address is in ALLOWED_DEV_ORIGINS (or was written)", 1: "an address is missing from it, or .env.local is, and --write was not given", 2: "no dev port (no package.json's scripts.dev to read it from, and no --port), or usage" },
     json: "{ addresses: { lan, public, publicLookedUp }, dev: { port, up, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }",
   },
+  serve: {
+    command: "serve", script: "serve", group: "site", summary: "the dev server and the lab for the owner's devices, started or found running, and every URL to hand over once each route answers: the origins checked first, next dev on the site's port on every interface, the lab when .parity/lab has scenes, every *-demo route and the root waited for, then one table — localhost, LAN and public × the routes, the lab's index and each /scene/<name> — until Ctrl-C stops both",
+    usage: "agentic-cms serve [--port <n>] [--lab] [--lab-port <n>] [--write-origins] [--fix-cache] [--no-public] [--timeout <s>] [--json]",
+    flags: {
+      port: { type: "number", value: "<n>", help: "the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000); this site's next dev already running there, or on the port its lock (.next/dev/lock) names, is reused and left running, and anything else on the port is refused" },
+      lab: { type: "boolean", help: "start the lab server even when .parity/lab has no scene (it starts by itself when it has one)" },
+      "lab-port": { type: "number", default: LAB_PORT, help: "the lab server's port (lab serve's); when it is taken, serve goes on without the lab and says so" },
+      "write-origins": { type: "boolean", help: "add the addresses ALLOWED_DEV_ORIGINS lacks to .env.local before next dev starts, so they apply (urls --write's edit)" },
+      "fix-cache": { type: "boolean", help: "when the dev log shows Turbopack's stale cache (Can't resolve '@vercel/turbopack-next/internal/…', after a production build), stop the server serve started, clear .next/dev and .next/cache/turbopack and start it again, once" },
+      "no-public": { type: "boolean", help: "do not look up the public address (offline, or a machine no viewer reaches from outside)" },
+      timeout: { type: "number", default: 120, value: "<s>", help: "how long next dev may take to be ready, and each route to answer, in seconds" },
+      json: { type: "boolean", help: "print each table as one JSON document per line instead (the progress goes to stderr)" },
+    },
+    examples: ["agentic-cms serve                          # then hand over the URLs it printed; Ctrl-C stops it", "agentic-cms serve --write-origins          # a new address of this machine, added before next dev starts", "agentic-cms serve --fix-cache              # after a production build broke the dev server's compile", "agentic-cms serve --lab --no-public --port 8002"],
+    exit: { 0: "stopped with Ctrl-C", 1: "next dev exited on its own, or was not ready within --timeout (its log's tail is printed)", 2: "no dev port, the port held by something that is not this site's next dev, next not installed, or usage" },
+    json: "{ dev: { port, pid, started, reused }, lab: { port, started, taken, urls, scenes: [{ name, urls }] } | null, hosts: [{ where, host }], routes: [{ path, ready, status, tail, urls: [{ where, url }] }], origins: { file, exists, listed, missing, written }, restarted }",
+  },
   "guard-email": {
     command: "guard-email", script: "guard-email", group: "build gates", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
     usage: "agentic-cms guard-email [--domain <host>]… [--json]",
@@ -441,7 +465,7 @@ export const SPECS = {
         json: "{ scene, file, kind }",
       },
       serve: {
-        command: "lab serve", summary: "serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C",
+        command: "lab serve", summary: "serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs, and each scene's own page (/scene/<name>, the URL to hand over), and runs until Ctrl-C",
         usage: "agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]",
         flags: {
           host: { type: "string", default: "0.0.0.0", value: "<address>", help: "the interface to listen on (0.0.0.0: every one, so a phone on the LAN can open it; 127.0.0.1: this machine only)" },
@@ -453,12 +477,16 @@ export const SPECS = {
         exit: { 0: "stopped", 2: "the port is taken, a --scenes path that does not exist, or usage" },
       },
       route: {
-        command: "lab route", summary: "writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it)",
-        usage: "agentic-cms lab route [--force] [--json]",
-        flags: { force: { type: "boolean", help: "overwrite a route that is already there" }, json: { type: "boolean", help: "print { file, path }" } },
-        examples: ["agentic-cms lab route                      # then pnpm dev and /lab-demo"],
-        exit: { 0: "written", 2: "the route exists (pass --force), or usage" },
-        json: "{ file, path }",
+        command: "lab route", summary: "writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with the dev server running, waits until /lab-demo answers and prints its URLs to hand over",
+        usage: "agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]",
+        flags: {
+          force: { type: "boolean", help: "overwrite a route that is already there" },
+          ...handover("/lab-demo"),
+          json: { type: "boolean", help: "print { file, path, urls, ready, status }" },
+        },
+        examples: ["agentic-cms lab route                      # with the dev server running: waits for /lab-demo, prints its URLs", "agentic-cms lab route --no-wait            # write it, ask nothing"],
+        exit: { 0: "written (and /lab-demo answered, or no dev server runs, or --no-wait)", 1: "written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout", 2: "the route exists (pass --force), or usage" },
+        json: "{ file, path, urls: [{ where, url }], ready: true|false|null, status }",
       },
       render: {
         command: "lab render", summary: "renders one scene to the file a page ships, by the extension of --out: .svg (the tokens resolved for one scheme, the animation kept), .webp/.png/.jpg (a still at --at), or with --animate a loop as an animated .webp (sharp, no ffmpeg), .webm or .mp4 (ffmpeg); a loop also writes its still beside it (the <picture> fallback, the poster) and a raster its source scene",
@@ -502,19 +530,22 @@ export const SPECS = {
     usage: "agentic-cms demo <new | clean> …",
     subcommands: {
       new: {
-        command: "demo new", summary: "writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last",
-        usage: "agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slug>] [--candidates 2] [--json]",
+        command: "demo new", summary: "writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with the dev server running, waits until the route answers and prints the URLs to hand over",
+        usage: "agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]",
         positionals: [{ name: "name", required: true, help: "the route is src/app/<name>-demo; lowercase letters, digits and hyphens" }],
         flags: {
           section: { type: "string", value: "<type>", help: "the section type (a key of the registry, src/components/sections/render.tsx); the route then reads the page's copy and passes it to every candidate" },
           page: { type: "string", value: "<slug>", help: "the page file whose copy the route reads (default: the first under content/pages carrying the section); only with --section" },
-          candidates: { type: "number", default: 2, help: "how many candidates, A onward (1 to 8)" },
-          component: { type: "string", value: "<file>", help: "the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props" },
+          candidates: { type: "number", value: "<n>", help: "how many candidates, A onward (1 to 8; default 2); not with --showcase" },
+          component: { type: "string", multiple: true, value: "<file>", help: "the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props; with --showcase, each piece the page shows (repeat it), never removed by demo clean" },
+          showcase: { type: "boolean", help: "a review page that is not a section's candidates — the library's primitives, a motion layer, a set of states — a block per --component (or one to fill), inside the site's own layout; demo clean removes it and every file only it uses" },
+          timeline: { type: "boolean", help: "wrap each block (the candidates, the current version, a showcase's pieces) in <LabTimeline label><div data-lab-drive>, so its motion can be paused, stepped and replayed (docs/lab.md § Inspecting motion)" },
+          ...handover("/<name>-demo"),
           json: { type: "boolean", help: "print the report" },
         },
-        examples: ["agentic-cms demo new services --section home-service", "agentic-cms demo new band --section about-story --page sections-about --candidates 3", "agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props"],
-        exit: { 0: "written", 2: "neither --section nor --component, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, or usage" },
-        json: "{ route, path, section, page, component, candidates: [{ letter, file }], data }",
+        examples: ["agentic-cms demo new services --section home-service        # with the dev server running: waits for /services-demo, prints its URLs", "agentic-cms demo new band --section about-story --page sections-about --candidates 3 --timeline", "agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props", "agentic-cms demo new library --showcase --component src/components/ui/Button.tsx --component src/components/ui/Panel.tsx --timeline"],
+        exit: { 0: "written (and the route answered, or no dev server runs, or --no-wait)", 1: "written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout", 2: "neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage" },
+        json: "{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }",
       },
       clean: {
         command: "demo clean", summary: "removes the route (without a name, every route demo new wrote — a site's own *-demo folder is kept and named), every file the round created that nothing outside it imports — the candidates and whatever they alone use, found from the route's imports through new files only (the manifest demo new wrote, and git since the round began) — with their module.css, the round's assets (public/images/<name>-demo/) and next dev's generated route types while they still name the route (the production build's type check reads them); the component the candidates were copied from is never removed, and a new file something else imports (a piece the promoted section now uses) is kept and named",

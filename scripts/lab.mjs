@@ -3,7 +3,9 @@
 // needed and removed when its files are rendered: `new` writes a scene to
 // start from under .parity/lab, `serve` shows every scene on the site's
 // tokens (in each of its schemes, inline and as an <img>, at its sizes and enlarged,
-// with a scrubber, a replay and its still) to the owner's browser and phone, `render` writes the file a page ships, `clean`
+// with a scrubber, a replay and its still) to the owner's browser and phone,
+// printing each scene's own URL, `route` writes the throwaway route and
+// waits until the dev server answers it, `render` writes the file a page ships, `clean`
 // removes the lab. Nothing of it lives under src/ or in package.json;
 // docs/lab.md has the recipe and the design-graphics skill the procedure.
 // The scene functions are the package's (TypeScript in this checkout), so
@@ -41,6 +43,12 @@ if (subcommand === "new") {
   const schemes = (await profileOrExit("lab serve"))?.schemes;
   try { server = await startLabServer({ root, extra: flags.scenes, host: flags.host, port: flags.port, watch: true, sizes, schemes }); } catch (error) { fail(error.message); }
   console.log(`lab: ${server.urls.join("  ")}\n     scenes under ${LAB_DIR}/${flags.scenes.length ? ` and ${flags.scenes.join(", ")}` : ""}; a saved file reloads the page; Ctrl-C stops`);
+  // the URL to hand over is each scene's own page, not the index
+  const scenes = server.scenes();
+  if (scenes.length) {
+    const width = Math.max(...scenes.map((id) => id.length));
+    console.log(`     hand over each scene's own page:\n${scenes.map((id) => `       ${id.padEnd(width)}  ${server.urls.map((url) => `${url}/scene/${id}`).join("  ")}`).join("\n")}`);
+  } else console.log(`     no scene yet: pnpm kit lab new <name> writes one, and /scene/<name> is its page`);
   const stop = () => { server.close(); process.exit(0); };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
@@ -49,8 +57,15 @@ if (subcommand === "new") {
   if (fs.existsSync(file) && !flags.force) fail(`${ROUTE_FILE} exists; edit it, or pass --force to write the template over it`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, routeTemplate());
-  if (flags.json) console.log(JSON.stringify({ file: ROUTE_FILE, path: "/lab-demo" }, null, 1));
-  else console.log(`${ROUTE_FILE} written: pnpm dev and open /lab-demo; add the site's surfaces to GROUNDS; pnpm kit lab clean removes it (it never merges: the SEO audit fails it)`);
+  // the route asked until it answers on the running dev server (which also compiles it), then its URLs (lib/handover.mjs)
+  const { formatHandover, handover } = await import("./lib/handover.mjs");
+  const scripts = (() => { try { return JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).scripts ?? {}; } catch { return {}; } })();
+  const handed = await handover({ root, route: "/lab-demo", url: flags.url, scripts, wait: !flags["no-wait"], timeout: flags.timeout * 1000, lookupPublic: !flags["no-public"], fs });
+  const told = formatHandover(handed, "/lab-demo");
+  if (flags.json) console.log(JSON.stringify({ file: ROUTE_FILE, path: "/lab-demo", urls: handed.urls, ready: handed.ready, status: handed.status }, null, 1));
+  else console.log([`${ROUTE_FILE} written: add the site's surfaces to GROUNDS; pnpm kit lab clean removes it (it never merges: the SEO audit fails it)`, ...told.out].join("\n"));
+  if (told.err.length) console.error(told.err.join("\n"));
+  process.exit(told.exit);
 } else if (subcommand === "render") {
   if (!flags.out) fail("--out names the file to write; its extension picks the format");
   const { renderScene } = await import("./lib/lab-render.mjs");

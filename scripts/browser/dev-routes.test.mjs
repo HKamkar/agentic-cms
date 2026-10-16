@@ -1,16 +1,19 @@
 // The routes the kit writes, rendered by the example site's own dev server:
 // the lab's (lab route → /lab-demo), the design round's (demo new →
-// /hero-demo), a route that ships an inline loop the way a section does
+// /hero-demo, and demo new waiting on a server that already runs), serve
+// started and stopped on free ports, a route that ships an inline loop the way a section does
 // (readInlineSvg + InlineAnimation), the harness's own preparation of a
 // page that is still hydrating, the seed reaching the design routes, and
 // consent (agentic-cms/consent) on the example with a Google tag id set. One file, so the servers never run on the
 // checkout at once; each test writes only what it removes again.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
+import { freePort, processAlive, readDevLock } from "../lib/dev-server.mjs";
+import { isUp } from "../lib/hosts.mjs";
 import { devServer } from "./dev-server.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
@@ -18,6 +21,14 @@ const BIN = path.join(ROOT, "bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
 const lab = (...args) => spawnSync(process.execPath, [BIN, "lab", ...args], { cwd: ROOT, encoding: "utf8" });
 const demo = (...args) => spawnSync(process.execPath, [BIN, "demo", ...args], { cwd: ROOT, encoding: "utf8" });
+/** A command that must not block this process's event loop while it runs (the dev server's output is read here). */
+const runAsync = (args) => new Promise((resolve) => {
+  const child = spawn(process.execPath, [BIN, ...args], { cwd: ROOT });
+  let stdout = "", stderr = "";
+  child.stdout.on("data", (chunk) => { stdout += chunk; });
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  child.on("exit", (status) => resolve({ status, stdout, stderr }));
+});
 
 // The dev server's HMR socket fails its handshake under this harness; every other console error counts (a hydration mismatch is one).
 const notHmr = (line) => !/WebSocket|_next\/hmr/.test(line);
@@ -30,7 +41,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
   fs.mkdirSync(labDir, { recursive: true });
   const scene = path.join(labDir, "route-test-spin.svg");
   assert.equal(lab("new", "route-test-spin", "--kind", "loop").status, 0);
-  assert.equal(lab("route").status, 0);
+  assert.equal(lab("route", "--no-wait", "--no-public").status, 0);
   let server, browser;
   try {
     server = await devServer();
@@ -85,7 +96,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
 test("demo new: /hero-demo on the example site — A, B and the current hero with the home page's copy, in the site's chrome", { skip, timeout: 180000 }, async () => {
   const routeDir = path.join(ROOT, "src/app/hero-demo");
   assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "no hero demo in the checkout before the test");
-  const made = demo("new", "hero", "--section", "home-hero", "--json");
+  const made = demo("new", "hero", "--section", "home-hero", "--no-wait", "--no-public", "--json");
   assert.equal(made.status, 0, made.stderr);
   let server, browser;
   try {
@@ -118,6 +129,57 @@ test("demo new: /hero-demo on the example site — A, B and the current hero wit
     assert.equal(cleaned.status, 0, cleaned.stderr);
     assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroB.tsx")), "nothing of the round left in the checkout");
   }
+});
+
+test("demo new against the running dev server: it waits until its route answers, then prints its URLs — the route answers 200 before the command exits", { skip, timeout: 240000 }, async () => {
+  const routeDir = path.join(ROOT, "src/app/wait-demo");
+  assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "no wait demo in the checkout before the test");
+  let server;
+  try {
+    server = await devServer();
+    const made = await runAsync(["demo", "new", "wait", "--section", "home-hero", "--url", server.url, "--no-public", "--json"]);
+    assert.equal(made.status, 0, made.stderr);
+    const report = JSON.parse(made.stdout);
+    assert.deepEqual([report.ready, report.status], [true, 200], "the route answered before the command exited");
+    assert.deepEqual(report.urls[0], { where: "localhost", url: `http://localhost:${server.port}/wait-demo` });
+    const again = await fetch(`${server.url}/wait-demo`, { signal: AbortSignal.timeout(15000) });
+    assert.equal(again.status, 200, "compiled already: the owner's first look is no cold compile");
+    assert.match(await again.text(), /data-candidate="now"/);
+  } finally {
+    await server?.stop();
+    const cleaned = demo("clean", "wait", "--json");
+    assert.equal(cleaned.status, 0, cleaned.stderr);
+    assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "nothing of the round left in the checkout");
+  }
+});
+
+test("serve on free ports: next dev and the lab started, the table printed once the root answers, and a Ctrl-C stops both — the ports are free again", { skip, timeout: 240000 }, async (t) => {
+  const lock = readDevLock(ROOT, fs);
+  if (lock && processAlive(lock.pid)) { t.skip(`this checkout's next dev runs (pid ${lock.pid}): serve would reuse it`); return; }
+  const [port, labPort] = [await freePort(), await freePort()];
+  const child = spawn(process.execPath, [BIN, "serve", "--port", String(port), "--lab-port", String(labPort), "--lab", "--no-public"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", err = "";
+  child.stdout.on("data", (chunk) => { out += chunk; });
+  child.stderr.on("data", (chunk) => { err += chunk; });
+  const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
+  try {
+    const started = Date.now();
+    while (!/^hand over the page itself/m.test(out)) {
+      assert.equal(child.exitCode, null, `serve exited early:\n${out}\n${err}`);
+      assert.ok(Date.now() - started < 180000, `no table in 180 s:\n${out}\n${err}`);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    assert.match(out, new RegExp(`^serve: next dev on port ${port}; the lab on port ${labPort}$`, "m"));
+    assert.match(out, new RegExp(`^ {2}/ +200 +http://localhost:${port}/`, "m"), "the root answered");
+    assert.match(out, new RegExp(`^ {2}/ +http://localhost:${labPort}/`, "m"), "the lab's index");
+    assert.ok(await isUp(port) && await isUp(labPort));
+  } finally {
+    child.kill("SIGINT");
+    const ended = await exited;
+    assert.deepEqual(ended, { code: 0, signal: null }, err);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  assert.deepEqual([await isUp(port), await isUp(labPort)], [false, false], "next dev's whole process group and the lab stopped");
 });
 
 // A section's inline loop, the way a site ships one: the SVG read at build (readInlineSvg, agentic-cms/content) and
@@ -233,8 +295,8 @@ test("a seed reaches the design routes on the dev server: /hero-demo (demo new) 
   fs.mkdirSync(labDir, { recursive: true });
   const scene = path.join(labDir, "seed-test-mark.svg");
   assert.equal(lab("new", "seed-test-mark", "--kind", "mark").status, 0);
-  assert.equal(lab("route").status, 0);
-  assert.equal(demo("new", "hero", "--section", "home-hero").status, 0);
+  assert.equal(lab("route", "--no-wait", "--no-public").status, 0);
+  assert.equal(demo("new", "hero", "--section", "home-hero", "--no-wait", "--no-public").status, 0);
   let server;
   try {
     server = await devServer();

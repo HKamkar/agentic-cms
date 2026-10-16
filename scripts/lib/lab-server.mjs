@@ -26,7 +26,7 @@ const send = (res, status, type, body) => { res.writeHead(status, { "content-typ
 const html = (res, body) => send(res, 200, "text/html; charset=utf-8", body);
 const notFound = (res) => send(res, 404, "text/plain", "not found");
 
-/** Starts the server; { url, port, urls, close }. `extra` are more scene files or folders; `watch` streams changes to the pages; `sizes` apply to every scene (null: ICON_SIZES for an icon-sized one); `schemes` are the grounds a scene is shown on (the site's profile's; light and dark without one). */
+/** Starts the server; { url, port, urls, scenes, close } — scenes() the ids it lists now, each served at /scene/<id>. `extra` are more scene files or folders; `watch` streams changes to the pages; `sizes` apply to every scene (null: ICON_SIZES for an icon-sized one); `schemes` are the grounds a scene is shown on (the site's profile's; light and dark without one). */
 export function startLabServer({ root = process.cwd(), extra = [], host = "127.0.0.1", port = 0, watch = false, sizes = null, schemes = LAB_SCHEMES } = {}) {
   let scenes = listScenes(root, { extra });
   const tokens = siteTokens(root);
@@ -84,7 +84,7 @@ export function startLabServer({ root = process.cwd(), extra = [], host = "127.0
       const bound = server.address().port;
       const local = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
       const urls = host === "0.0.0.0" || host === "::" ? [`http://localhost:${bound}`, ...lanUrls(bound)] : [`http://${local}:${bound}`];
-      resolve({ url: `http://${local}:${bound}`, port: bound, urls, close: () => { for (const w of watchers) w.close(); for (const c of clients) c.end(); server.close(); } });
+      resolve({ url: `http://${local}:${bound}`, port: bound, urls, scenes: () => { relist(); return [...scenes.keys()]; }, close: () => { for (const w of watchers) w.close(); for (const c of clients) c.end(); server.close(); } });
     });
   });
 }

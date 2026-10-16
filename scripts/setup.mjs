@@ -60,6 +60,6 @@ else {
     : report.check ? [gaps && `${gaps} gap(s), which setup (bash scripts/setup.sh) fills`, owner].filter(Boolean).join("; ") || "nothing missing"
     : owner ? `ready, with ${owner}` : "ready";
   console.log(`\nsetup: ${verdict}`);
-  if (report.exit === 0 && !report.check) console.log("next: pnpm dev, then hand over a URL above (docs/dev-server.md); AGENTS.md is the rules");
+  if (report.exit === 0 && !report.check) console.log("next: pnpm kit serve — the dev server, and the URLs to hand over once its pages answer (docs/dev-server.md); AGENTS.md is the rules");
 }
 process.exit(report.exit);

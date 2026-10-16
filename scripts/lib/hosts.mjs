@@ -99,7 +99,8 @@ export function writeOrigins(text = "", hosts = []) {
 }
 
 // ---- the report `urls` prints and `setup` ends with ---------------------------
-const urlsOn = (port, { lan, publicIp }) => [
+/** The URLs a port answers on from each kind of host: localhost, each LAN address, the public one. */
+export const urlsOn = (port, { lan, publicIp }) => [
   { where: "localhost", url: `http://localhost:${port}` },
   ...lan.map((ip) => ({ where: "LAN", url: `http://${ip}:${port}` })),
   ...(publicIp ? [{ where: "public", url: `http://${publicIp}:${port}` }] : []),
