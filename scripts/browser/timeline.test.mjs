@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
+import { until } from "./until.mjs";
 // The package's components are TypeScript in this checkout: the hook first, the imports after it.
 import "../lib/load-ts.mjs";
 
@@ -80,6 +81,8 @@ function running(times, runs, far, frame) {
   assert.ok(near.length && near.every((t) => Math.abs(t - near[0]) < frame), `within a frame of each other: ${near}`);
   return near[0];
 }
+/** What `running` asserts, every running copy past `past` too: the state a test waits for before it asserts it. */
+const started = (times, runs, far, past = -Infinity) => runs.some(Boolean) && runs.every((run, i) => run === !far[i] && (!run || times[i] > past));
 
 const ENGINES = [
   { name: "Chromium", launch: () => chromium.launch({ executablePath: chromePath(), args: ["--no-sandbox"] }), skip: chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`" },
@@ -103,8 +106,9 @@ for (const engine of ENGINES) {
         assert.equal(new Set(ids).size, ids.length, "every id on the page is unique");
         assert.equal(ids.length, 3 * 3 * 2 + 1 * 2 * 2, "three per copy of A, one per copy of B");
 
-        await page.waitForTimeout(400);
-        let a = await read(page, "Study A"), b = await read(page, "Study B");
+        // Once the first frames set the clocks going and the copies far off screen stopped, which a loaded runner draws late.
+        let a = await until(() => read(page, "Study A"), (r) => started(r.svg, r.svgRuns, r.svgFar, 0.1));
+        let b = await until(() => read(page, "Study B"), (r) => started(r.css, r.cssRuns, r.cssFar, 100));
         assert.equal(a.button, "Pause");
         assert.ok(a.svg.length === 6 && running(a.svg, a.svgRuns, a.svgFar, 0.02) > 0.1, `A plays from one start: ${a.svg}`);
         const bAt = b.css.length === 4 && running(b.css, b.cssRuns, b.cssFar, 20);
@@ -113,8 +117,7 @@ for (const engine of ENGINES) {
         // Pause: the frame stays, to the pixel — where, playing, it moved.
         const shot = () => timeline(page, "Study A").locator("[data-ground]").first().screenshot();
         const moving = await shot();
-        await page.waitForTimeout(250);
-        assert.ok(!moving.equals(await shot()), "playing, the pixels move");
+        assert.ok(!moving.equals(await until(shot, (next) => !moving.equals(next))), "playing, the pixels move");
         await timeline(page, "Study A").locator("[data-lab-play]").click();
         const still = await shot();
         await page.waitForTimeout(400);
@@ -122,7 +125,7 @@ for (const engine of ENGINES) {
         const paused = await read(page, "Study A");
         assert.equal(paused.button, "Play");
         assert.ok(same(paused.svg) && same(paused.cx), "every copy on one frame");
-        b = await read(page, "Study B");
+        b = await until(() => read(page, "Study B"), (r) => r.css.some((t, i) => r.cssRuns[i] && Math.abs(t - bAt) > 1));
         const bLater = running(b.css, b.cssRuns, b.cssFar, 20);
         assert.ok(b.button === "Pause" && Math.abs(bLater - bAt) > 1, `B plays on (past a cycle's end, under load): the studies are independent: ${bAt} → ${bLater}`);
 
@@ -151,9 +154,9 @@ for (const engine of ENGINES) {
         // Resume from there; replay from zero.
         const from = a.value;
         await timeline(page, "Study A").locator("[data-lab-play]").click();
-        await page.waitForTimeout(300);
-        a = await read(page, "Study A");
-        const ahead = (running(a.svg, a.svgRuns, a.svgFar, 0.02) - from + 1.6) % 1.6;
+        const past = (t) => (t - from + 1.6) % 1.6;
+        a = await until(() => read(page, "Study A"), (r) => started(r.svg, r.svgRuns, r.svgFar) && past(r.svg[r.svgRuns.indexOf(true)]) > 0.1);
+        const ahead = past(running(a.svg, a.svgRuns, a.svgFar, 0.02));
         assert.ok(ahead > 0.1 && ahead < 0.8, `resumed from ${from}, not from 0: ${a.svg}`);
         await timeline(page, "Study A").locator("[data-lab-replay]").click();
         a = await read(page, "Study A");
@@ -182,8 +185,8 @@ for (const engine of ENGINES) {
       const [a, b] = [await read(page, "Study A"), await read(page, "Study B")];
       assert.deepEqual([a.button, a.svg.every((t) => t === 0), b.button, b.css.length], ["Play", true, "Play", 0], "nothing moves; B's CSS loop is off by its own rule");
       await timeline(page, "Study A").locator("[data-lab-play]").click();
-      await page.waitForTimeout(300);
-      assert.ok((await read(page, "Study A")).svg[0] > 0.1, "a Play the reader asks for plays");
+      const played = await until(() => read(page, "Study A"), (r) => r.svg[0] > 0.1);
+      assert.ok(played.svg[0] > 0.1, `a Play the reader asks for plays: ${played.svg[0]}`);
     } finally {
       await browser.close();
       site.close();
@@ -251,7 +254,6 @@ window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-t
     try {
       const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "no-preference" })).newPage();
       await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: "load" });
-      await page.waitForTimeout(300);
       const state = () => page.evaluate(() => {
         const [top, bottom] = [...document.querySelectorAll("svg")];
         const css = (svg) => svg.querySelector("rect").getAnimations()[0];
@@ -261,17 +263,17 @@ window.timeline = (${String(mountTimeline)})(document.querySelector("[data-lab-t
           slide: document.querySelector(".slide").getAnimations()[0].playState, writes: window.writes, time: window.timeline.time(),
         };
       });
-      let s = await state();
+      // The observer's first entries stop the copy below: on a frame a loaded runner draws late.
+      let s = await until(state, (v) => v.runs[0] && !v.runs[1] && v.css[1] === "paused");
       assert.deepEqual([s.runs, s.css, s.slide], [[true, false], ["running", "paused"], "running"], "the copy on screen runs, the one four screens down is stopped, the part far off screen by its own motion runs on");
       const writes = s.writes;
       await page.waitForTimeout(500);
-      s = await state();
+      s = await until(state, (v) => v.time > 0.6);
       assert.equal(s.writes, writes, "playing, the frames set no animation's time");
       assert.ok(s.time > 0.6 && s.time < 1.4, `the timeline's time ran on: ${s.time}`);
 
       await page.evaluate(() => document.getElementById("bottom").scrollIntoView({ block: "center" }));
-      await page.waitForTimeout(250);
-      s = await state();
+      s = await until(state, (v) => !v.runs[0] && v.runs[1] && v.css[1] === "running");
       assert.deepEqual([s.runs, s.css], [[false, true], ["paused", "running"]], "scrolled: the copy below runs, the one now far above is stopped");
       assert.ok(Math.abs(s.svg[1] - s.time) < 0.05 && Math.abs(s.rect[1] / 1000 - s.time) < 0.05, `the copy that came back joined the timeline's time: ${s.svg[1]}, ${s.rect[1]} ms, ${s.time}`);
 
@@ -354,7 +356,7 @@ for (const engine of ENGINES) {
 
       const bare = await context.newPage();
       await bare.goto(`${base}/bare`, { waitUntil: "load" });
-      await bare.waitForTimeout(600);
+      await bare.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5000 });
       const flash = await bare.evaluate(() => { const d = window.lab.duration(); window.lab.seek(0.15); return { d, opacity: Number(getComputedStyle(document.querySelector(".flash")).opacity) }; });
       assert.ok(Math.abs(flash.d - 0.3) < 1e-6 && Math.abs(flash.opacity - 0.5) < 0.02, `the ended entrance is still the page's: ${flash.d} s, opacity ${flash.opacity} at 0.15 s`);
       assert.deepEqual(errors, []);

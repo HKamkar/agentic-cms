@@ -17,6 +17,7 @@ import { chromePath } from "../lib/browser.mjs";
 import { freePort, freePorts, processAlive, readDevLock } from "../lib/dev-server.mjs";
 import { isUp } from "../lib/hosts.mjs";
 import { devServer } from "./dev-server.mjs";
+import { until } from "./until.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const BIN = path.join(ROOT, "bin/agentic-cms.mjs");
@@ -77,8 +78,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
     assert.deepEqual([seen.timeline, seen.max], ["route-test-spin: timeline", "2"]);
     assert.equal(new Set(seen.ids).size, seen.ids.length, "every id on the page is unique");
     await page.fill(`${scene} [data-lab-time]`, "0.5");
-    await page.waitForTimeout(200);
-    const cx = await page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value));
+    const cx = await until(() => page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value)), (list) => list.every((x) => x === 32));
     assert.deepEqual(cx, [32, 32, 32, 32, 32, 32], "every copy paused at 0.5 s");
     assert.equal(await page.textContent(`${scene} [data-lab-play]`), "Play", "a seek pauses, and the button says so");
     assert.deepEqual(errors, []);
@@ -180,8 +180,8 @@ test("serve on free ports: next dev and the lab started, the table printed once 
     const ended = await exited;
     assert.deepEqual(ended, { code: 0, signal: null }, err);
   }
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  assert.deepEqual([await isUp(port), await isUp(labPort)], [false, false], "next dev's whole process group and the lab stopped");
+  const up = await until(async () => [await isUp(port), await isUp(labPort)], (list) => !list.some(Boolean), 10000);
+  assert.deepEqual(up, [false, false], "next dev's whole process group and the lab stopped");
 });
 
 test("urls on the example: a port another server holds answers, but not as this clone's next dev, with no restart named; this checkout's own next dev, found by its lock, is running", { skip, timeout: 240000 }, async (t) => {
@@ -270,13 +270,11 @@ test("InlineAnimation on the example site: waits on its first frame until in vie
     assert.ok(waiting.fills, "the svg fills its box from its own style");
     assert.equal(waiting.clip, "inline-test-frame", "its ids are its own");
     await page.locator(".inline-test-box").scrollIntoViewIfNeeded();
-    await page.waitForTimeout(700);
-    const playing = await clock(page);
+    const playing = await until(() => clock(page), (c) => !c.paused && c.time > 0.2);
     assert.equal(playing.paused, false, "in view: it plays");
     assert.ok(playing.time > 0.2 && playing.time < 1.5, `from the start of the cycle: ${playing.time}`);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(500);
-    const away = await clock(page);
+    const away = await until(() => clock(page), (c) => c.paused);
     assert.equal(away.paused, true, "off screen: paused");
     // Under the timeline (autoplay off) the copy at the top stays where the timeline holds it, in view, after a seek and a scroll.
     const timed = () => page.evaluate(() => { const svg = document.querySelector(".inline-test-timed svg"); return { paused: svg.animationsPaused(), time: Math.round(svg.getCurrentTime() * 1000) / 1000 }; });
@@ -371,6 +369,8 @@ test("a seed reaches the design routes on the dev server: /hero-demo (demo new) 
 const TAG = "G-TEST000000";
 const GOOGLE = /^https:\/\/([a-z0-9-]+\.)*(googletagmanager|google-analytics|doubleclick|google)\.(com|net)\//;
 const GTAG_JS = /googletagmanager\.com\/gtag\/js\?id=G-TEST000000$/;
+/** The requests for gtag.js recorded so far. */
+const tags = (google) => google.filter((url) => GTAG_JS.test(url)).length;
 
 /** A browser context whose requests to Google are recorded and answered here. */
 async function consentContext(browser) {
@@ -386,6 +386,7 @@ const sent = (page) => page.evaluate(() => (window.dataLayer ?? []).map((entry) 
   return command === "consent" ? `consent ${what}${what === "update" ? ` ${value.analytics_storage}` : ""}` : command === "set" ? `set ${what}` : String(command);
 }));
 const before = (list, a, b) => list.indexOf(a) !== -1 && list.indexOf(a) < list.indexOf(b);
+/** Time for what must not happen (a request to Google, a second tag) to happen. */
 const settle = (page) => page.waitForTimeout(800);
 
 test("consent on the example: nothing reaches Google before a choice or after a refusal; a grant, here or in another tab, sends the choice before the tag's config", { skip, timeout: 300000 }, async (t) => {
@@ -416,8 +417,9 @@ test("consent on the example: nothing reaches Google before a choice or after a 
       await page.goto(`${server.url}/`, { waitUntil: "load" });
       await page.getByRole("button", { name: "Allow" }).click();
       await page.waitForFunction(() => document.querySelectorAll("script[data-gtag]").length > 0);
+      await until(() => tags(google), (n) => n > 0);
       await settle(page);
-      assert.equal(google.filter((url) => GTAG_JS.test(url)).length, 1, "one tag, however often React mounted it");
+      assert.equal(tags(google), 1, "one tag, however often React mounted it");
       const granted = await sent(page);
       assert.ok(before(granted, "consent update granted", "config"), granted.join(", "));
       assert.equal(await page.getByRole("dialog").count(), 0);
@@ -453,11 +455,12 @@ test("consent on the example: nothing reaches Google before a choice or after a 
       const page = await context.newPage();
       await page.goto(`${server.url}/`, { waitUntil: "load" });
       await page.waitForFunction(() => document.querySelectorAll("script[data-gtag]").length > 0);
+      await until(() => tags(google), (n) => n > 0);
       await settle(page);
       const replayed = await sent(page);
       assert.deepEqual(replayed.slice(0, 3), ["consent default", "set ads_data_redaction", "consent update granted"], "the inline script's replay, before anything else");
       assert.ok(before(replayed, "consent update granted", "config"));
-      assert.equal(google.filter((url) => GTAG_JS.test(url)).length, 1);
+      assert.equal(tags(google), 1);
       assert.equal(await page.getByRole("dialog").count(), 0);
       await context.close();
     });
