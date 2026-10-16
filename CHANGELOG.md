@@ -385,6 +385,48 @@ changes what a capture writes says **recapture baselines**.
   named. When this clone's `next dev` runs on another port, the line names
   that port. `urls --json` adds `dev.own` and `dev.ownPort`. `serve` now
   asks the same function (`ownDevServer`), and behaves as before.
+- `demo new` and `lab route` hand their route over on this clone's
+  `next dev`, found by `.next/dev/lock` as `serve`, `urls` and `setup`
+  find it. With another checkout of the same site, or another project,
+  serving on the `scripts.dev` port, each asked that server for its new
+  route for `--timeout` (120 s), and only then asked whether it was this
+  site's. Now each says at once that the port answers, but not as this
+  clone's next dev, and exits 1 with the route written: stop what holds
+  the port, or `pnpm kit serve --port <n>`. This clone's `next dev` on
+  another port is the one asked, and the hand-over names its port.
+  `--url` still names any server, with no lock read.
+- A `--motion` capture's animation inventory leaves infinite loops out, as
+  it always meant to: the DevTools protocol reports an infinite animation
+  with no iteration count at all, so the test for `Infinity` never matched,
+  and a loop that a page's observer or timer starts or restarts entered
+  `<page>@<width>.animations.json` as many times as it happened to start
+  (found by running the migration guide on a site on 0.7.6: one page-width
+  gave 40, 40, 66, 66 and 57 entries from one build). The loop is read from
+  the effect's own timing in the page, and from the protocol's report
+  (anything but a finite count) when the page no longer holds it. A
+  `--motion` capture writes fewer entries for a page with a loop:
+  **recapture baselines** of `--motion` captures taken before this change.
+- A profile that names the widths a site used to pass as `--widths` keeps
+  the shot cache: the menu is part of the key of the page-widths that open
+  it (the home page of a static capture at a menu width), no longer of
+  every shot, so writing the profile retakes the home page where the menu
+  is now tried and copies the rest, where it retook every shot of the site
+  (found by the same run: 0 of 176 reused, 579 s against 72 s). A
+  `--motion` or `--states` capture opens no menu and ignores it. What a
+  capture writes is unchanged.
+- `harness.proof.sample` in `src/config/harness.ts`: a site whose short
+  proof is one page of each template says so once (`proof: { sample: 1 }`)
+  instead of passing `--sample` every time. It reaches the static pass like
+  `--sample`; a `--sample` or `--pages` flag sets it aside for a run; it is
+  a whole number from 1, and a profile with both `proof.pages` and
+  `proof.sample` exits 2 naming them. `docs/migrating-to-0.8.0.md` § 3.1
+  says so, with the cache note, and its `--ref develop` note says the
+  branch resolves to `origin/develop` first.
+- `agentic-cms/eslint`: `componentRules()` fails copy in a section or a pattern: JSX text with a letter or a digit, and strings in `title`, `alt`, `aria-label`, `placeholder`, `label` and `children` (straight, as `{…}`, in a template or a fallback, or as a data array's field of that name). The message names the route the copy takes: the page's file, the section's schema field, the prop. The new option `copy: { props, decorations }` (or `false`) configures it; symbols, `aria-hidden` text and the props of `Placeholder` and `TypeTag` pass.
+- `check-components`: `routes` holds the content engine's route folders (the app folder and its catch-all), and every other route folder is a named exception, `"exceptions": { "<folder>": "<reason>" }` in `src/config/components.json`. A folder in `routes` that is neither, or an exception with no reason, is a finding that names the fix. The defaults carry the example's three reasons (the post template, the form endpoint, the feed), so a config from before still reads; `init` writes the example's set.
+- A new `pages` rule, which `init --agent-files` writes for every site, loads on `src/app/**`, `src/components/**` and `content/pages/**`: every page is a content file, a new one is `/editorial:new-page`, and a page's copy never lives in a component, a `page.tsx` or `src/config/`. The site template's `AGENTS.md` says it in one always-loaded bullet, which § 1 of the migration guide lists for existing sites.
+- `docs/migrating-to-0.8.0.md` § 3.9, pages as content files: for a site whose pages are hand-written routes, one page per commit, each proven identical, then the exceptions for what stays outside the engine.
+- The example's FAQ section marks its `variant:` note `aria-hidden`, a wireframe note like a `TypeTag`; no pixel moves.
 
 ## [0.7.6] — 2026-10-13
 
