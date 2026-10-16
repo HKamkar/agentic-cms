@@ -9,10 +9,11 @@
 // next build and the SEO audit — its lint and its tests through the
 // installed command line; then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
-// layer, the form endpoint's server half, the consent entries and the class
-// helpers in plain Node) and the tarball's size; last, a second site laid
-// out by the installed `init --light-only` builds, lints and tests too, with
-// no theme script in its pages. Exit 1 on the first failure.
+// layer, the form endpoint's server half, the consent entries, the class
+// helpers and the component lint in plain Node) and the tarball's size;
+// last, a second site laid out by the installed `init --light-only` builds,
+// lints and tests too, with no theme script in its pages. Exit 1 on the
+// first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -144,6 +145,7 @@ function entries(site) {
   const consentEntries = node(site, CONSENT_SMOKE);
   if (consentEntries.status !== 0 || consentEntries.stdout.trim() !== "granted true function function") fail(`agentic-cms/consent from the tarball answered ${consentEntries.status}: ${(consentEntries.stderr || consentEntries.stdout).trim()}`);
   classHelpers(site);
+  componentLint(site);
 }
 const node = (cwd, source) => spawnSync(process.execPath, ["--input-type=module", "-e", source], { cwd, encoding: "utf8" });
 
@@ -165,6 +167,14 @@ function classHelpers(site) {
   const types = fs.readFileSync(path.join(site, "node_modules/agentic-cms/dist/cx.d.ts"), "utf8");
   if (!/\bVariantProps\b/.test(types) || !/\bvariants\b/.test(types)) fail("the tarball's agentic-cms/cx types lack variants or VariantProps");
 }
+/** agentic-cms/eslint, the export the example's eslint.config.mjs imports, loads in plain Node and builds the component configs, a missing layer allowed. */
+function componentLint(site) {
+  const lint = node(site, ESLINT_SMOKE);
+  if (lint.status !== 0 || lint.stdout.trim() !== "true true") fail(`agentic-cms/eslint from the tarball answered ${lint.status}: ${(lint.stderr || lint.stdout).trim()}`);
+}
+const ESLINT_SMOKE = `const { componentRules } = await import("agentic-cms/eslint");
+const configs = componentRules({ motion: null, patterns: null });
+console.log(configs.length > 0, configs.some((config) => Boolean(config.rules?.["react/forbid-elements"])));`;
 const CX_SMOKE = `const { cx, variants } = await import("agentic-cms/cx");
 const box = variants({ base: "border", variants: { size: { md: "p-4", lg: "p-8" } }, defaults: { size: "md" } });
 let refused = "";
