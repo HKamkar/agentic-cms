@@ -32,6 +32,11 @@ export const SPIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="ut
 const observer = new IntersectionObserver((entries) => { for (const { target, isIntersecting } of entries) { clearInterval(target.timer); if (!isIntersecting) { target.classList.remove("on"); continue; } target.classList.add("seen"); restart(target); target.timer = setInterval(() => restart(target), 700); } });
 for (const tile of document.querySelectorAll(".tile")) observer.observe(tile);</script></body></html>`;
 
+// A page with one lazy image far below the fold, 400 × 400, at /images/late.svg: a test that serves the page
+// itself decides when (or whether) that image arrives.
+export const LAZY_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Lazy</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } .gap { height: 1600px; }</style></head>
+<body><main><section data-section="gap" class="gap"><h1>Far above the image</h1></section><section data-section="late"><img loading="lazy" src="/images/late.svg" width="400" height="400" alt="late"></section></main></body></html>`;
+
 // A page that shows a banner until a choice is stored, the way a consent banner does: its first inline
 // <head> script reads localStorage.consent (and sessionStorage.tab), notes what it found and, finding no
 // record, marks <html> so a fixed 240×64 box shows over the page's text, with a 16 px close icon (an

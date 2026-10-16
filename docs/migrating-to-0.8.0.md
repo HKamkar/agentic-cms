@@ -268,9 +268,24 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
   prints each scene's own page, `/scene/<name>`, on every address.
 
-**Check:** the verify block, then `pnpm kit visual-parity proof upgrade --ref develop --build`.
-It must be identical. If it isn't, that is a kit bug: report it with the
-compare's `cause:` line rather than adjusting the site.
+**Check:** the verify block, then
+`pnpm kit visual-parity proof upgrade --ref develop --build --all`: the
+static pass, `--states` and `--motion`, in each scheme the site has. Every
+pass must be identical: each page shot, each state's box, and each
+`--motion` step's settled frame. A mid-flight frame (`-150`, `-500`) that
+differs is re-run once with `--fresh`, and identical then is accepted; a
+`FLAKY` line is a shot taken with an image still loading, retaken with
+`--pages <route> --fresh`. Any other difference is a kit bug: report it
+with the `cause:` line the compare prints under it rather than adjusting
+the site.
+
+The baseline is built in a sibling worktree, `../<checkout>-ref-<sha>`
+(this checkout's folder name and the first 12 characters of `develop`'s
+sha), with a full `pnpm install` and `pnpm build`: minutes the first time,
+reused while `develop` stays at that sha, and replaced when it moves. Once
+the migration is merged, remove it with
+`git worktree remove ../<checkout>-ref-<sha>`, and the captures with
+`pnpm kit visual-parity clean` (`--cache` empties the shot cache too).
 
 ## 2. Breaking changes
 

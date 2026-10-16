@@ -97,7 +97,8 @@ test("compareCapture: two capture directories give the report, the lines and the
   assert.equal(byName["only@40.png"].in, "before");
   assert.equal(byName["home@40.animations.json"].status, "CHANGED");
   assert.deepEqual(byName["home@40.animations.json"].onlyAfter, [{ name: "y" }]);
-  assert.deepEqual(report.summary, { ok: 1, changed: 2, size: 1, missing: 1, exit: 1 });
+  assert.deepEqual(report.summary, { ok: 1, changed: 2, size: 1, missing: 1, flaky: 0, exit: 1 });
+  for (const file of report.files.filter((f) => f.status !== "ok")) assert.match(causeLine(file.cause), /^cause: \S/, `${file.name} carries a cause`);
   assert.equal(report.baseline.sha, "abc123");
   assert.match(report.files.find((f) => f.name === "about@40.png").line, /^SIZE {5}about@40\.png +40x300 -> 40x330 \(\+30\) {2}same to row 100, tail 190 rows, band 100-110 -> 100-140: shift$/);
   assert.match(byName["blog@40.png"].line, /^CHANGED {2}blog@40\.png +0\.333% \(40 px\) rows 10-10$/);
@@ -152,7 +153,7 @@ test("explainShift names the first section whose height moved, a fraction of a p
   assert.equal(explainShift(before, before.map((s) => ({ ...s, height: s.height + 0.004 }))), null, "within 0.01 px is layout noise");
 });
 
-test("compareCapture gives a changed page shot its cause from both captures' geometry; a shot without geometry gets null, a menu shot none", async () => {
+test("compareCapture gives a changed page shot its cause from both captures' geometry; a side without geometry says so, a menu shot says what it is", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-cause-"));
   const write = async (label, name, rows) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(rows); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
   const before = page(100), after = [...before]; after[60] = [250, 250, 250];
@@ -164,9 +165,53 @@ test("compareCapture gives a changed page shot its cause from both captures' geo
   const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20 });
   const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
   assert.equal(byName["home@40.png"].cause.delta, 0.5);
-  assert.equal(byName["about@40.png"].cause, null, "the after capture has no geometry for it");
-  assert.ok(!("cause" in byName["home@40--menu.png"]), "a menu shot has no geometry by kind");
+  assert.deepEqual(byName["about@40.png"].cause, { kind: "geometry", lacking: ["after"] }, "the after capture has no geometry for it");
+  assert.equal(causeLine(byName["about@40.png"].cause), "cause: unknown, no section geometry in the after capture; recapture it to have the section named");
+  assert.equal(byName["home@40--menu.png"].cause.kind, "frame", "a menu shot has no geometry by kind, and says what it shows");
+  assert.match(causeLine(byName["home@40--menu.png"].cause), /^cause: the open menu, a viewport shot, row 60: no section geometry/);
   assert.ok(!report.files.some((f) => f.name.endsWith(".sections.json")), "geometry annotates, it is not judged");
   assert.deepEqual(report.geometry, { before: true, after: true });
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("every line that is not ok carries a cause: an image still loading is FLAKY, a change inside one section names it, a missing file says why, an inventory names its first difference", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-every-cause-"));
+  const write = async (label, name, rows) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(rows); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  const json = (label, name, value) => fs.writeFileSync(path.join(dir, label, name), JSON.stringify(value));
+  const before = page(100), after = [...before]; after[70] = [250, 250, 250];
+  const geo = [{ id: "hero", section: "hero", top: 0, height: 50 }, { id: null, section: "cards", top: 50, height: 50 }];
+  // blank: the after side's shot was taken with an image still loading; inside: one section's content changed, nothing moved
+  for (const name of ["blank@40.png", "inside@40.png", "home@40--s01-500.png", "home@40--s01-settled.png", "home@1440--state-cta-hover.png"]) { await write("a", name, before); await write("b", name, after); }
+  for (const label of ["a", "b"]) for (const shot of ["blank@40", "inside@40"]) json(label, `${shot}.sections.json`, geo);
+  json("b", "blank@40.unloaded.json", [{ src: "/images/x.webp", top: 64, left: 0, width: 40, height: 20 }]);
+  await write("a", "gone@40.png", before);
+  await write("a", "inside@80.png", before);
+  await write("a", "home@40--s02-500.png", before);
+  await write("a", "home@1440--state-post-faq-open.png", before);
+  json("b", "capture.json", { skipped: [{ state: "post-faq-open", page: "/blog-post/a", file: "home@1440--state-post-faq-open.png", reason: "no target" }] });
+  json("a", "home@40.animations.json", [{ type: "CSSAnimation", name: "fade", target: { tag: "h1", top: 10 } }]);
+  json("b", "home@40.animations.json", []);
+  json("a", "home@40.settle.json", [{ step: 0, waited: 2000 }, { step: 1, waited: 2000 }]);
+  json("b", "home@40.settle.json", [{ step: 0, waited: 2000 }, { step: 1, waited: 2600 }]);
+  // a mid-flight threshold under the 1 % this one row changes, so the mid-flight frame differs too
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 0.5 });
+  const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
+  const lineOf = (name) => causeLine(byName[name].cause);
+  for (const file of report.files) assert.ok(file.status === "ok" || /^cause: \S/.test(causeLine(file.cause)), `${file.name} (${file.status}) carries a cause`);
+  assert.equal(byName["blank@40.png"].status, "FLAKY");
+  assert.match(byName["blank@40.png"].line, /^FLAKY {4}blank@40\.png/);
+  assert.equal(lineOf("blank@40.png"), "cause: image not loaded on after at y=64 (/images/x.webp, 40x20): the shot is not evidence; retake the page with --fresh");
+  assert.equal(lineOf("inside@40.png"), "cause: no section moved; the change at row 70 is inside cards: its content changed in place");
+  assert.match(lineOf("home@40--s01-500.png"), /^cause: scroll step 1, 500 ms after it \(mid-flight: re-run once with --fresh/);
+  assert.match(lineOf("home@40--s01-settled.png"), /^cause: scroll step 1, settled \(a settled frame never jitters: the difference is real\)/);
+  assert.match(lineOf("home@1440--state-cta-hover.png"), /^cause: the cta-hover state's box/);
+  assert.equal(lineOf("gone@40.png"), "cause: only in the before capture: the after capture has no gone page (one added or removed, or a capture of other pages)");
+  assert.equal(lineOf("inside@80.png"), "cause: only in the before capture: the after capture took inside at 40 only");
+  assert.match(lineOf("home@40--s02-500.png"), /^cause: only in the before capture: the after capture's home@40 has a different number of scroll steps/);
+  assert.equal(lineOf("home@1440--state-post-faq-open.png"), "cause: only in the before capture: the after capture found no target for the post-faq-open state on /blog-post/a, and skipped it");
+  assert.equal(lineOf("home@40.animations.json"), "cause: 1 animation only before, 0 only after; the first: CSSAnimation fade on h1 at top 10 (before)");
+  assert.equal(lineOf("home@40.settle.json"), "cause: step 1 waited 2000 → 2600 ms");
+  assert.equal(report.summary.flaky, 1);
+  assert.equal(report.summary.exit, 1, "a flaky shot proves nothing: the compare does not pass it");
   fs.rmSync(dir, { recursive: true, force: true });
 });

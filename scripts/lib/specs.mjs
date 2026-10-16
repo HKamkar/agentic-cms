@@ -108,7 +108,7 @@ export const SPECS = {
         positionals: [{ name: "label", required: true, help: "the capture's name under .parity/visual/" }],
         flags: {
           motion: { type: "boolean", help: "play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation" },
-          states: { type: "boolean", help: "hover, focus, checked and open states, located by role and text" },
+          states: { type: "boolean", help: "hover, focus, checked and open states, located by role and text; a state whose target the page lacks is skipped and listed in capture.json" },
           scheme: scheme("prefers-color-scheme for the capture"),
           url: { type: "string", value: "<base>", help: "capture a served site instead of serving .next (print its git log -1 first)" },
           build: { type: "boolean", help: "run the site's `pnpm build` first (log: .parity/<label>.build.log)" },
@@ -124,8 +124,8 @@ export const SPECS = {
           json: { type: "boolean", help: "print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished)" },
         },
         examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json", "agentic-cms visual-parity capture after --storage 'consent={\"analytics\":\"denied\",\"at\":\"{now}\"}'"],
-        exit: { 0: "captured", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named)" },
-        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }",
+        exit: { 0: "captured (a static shot taken with an image still loading after a reload is recorded beside it as <page>@<width>.unloaded.json, and a compare calls it FLAKY)", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named)" },
+        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }",
       },
       compare: {
         command: "visual-parity compare", summary: "diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/",
@@ -139,8 +139,8 @@ export const SPECS = {
           json: { type: "boolean", help: "print the report as JSON (also written as report.json in the diff directory)" },
         },
         examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog", "agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes"],
-        exit: { 0: "identical within the thresholds", 1: "a difference, a size change or a missing file", 2: "usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed)" },
-        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }",
+        exit: { 0: "identical within the thresholds", 1: "a difference, a size change, a missing file or a flaky shot (one taken with an image still loading); each line that is not ok has its cause: line under it", 2: "usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed)" },
+        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional } | { kind: unloaded | in-place | geometry | frame | missing | inventory | settle, … } }] }",
       },
       proof: {
         command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference",

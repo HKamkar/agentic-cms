@@ -252,7 +252,9 @@ seed or (for `--states`) the site's config starts from nothing, and a `--url`
 capture reuses nothing. The menu is a setting of the page-widths that open
 it alone — the home page of a static capture at the menu's widths — so a
 change to those widths retakes the home page there and reuses every other
-page-width. `--fresh` takes every shot again and refreshes the cache: to
+page-width. A shot taken with an image still loading (below) and a state
+skipped for want of its target are never stored, so a later capture takes
+them again. `--fresh` takes every shot again and refreshes the cache: to
 prove a frame deterministic, or whenever a copied shot is in doubt. Four
 entries are kept per page-width, the least recently used going first;
 `visual-parity clean --cache` empties it.
@@ -333,10 +335,18 @@ Motion mode covers every page of the build and its first post.
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a
 checkbox checked; the first FAQ open on the first page that has one and on
-the first post. Elements are located by role and text from the site's
-config and page files (`src/kit.ts`), never by class, so the same list
-works before and after a markup rewrite. Each shot is the element's box
-with a margin, at 1440 (`home@1440--state-cta-hover.png`).
+the first post whose body has one (the kit's own test, the FAQPage its page
+emits: the accordion's toggle gets its `aria-expanded` only once the page
+hydrates, so the built HTML cannot say). A build without such a page or
+post has no row for it. Elements are located by role and text from the
+site's config and page files (`src/kit.ts`), never by class, so the same
+list works before and after a markup rewrite. Each shot is the element's
+box with a margin, at 1440 (`home@1440--state-cta-hover.png`). A state
+whose target does not show within 10 s of the page being ready is skipped,
+`<state> (skipped: no target)` on the progress line and `skipped: [{ state,
+page, file, reason }]` in `capture.json`, and the run goes on; the compare
+calls its shot `MISSING` and says which side skipped it. It used to time
+out twice and end the run.
 
 `--scheme dark` renders any mode under `prefers-color-scheme: dark`; without
 the flag a capture takes the first of the profile's schemes, else light.
@@ -355,9 +365,15 @@ baseline: develop 55ab6af3d59bee8ce99b1e572c2bbf5ba360f106
 seed: storage consent={"analytics":"denied","at":"{now}","version":1}, on both
 ok       home@1440.png                                                          0.000% (0 px)
 CHANGED  about@390.png                                                          0.412% (1234 px) rows 2017-2060
+         cause: no section moved; the change at rows 2017-2060 is inside cards: its content changed in place
 CHANGED  home@1440--s02-500.png                                                18.100% (…)  mid-flight
+         cause: scroll step 2, 500 ms after it (mid-flight: re-run once with --fresh, and identical then means accepted)
 SIZE     blog@800.png                                                           800x3160 -> 800x3210 (+50)  same to row 1204, tail 1550 rows, band 1204-1610 -> 1204-1660: shift
+         cause: hero height 812.000 → 862.000 (+50.000 px)
+FLAKY    blog-post__pages-are-files@1440.png                                    3.214% (…) rows 3320-3610
+         cause: image not loaded on before at y=3320 (/images/blog/pages-are-files-mid.webp, 1440x810): the shot is not evidence; retake the page with --fresh
 MISSING  contact@1920.png (only in before)
+         cause: only in the before capture: the after capture took contact at 390, 768, 1440 only
 ok       home@1440.animations.json                                              12 -> 12 animations
 ```
 
@@ -386,15 +402,32 @@ ok       home@1440.animations.json                                              
 
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
-- `cause:` — under a `SIZE` or `CHANGED` page shot, the section behind it,
-  from the geometry a static capture writes beside each shot
-  (`<page>@<width>.sections.json`: every `[data-section]`, else the header,
-  `main`'s children and the footer, with its top and height in fractional
-  pixels): the first one in page order whose height changed, and by how
-  much — `fractional` when the change is not a whole pixel — or the first
-  whose top moved, when something above the sections changed. No section
-  measured by hand. A capture from before the kit wrote geometry has none;
-  the compare says so and names the capture to redo.
+- `FLAKY`: a static shot that differs and that one side took with an image
+  still loading, after a reload had not brought it (below): the empty box
+  is the capture's, not the build's, so the line proves nothing either way.
+  Retake that page with `--pages <route> --fresh`. It counts against the
+  exit like any other line that is not `ok`.
+- `cause:` — under every line that is not `ok`, what is behind it:
+  - a page shot's section, from the geometry a static capture writes beside
+    each shot (`<page>@<width>.sections.json`: every `[data-section]`, else
+    the header, `main`'s children and the footer, with its top and height
+    in fractional pixels): the first one in page order whose height
+    changed, and by how much — `fractional` when the change is not a whole
+    pixel — or the first whose top moved, when something above the
+    sections changed; when none moved, the section whose box holds the
+    first changed row, whose content changed in place. No section measured
+    by hand. A capture from before the kit wrote geometry has none; the
+    cause says so and names the side to redo;
+  - on a `FLAKY` line, the image that had not arrived: its side, its place
+    and its source;
+  - for a shot that has no geometry by kind, what it shows: the open menu,
+    a motion step's frame (a mid-flight one may move with timing, a settled
+    one never does) or a state's box; the diff image shows where;
+  - for a `MISSING` file, why the other side lacks it: a state it skipped
+    for want of a target, a page it did not take at all or not at that
+    width, or a motion step past its end because the page's height changed;
+  - for an inventory, how many animations each side alone has and the first
+    of them; for a settle record, the step whose wait changed.
 - `MISSING`: a file only one capture has (a page added or removed, or a
   partial capture without `--pages` on the compare). With `--pages` the
   compare judges only those pages' files, on both sides, and of the before
@@ -406,10 +439,10 @@ ok       home@1440.animations.json                                              
   differ; the diff directory then holds the entries only one side has.
 
 `--json` prints the same as one document (`{ before, after, scheme,
-baseline, summary: { ok, changed, size, missing, exit }, files: [{ name,
-kind, status, line, … }] }`; every file's entry carries its printed `line`
-and its numbers) and it is always written as `report.json` in the `-vs-`
-directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
+baseline, summary: { ok, changed, size, missing, flaky, exit }, files: [{
+name, kind, status, line, cause, … }] }`; every file's entry carries its
+printed `line` and its numbers, and every one that is not `ok` its `cause`)
+and it is always written as `report.json` in the `-vs-` directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
 a usage error, a missing capture or two captures of different schemes.
 
 ## What the harness waits for, and why
@@ -425,10 +458,22 @@ slows the capture instead of photographing a reveal before it ran — each
 600 px step done once the page has not changed (no DOM mutation) for two
 frames in a row, two frames at least and never more than eight, so a busy
 section gets the eight a step always had and a quiet one is not held; every
-image loaded; and, on a site whose footer hairlines are drawn by a sequence
+image arrived and decoded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
 a stalled page.
+
+An image is waited for until it has arrived and then decoded
+(`img.decode()`): arrived is not painted, and a renderer may decode a large
+image off its main thread and draw the box empty until it has. The wait
+listens beside the page's own `load` handlers, never in place of them, and
+gives up after 10 s. Then, just before the shot, every image that shows and
+has not arrived is counted: a page with one is loaded again, once, as a
+stalled one is; if the second load still has one, the shot is taken, the
+images are listed beside it (`<page>@<width>.unloaded.json`: source, place,
+size), the shot is kept out of the cache and the compare calls a difference
+on it `FLAKY` with that image as its cause. A broken image (a 404) is the
+build's, and is photographed as it is.
 
 The scroll-through exists to run what entering the view runs — reveals,
 lazy images, observers — so it runs with every element `visibility:
