@@ -306,6 +306,32 @@ changes what a capture writes says **recapture baselines**.
 - The browser suite's dev server runs on `scripts/lib/dev-server.mjs`, the
   helper `serve` uses (next dev started, watched and stopped by process
   group); its `stop()` now resolves once the server exited.
+- `agentic-cms check-components`, the component library's placement
+  guard: the layers there and every file under `src/components` in one,
+  every component the motion layer, `ui/` and `patterns/` export named in
+  the catalogue (a PascalCase name with a lowercase letter, so an ALL_CAPS
+  constant passes), every component in a section folder imported by the
+  registry, route files only in `src/app`'s known route folders (a `*-demo`
+  folder is free), no component elsewhere in `src/`, CSS modules only in
+  `ui/` and the motion layer and `@keyframes` only there and in
+  `src/styles/motion.css`. A running design round's candidates (its
+  `demo.json`) and the files on the config's frozen `inherited` list pass;
+  a listed file that is gone is a finding. Each finding names its fix; exit
+  1 on any, 2 without a config. The config is `src/config/components.json`,
+  its layer keys `componentRules()`'s; the example's freezes the blog's
+  post template (`docs/primitives.md` § Placed).
+- `pnpm lint` runs ESLint, then the guard, and fails on either while both
+  report — the kit's own, and the one `init` writes into a new site's
+  `package.json`: `eslint; s=$?; agentic-cms check-components || s=1;
+  exit $s`. `pnpm test:pack` lints a fresh site with it, and a stray
+  section file planted there fails the lint.
+- A site's components rule, `templates/site/rules/components.md`, and with
+  it agent files that follow the tool they describe: `init --agent-files`
+  writes and checks the components rule only where the site has
+  `src/config/components.json`. A site on 0.7.6 without it is neither
+  given the rule nor told it is missing, and `--check` stays clean; a new
+  site from `init` gets the config, the rule and the lint script together
+  (`docs/migrating-to-0.8.0.md` § 3.7).
 
 ## [0.7.6] — 2026-10-13
 

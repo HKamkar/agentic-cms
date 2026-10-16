@@ -368,7 +368,9 @@ section's `<h2>`; body copy as a bare `<p>`; the icon a `Media` in its `icon`
 box, the file's own size in the attributes. A call to action would be
 `<Button href={site.links.contact} label={cta} />`. No raw element and no box
 of its own: `pnpm lint` fails a section that writes either (the component
-rules, `agentic-cms/eslint`; `src/components/README.md` § Library first).
+rules, `agentic-cms/eslint`), and a section file the registry does not
+import (the placement guard, `agentic-cms check-components`;
+`src/components/README.md` § Library first).
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.
 
