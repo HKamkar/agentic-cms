@@ -29,7 +29,9 @@ rules for an agent working on the code.
   what headless cannot show; the engines' differences.
 - [primitives.md](primitives.md) — what a new site builds first: the
   tokens, what the kit provides, the day-one primitives against what the
-  example has, what waits for a second use, the rules every one follows.
+  example has, what waits for a second use, the rules every one follows,
+  and the lint that keeps every section built from them
+  (`agentic-cms/eslint`).
 - [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
   Tailwind, CSS and SVG, measuring, pnpm, git and GitHub, services; each
   the symptom, the reason and what to do.

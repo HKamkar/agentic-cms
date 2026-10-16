@@ -1,4 +1,5 @@
 import type { SectionProps } from "@/components/sections/schemas";
+import { Heading } from "@/components/ui/Heading";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 
@@ -11,7 +12,7 @@ export function About({ eyebrow, statement, cards }: SectionProps<"home-about">)
       <ul className="grid gap-4 lg:grid-cols-3">
         {cards.map((entry) => (
           <Panel as="li" key={entry.title} className={card}>
-            <h3>{entry.title}</h3>
+            <Heading as="h3">{entry.title}</Heading>
             <p className="text-h1 font-semibold">{entry.stat}</p>
             <p>{entry.text}</p>
           </Panel>

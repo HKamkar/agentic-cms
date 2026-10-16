@@ -166,7 +166,7 @@ kind; it is plain CSS (no `@apply`, no preprocessor nesting), spells its
 breakpoints out, and joins the utilities with `cx()` from `src/lib/cx.ts`:
 
 ```tsx
-faq: cx(styles.faq, "mb-8 border border-line"),
+faq: cx(styles.faq, panel(), "mb-8"),
 ```
 
 Because preflight already zeroes them, nothing writes `m-0`, `p-0` or
@@ -216,8 +216,10 @@ Two kinds of picture, and they are not interchangeable.
   missing one; empty is fine for decoration), plus explicit size utilities.
   `base.css` sets `img { height: revert-layer }`, so an image sized by `w-full`
   carries `h-auto` with it — the content-image string is
-  `block h-auto w-full border border-line`. `ui/Media` writes exactly that
-  `<img>` from `src`, `width`, `height` and `alt`, so new markup uses it.
+  `block h-auto w-full border border-line`. A section never writes the
+  `<img>` itself (the lint fails one): `ui/Media` writes it from `src`,
+  `width`, `height` and `alt`, in the box its `size` names — `fill`, that
+  string; `icon`, a card's `size-16`; `portrait`, a review's `size-20`.
 
 Above the fold in a **server** component, use `EagerImage` (from
 `agentic-cms/components`, or `<Media eager>`): a plain eager
@@ -275,12 +277,12 @@ shared component goes into it in the same commit. In short:
 
 | Kind | Components | Rule |
 |---|---|---|
-| Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`) | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; nothing else sets a page width |
+| Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`), `ui/TypeTag` | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; the tag in the corner of each names what drew it; nothing else sets a page width |
 | Chrome | `ui/Navbar`, `ui/NavLink`, <!-- dark-mode:start -->`ui/ThemeToggle`, <!-- dark-mode:end -->`ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
 | Actions | `ui/Button` (+ `button`, `buttonClass`), `ui/OutlineButton`, `ui/IconButton` (+ `iconButton`) | a call to action is `Button`, a link; a choice on the page is `OutlineButton`, a `<button>` with `aria-pressed` when it toggles; an icon alone is `IconButton`, 44 px, its label required |
 | Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` (+ `heading`) | `Section` renders both from its props; `eyebrowText` is the same label as a class string; a heading's level is apart from its size, and its `entrance` is the play-once `Reveal`, unused here |
 | Text | `ui/TextLink`, `ui/MetaLine` (+ `metaLabel`), `keepWords` (`ui/text.ts`) | a link in copy (`next/link` for a path, a new tab for `http(s)`); small uppercase metadata; a hyphenated word kept on one line |
-| Pictures | `ui/Placeholder`, `ui/Media` | every illustration the design has not drawn; a picture the copy describes, lazy, or `EagerImage` above the fold |
+| Pictures | `ui/Placeholder`, `ui/Media` (+ `media`) | every illustration the design has not drawn; a picture the copy describes, lazy, or `EagerImage` above the fold, at the column's width or in an icon's or a portrait's box |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
 | Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
@@ -307,7 +309,7 @@ keyed by position. Every one of them renders inside `ui/Section`, the frame:
 <section id={type} data-section={type} className="py-section">
   <Container>
     <Panel className="p-6 max-md:p-4">
-      <span aria-hidden="true" className="mb-4 inline-block border border-line bg-fill px-2 font-label text-h6">{type}</span>
+      <TypeTag label={type} className="mb-4" />
       …the eyebrow, the heading, the children…
 ```
 
@@ -322,16 +324,19 @@ The shared strings, as they appear in the code:
 |---|---|
 | a card | `<Panel as="li" className="flex flex-col gap-2 p-4">` |
 | a card grid | `grid gap-4 lg:grid-cols-3` (or `-2`, `-4`) |
-| a split | `grid gap-4 lg:grid-cols-2` |
+| a split | `grid gap-4 lg:grid-cols-2` (uneven: the tokens `lg:grid-cols-2-1`, `lg:grid-cols-1-2-1`) |
 | a lead paragraph | `mb-6 max-w-prose` |
-| a content image | `block h-auto w-full border border-line` |
-| an icon | `size-16 border border-line` |
+| a card's title | `<Heading as="h3">` |
+| a content image | `<Media src width height alt />` (`block h-auto w-full border border-line`) |
+| an icon | `<Media … size="icon" />` (`size-16 border border-line`) |
 | a statistic | `text-h1 font-semibold` |
 | secondary text | `text-muted` |
 
 `src/components/about/Benefits.tsx`, whole:
 
 ```tsx
+import { Heading } from "@/components/ui/Heading";
+import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
@@ -345,8 +350,8 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
       <ul className="grid gap-4 lg:grid-cols-3">
         {cards.map((benefit) => (
           <Panel as="li" key={benefit.title} className={card}>
-            <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
-            <h3>{benefit.title}</h3>
+            <Media src={benefit.icon} width={64} height={64} alt="" size="icon" />
+            <Heading as="h3">{benefit.title}</Heading>
             <p>{benefit.text}</p>
           </Panel>
         ))}
@@ -358,10 +363,12 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
 
 A server component (nothing here needs the browser); the frame and title block
 from `Section`; cards as `Panel` list items from the section's own array, the
-layout inside them the section's own; `<h3>` after the section's `<h2>`; body
-copy as a bare `<p>`; the icon carrying its size both on the element and in the
-attributes. A call to action would be
-`<Button href={site.links.contact} label={cta} />`.
+layout inside them the section's own; the card's `<h3>` a `Heading`, after the
+section's `<h2>`; body copy as a bare `<p>`; the icon a `Media` in its `icon`
+box, the file's own size in the attributes. A call to action would be
+`<Button href={site.links.contact} label={cta} />`. No raw element and no box
+of its own: `pnpm lint` fails a section that writes either (the component
+rules, `agentic-cms/eslint`; `src/components/README.md` § Library first).
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.
 

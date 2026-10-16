@@ -1,4 +1,6 @@
 import { eyebrowText } from "@/components/ui/Eyebrow";
+import { Heading } from "@/components/ui/Heading";
+import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
@@ -14,9 +16,9 @@ export function UseCaseCards({ eyebrow, heading, cards }: SectionProps<"use-case
         {cards.map((useCase) => (
           <Panel as="li" key={useCase.sector} className={card}>
             <p className={eyebrowText}>{useCase.sector}</p>
-            <h3>{useCase.title}</h3>
+            <Heading as="h3">{useCase.title}</Heading>
             <p>{useCase.text}</p>
-            <img src={useCase.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
+            <Media src={useCase.icon} width={64} height={64} alt="" size="icon" />
           </Panel>
         ))}
       </ul>

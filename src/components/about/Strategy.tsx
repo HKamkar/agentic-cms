@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
@@ -12,7 +13,7 @@ export function Strategy({ eyebrow, heading, text, beliefsHeading, beliefs, cta 
       <div className="grid gap-4 lg:grid-cols-2">
         <Placeholder ratio="aspect-[4/3]" label="dashboard" />
         <div className="flex flex-col gap-4">
-          <h3>{beliefsHeading}</h3>
+          <Heading as="h3">{beliefsHeading}</Heading>
           <ul className="list-disc pl-5">
             {beliefs.map((belief) => (
               <li key={belief}>{belief}</li>

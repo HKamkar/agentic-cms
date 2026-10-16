@@ -1,4 +1,6 @@
 import type { SectionProps } from "@/components/sections/schemas";
+import { Heading } from "@/components/ui/Heading";
+import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 
@@ -12,16 +14,16 @@ export function ChooseUs({ eyebrow, heading, items, demo, stats }: SectionProps<
         <ul className="grid gap-4">
           {items.map((item) => (
             <Panel as="li" key={item.title} className={card}>
-              <img src={item.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-line" />
-              <h3>{item.title}</h3>
+              <Media src={item.icon} width={64} height={64} alt="" size="icon" />
+              <Heading as="h3">{item.title}</Heading>
               <p>{item.text}</p>
             </Panel>
           ))}
         </ul>
         <Panel className="grid gap-2 p-4">
-          <h3>{demo.title}</h3>
-          <img src={demo.image} width={800} height={400} alt={demo.imageAlt} loading="lazy" className="block h-auto w-full border border-line" />
-          <img src={stats.image} width={800} height={450} alt={stats.imageAlt} loading="lazy" className="block h-auto w-full border border-line" />
+          <Heading as="h3">{demo.title}</Heading>
+          <Media src={demo.image} width={800} height={400} alt={demo.imageAlt} />
+          <Media src={stats.image} width={800} height={450} alt={stats.imageAlt} />
         </Panel>
       </div>
     </Section>

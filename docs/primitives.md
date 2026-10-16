@@ -90,3 +90,45 @@ site names an exception, in the catalogue, with its reason.
 - **Values:** tokens only. A state the page has before its scripts run
   (pre-paint) keys on a `data-` or `aria-` attribute, never on a class,
   so the critical CSS keeps its rule ([deploy.md § Critical CSS](deploy.md#critical-css)).
+
+## Enforced: `agentic-cms/eslint`
+
+The library holds only while nothing else draws UI, and the lint says so.
+`componentRules(options)` from `agentic-cms/eslint` returns flat ESLint
+configs; spread them after `eslint-config-next`, which registers the
+`react` plugin two of the rules come from:
+
+```js
+import { componentRules } from "agentic-cms/eslint";
+
+export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ sections: ["sections"] })]);
+```
+
+- **The layers import one way:** motion ← `ui/` ← `patterns/` ← the
+  sections. A primitive imports no pattern and no section, a pattern no
+  section, the motion layer none of them. Only the motion layer imports
+  `motion`, `framer-motion` or `agentic-cms/ix`; with no motion folder
+  (`motion: null`) `agentic-cms/ix` is the motion layer, and the two
+  libraries stay out of `src` altogether.
+- **A section or a pattern composes:** one component per file; no raw
+  `button`, `a`, `img`, `picture`, `video`, form field or `h1`–`h6` (and no
+  `svg` in a section), each message naming the primitive to use; no `style`;
+  no arbitrary value (`[…]`, `(…)`); no fill, border, radius, ring, outline,
+  divider, shadow, transition or animation class, whether the class string
+  is a `className` literal, a template literal or a `cx()` argument.
+
+| Option | Default | What it is |
+|---|---|---|
+| `root` | `"src/components"` | where the layers' folders are |
+| `motion`, `ui`, `patterns` | `"motion"`, `"ui"`, `"patterns"` | each layer's folder under `root`; `null` for a layer the site does not have |
+| `sections` | `["sections"]` | the section folders under `root` |
+| `registry` | `"sections/render.tsx"` | the section registry under `root`, left out of the section rules: it imports every section |
+| `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
+| `ignores` | `[]` | globs left out of every rule |
+| `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban covers, and the tsconfig alias for it |
+
+The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`
+and its six section folders, the page folders with `sections/` and
+`blog/`. A rule a site cannot meet yet is a new primitive or option, never
+a rule turned off in passing; loosening one is its own pull request, said
+so in its title.

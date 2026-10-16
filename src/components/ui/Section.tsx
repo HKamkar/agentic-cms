@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Heading } from "@/components/ui/Heading";
 import { Panel } from "@/components/ui/Panel";
+import { TypeTag } from "@/components/ui/TypeTag";
 import { cx } from "agentic-cms/cx";
 
 /**
@@ -18,9 +19,7 @@ export function Section({ type, eyebrow, heading, headingAs = "h2", className, c
     <section id={type} data-section={type} className={cx("py-section", className)}>
       <Container>
         <Panel className="p-6 max-md:p-4">
-          <span aria-hidden="true" className="mb-4 inline-block border border-line bg-fill px-2 font-label text-h6">
-            {type}
-          </span>
+          <TypeTag label={type} className="mb-4" />
           {titled && (
             <div className="mb-6 flex flex-col gap-2">
               {eyebrow && <Eyebrow label={eyebrow} className="self-start" />}

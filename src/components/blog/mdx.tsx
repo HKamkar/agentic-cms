@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactNode } from "react";
+import { TextLink } from "@/components/ui/TextLink";
 import type { MDXComponents } from "agentic-cms/blog";
 
 type FxProps = { as?: ElementType; delay?: number | string; children?: ReactNode; [attr: string]: unknown };
@@ -16,19 +16,10 @@ export const mdxComponents: MDXComponents = {
     const { as = "div", children } = props;
     return createElement(as, Object.fromEntries(Object.entries(props).filter(([attr]) => !WRAPPER_PROPS.includes(attr))), children);
   },
-  a: ({ href = "", children, ...rest }: ComponentPropsWithoutRef<"a">) => {
-    if (href.startsWith("/") || href.startsWith("#")) {
-      return (
-        <Link href={href} {...rest}>
-          {children}
-        </Link>
-      );
-    }
-    const external = /^https?:\/\//.test(href);
-    return (
-      <a href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})} {...rest}>
-        {children}
-      </a>
-    );
-  },
+  // A body's links are TextLink: internal ones through next/link, external ones in a new tab.
+  a: ({ href = "", children, ...rest }: ComponentPropsWithoutRef<"a">) => (
+    <TextLink href={href} {...rest}>
+      {children}
+    </TextLink>
+  ),
 } as MDXComponents;
