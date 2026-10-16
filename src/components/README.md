@@ -37,9 +37,21 @@ in `src/`, it fails an import that goes the wrong way between the layers:
 
 Nothing outside the motion layer imports `motion` or `framer-motion`; a
 site that adds a `motion/` folder wraps `agentic-cms/ix` there too, and the
-lint then keeps it out of the other layers. A rule the library cannot meet yet is a new primitive or option, never a
-rule turned off in passing: loosening one is its own pull request, said so
-in its title.
+lint then keeps it out of the other layers.
+
+Then `pnpm lint` runs `agentic-cms check-components`, the placement guard,
+configured in `src/config/components.json`: every file under
+`src/components` sits in a layer; every component `ui/` exports is named
+in this file, in backticks, in the same commit that adds it; every
+component in a section folder is a section `sections/render.tsx` imports;
+`src/app` holds route files only, in its known route folders; no component
+lives elsewhere in `src/`; CSS modules only in `ui/` (and a motion folder),
+`@keyframes` only in `src/styles/motion.css`. The blog's post template,
+which the blog routes render rather than the registry, is on the guard's
+frozen `inherited` list. A rule the library cannot meet yet is a new
+primitive or option, never a rule turned off in passing: loosening one —
+a rule, a layer, a route folder, an `inherited` file — is its own pull
+request, said so in its title.
 
 ## Extending a primitive
 

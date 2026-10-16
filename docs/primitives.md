@@ -132,3 +132,61 @@ and its six section folders, the page folders with `sections/` and
 `blog/`. A rule a site cannot meet yet is a new primitive or option, never
 a rule turned off in passing; loosening one is its own pull request, said
 so in its title.
+
+## Placed: `agentic-cms check-components`
+
+ESLint judges what a file contains; the placement guard judges where files
+are and what declares them, so a one-off component cannot hide in a page
+folder or a route. `pnpm lint` runs both and fails on either, while both
+report:
+
+```json
+"lint": "eslint; s=$?; agentic-cms check-components || s=1; exit $s"
+```
+
+It checks that:
+
+- **the layers exist** (a layer the config sets to `null` is one the site
+  does not have), and every file under `src/components` sits in one, or is
+  the catalogue;
+- **the catalogue names every component** the motion layer, `ui/` and
+  `patterns/` export, in backticks (`` `Faq` ``, `` `ui/Faq.tsx` `` or
+  `` `<Faq …/>` ``). A component is a PascalCase name with a lowercase
+  letter, so an ALL_CAPS constant (`BUTTON_SIZES`) is none, and a type is
+  none either;
+- **every component in a section folder is a section** the registry
+  (`sections/render.tsx`) imports, by the alias or relatively;
+- **`src/app` holds route files only** (`page`, `layout`, `route`,
+  `not-found`, `error`, the metadata files, `globals.css`) in the folders
+  `routes` names. A `*-demo` folder, a design round's or the lab's
+  `lab-demo`, is free: the SEO audit already keeps it out of a build;
+- **no component (`.tsx`, `.jsx`) outside `src/components` and `src/app`**;
+- **CSS modules only in `ui/` and the motion layer, `@keyframes` only in
+  the motion layer and `src/styles/motion.css`**.
+
+A running design round's candidates pass: the files its `demo.json` lists
+under `created`, with their `module.css`, until `demo clean` takes them.
+Each finding names its file, the check and the fix; exit 1 on any, 2 when
+the config is missing or does not read ([commands.md](commands.md#check-components)).
+
+The config is `src/config/components.json`. Its layer keys are
+`componentRules()`'s options, with the same defaults, so the two tools
+read the same folders; keep them alike. A key starting with `$` is a
+comment.
+
+| Key | Default | What it is |
+|---|---|---|
+| `root`, `motion`, `ui`, `patterns`, `sections`, `registry`, `ignores`, `src`, `alias` | as in `componentRules()` | the layers, the section folders, the registry, the globs left out of every check |
+| `catalogue` | `"README.md"` | the catalogue, under `root` |
+| `routes` | the example's five | the folders under `src/app` that hold a route's files |
+| `app` | `"src/app"` | the app folder |
+| `motionCss` | `"src/styles/motion.css"` | the stylesheet that holds the motion layer's start states and keyframes |
+| `inherited` | `[]` | files the guard leaves alone, frozen |
+
+`inherited` is how a site adopts the guard without rewriting anything: it
+lists every file that does not fit yet, and the list only shrinks. Nothing
+joins it, a file leaves it when the library replaces it, and a listed file
+that is gone is a finding until its line goes. The example's holds the
+blog's post template, which the blog routes render rather than the
+registry. Adding a route folder, an `inherited` file or an `ignores` glob
+loosens the guard: its own pull request, said so in its title.

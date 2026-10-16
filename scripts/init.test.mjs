@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { parse as parseYaml } from "yaml";
-import { agentFiles, ALLOW_BUILDS, EXAMPLE, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
+import { checkComponents, formatReport } from "./lib/check-components.mjs";
+import { agentFiles, ALLOW_BUILDS, EXAMPLE, LINT, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
 
@@ -17,7 +18,7 @@ const quiet = { log: () => {} };
 test("scaffold lays out a site from the package: the example, the agent files, the config, a manifest", () => {
   const target = path.join(tmp(), "my-site");
   const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
+  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/rules/components.md", "src/config/components.json", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
     assert.ok(fs.existsSync(path.join(target, file)), file);
   }
   assert.ok(!fs.existsSync(path.join(target, "src/lib")), "nothing of the package's source");
@@ -31,6 +32,10 @@ test("scaffold lays out a site from the package: the example, the agent files, t
   assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo");
   assert.equal(pkg.scripts.kit, "agentic-cms");
   assert.equal(pkg.scripts.urls, "agentic-cms urls");
+  assert.equal(pkg.scripts.lint, "eslint; s=$?; agentic-cms check-components || s=1; exit $s", "the lint runs ESLint, then the guard, failing on either");
+  assert.equal(pkg.scripts.lint, LINT);
+  const guard = checkComponents({ root: target, fs });
+  assert.deepEqual(guard.findings, [], formatReport(guard).join("\n"));
   assert.ok(!("setup" in pkg.scripts), "no script named setup: pnpm setup is pnpm's own");
   assert.ok(pkg.devDependencies["playwright-core"] && pkg.devDependencies.tailwindcss && pkg.dependencies.next && pkg.dependencies.zod);
   assert.ok(!("@opennextjs/cloudflare" in pkg.devDependencies) && !("wrangler" in pkg.devDependencies));
@@ -166,6 +171,7 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
   assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
   assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{site\.cta\.href\}/, "the navbar keeps everything else");
+  assert.deepEqual(checkComponents({ root: target, fs }).findings, [], "the guard passes without the toggle and its entry");
 
   const both = path.join(tmp(), "both");
   scaffold(both, { kitRoot: KIT, version: "0.8.0", ...quiet });
@@ -230,6 +236,7 @@ test("a site's own rule that predates the manifest is kept on the first --agent-
   const status = Object.fromEntries(first.map((f) => [f.file, f.status]));
   assert.equal(status[".claude/rules/styling.md"], "kept");
   assert.equal(status[".claude/rules/design.md"], "created");
+  assert.ok(!(".claude/rules/components.md" in status), "no guard config: the components rule is not the site's");
   assert.equal(read(target, ".claude/rules/styling.md"), "the site's own styling rule\n");
   const check = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: true, ...quiet }).map((f) => [f.file, f.status]));
   assert.equal(check[".claude/rules/styling.md"], "modified", "and --check keeps calling it the site's");
@@ -265,4 +272,29 @@ test("--agent-files keeps AGENTS.md's scoped-rules table as the site's rules rea
   const size = agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: true, ...quiet }).find((f) => f.file === "AGENTS.md (size)");
   assert.equal(size.status, "too big");
   assert.ok(size.bytes > 32 * 1024);
+});
+
+test("the components rule follows the guard: a site without src/config/components.json is neither given it nor told it is missing; adopting the guard brings it", () => {
+  const target = tmp();
+  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  const status = (report) => Object.fromEntries(report.map((f) => [f.file, f.status]));
+  const rule = path.join(target, ".claude/rules/components.md");
+  // a site as 0.7.6 left it: no guard config, no components rule, nothing of either in the manifest or the table
+  fs.rmSync(path.join(target, "src/config/components.json"));
+  fs.rmSync(rule);
+  const refreshed = status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: false, ...quiet }));
+  assert.ok(!(".claude/rules/components.md" in refreshed), "not written");
+  assert.ok(!fs.existsSync(rule));
+  assert.ok(!(".claude/rules/components.md" in readManifest(target).files), "not recorded");
+  assert.doesNotMatch(read(target, "AGENTS.md"), /\[Components\]/, "the table follows the rules the site has");
+  const check = agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet });
+  assert.ok(!check.some((f) => f.file === ".claude/rules/components.md"), "not reported missing");
+  assert.deepEqual(check.filter((f) => f.status !== "ok"), [], "--check stays clean");
+  // the site adopts the guard: its config, then --agent-files
+  fs.writeFileSync(path.join(target, "src/config/components.json"), "{}\n");
+  assert.equal(status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }))[".claude/rules/components.md"], "missing");
+  assert.equal(status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: false, ...quiet }))[".claude/rules/components.md"], "created");
+  assert.equal(read(target, ".claude/rules/components.md"), read(KIT, "templates/site/rules/components.md"));
+  assert.match(read(target, "AGENTS.md"), /\| \[Components\]\(\.claude\/rules\/components\.md\) \|$/m);
+  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
 });

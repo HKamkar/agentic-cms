@@ -429,7 +429,7 @@ commit of its own.
 **If you wrote your own `variants()`:** delete it and its test, and switch
 the imports.
 
-### 3.7 The component library, enforced *(job 10)*
+### 3.7 The component library, enforced
 
 **Why:** UI is made only in the library, and ESLint and CI keep it that way:
 - the layers: `motion ← ui ← patterns ← sections`;
@@ -438,9 +438,31 @@ the imports.
 - `src/app` holds route files only.
 
 **Do:**
-1. Add the guard's config, `src/config/components.json`. List every
-   component your site already has under `inherited`: they are frozen, not
-   rewritten, and leave the list as you replace them.
+1. Add the guard's config, `src/config/components.json`, with the same
+   folders as step 2's options (`motion`, `ui`, `patterns`, `sections`,
+   `registry`, `ignores`; `null` for a layer you do not have) and your
+   route folders under `routes`, then run the guard:
+
+   ```json
+   {
+     "motion": null,
+     "patterns": null,
+     "sections": ["sections"],
+     "routes": ["src/app", "src/app/[[...slug]]", "src/app/blog-post/[slug]", "src/app/api/forms/[id]", "src/app/feed.xml"],
+     "inherited": []
+   }
+   ```
+
+   ```bash
+   pnpm exec agentic-cms check-components
+   ```
+
+   Each finding names its file and its fix. List every file it finds under
+   `inherited`: those are frozen, not rewritten, and leave the list as you
+   replace them. An export the catalogue does not name is quicker named
+   than frozen: add it, in backticks, to `src/components/README.md`
+   ([primitives.md § Placed](primitives.md#placed-agentic-cms-check-components)
+   has every key).
 2. Spread `componentRules()` from `agentic-cms/eslint` into
    `eslint.config.mjs`, after `eslint-config-next` (which registers the
    `react` plugin two of its rules use):
@@ -460,16 +482,25 @@ the imports.
    `visual-parity proof`: a raw `<img>` becomes `Media`, an `<h3>`
    `Heading`, a bordered box `Panel`, an arbitrary grid a token. A file you
    cannot move yet goes into `ignores`, with its reason, until you can.
-3. Change the lint script to
-   `eslint; s=$?; agentic-cms check-components || s=1; exit $s`.
-4. Run `init --agent-files`: with the config present, it writes the
-   components rule.
+3. Change the lint script in `package.json` to
+   `eslint; s=$?; agentic-cms check-components || s=1; exit $s`: both tools
+   report, and either fails the lint, so CI's `pnpm lint` fails too.
+4. Run `pnpm exec agentic-cms init . --agent-files`: with the config
+   present, it writes the components rule (`.claude/rules/components.md`)
+   and its row in `AGENTS.md`'s scoped-rules table. Without the config it
+   never writes the rule, and `--check` does not report it missing.
 
-**Check:** `pnpm lint` passes on the current tree. A planted violation fails
-it: a raw `<button>` in a section, or an uncatalogued export in `ui/`.
+**Check:** `pnpm lint` passes on the current tree, and
+`pnpm exec agentic-cms init . --agent-files --check` is clean. A planted
+violation fails the lint, each caught by the tool meant for it: a raw
+`<button>` in a section by ESLint; a new file in a section folder that the
+registry does not import, or an export of `ui/` the catalogue does not
+name, by the guard. Remove the plant.
 
-**If you wrote your own guard and lint:** move your config's lists into the
-kit's format, then delete your scripts and the rule you wrote.
+**If you wrote your own guard and lint:** move your config's lists into
+`src/config/components.json` (the layers, the route folders, the frozen
+list as `inherited`), then delete your scripts and the rule you wrote; the
+kit's rule replaces yours at step 4.
 
 ### 3.8 The know-how pointers
 
@@ -513,7 +544,7 @@ Each row goes only after its step works.
 | a lab-timeline patch for play-once motion | the timeline itself | 1 |
 | a play-once motion layer | `agentic-cms/ix` | 3.5 |
 | `variants()` | `agentic-cms/cx` | 3.6 |
-| a placement guard, component lint rules, a components rule | `agentic-cms check-components`, `agentic-cms/eslint`, the kit's rule | 3.7 |
+| a placement guard and its config, component lint rules, a components rule | `agentic-cms check-components` with `src/config/components.json`, `agentic-cms/eslint`, the components rule `init --agent-files` writes | 3.7 |
 | hand-written review routes (a page of every primitive, of every motion) | `demo new <name> --showcase --component <file>…` (`--timeline` for motion), removed by `demo clean` with every file only it uses | 1 |
 | a script that starts the dev server and the lab, waits for a route, prints its URLs, or clears Turbopack's cache | `pnpm kit serve` (`--fix-cache`); `demo new` and `lab route` wait themselves | 3.2 |
 | copies of the gotchas, browser, dev-server or setup guides, or a primitives spec | the kit's docs, plus your site-only lines | 3.8 |
@@ -545,6 +576,7 @@ Each row goes only after its step works.
 | `init --agent-files` reports a rule or skill `modified` | You edited it: take the new lines by hand (§ 1). `--force` would discard your edits |
 | The proof differs after § 1 alone | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |
 | `ERR_PNPM_IGNORED_BUILDS` | `pnpm-workspace.yaml` misses the `allowBuilds` key the error names, or lists it under `onlyBuiltDependencies`, which pnpm no longer reads: add it under `allowBuilds` as `<name>: true`. A new site's `init` writes the kit's three keys and merges them into a workspace it finds |
-| `pnpm lint` fails everywhere after 3.7 | Components missing from `inherited`: list them, then replace them one pull request at a time |
+| `pnpm lint` fails everywhere after 3.7 | Files the guard finds that the site had before it: list them under `inherited` in `src/config/components.json`, then replace them one pull request at a time. A layer the config names but the site lacks is `null` |
+| `check-components: no src/config/components.json here` | The lint script runs the guard before its config exists: § 3.7 step 1 first |
 | A page on the owner's phone renders but nothing works | Its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm urls --write`, then restart the dev server (or `pnpm kit serve --write-origins`, which writes it before the server starts) |
 | `serve: port 8000 answers, but not as this site's next dev` | Something else holds the port (another project's dev server, `pnpm preview`): stop it if it is yours, or `pnpm kit serve --port <another>` |

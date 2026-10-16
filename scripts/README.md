@@ -106,6 +106,19 @@ by `pnpm test:browser`.
   and what a section or a pattern may contain. Not a command: a site's
   `eslint.config.mjs` spreads it, and `pnpm lint` runs it
   (`docs/primitives.md` § Enforced).
+- `check-components` — `pnpm kit check-components [--json]`
+  (`check-components.mjs`; the work in `lib/check-components.mjs`, the file
+  system passed in) is the component library's placement guard, the second
+  half of `pnpm lint` (`eslint; s=$?; … check-components || s=1; exit $s`):
+  the layers there and every file under `src/components` in one, every
+  component the library exports named in its catalogue, every component in
+  a section folder imported by the registry, route files only in
+  `src/app`'s known route folders, no component elsewhere in `src/`, CSS
+  modules and `@keyframes` only where the library keeps them. Its config is
+  `src/config/components.json` (the layer keys are `componentRules()`'s);
+  the config's frozen `inherited` list and a running round's candidates
+  pass. Exit 1 on a finding, each with its fix (`docs/primitives.md`
+  § Placed).
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
 - `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
   --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one

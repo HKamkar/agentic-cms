@@ -259,7 +259,7 @@ export const SPECS = {
     usage: "agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check] [--force]",
     positionals: [{ name: "dir", help: "where the site goes (default: the current directory)" }],
     flags: {
-      "agent-files": { type: "boolean", help: "only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept" },
+      "agent-files": { type: "boolean", help: "only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept, and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked" },
       check: { type: "boolean", help: "with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing" },
       force: { type: "boolean", help: "overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten)" },
       "light-only": { type: "boolean", help: "a site without dark mode: the profile's schemes are [\"light\"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines" },
@@ -350,6 +350,14 @@ export const SPECS = {
     examples: ["agentic-cms assemble                      # after next build: the last step of a standalone site's build", "agentic-cms assemble --check --json"],
     exit: { 0: "the package holds every file of public/ and .next/static", 1: "a file missing or different, or a copy nested inside the folder it should fill (each named)", 2: "usage, or no standalone build (output: \"standalone\", then next build)" },
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
+  },
+  "check-components": {
+    command: "check-components", script: "check-components", group: "build gates", summary: "the component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json",
+    usage: "agentic-cms check-components [--json]",
+    flags: { json: { type: "boolean", help: "print the report as one JSON document" } },
+    examples: ["agentic-cms check-components             # what pnpm lint runs after eslint", "agentic-cms check-components --json | jq '.findings[] | .file'"],
+    exit: { 0: "every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass)", 1: "a finding (each with its file, the check, and the fix)", 2: "no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage" },
+    json: "{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited, file, problem, fix }] }",
   },
   icons: {
     command: "icons", script: "icons", group: "icons", summary: "the site's icons: a map of Lucide and Simple Icons paths kept from a manifest, a family of marks rendered from primitives, an audit of every icon on the built pages, and a design round for a set of the site's own",

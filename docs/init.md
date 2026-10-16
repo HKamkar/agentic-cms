@@ -39,17 +39,23 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   `design` skill replaces it as the look lands). Its `src/config/harness.ts`
   holds the site's profile — the widths a capture takes (390, 768, 1440 and
   1920), the schemes a proof runs a pass in (light and dark), the ref a
-  proof's baseline is built from ([visual-parity.md](visual-parity.md#the-sites-profile)).
+  proof's baseline is built from ([visual-parity.md](visual-parity.md#the-sites-profile)),
+  and its `src/config/components.json` is the component guard's config:
+  the layers, the route folders, the frozen `inherited` list
+  ([primitives.md § Placed](primitives.md#placed-agentic-cms-check-components)).
 - **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
   it), `.claude/rules/` (path-scoped invariants for the content engine, the
-  blog, forms, SEO, styling and design, pointing at the engine's READMEs
-  under `node_modules/agentic-cms/`; `AGENTS.md`'s scoped-rules table routes
-  Codex to them), `.claude/skills/` and
+  blog, forms, SEO, styling, design and the components, pointing at the
+  engine's READMEs under `node_modules/agentic-cms/`; `AGENTS.md`'s
+  scoped-rules table routes Codex to them; the components rule is written
+  only beside the guard's config, which the example brings), `.claude/skills/` and
   `.agents/skills/` (the design skills), `.claude/settings.json` (the
   editorial plugin from the kit's marketplace), and `.agentic-cms.json`, the
   manifest of the agent files as written.
-- **The config**: `package.json` (the scripts a build needs and the
-  dependencies at the kit's versions — merged into an existing one, whose
+- **The config**: `package.json` (the scripts a build needs — `lint` runs
+  ESLint, then the component guard, and fails on either:
+  `eslint; s=$?; agentic-cms check-components || s=1; exit $s` — and the
+  dependencies at the kit's versions; merged into an existing one, whose
   name, scripts and dependencies win, but for `pnpm init`'s placeholders:
   its failing `test` gives way to the kit's and its `main: "index.js"` is
   dropped, while its `license`, `version`, `devEngines` and
@@ -146,7 +152,12 @@ pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit
 A rule is `ok`, `modified` (the site edited it: kept, never overwritten),
 `stale` (the kit has a newer one) or `missing`; `--check` exits 1 on
 anything but `ok`, a site's own edit included, and the CI workflow `init`
-writes runs it on every pull request. `AGENTS.md` is the site's
+writes runs it on every pull request. A rule for a tool the site has not
+adopted is neither written nor checked: the components rule needs the
+component guard's config, `src/config/components.json`, so a site that
+predates the guard is never told the rule is missing
+([migrating-to-0.8.0.md § 3.7](migrating-to-0.8.0.md#37-the-component-library-enforced)
+adopts it). `AGENTS.md` is the site's
 own, but for one block between `<!-- rules-table:start -->` and
 `<!-- rules-table:end -->`: the scoped-rules table, written from the rules'
 `paths` frontmatter — the site's edited rules included — because Codex reads

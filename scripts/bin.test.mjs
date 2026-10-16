@@ -63,6 +63,36 @@ test("assemble runs in any folder and, without a standalone build, says how to m
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("check-components: the kit's example passes; a stray section file is a finding with its fix, in text and JSON; no config is exit 2", () => {
+  const ok = run(["check-components"]);
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited\)\n$/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guard-cli-"));
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
+  try {
+    const none = run(["check-components"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^check-components: no src\/config\/components\.json here — the guard is not set up in this site/);
+    write("src/config/components.json", JSON.stringify({ motion: null, patterns: null }));
+    write("src/components/README.md", "## `Button`\n");
+    write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
+    write("src/components/sections/render.tsx", 'import { Hero } from "@/components/sections/Hero";\n');
+    write("src/components/sections/Hero.tsx", "export function Hero() { return null; }\n");
+    write("src/app/layout.tsx", "export default function Layout() { return null; }\n");
+    assert.equal(run(["check-components"], dir).status, 0);
+    write("src/components/sections/Promo.tsx", "export function Promo() { return null; }\n");
+    const found = run(["check-components"], dir);
+    assert.equal(found.status, 1);
+    assert.match(found.stderr, /^check-components: 1 problem\n\n {2}✗ src\/components\/sections\/Promo\.tsx {2}\[registry\]\n {4}a component in a section folder that the registry does not import\n {4}→ a section folder holds the components the registry renders: register it in src\/components\/sections\/render\.tsx/);
+    const json = run(["check-components", "--json"], dir);
+    assert.equal(json.status, 1);
+    assert.deepEqual(JSON.parse(json.stdout).findings.map((f) => [f.check, f.file]), [["registry", "src/components/sections/Promo.tsx"]]);
+    write("src/config/components.json", JSON.stringify({ sectons: ["sections"] }));
+    assert.match(run(["check-components"], dir).stderr, /no option sectons — did you mean sections\?/);
+    assert.match(run(["check-components", "--jsn"], dir).stderr, /did you mean --json\?/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a --json report larger than a pipe's buffer reaches the reader whole, though the command exits right after printing it", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "big-report-"));
   try {

@@ -1,0 +1,19 @@
+{
+  "$comment": "The component guard's config: agentic-cms check-components reads it, and pnpm lint runs it after ESLint. The layer keys (motion, ui, patterns, sections, registry, ignores) are the options of componentRules() in eslint.config.mjs, with the same defaults: keep the two alike. Loosening the guard — a layer dropped, a route folder or an inherited file added — is its own pull request, said so in its title.",
+  "$layers": "No motion folder: agentic-cms/ix is the motion layer. No patterns yet. The sections live in the folder of the page they belong to.",
+  "motion": null,
+  "patterns": null,
+  "sections": ["home", "about", "use-cases", "contact", "sections", "blog"],
+  "$routes": "The folders under src/app that hold a route's files; a *-demo folder (a design round's, the lab's) needs no entry.",
+  "routes": ["src/app", "src/app/[[...slug]]", "src/app/blog-post/[slug]", "src/app/api/forms/[id]", "src/app/feed.xml"],
+  "$ignores": "In the kit's own checkout src/lib is the package's source; a site has none.",
+  "ignores": ["src/lib/**"],
+  "$inherited": "Files the guard leaves alone, frozen: here the blog's post template, which the blog routes render themselves rather than the registry (the body with its stylesheet, its element overrides, the card and the hero). Nothing new is added; a file leaves the list when a registered section or a primitive replaces it.",
+  "inherited": [
+    "src/components/blog/BlogCard.tsx",
+    "src/components/blog/BlogHero.tsx",
+    "src/components/blog/PostBody.module.css",
+    "src/components/blog/PostBody.tsx",
+    "src/components/blog/mdx.tsx"
+  ]
+}

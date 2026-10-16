@@ -132,7 +132,7 @@ agentic-cms docs --check                  # exit 1 when they are stale (pnpm bui
 
 ## build gates
 
-`seo` · `guard-email` · `critical-css` · `assemble` — `seo`, `guard-email` read the site's registry and run in its root
+`seo` · `guard-email` · `critical-css` · `assemble` · `check-components` — `seo`, `guard-email` read the site's registry and run in its root
 
 ### `seo`
 
@@ -221,6 +221,27 @@ Exit: `0` the package holds every file of public/ and .next/static; `1` a file m
 ```bash
 agentic-cms assemble                      # after next build: the last step of a standalone site's build
 agentic-cms assemble --check --json
+```
+
+### `check-components`
+
+The component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json.
+
+```bash
+agentic-cms check-components [--json]
+```
+
+| flag | what |
+|---|---|
+| `--json` | print the report as one JSON document |
+
+Exit: `0` every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass); `1` a finding (each with its file, the check, and the fix); `2` no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage.
+
+`--json` prints `{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited, file, problem, fix }] }`.
+
+```bash
+agentic-cms check-components             # what pnpm lint runs after eslint
+agentic-cms check-components --json | jq '.findings[] | .file'
 ```
 
 ## images
@@ -1007,7 +1028,7 @@ agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept, and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
 | `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
 | `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |

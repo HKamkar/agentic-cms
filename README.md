@@ -258,7 +258,9 @@ Illustrations are crossed placeholder boxes; content images come from
 and the only place UI is made: `pnpm lint` runs the component rules
 (`agentic-cms/eslint`), which fail a section that writes a raw element or
 draws a box of its own, or an import that goes the wrong way between the
-layers. The `agentic-cms/ix` library stays in the package for a fork that wants
+layers, then the placement guard (`agentic-cms check-components`), which
+fails a component outside the library, an export the catalogue does not
+name, or a section file the registry does not render. The `agentic-cms/ix` library stays in the package for a fork that wants
 motion: a play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`)
 whose roots play the first time they are seen and never again, the
 scroll-into-view reveals and sequences that replay on each entry, and
@@ -373,6 +375,7 @@ pnpm dev             # next dev on :8000
 pnpm build           # content lint → docs check → next build → SEO audit; every page prerendered
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
+pnpm lint            # ESLint with the component rules, then the placement guard (agentic-cms check-components)
 pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
@@ -455,7 +458,7 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
 src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy; harness.ts, the screenshot harness's seed
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
-bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init; the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
+bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, check-components, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init; the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
 docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, setup.md, dev-server.md, browsers.md, primitives.md, gotchas.md, upgrading.md, migrating-to-0.8.0.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md

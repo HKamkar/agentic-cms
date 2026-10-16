@@ -11,7 +11,9 @@
 // `pnpm init` or an older install left there cannot stop the first install
 // or the first test. A manifest (.agentic-cms.json) records the hash of every agent
 // file as written, so `init --agent-files --check` can tell a site's own
-// edit (never clobbered) from a file the kit has since updated. The site's
+// edit (never clobbered) from a file the kit has since updated. A rule for a
+// tool a site adopts (the components rule, for the component guard) is
+// written and checked only where the site has that tool's config. The site's
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
 // needs to find .claude/rules/ (lib/rules-table.mjs), written from the
 // site's rules as they stand, and measured against Codex's 32 KiB. With
@@ -30,6 +32,15 @@ export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/c
 export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "setup.sh": "scripts/setup.sh" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
 export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/skills": ".claude/skills", ".agents/skills": ".agents/skills" };
+/**
+ * The agent files that describe a tool a site adopts, each with the file
+ * that adopts it: written and checked only where the site has that file, so
+ * nothing the kit writes describes a tool the site has not taken up (a site
+ * from 0.7.6 is neither given the components rule nor told it is missing).
+ */
+export const ADOPTED_BY = { ".claude/rules/components.md": "src/config/components.json" };
+/** The lint a new site runs: ESLint, then the component guard, failing on either while both report. */
+export const LINT = "eslint; s=$?; agentic-cms check-components || s=1; exit $s";
 export const MANIFEST = ".agentic-cms.json";
 const STANDARD_NOTE = "> This is the wireframe's standard, as `agentic-cms init` scaffolded it: the `design` skill replaces its tokens, components and motion as the site's own look lands, and §8 collects the site's own decisions.\n";
 const sha = (text) => `sha256:${crypto.createHash("sha256").update(text).digest("hex")}`;
@@ -97,7 +108,7 @@ function sitePackage(target, { kitRoot, version }) {
     type: "module",
     engines: kit.engines,
     packageManager: kit.packageManager,
-    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: "eslint", test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
+    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
     dependencies: { "agentic-cms": `github:HKamkar/agentic-cms#v${version}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
     devDependencies: { "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], eslint: dev.eslint, "eslint-config-next": dev["eslint-config-next"], "playwright-core": dev["playwright-core"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   };
@@ -191,12 +202,15 @@ export function scaffold(target, { kitRoot, version, force = false, lightOnly = 
   return result;
 }
 
-/** Writes the agent files (a site's own edit is kept), or with `check` reports each: ok | modified | stale | missing. */
+/** Whether the site has adopted what an agent file describes: always, unless ADOPTED_BY names a file the site lacks. */
+export const adopted = (target, file) => !ADOPTED_BY[file] || fs.existsSync(path.join(target, ADOPTED_BY[file]));
+
+/** Writes the agent files (a site's own edit is kept), or with `check` reports each: ok | modified | stale | missing; a file for a tool the site has not adopted is neither. */
 export function agentFiles(target, { kitRoot, version, check = false, force = false, log = console.log, result = { created: [], updated: [], kept: [] } }) {
   const manifest = readManifest(target);
   const report = [];
   const next = { version, files: {} };
-  for (const { file, text } of renderAgentFiles(kitRoot)) {
+  for (const { file, text } of renderAgentFiles(kitRoot).filter(({ file }) => adopted(target, file))) {
     const full = path.join(target, file);
     const onDisk = fs.existsSync(full) ? fs.readFileSync(full, "utf8") : null;
     const recorded = manifest.files[file];

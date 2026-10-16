@@ -6,7 +6,8 @@
 // unrs-resolver), runs the install line of docs/init.md as it is written,
 // the tarball standing in for the git spec. Then it installs the site's
 // dependencies and runs its build — the content lint, the field-table check,
-// next build and the SEO audit — its lint and its tests through the
+// next build and the SEO audit — its lint (ESLint, then the component
+// guard, which a planted stray section file fails) and its tests through the
 // installed command line; then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
@@ -106,8 +107,22 @@ async function build(site) {
   }
   run("pnpm", ["build"], site);
   run("pnpm", ["lint"], site);
+  guardFails(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+}
+
+/** The site's lint runs the installed guard after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
+function guardFails(site) {
+  const { lint } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
+  if (!/; agentic-cms check-components \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the guard after ESLint: ${lint}`);
+  if (!fs.existsSync(path.join(site, "src/config/components.json")) || !fs.existsSync(path.join(site, ".claude/rules/components.md"))) fail("init wrote the guard's config without the components rule, or neither");
+  const stray = path.join(site, "src/components/sections/Stray.tsx");
+  fs.writeFileSync(stray, "export function Stray() {\n  return null;\n}\n");
+  const result = spawnSync("pnpm", ["lint"], { cwd: site, encoding: "utf8", env: ENV });
+  fs.rmSync(stray);
+  const output = `${result.stdout}${result.stderr}`;
+  if (result.status !== 1 || !/✗ src\/components\/sections\/Stray\.tsx {2}\[registry\]/.test(output)) fail(`pnpm lint with a stray section file answered ${result.status}: ${output.trim().slice(-600)}`);
 }
 
 /** 5. A site without dark mode, laid out by the installed init --light-only: it builds, lints and tests, and its pages carry no theme script. */

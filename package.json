@@ -102,7 +102,7 @@
     "dev": "next dev -p 8000",
     "build": "node bin/agentic-cms.mjs lint && node bin/agentic-cms.mjs docs --check && next build && node bin/agentic-cms.mjs seo",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint; s=$?; node bin/agentic-cms.mjs check-components || s=1; exit $s",
     "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/*.test.mjs\" \"scripts/lib/*.test.mjs\" \"tools/**/*.test.mjs\"",
     "test:browser": "node --test \"scripts/browser/*.test.mjs\"",
     "plugin:validate": "claude plugin validate ./plugin --strict && claude plugin validate . --strict",
