@@ -58,8 +58,9 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   names of a legacy `onlyBuiltDependencies` list, which pnpm no longer
   reads, are carried into it, and every other key, value and comment stays
   as the site wrote it), `next.config.ts`, `postcss.config.mjs`,
-  `eslint.config.mjs`, `.gitignore`, `.env.example`, `.nvmrc`, `README.md`,
-  `PLAN.md`.
+  `eslint.config.mjs` (`eslint-config-next` and the component rules,
+  `agentic-cms/eslint`: [primitives.md § Enforced](primitives.md#enforced-agentic-cmseslint)),
+  `.gitignore`, `.env.example`, `.nvmrc`, `README.md`, `PLAN.md`.
 - **CI**: `.github/workflows/verify.yml`, on every pull request and every
   push to `develop` or `main`: `pnpm install --frozen-lockfile`, `pnpm lint`,
   `pnpm test`, `pnpm build` and `agentic-cms init . --agent-files --check`,

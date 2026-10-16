@@ -100,6 +100,12 @@ by `pnpm test:browser`.
   by the hook, which never touches `node_modules`, where a package ships
   JavaScript); every command loads `src/kit.ts` through it, and `pnpm test`
   (`src/**/*.test.ts` and `scripts/**/*.test.mjs`) uses it. No `.tsx`.
+- `lib/component-lint.mjs` — `componentRules(options)`, the component
+  library's ESLint configs (the package exports it as `./eslint`): the
+  layers' one-way imports, animation libraries only in the motion layer,
+  and what a section or a pattern may contain. Not a command: a site's
+  `eslint.config.mjs` spreads it, and `pnpm lint` runs it
+  (`docs/primitives.md` § Enforced).
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
 - `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
   --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one
