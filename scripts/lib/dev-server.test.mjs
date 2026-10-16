@@ -7,7 +7,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { DEV_LOCK, clearStaleCache, ownDevServer, processAlive, readDevLock, startDevServer } from "./dev-server.mjs";
+import net from "node:net";
+import { DEV_LOCK, FREE_PORT_RANGE, clearStaleCache, freePorts, ownDevServer, processAlive, readDevLock, startDevServer } from "./dev-server.mjs";
 
 /** A spawn that hands back fake children, and a kill that ends a child when its group is sent a signal. */
 function fakes({ say = [" ✓ Ready in 812ms\n"], exitFirst = null } = {}) {
@@ -44,6 +45,27 @@ test("startDevServer: exiting before it is ready rejects with the log's tail; no
   const f = fakes({ say: ["Error: Another next dev server is already running.\n"], exitFirst: 1 });
   await assert.rejects(startDevServer({ root: "/site", port: 4100, bin: "next", spawn: f.spawn, kill: f.kill }), /next dev exited \(1\) before it was ready:\nError: Another next dev server is already running\./);
   await assert.rejects(startDevServer({ root: "/site", port: 4100, bin: null }), /next is not installed in \/site \(pnpm install\)/);
+  const taken = fakes({ say: ["Error: listen EADDRINUSE: address already in use :::4100\n"], exitFirst: 1 });
+  await assert.rejects(startDevServer({ root: "/site", port: 4100, bin: "next", spawn: taken.spawn, kill: taken.kill }), /^Error: next dev exited \(1\) before it was ready: port 4100 is taken, something else listens on it:\nError: listen EADDRINUSE/);
+});
+
+const listening = (port) => new Promise((resolve, reject) => { const server = net.createServer().once("error", reject); server.listen({ port, exclusive: true }, () => resolve(server)); });
+const closed = (server) => new Promise((resolve) => server.close(resolve));
+
+test("freePorts: distinct ports below the ephemeral range, free on every interface once returned; a held port is skipped; a full range throws", async () => {
+  const [a, b] = await freePorts(2);
+  assert.notEqual(a, b);
+  assert.ok([a, b].every((port) => port >= FREE_PORT_RANGE[0] && port <= FREE_PORT_RANGE[1]), `${a}, ${b}`);
+  const servers = [await listening(a), await listening(b)];   // both closed again: a server can start on each
+  await closed(servers[1]);
+  const [lo, hi] = a < b ? [a, b] : [b, a];
+  const picks = [a === lo ? 0 : 0.99999, a === lo ? 0.99999 : 0];   // the held one first, then the other
+  try {
+    assert.deepEqual(await freePorts(1, { range: [lo, hi], random: () => picks.shift() }), [b]);
+    await assert.rejects(freePorts(1, { range: [a, a], tries: 5 }), new RegExp(`0 of 1 free ports found between ${a} and ${a} in 5 tries`));
+  } finally {
+    await closed(servers[0]);
+  }
 });
 
 test("ownDevServer: this site's next dev only while its lock names a live pid on a port that answers; another server on the port, a stale lock, no lock are none", async () => {
