@@ -227,7 +227,7 @@ test("visual-parity proof --build runs its baseline step (no three-sources refus
 /** Two servers listening on the loopback for a command to find up: a spawned command connects while the test waits on it, so the kernel accepts. */
 const listening = () => Promise.all([0, 1].map(() => new Promise((resolve) => { const server = net.createServer((socket) => socket.end()); server.listen(0, "127.0.0.1", () => resolve(server)); })));
 
-test("urls: this machine's URLs and its origins, --write fills .env.local once, no dev port is a usage error", async () => {
+test("urls: this machine's URLs and its origins, --write fills .env.local once, a server with no lock here is not this clone's, no dev port is a usage error", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "urls-cli-"));
   const servers = await listening();
   const [dev, lab] = servers.map((s) => String(s.address().port));
@@ -238,17 +238,20 @@ test("urls: this machine's URLs and its origins, --write fills .env.local once, 
     fs.writeFileSync(path.join(dir, ".env.example"), "# kept\nALLOWED_DEV_ORIGINS=\n");
     const written = run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--write"], dir);
     assert.equal(written.status, 0, written.stderr);
-    assert.match(written.stdout, new RegExp(`^dev server, port ${dev}: running\n {2}localhost {2}http://localhost:${dev}\n`));
+    assert.match(written.stdout, new RegExp(`^dev server, port ${dev}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\)`), "another checkout's server, as far as this one can tell");
+    assert.doesNotMatch(written.stdout, /restart/, "and nobody is asked to restart it");
     assert.match(written.stdout, new RegExp(`\nlab, port ${lab}: running, each scene at /scene/<name>\n`));
     assert.match(written.stdout, /public {5}not looked up \(--no-public\)/);
     const report = JSON.parse(run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--json"], dir).stdout);
-    assert.equal(report.dev.up, true);
+    assert.deepEqual([report.dev.up, report.dev.own, report.dev.ownPort], [true, false, null]);
     assert.equal(report.addresses.publicLookedUp, false);
     assert.deepEqual(report.origins.missing, [], "written once: covered on the next run");
     if (report.addresses.lan.length) assert.equal(fs.readFileSync(path.join(dir, ".env.local"), "utf8"), `# kept\nALLOWED_DEV_ORIGINS=${report.addresses.lan.join(",")}\n`);
     else assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no LAN address: nothing to write");
     fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${dev}` } }));
-    assert.match(run(["urls", "--no-public", "--lab-port", lab], dir).stdout, new RegExp(`^dev server, port ${dev}: running`), "the port from scripts.dev");
+    fs.mkdirSync(path.join(dir, ".next/dev"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".next/dev/lock"), JSON.stringify({ pid: process.pid, port: Number(dev) }));
+    assert.match(run(["urls", "--no-public", "--lab-port", lab], dir).stdout, new RegExp(`^dev server, port ${dev}: running\n {2}localhost {2}http://localhost:${dev}\n`), "the port from scripts.dev, this clone's next dev by its lock (a live pid, the port)");
   } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -293,7 +296,8 @@ test("setup: --engines takes the kit's engines only; --check writes nothing and 
     const report = JSON.parse(r.stdout);
     assert.equal(report.check, true);
     assert.deepEqual(report.steps.map((s) => s.step), ["node", "pnpm", "browsers", "env", "origins", "dev port", "verify"]);
-    assert.match(report.steps.find((s) => s.step === "dev port").detail, new RegExp(`a server answers on ${dev}`));
+    assert.match(report.steps.find((s) => s.step === "dev port").detail, new RegExp(`^${dev} answers, but not as this clone's next dev: pnpm dev needs the port`), "a server with no lock here is another's");
+    assert.deepEqual([report.urls.dev.up, report.urls.dev.own], [true, false]);
     assert.match(r.stderr, /setup --check: what this clone has, changing nothing/, "the progress on stderr, the report alone on stdout");
     assert.deepEqual(fs.readdirSync(dir).sort(), [".env.example", "package.json"], "--check wrote nothing");
   } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }

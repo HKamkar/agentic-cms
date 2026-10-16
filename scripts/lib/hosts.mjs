@@ -3,7 +3,9 @@
 // the address, so none is ever written into the repo (docs/dev-server.md).
 // This machine's LAN addresses (its real interfaces, not loopback or a
 // container's bridge), its public address, whether a server answers on a
-// port, and ALLOWED_DEV_ORIGINS in the gitignored .env.local: the hostnames
+// port and whether that is this clone's own next dev (its lock, read as
+// serve reads it: another checkout's server on the same port is not it),
+// and ALLOWED_DEV_ORIGINS in the gitignored .env.local: the hostnames
 // `next dev` serves its scripts to besides localhost, without which a page
 // opened from another device renders and never hydrates. `agentic-cms urls`
 // prints them and `setup` writes the origins through urlsReport(); the lab
@@ -11,6 +13,7 @@
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { DEV_LOCK, ownDevServer } from "./dev-server.mjs";
 
 /** Interfaces that are not the machine's network: loopback, container and VM bridges, macOS's tunnels and peer-to-peer links. */
 export const SKIPPED_INTERFACES = /^(lo|docker|br-|veth|virbr|utun|awdl|llw)/;
@@ -125,17 +128,28 @@ export function originsStatus({ root, hosts, write = false, fs }) {
 }
 
 /**
- * Everything `urls` reports: the addresses, the dev server's and the lab's
- * URLs and whether each answers, and the origins (written with `write`).
- * The network comes in — interfaces, fetch, isUp — so a test stubs it.
+ * The dev port: `up` when anything answers there, `own` when that is this
+ * clone's next dev, `ownPort` the port this clone's next dev runs on,
+ * wherever that is (null when none runs).
  */
-export async function urlsReport({ root, port, labPort, lookupPublic = true, write = false, fs, interfaces, fetch, up = isUp }) {
+async function devPortStatus(port, { root, fs, up, kill }) {
+  const [own, answers] = await Promise.all([ownDevServer({ root, fs, up, kill }), port ? up(port) : false]);
+  return { up: answers, own: Boolean(own && port && own.port === port), ownPort: own?.port ?? null };
+}
+
+/**
+ * Everything `urls` reports: the addresses, the dev server's and the lab's
+ * URLs, whether each answers and whether the dev port's is this clone's
+ * next dev, and the origins (written with `write`). The network and the
+ * processes come in — interfaces, fetch, isUp, kill — so a test stubs them.
+ */
+export async function urlsReport({ root, port, labPort, lookupPublic = true, write = false, fs, interfaces, fetch, up = isUp, kill = process.kill }) {
   const lan = lanAddresses(interfaces);
-  const [publicIp, devUp, labUp] = await Promise.all([lookupPublic ? publicAddress({ fetch }) : null, port ? up(port) : false, up(labPort)]);
+  const [publicIp, dev, labUp] = await Promise.all([lookupPublic ? publicAddress({ fetch }) : null, devPortStatus(port, { root, fs, up, kill }), up(labPort)]);
   const origins = originsStatus({ root, hosts: unique([...lan, ...(publicIp ? [publicIp] : [])]), write, fs });
   return {
     addresses: { lan, public: publicIp, publicLookedUp: lookupPublic },
-    dev: { port, up: devUp, urls: port ? urlsOn(port, { lan, publicIp }) : [] },
+    dev: { port, ...dev, urls: port ? urlsOn(port, { lan, publicIp }) : [] },
     lab: { port: labPort, up: labUp, urls: urlsOn(labPort, { lan, publicIp }) },
     origins,
   };
@@ -148,7 +162,7 @@ export function formatUrls(report) {
   const firewall = (port) => `answers only where a firewall opens ${port}, to the viewer's IP only`;
   const lines = [];
   if (dev.port) {
-    lines.push(`dev server, port ${dev.port}: ${dev.up ? "running" : "not running (pnpm dev starts it)"}`);
+    lines.push(`dev server, port ${dev.port}: ${devState(dev)}`);
     for (const u of dev.urls) lines.push(`  ${pad(u.where)} ${u.url}${u.where === "public" ? `   ${firewall(dev.port)}` : ""}`);
   } else lines.push("dev server: no port found (package.json's scripts.dev runs no next dev): pass --port");
   if (!addresses.public) lines.push(`  ${pad("public")} ${addresses.publicLookedUp ? "not found (offline?)" : "not looked up (--no-public)"}`);
@@ -156,15 +170,24 @@ export function formatUrls(report) {
     lines.push(`lab, port ${lab.port}: running, each scene at /scene/<name>`);
     for (const u of lab.urls) lines.push(`  ${pad(u.where)} ${u.url}`);
   } else lines.push(`lab, port ${lab.port}: not running (pnpm kit lab serve starts it); /scene/<name> on the same hosts`);
-  lines.push("", originsLine(origins, dev.up));
+  lines.push("", originsLine(origins, Boolean(dev.ownPort)));
   return lines;
 }
 
-function originsLine(origins, devUp) {
+/** The dev port in words: this clone's next dev running, something else answering (never this clone's to restart), or nothing; and where this clone's runs when that is another port. */
+function devState(dev) {
+  const elsewhere = dev.ownPort && !dev.own ? `; this clone's next dev runs on port ${dev.ownPort} (pnpm urls --port ${dev.ownPort})` : "";
+  if (dev.own) return "running";
+  if (dev.up) return `answers, but not as this clone's next dev (${DEV_LOCK} names none on it)${elsewhere || ": stop what holds it before pnpm dev (docs/dev-server.md § Stopping a server), or serve this clone on another port (pnpm kit serve --port <n>)"}`;
+  return `not running${elsewhere || " (pnpm dev starts it)"}`;
+}
+
+/** The origins in words; a restart named only while this clone's next dev runs, on whichever port, since nothing else reads its .env.local. */
+function originsLine(origins, ownRunning) {
   const where = `${ORIGINS_KEY} in ${origins.file}`;
-  const restart = devUp ? "; restart the dev server to apply it" : "";
+  const restart = ownRunning ? "; restart the dev server to apply it" : "";
   if (origins.written.length) return `added ${origins.written.join(", ")} to ${where}${restart}`;
   if (!origins.missing.length) return `${where} covers every address above`;
   const lacks = origins.exists ? `${where} lacks ${origins.missing.join(", ")}` : `${origins.file} is missing, so ${ORIGINS_KEY} lacks ${origins.missing.join(", ")}`;
-  return `${lacks}: a browser there gets a page that never hydrates. pnpm urls --write adds them (then restart the dev server)`;
+  return `${lacks}: a browser there gets a page that never hydrates. pnpm urls --write adds them${ownRunning ? " (then restart the dev server)" : ""}`;
 }

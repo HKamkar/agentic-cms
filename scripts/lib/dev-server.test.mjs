@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { DEV_LOCK, clearStaleCache, processAlive, readDevLock, startDevServer } from "./dev-server.mjs";
+import { DEV_LOCK, clearStaleCache, ownDevServer, processAlive, readDevLock, startDevServer } from "./dev-server.mjs";
 
 /** A spawn that hands back fake children, and a kill that ends a child when its group is sent a signal. */
 function fakes({ say = [" ✓ Ready in 812ms\n"], exitFirst = null } = {}) {
@@ -44,6 +44,21 @@ test("startDevServer: exiting before it is ready rejects with the log's tail; no
   const f = fakes({ say: ["Error: Another next dev server is already running.\n"], exitFirst: 1 });
   await assert.rejects(startDevServer({ root: "/site", port: 4100, bin: "next", spawn: f.spawn, kill: f.kill }), /next dev exited \(1\) before it was ready:\nError: Another next dev server is already running\./);
   await assert.rejects(startDevServer({ root: "/site", port: 4100, bin: null }), /next is not installed in \/site \(pnpm install\)/);
+});
+
+test("ownDevServer: this site's next dev only while its lock names a live pid on a port that answers; another server on the port, a stale lock, no lock are none", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-server-"));
+  const kill = (pid) => { if (pid !== 4242) throw Object.assign(new Error("ESRCH"), { code: "ESRCH" }); };
+  const answering = (...ports) => async (port) => ports.includes(port);
+  try {
+    assert.equal(await ownDevServer({ root, fs, kill, up: answering(8000) }), null, "no lock: whatever answers on 8000 is not this site's");
+    fs.mkdirSync(path.join(root, ".next/dev"), { recursive: true });
+    fs.writeFileSync(path.join(root, DEV_LOCK), JSON.stringify({ pid: 4242, port: 8000, appUrl: "http://localhost:8000" }));
+    assert.deepEqual(await ownDevServer({ root, fs, kill, up: answering(8000) }), { pid: 4242, port: 8000, appUrl: "http://localhost:8000" });
+    assert.equal(await ownDevServer({ root, fs, kill, up: answering() }), null, "its port answers nothing: it stopped");
+    fs.writeFileSync(path.join(root, DEV_LOCK), JSON.stringify({ pid: 4343, port: 8000 }));
+    assert.equal(await ownDevServer({ root, fs, kill, up: answering(8000) }), null, "a lock left by a server that exited: the one on 8000 is another");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test("readDevLock, processAlive, clearStaleCache: next dev's lock read, a pid tested without a signal, the two cache folders removed", () => {

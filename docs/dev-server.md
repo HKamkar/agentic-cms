@@ -57,6 +57,14 @@ ALLOWED_DEV_ORIGINS in .env.local covers every address above
   from outside.
 - **The ports:** the dev server's from the `-p` of `scripts.dev` in
   `package.json` (`--port` for another), the lab's 8001 (`--lab-port`).
+- **Whose server answers:** `running` is this clone's own `next dev`,
+  told the way `serve` tells it: `.next/dev/lock` names a live pid on
+  that port. Anything else on the port, another checkout of the same site
+  or another project, is `answers, but not as this clone's next dev`, and
+  the URLs under it reach that server. Stop it before `pnpm dev`, or serve
+  this clone on another port. Nothing then says to restart the dev
+  server: an origin written applies to this clone's `next dev` only. When
+  this clone's `next dev` runs on another port, the line names that port.
 - `--json` prints the same as one document; exit 1 means an address is
   missing from `ALLOWED_DEV_ORIGINS`.
 

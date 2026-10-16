@@ -1,7 +1,8 @@
 // The routes the kit writes, rendered by the example site's own dev server:
 // the lab's (lab route → /lab-demo), the design round's (demo new →
 // /hero-demo, and demo new waiting on a server that already runs), serve
-// started and stopped on free ports, a route that ships an inline loop the way a section does
+// started and stopped on free ports, urls telling this checkout's next dev
+// from another server on its port, a route that ships an inline loop the way a section does
 // (readInlineSvg + InlineAnimation), the harness's own preparation of a
 // page that is still hydrating, the seed reaching the design routes, and
 // consent (agentic-cms/consent) on the example with a Google tag id set. One file, so the servers never run on the
@@ -9,6 +10,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
@@ -180,6 +182,43 @@ test("serve on free ports: next dev and the lab started, the table printed once 
   }
   await new Promise((resolve) => setTimeout(resolve, 1000));
   assert.deepEqual([await isUp(port), await isUp(labPort)], [false, false], "next dev's whole process group and the lab stopped");
+});
+
+test("urls on the example: a port another server holds answers, but not as this clone's next dev, with no restart named; this checkout's own next dev, found by its lock, is running", { skip, timeout: 240000 }, async (t) => {
+  const lock = readDevLock(ROOT, fs);
+  if (lock && processAlive(lock.pid)) { t.skip(`this checkout's next dev runs (pid ${lock.pid}): the test's own would not start`); return; }
+  const labPort = await freePort();
+  const urls = async (port, ...flags) => {
+    const ran = await runAsync(["urls", "--port", String(port), "--lab-port", String(labPort), "--no-public", ...flags]);
+    assert.ok([0, 1].includes(ran.status), ran.stderr);
+    return ran.stdout;
+  };
+  // Another checkout's server, as far as this checkout can tell: something answers on the port, and no lock here names it.
+  const other = http.createServer((req, res) => res.end("another checkout"));
+  await new Promise((resolve) => other.listen(0, resolve));
+  const otherPort = other.address().port;
+  let server;
+  try {
+    const held = JSON.parse(await urls(otherPort, "--json"));
+    assert.deepEqual([held.dev.up, held.dev.own, held.dev.ownPort], [true, false, null]);
+    const text = await urls(otherPort);
+    assert.match(text, new RegExp(`^dev server, port ${otherPort}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\)`, "m"));
+    assert.doesNotMatch(text, /restart/);
+
+    server = await devServer();
+    const started = Date.now();
+    while (readDevLock(ROOT, fs)?.port !== server.port) {
+      assert.ok(Date.now() - started < 15000, "next dev wrote no lock naming its port in 15 s");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    const own = JSON.parse(await urls(server.port, "--json"));
+    assert.deepEqual([own.dev.up, own.dev.own, own.dev.ownPort], [true, true, server.port]);
+    assert.match(await urls(server.port), new RegExp(`^dev server, port ${server.port}: running$`, "m"));
+    assert.match(await urls(otherPort), new RegExp(`^dev server, port ${otherPort}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\); this clone's next dev runs on port ${server.port} \\(pnpm urls --port ${server.port}\\)$`, "m"));
+  } finally {
+    await server?.stop();
+    await new Promise((resolve) => other.close(resolve));
+  }
 });
 
 // A section's inline loop, the way a site ships one: the SVG read at build (readInlineSvg, agentic-cms/content) and

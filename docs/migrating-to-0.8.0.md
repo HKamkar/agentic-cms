@@ -332,7 +332,9 @@ renders and never hydrates.
    - writes `.env.local` from `.env.example` when absent, and adds this
      machine's LAN and public addresses to `ALLOWED_DEV_ORIGINS`;
    - runs `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`);
-   - prints the dev server's and the lab's URLs.
+   - prints the dev server's and the lab's URLs, the dev server said
+     running only when it is this clone's own `next dev` (another
+     checkout's server on the port is named as such, as `pnpm urls` does).
 4. In `AGENTS.md`, the know-how bullet's "`setup.md` on a fresh clone or a
    new machine" becomes "`setup.md` on a fresh clone or a new machine
    (`bash scripts/setup.sh`; the `setup` skill runs it)", and the
@@ -342,8 +344,8 @@ renders and never hydrates.
    comes with `init --agent-files` (§ 1).
 5. From then on, `pnpm kit serve` starts the dev server for a look, in
    place of `pnpm dev`: `next dev` on the port of `scripts.dev`, the lab
-   when `.parity/lab` has a scene, every demo route waited for, and every
-   URL to hand over in one table, naming each address
+   when `.parity/lab` has a scene, the root and every demo route waited
+   for, and their URLs, and the lab's, in one table, naming each address
    `ALLOWED_DEV_ORIGINS` lacks (`--write-origins` adds it before the
    server starts). Ctrl-C stops both. It runs through the `kit` script
    `init` writes (`"kit": "agentic-cms"`); a site without one runs

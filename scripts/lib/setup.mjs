@@ -38,7 +38,7 @@ export function parseEngines(value) {
  * ok (already there), done (done now), skipped, gap (--check: missing),
  * todo (left for the owner), failed. `exec(cmd, args, { capture })` returns
  * { status, stdout }; `browsers` is { path(engine), launches(engine), cli };
- * `net` is what urlsReport takes (interfaces, fetch, up).
+ * `net` is what urlsReport takes (interfaces, fetch, up, kill).
  */
 export async function setup({ root, flags, exec, fs, browsers, net = {}, versions = process.versions, platform = process.platform, log = () => {} }) {
   const steps = [];
@@ -115,12 +115,14 @@ function envStep({ root, flags, fs, step }) {
   step("env", "done", `${ENV_FILE} created from .env.example`);
 }
 
-/** ALLOWED_DEV_ORIGINS against this machine's addresses, and a server already on the dev port. */
+/** ALLOWED_DEV_ORIGINS against this machine's addresses, and what holds the dev port: this clone's next dev (its lock), something else, or nothing. */
 function originsStep(urls, { flags, step }) {
   const { origins, addresses, dev } = urls;
   const hosts = [...addresses.lan, ...(addresses.public ? [addresses.public] : [])];
-  if (origins.written.length) step("origins", "done", `added ${origins.written.join(", ")} to ALLOWED_DEV_ORIGINS${dev.up ? "; restart the dev server to apply it" : ""}`);
+  if (origins.written.length) step("origins", "done", `added ${origins.written.join(", ")} to ALLOWED_DEV_ORIGINS${dev.ownPort ? "; restart the dev server to apply it" : ""}`);
   else if (origins.missing.length) step("origins", "gap", `ALLOWED_DEV_ORIGINS lacks ${origins.missing.join(", ")}`, "pnpm urls --write");
   else step("origins", "ok", hosts.length ? `ALLOWED_DEV_ORIGINS covers ${hosts.join(", ")}` : "no address but localhost to cover");
-  if (flags.check && dev.port) step("dev port", "ok", dev.up ? `a server answers on ${dev.port}: pnpm dev needs the port, so a stale one is stopped first (docs/dev-server.md § Stopping a server)` : `${dev.port} is free for pnpm dev`);
+  if (flags.check && dev.port) step("dev port", "ok", dev.own ? `this clone's next dev runs on ${dev.port}`
+    : dev.up ? `${dev.port} answers, but not as this clone's next dev: pnpm dev needs the port, so stop what holds it first (docs/dev-server.md § Stopping a server)`
+    : `${dev.port} is free for pnpm dev`);
 }
