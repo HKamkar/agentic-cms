@@ -73,28 +73,98 @@ and is kept in `.agentic-cms/base/` from then on: commit that folder with
 `.agentic-cms.json`. `git apply` takes a `--diff` where your edits sit apart
 from it; otherwise merge by hand. `--diff` prints the kit's new lines alone,
 without your edits.
-They are listed here *(each job adds its lines)*:
 
-- **`design-options`:** step 4's hand-over (the LAN or public address with
-  its origin allowed, the site's widths, the interactions in WebKit, what
-  to ask the owner's Safari for), and the rule that rejected and
-  unapproved candidates are deleted, never archived.
-- **`design-proof`:** a proof as short as the change allows (the site's
-  widths, the pages the change touches, `--sample 1` only for a site-wide
-  change, `--states` / `--motion` only when hover or animation changed,
-  never a scheme the site does not have), in place of "capture the full
-  set".
-- **The design rule:** rejected and unapproved candidates are deleted,
-  never archived or kept "for later".
-- **The styling rule:** the site is designed, looked at and measured at
-  its widths, for a new site 390, 768, 1440 and 1920.
-- **`design-options`, `design-graphics`, `design`, `setup`:** the dev
-  server is `pnpm kit serve`, and the hand-over is "the URLs it printed"
-  (`demo new`, `lab route`, `lab serve` and `serve` print them); a public
-  URL only where the firewall opens the port to the viewer's IP only;
-  `demo new --timeline` in place of wrapping a moving candidate in
-  `<LabTimeline>` by hand, and `--showcase` for a review page of pieces;
-  `pnpm kit serve --fix-cache` for Turbopack's stale cache.
+What `--diff` shows for each file is listed here, each line with the step
+it belongs to. A line for a step your site has not taken is worded to hold
+without it ("where the layout renders `motionScript()`", "on a site that
+has the example's"), so the whole `--diff` can go into your copy: a line
+marked § 1 applies to every site, the others once you take their step. If
+you leave a later step's lines out, take them from this list when you take
+that step: once you `--accept`, `--diff` no longer shows them.
+
+- **The styling rule:**
+  - § 1: motion is `agentic-cms/ix` in the layer the site has (its
+    `STANDARD.md` §7): the play-once layer where the layout renders
+    `motionScript()`, and for a site's first motion; `Fx` and `OnView` on
+    a site that moves with them and has not adopted it, and elsewhere only
+    where a replay on re-entry is wanted. The `Fx` / `OnView` bullet opens
+    "Where the site uses them".
+  - § 1: a change that must not move a pixel proves it with
+    `pnpm kit visual-parity proof` (the baseline of develop, the tree and
+    the compare, once built), in place of `capture before`,
+    `capture after` and `compare`.
+  - 3.1: the site is designed, looked at and measured at its widths, the
+    profile's (for a new site 390, 768, 1440 and 1920), and nothing that
+    moves widens the page at any of them.
+  - 3.1: the proof runs at the profile's widths and in each scheme it
+    names; a site without a profile writes one first.
+  - 3.5: the play-once bullet (`Reveal`, `RevealGroup`, `Sequence`,
+    `part()`, `motionScript()`, the `--ease-*` / `--motion-*` tokens),
+    which opens "Where the layout renders `motionScript()`".
+  - 3.6: a component asks for a colour, a radius or a shadow by its role
+    where the site has one, and names a value only where no role does.
+- **The design rule:**
+  - § 1: rejected and unapproved candidates are deleted, never archived,
+    moved aside or kept "for later".
+  - 3.6: a section's card content is its own, inside the site's one card
+    frame (`ui/Panel` on a site that has the example's).
+- **The components rule:** 3.7. It is new, and `--agent-files` writes it
+  only once the site has `src/config/components.json`.
+- **`design`:**
+  - § 1: the owner's look is `pnpm kit serve`, handing over the URLs it
+    printed, in place of `pnpm dev`.
+  - § 1: motion comes last, in the layer the site has: a site on `Fx` and
+    `OnView` keeps them, and a site with no motion yet starts with the
+    play-once layer.
+  - 3.1: the colours in each scheme the profile names.
+  - 3.5: where the layout renders `motionScript()`, the play-once layer
+    is the default, and `Fx` and `OnView` serve only where a replay is
+    wanted.
+  - 3.6: where the site has role tokens, the design gives the roles their
+    values first.
+  - 3.6: a section's cards sit in the site's one card frame (`ui/Panel`
+    where it has the example's).
+- **`design-options`:**
+  - § 1: step 4's hand-over. `pnpm kit serve` starts next dev and the lab
+    and prints every URL in one table, and `demo new` waits until the
+    route answers and prints its URLs. The LAN or public address goes over
+    with its origin in `ALLOWED_DEV_ORIGINS` (`serve --write-origins`
+    adds it), and a public one only where the firewall opens the port to
+    the viewer's IP only. The candidates are measured at the site's widths
+    and their interactions run in WebKit, with what to ask the owner's
+    Safari for. `serve --fix-cache` clears Turbopack's stale cache.
+  - § 1: `demo new --timeline` in place of wrapping a moving candidate in
+    `<LabTimeline>` by hand, and `--showcase` for a review page of pieces.
+  - § 1: rejected and unapproved candidates are deleted, never archived.
+  - 3.1: the demo route shows the site's tokens and chrome in each scheme
+    the profile names, in place of "its theme toggle".
+- **`design-proof`:**
+  - § 1: a proof as short as the change allows, in place of "capture the
+    full set": the pages the change touches, `--sample 1` only for a
+    site-wide change, `--states` / `--motion` only when hover or animation
+    changed (the read-first step checks which). A page is left out only
+    because the change cannot reach it.
+  - 3.1: the profile paragraph (a site says its widths, schemes, proof
+    pages and ref once, in `src/config/harness.ts`; without one, the
+    built-in eight widths in light). The widths and the scheme come from
+    the profile with no flag, a proof runs a pass in each scheme it names
+    (the dark one's captures end in `-dark`), and never in a scheme the
+    site does not have.
+- **`design-graphics`:**
+  - § 1: `lab serve` prints the URLs to hand over, each scene's own
+    `/scene/<name>`. `lab route` waits until `/lab-demo` answers on the
+    dev server (`pnpm kit serve` starts it, with the lab) and prints its
+    URLs, and `demo new --timeline` gives a moving candidate its timeline.
+    A public URL goes over only where the firewall opens the port to the
+    viewer's IP only. Inline `Icon` data follows the scheme, and an `<img>`
+    of a `.svg` must read on both grounds only on a site with two.
+  - 3.1: the graphic is looked at, and rendered with `--scheme`, in each
+    scheme the profile names (light and dark without one), in place of
+    "light and dark" and `--scheme dark`.
+- **`setup`:** § 1. It is new, written whole. On a site that has not taken
+  3.2 it runs `pnpm install --frozen-lockfile` and
+  `pnpm exec agentic-cms setup` in place of `bash scripts/setup.sh`, and
+  `pnpm exec agentic-cms urls` in place of `pnpm urls`.
 
 **`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
 these lines by hand, as a new site's `AGENTS.md` carries them. After the
@@ -112,7 +182,9 @@ bullet that names the engines' contracts:
   (`ALLOWED_DEV_ORIGINS`, `dev-server.md`).
 ```
 
-In § Process, after "Reading a screenshot":
+Among the rules for how the work is done, after the one on reading a
+screenshot (measure with `pnpm kit probe` and `pnpm kit shot`, don't
+guess):
 
 ```md
 - The site is designed, looked at and measured at its widths — for a new
@@ -121,9 +193,11 @@ In § Process, after "Reading a screenshot":
   "for later" (`pnpm kit demo clean`, `pnpm kit lab clean`).
 ```
 
-In § Parity harness and long runs, the clause "so capture the full set
-rather than a `--pages` subset to save time (`--pages` is for looking at
-one page; `--sample <n>` for a site with many posts)" becomes:
+Where your `AGENTS.md` gives the screenshot harness's rules, replace the
+advice to capture every page rather than a subset to save time (in a site
+from `init`, the clause "so capture the full set rather than a `--pages`
+subset to save time (`--pages` is for looking at one page; `--sample <n>`
+for a site with many posts)") with:
 
 ```md
 ; keep a proof as short as the change allows — the site's widths
@@ -132,6 +206,10 @@ per template (`--sample 1`) only when the change is site-wide, `--states` /
 `--motion` only when hover or animation changed, never a scheme the site
 does not have
 ```
+
+Two more lines of a new site's `AGENTS.md` belong to later steps: its
+motion bullet, which names the play-once layer beside `Fx` and `OnView`
+(3.5), and the sentence on CI in its verify bullet (3.3).
 
 **What changes without any action from you:**
 
@@ -201,8 +279,9 @@ export const harness = {
 ```
 
 Every key is optional; one you leave out keeps the built-in default. Then
-in `AGENTS.md` § Parity harness, make the profile the site's proof: after
-"The contract is `node_modules/agentic-cms/docs/visual-parity.md`." add
+make the profile the site's proof in `AGENTS.md`, where it gives the
+screenshot harness's rules: after the line that names their contract,
+`node_modules/agentic-cms/docs/visual-parity.md`, add
 "The site's profile in `src/config/harness.ts` says once what every
 capture takes without a flag: its `widths`, its `schemes` (a proof runs a
 pass in each, the dark one's captures ending in `-dark`) and `proof: {
@@ -435,8 +514,9 @@ applies, never the hue behind it.
   own content, and `Section` draws its box with `Panel`; a site that adopts
   `Panel` moves its card frames the same way and keeps what goes inside
   them. The design rule `--agent-files` writes says "a section's card
-  content is its own; the card frame is `ui/Panel`"; an edited copy takes
-  that line by hand (§ 1).
+  content is its own, its frame the site's one card frame (`ui/Panel` on a
+  site that has the example's)"; an edited copy takes that line by hand
+  (§ 1).
 - **The guide:** `docs/primitives.md` is the checklist of what a site builds
   on day one and what waits for a second use.
 
