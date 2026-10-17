@@ -102,7 +102,7 @@ together are refused.
 
 A site without dark mode says `schemes: ["light"]` and is never proved in a
 scheme it does not have; `init --light-only` writes that profile with a
-light-only example ([init.md](init.md)). A site whose widths change
+light-only site ([init.md](init.md)). A site whose widths change
 recaptures its baselines: a capture at the old widths and one at the new
 compare as `MISSING` files. A site that writes into its profile the widths
 it used to pass as a flag keeps its shot cache: the first proof after it
@@ -195,6 +195,12 @@ of the file, never its values — one whose build failed, or that read another
 the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
+
+Both builds are the site's production build (`pnpm build`), so on a site
+whose copy is still the starter's placeholder
+([init.md § The starter](init.md#the-starter)) they fail at the content
+lint, naming each placeholder: a proof is of a design, and a design is
+drawn around the site's real copy, so the copy comes first.
 
 The build (a snapshot or a `--ref` sibling) is served the way Next's own
 server serves it: the pages, their RSC payloads and the per-segment prefetch

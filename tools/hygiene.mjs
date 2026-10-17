@@ -33,7 +33,7 @@ export function findings(root, files, { brands }) {
   for (const file of files) {
     if (file.startsWith(".parity/")) out.push(`${file}: a capture is tracked; .parity/ is gitignored`);
     if (SCRATCH.test(file)) out.push(`${file}: a scratch file is tracked`);
-    if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ and the app icons`);
+    if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public|templates\/starter\/public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ (the example's, the starter's) and the app icons`);
     // a test needs counterexamples, so the line rules skip test files
     if (!TEXT.test(file) || /\.test\.(mjs|ts)$/.test(file) || !fs.existsSync(path.join(root, file))) continue;
     const text = read(file);

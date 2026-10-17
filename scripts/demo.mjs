@@ -11,11 +11,13 @@
 // the route, and git, say what that is) and next dev's stale route types.
 // The procedure around it — the ideas, the pick, the build — is the
 // design-options skill; docs/design.md § The round. Never merged: the
-// build's SEO audit fails a route without a seo block, which is the guard.
+// build's SEO audit fails a route without a seo block, which is the guard. A
+// round designs around the site's real copy: on a page that still holds the
+// starter's placeholder copy or the kit example's brand, `new` says so first.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { parseOrExit } from "./lib/args.mjs";
-import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, writeDemo } from "./lib/demo.mjs";
+import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, roundCopy, writeDemo } from "./lib/demo.mjs";
 import { formatHandover, handover } from "./lib/handover.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
@@ -29,12 +31,14 @@ if (subcommand === "new") {
   let report;
   // where the round begins, so clean can tell what it created: the commit, and what git did not track yet
   const round = { base: git(["rev-parse", "HEAD"])?.[0] ?? null, untracked: git(["ls-files", "--others", "--exclude-standard"]) ?? [] };
+  const copy = flags.section ? roundCopy(root, { type: flags.section, page: flags.page }) : null;
+  for (const line of copyWarning(copy)) console.error(line);
   try { report = writeDemo(root, { name: positionals[0], type: flags.section, page: flags.page, count: flags.candidates, components: flags.component, showcase: flags.showcase, timeline: flags.timeline, ...round }); } catch (error) { fail(error.message); }
   const scripts = (() => { try { return JSON.parse(fs.readFileSync("package.json", "utf8")).scripts ?? {}; } catch { return {}; } })();
   // the route asked until it answers on the running dev server (which also compiles it), then its URLs
   const handed = await handover({ root, route: report.path, url: flags.url, scripts, wait: !flags["no-wait"], timeout: flags.timeout * 1000, lookupPublic: !flags["no-public"], fs });
   const told = formatHandover(handed, report.path);
-  if (flags.json) console.log(JSON.stringify({ ...report, urls: handed.urls, ready: handed.ready, status: handed.status }, null, 1));
+  if (flags.json) console.log(JSON.stringify({ ...report, copy: copy && { placeholders: copy.placeholders, brand: copy.brand }, urls: handed.urls, ready: handed.ready, status: handed.status }, null, 1));
   else {
     console.log(`${report.route}  ${report.path}: ${describe(report)}`);
     if (told.out.length) console.log(told.out.join("\n"));
@@ -59,6 +63,16 @@ if (subcommand === "new") {
   }
   if (flags.json) console.log(JSON.stringify({ removed, kept, ...(dryRun ? { dryRun } : {}) }, null, 1));
   else console.log(`${removed.length ? `${dryRun ? "would remove" : "removed"}: ${removed.join(", ")}` : `nothing to remove${positionals[0] ? `: no src/app/${positionals[0]}-demo` : ""}`}${kept.length ? `\nkept: ${kept.join("; ")}` : ""}`);
+}
+
+/** What the round would design around that is not the site's copy, said before the round is written; nothing for a page of real copy. */
+function copyWarning(copy) {
+  if (!copy) return [];
+  const some = (fields) => `${fields.slice(0, 4).join(", ")}${fields.length > 4 ? ` and ${fields.length - 4} more` : ""}`;
+  return [
+    ...(copy.placeholders.length ? [`demo new: ${copy.page} still holds the starter's placeholder copy (${some(copy.placeholders)}): a round designs around the site's real copy — write it first (/editorial:new-page, or the owner's words), then start the round`] : []),
+    ...(copy.brand.length ? [`demo new: ${copy.page} still carries the kit example's brand (${some(copy.brand)}): a round never designs around it — replace that copy first`] : []),
+  ];
 }
 
 /** What the route shows, in one line: a section's candidates, a chrome piece's, or a showcase's pieces. */

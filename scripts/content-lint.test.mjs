@@ -6,11 +6,14 @@
 // scripts/lib/load-ts.mjs).
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, test } from "node:test";
+import { pathToFileURL } from "node:url";
 import { postTree, withContent } from "../src/lib/content/test-helpers.ts";
 import { kit } from "../src/kit.ts";
 import { format, lint as lintTree, readVoice } from "./lib/content-lint.mjs";
+import { scaffold } from "./lib/init.mjs";
 
 /** The lint on the example site's registry and config; the trees under test are the scratch ones each case writes. */
 const { site } = kit;
@@ -97,13 +100,18 @@ const publicFile = (root, rel, bytes = 16) => {
 };
 const post = (frontmatter = FRONTMATTER, body = BODY) => `---\n${frontmatter}\n---\n${body}`;
 const swap = (from, to) => FRONTMATTER.replace(from, to);
-/** Runs the lint on CLEAN with `files` overriding, `setup(root)` adding to public/, and returns the formatted lines. */
-const run = (files = {}, { setup, voice = VOICE, images = IMAGES } = {}) => // voice: null reads content/VOICE.md
+/** Runs the lint on CLEAN with `files` overriding, `setup(root)` adding to public/, and returns the formatted lines; `site` and `production` go to the lint. */
+const run = (files = {}, { setup, voice = VOICE, images = IMAGES, ...options } = {}) => // voice: null reads content/VOICE.md
   withContent({ ...CLEAN, ...files }, (root) => {
     for (const rel of images) publicFile(root, rel);
     setup?.(root);
-    return lint({ root, voice: voice ?? undefined, now: NOW }).findings.map(format);
+    return lint({ root, voice: voice ?? undefined, now: NOW, ...options }).findings.map(format);
   });
+/** A file under the scratch tree's root, outside content/ (a site's config, its package.json). */
+const rootFile = (root, rel, text) => {
+  fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+  fs.writeFileSync(path.join(root, rel), text);
+};
 const has = (lines, expected) => assert.ok(lines.some((line) => line.includes(expected)), `expected a line containing:\n  ${expected}\nin:\n  ${lines.join("\n  ") || "(nothing)"}`);
 const lacks = (lines, rule) => assert.deepEqual(lines.filter((line) => line.includes(` ${rule}: `)), [], `no ${rule} line expected`);
 
@@ -307,5 +315,67 @@ describe("filesystem rules", () => {
     has(lines, "WARN content/blog/drafts stray-file: is a folder; the loader reads only files");
     has(lines, "WARN content/extra.yaml stray-file: is not a collection file; nothing reads it");
     assert.equal(lines.filter((line) => line.includes("stray-file")).length, 3);
+  });
+});
+
+describe("the starter's placeholders and the kit example's brand", () => {
+  const nimbus = { ...site, name: "nimbus®", shortName: "nimbus" };
+  const BLOG = CLEAN["pages/blog.yaml"];
+  test("placeholder copy WARNs by file and field, and FAILs in a production build", () => {
+    const files = { "pages/blog.yaml": BLOG.replace("    heading: Insights", '    heading: "(placeholder) What the blog is about."') };
+    const warned = run(files, { site: nimbus });
+    has(warned, "WARN content/pages/blog.yaml placeholder: sections[0].heading is placeholder copy: write the site's own (/editorial:new-page, or by hand)");
+    assert.equal(warned.length, 1, warned.join("\n"));
+    has(run(files, { site: nimbus, production: true }), "FAIL content/pages/blog.yaml placeholder: sections[0].heading is placeholder copy, which a production build never ships: write the site's own");
+    has(run({ "blog/x.md": post(FRONTMATTER, BODY + "\n(placeholder) A paragraph to come.\n") }, { site: nimbus }), `WARN content/blog/x.md placeholder: line ${APPENDED} is placeholder copy`);
+  });
+  test("a stand-in address on a reserved domain is a placeholder, in the content and the config by line; in the kit's own repository it is the example's, and only the marker counts", () => {
+    const files = { "blog/x.md": post(`${FRONTMATTER}\nsource: https://notes.example/old`) };
+    const config = (root) => rootFile(root, "src/config/site.ts", 'export const site = {\n  // a comment on the "(placeholder)" marker is none\n  url: "https://my-site.example",\n  tagline: "(placeholder) The line.",\n  signIn: { label: "Sign in", href: "https://app.my-site.test" },\n};\n');
+    const lines = run(files, { site: nimbus, setup: config });
+    has(lines, 'WARN content/blog/x.md placeholder: source "https://notes.example/old" is a stand-in on a domain reserved for examples: set the site\'s own (init --url and --email, or by hand)');
+    has(lines, 'WARN src/config/site.ts placeholder: line 3 (url) "https://my-site.example" is a stand-in');
+    has(lines, "WARN src/config/site.ts placeholder: line 4 (tagline) holds placeholder copy: write the site's own");
+    has(lines, 'WARN src/config/site.ts placeholder: line 5 (signIn) "https://app.my-site.test" is a stand-in');
+    assert.equal(lines.length, 4, lines.join("\n"));
+    const kit = run(files, { site: nimbus, setup: (root) => { config(root); rootFile(root, "package.json", '{ "name": "agentic-cms" }'); } });
+    assert.deepEqual(kit, ["WARN src/config/site.ts placeholder: line 4 (tagline) holds placeholder copy: write the site's own (/editorial:new-page, or by hand)"]);
+  });
+  test("the kit example's brand FAILs in a site at any time, by file and line or by a picture's name, and never in the kit's own repository", () => {
+    const files = { "editorial/backlog.md": "# Backlog\n\n- **x**: a post by Acme\n", "_templates/author.json": '{ "acme-editorial": { "name": "The team" } }\n' };
+    const setup = (root) => { publicFile(root, "images/authors/acme-editorial.webp"); rootFile(root, "public/images/brand/logo.svg", "<svg><text>Acme</text></svg>\n"); rootFile(root, "src/config/site.ts", 'export const site = { email: "hello@acme.example" };\n'); };
+    const lines = run(files, { site: nimbus, setup });
+    has(lines, `FAIL content/editorial/backlog.md example-brand: line 3 "Acme" is the kit example's brand, which a site never keeps: write the site's own, or delete what came from the example`);
+    has(lines, `FAIL content/_templates/author.json example-brand: line 1 "acme-editorial" is the kit example's author`);
+    has(lines, `FAIL public/images/authors/acme-editorial.webp example-brand: "acme-editorial" is the kit example's author, which a site never keeps: write the site's own (rename or delete the file)`);
+    has(lines, `FAIL public/images/brand/logo.svg example-brand: line 1 "Acme" is the kit example's brand`);
+    has(lines, `FAIL src/config/site.ts example-brand: line 1 "acme.example" is the kit example's domain`);
+    assert.equal(lines.filter((line) => line.includes(" example-brand: ")).length, 5, lines.join("\n"));
+    lacks(run(files, { site: nimbus, setup: (root) => { setup(root); rootFile(root, "package.json", '{ "name": "agentic-cms" }'); } }), "example-brand");
+    lacks(run({ "editorial/backlog.md": "- **x**: ACME certificates, renewed\n" }, { site: nimbus }), "example-brand");
+    const own = run(files, { site: { ...site, name: "Acme Labs", shortName: "Acme Labs" }, setup });
+    assert.deepEqual(own.filter((line) => line.includes(" example-brand: ")).map((line) => line.split(" example-brand: ")[0]), ["FAIL public/images/authors/acme-editorial.webp", "FAIL content/_templates/author.json", "FAIL src/config/site.ts"], "a site named Acme keeps its name; the example's author and domain still fail");
+  });
+  test("the starter init lays out: every collection reads with no entry, and its only findings are its placeholders, which a production build fails on and which go with the copy", async () => {
+    const target = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "starter-")), "nimbus-notes");
+    try {
+      scaffold(target, { kitRoot: REPO, version: "0.8.2", now: NOW, log: () => {} });
+      const { site: own } = await import(pathToFileURL(path.join(target, "src/config/site.ts")).href);
+      const { findings, collections } = lint({ root: target, site: own, now: NOW });
+      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2"]);
+      assert.deepEqual(findings.filter((f) => f.rule !== "placeholder").map(format), [], "nothing but the placeholders");
+      assert.ok(findings.length > 40 && findings.every((f) => f.level === "WARN"), "each placeholder by field, a warning while the site is written");
+      for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) assert.ok(findings.some((f) => f.file === file), `${file} has placeholders`);
+      assert.ok(lint({ root: target, site: own, now: NOW, production: true }).findings.every((f) => f.level === "FAIL"), "and a failure in a production build");
+      // the site writes its own: the marker goes with each string, an address of its own replaces each stand-in
+      for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) {
+        const full = path.join(target, file);
+        fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
+      }
+      const replaced = await import(`${pathToFileURL(path.join(target, "src/config/site.ts")).href}?replaced`);
+      assert.deepEqual(lint({ root: target, site: replaced.site, now: NOW, production: true }).findings.map(format), [], "clean once the copy is the site's");
+    } finally {
+      fs.rmSync(path.dirname(target), { recursive: true, force: true });
+    }
   });
 });

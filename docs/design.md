@@ -53,7 +53,13 @@ commit. Per element:
 ## The round
 
 How a section gets its design, as it runs in practice (the
-`design-options` skill is the procedure; `pnpm kit demo` the command):
+`design-options` skill is the procedure; `pnpm kit demo` the command). A
+round designs around the site's real copy. A site laid out by
+`agentic-cms init` starts with its copy marked `(placeholder)`
+([init.md § The starter](init.md#the-starter)): `demo new` names the page's
+placeholder fields, and any of the kit example's brand, before it writes
+the round, and the `design` skill gets the copy first, from the owner or
+`/editorial:new-page`, rather than design around a placeholder.
 
 1. **The ask.** The owner asks for a design or says what looks wrong:
    "this section looks empty", "redesign the closing band".
@@ -148,7 +154,8 @@ grows from picks, not from plans.
 
 **Before handing over a URL:**
 
-- the candidates carry the page's real copy, the current version last,
+- the candidates carry the page's real copy (never the starter's
+  placeholder or the example's brand), the current version last,
   each lettered with one line on what differs, and a timeline on anything
   that moves (§ The round);
 - they are measured at the site's widths (the profile's, `widths` in

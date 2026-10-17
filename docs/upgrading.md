@@ -24,6 +24,32 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.8.1 → Unreleased
+
+A new site starts from a starter of its own name instead of the example
+([init.md § The starter](init.md#the-starter)). For an existing site nothing
+of its content changes: `init` lays the starter's content and pictures out
+only in a folder with no `content/` yet, and never rewrites a site's
+`content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`,
+`--force` included. Two things the content lint now reads, which a site
+sees on its first build after the upgrade:
+
+- **The kit example's brand fails** in a site at any time (`example-brand`):
+  `Acme` as a word, `acme.example`, the example's author `acme-editorial`,
+  in any file under `content/` and `src/config/`, in an SVG's text and in a
+  picture's name under `public/`. A site that kept the example's posts, its
+  author, its logo or a line of its copy sees each named: replace it with
+  the site's own, or delete it. A site whose own name is Acme keeps it; the
+  example's domain and author still fail.
+- **Placeholders** (`placeholder`): a string marked `(placeholder)`, or an
+  address on a domain reserved for examples (`.example`, `.test`,
+  `.invalid`, `localhost`, example.com), warns. A site that wants a
+  production build to fail on them, as a new one does, adds `--production`
+  to the lint in its `build` script (`"build": "agentic-cms lint
+  --production && …"`), and to its CI's `pnpm build` step
+  `env: { AGENTIC_CMS_PLACEHOLDERS: warn }` if that run deploys nothing.
+  `agentic-cms assemble` packages nothing while one remains.
+
 ## 0.8.0 → 0.8.1
 
 The fixes from running the migration guide on two sites. Move the pin to

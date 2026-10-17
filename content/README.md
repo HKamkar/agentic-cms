@@ -18,9 +18,9 @@ never claims, is `VOICE.md` in this folder.
 | Authors | `authors.json` (a map, the key is the slug a post's `author` names) | the byline and author card of a post | `_templates/author.json` | › `authors` |
 | Categories | `categories.json` (a map, the key is the slug a post's `category` names) | a post's eyebrow and `articleSection` | `_templates/category.json` | › `categories` |
 | Reviews | `reviews.yaml` (a list, in slide order) | the `reviews` section of any page that lists one | `_templates/review.yaml` | › `reviews` |
-| FAQ sets | `faqs/<key>.yaml` (one file per set; a page's `faq` section names the key) | the FAQ section and the FAQPage structured data of every page that shows one — today one set, `general`, shown by `/`, `/sections/about` and `/sections/contact` | `_templates/faq.yaml` | › `faqs` |
+| FAQ sets | `faqs/<key>.yaml` (one file per set; a page's `faq` section names the key) | the FAQ section and the FAQPage structured data of every page that shows one | `_templates/faq.yaml` | › `faqs` |
 | Use cases | `use-cases.yaml` (a list, in card order) | the `use-case-cards` section and the ItemList structured data of every page that shows them | `_templates/use-case.yaml` | › `useCases` |
-| Pages | `pages/<slug>.yaml` (`seo.path` is the route) | the page itself: its head, its structured data, and its sections in order with all their copy — six files today: the landing page, the four section galleries and the blog index | `_templates/page.yaml` | › `pages` (one table per section type) — all of them at the end of this file |
+| Pages | `pages/<slug>.yaml` (`seo.path` is the route) | the page itself: its head, its structured data, and its sections in order with all their copy | `_templates/page.yaml` | › `pages` (one table per section type) — all of them at the end of this file |
 
 Files and folders starting with `_` are never read (`_templates/`,
 `blog/_template.md`). A page file lists its sections by `type`; the copy
@@ -34,9 +34,9 @@ is the blank a new site starts from) and `editorial/` (`calendar.md`, the
 dated plan; `backlog.md`, the ideas; free-form, printed by `pnpm
 content:status`; and, optionally, `workshop.yaml`, which names where a
 marketing workshop — strategy, keyword research, briefs, drafts, prompts —
-lives outside the repo and what may be read there, by role. This site has
-no workshop file and every skill below works without one; what a workshop
-produces lands here through those skills.
+lives outside the repo and what may be read there, by role. Every skill
+below works without a workshop file; what a workshop produces lands here
+through those skills.
 
 ## Skills
 
@@ -53,7 +53,7 @@ isolation.
 | `write-post` | write a post from a brief in four stages (outline, body, the two agents' critique, SEO fields), or rewrite one | a lint-clean `draft: true` file, handed to `new-post` |
 | `new-post` | add a post as a draft, from a brief, a draft file or the workshop's drafts, with its images and frontmatter | the lint clean on the new file, the build, `pnpm preview`, a commit; the user flips `draft` |
 | `update-post` | change a post's copy, fields or images, `updatedAt` set, the two dates and the URL intact | the lint, the build, the route's audit lines, a commit |
-| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image | the lint, the build, a capture of the page at the site's widths, a commit |
+| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image; or write the real copy of a page that still holds placeholder copy | the lint with no placeholder left, the build, a capture of the page at the site's widths, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge | a HIGH / MEDIUM / LOW report with a verdict, then the approved fixes |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |
 | `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |
@@ -82,7 +82,7 @@ stand-in is `pnpm kit placeholder public/images/home/<file>.webp 160
 160`, a real photograph goes through `pnpm kit optimize-webp
 public/images/home/<file>`. Verify (below).
 
-**Change a FAQ.** Edit the set a page names, `faqs/general.yaml`: reorder,
+**Change a FAQ.** Edit the set a page names, `faqs/<key>.yaml`: reorder,
 reword, add or remove items (at least one must remain). A new page that
 shows a FAQ gets its own `faqs/<key>.yaml` from `_templates/faq.yaml` and a
 section naming it (`set: <key>`). Verify.
@@ -110,14 +110,23 @@ its design where the build says "must have exactly N": a different count is
 a design change, not a content edit. Verify.
 
 **Add a page.** Copy `_templates/page.yaml` to `pages/<slug>.yaml`, choose
-the sections from the section types in `src/lib/content/README.md` (the six
-existing pages are worked examples, and the four `sections/*` galleries show
-every type in place), add the OG image under `public/images/` as
+the sections from the section types in § Fields below (the existing pages
+are worked examples; the kit's own repository shows every type in place, on
+its example's `/sections/*` pages), add the OG image under `public/images/` as
 `<path-with-hyphens>-og.jpg` (`/sections/about` → `sections-about-og.jpg`;
 `pnpm kit placeholder public/images/<name>-og.jpg 1200 630` writes a
 stand-in), and add the page to `nav` / `links` / `footer.quickLinks` in
 `src/config/site.ts` if it belongs there. No code. Verify, then look at every
 width in `pnpm preview`.
+
+**Replace the starter's placeholders.** A site that `agentic-cms init`
+laid out starts with copy marked `(placeholder)` — in the home page, the
+blog index and `src/config/site.ts` — and, unless `--url` and `--email`
+gave the real ones, an address on a domain reserved for examples
+(`<slug>.example`). `pnpm content:lint` lists each as a `placeholder` line
+naming the file and the field; `/editorial:new-page` writes a page's real
+copy, or edit by hand, and the marker goes with the string it replaces. A
+production build (`pnpm build`) fails while one remains. Verify.
 
 **Reorder or remove a section.** Move or delete its block in the page file.
 The audit still wants an `<h2>` before any `<h3>` and exactly one `<h1>`,
@@ -138,9 +147,10 @@ pnpm preview                             # the real Worker on http://<ip>:8000 �
 ```
 
 A `FAIL` line stops the build; a `WARN` line is read and either fixed or
-explained (`pnpm content:lint --strict` makes every warning fail). The
-content reports 0 failures and 0 warnings as of 2026-09-16: a new
-warning is yours to retire, not to accumulate.
+explained (`pnpm content:lint --strict` makes every warning fail). Keep
+the content at 0 of each: a new warning is yours to retire, not to
+accumulate, and the starter's `placeholder` lines go as the site's own copy
+replaces them (below).
 
 A content change is supposed to change the page, so the parity proofs
 (`agentic-cms parity`, `agentic-cms visual-parity`) are for code changes,

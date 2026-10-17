@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { EXAMPLE } from "../scripts/lib/init.mjs";
+import { SHARED_CONTENT } from "../scripts/lib/starter.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]));
@@ -44,9 +46,10 @@ test("every site rule template is path-scoped and points at the installed packag
   }
 });
 
-test("the package ships what init copies", () => {
+test("the package ships what init copies, and none of the example's content or pictures", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  for (const entry of ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc", "STANDARD.md", "tsconfig.json", "templates", ".claude/skills", ".agents/skills", "docs"]) {
+  for (const entry of [...EXAMPLE, ...SHARED_CONTENT, "STANDARD.md", "tsconfig.json", "templates", ".claude/skills", ".agents/skills", "docs"]) {
     assert.ok(pkg.files.includes(entry), `files: ${entry}`);
   }
+  for (const entry of ["content", "public"]) assert.ok(!pkg.files.includes(entry), `files: ${entry} — the example's own content stays in the kit's repository`);
 });

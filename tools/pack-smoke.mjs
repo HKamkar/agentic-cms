@@ -4,17 +4,21 @@
 // and in a scratch folder that holds what the old install docs left there
 // (`pnpm init`'s package.json and the workspace snippet without
 // unrs-resolver), runs the install line of docs/init.md as it is written,
-// the tarball standing in for the git spec. Then it installs the site's
-// dependencies and runs its build — the content lint, the field-table check,
-// next build and the SEO audit — its lint (ESLint, then the component
-// guard, which a planted stray section file fails) and its tests through the
-// installed command line; then checks the agent files are as shipped, the
+// the tarball standing in for the git spec. The site is the starter: none of
+// the example's brand, content or pictures in it. Then it installs the site's
+// dependencies and runs its build as its own CI does, the starter's
+// placeholders warnings — the content lint, the field-table check, next build
+// and the SEO audit — then a production build, which fails on them, then,
+// with the copy replaced as a site writes its own, the production build
+// clean; its lint (ESLint, then the component guard, which a planted stray
+// section file fails) and its tests through the installed command line;
+// then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
 // helpers and the component lint in plain Node) and the tarball's size;
-// last, a second site laid out by the installed `init --light-only` builds,
-// lints and tests too, with no theme script in its pages. Exit 1 on the
-// first failure.
+// last, a second site laid out by the installed `init --light-only --name`
+// builds, lints and tests too, with no theme script in its pages. Exit 1 on
+// the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -56,9 +60,12 @@ export const pnpmInitPackage = (name, pnpm) => ({ name, version: "1.0.0", descri
 /** The workspace docs/init.md had a site write by hand up to 0.7.6: without unrs-resolver, which stopped the install after init at ERR_PNPM_IGNORED_BUILDS. */
 export const OLD_WORKSPACE = 'allowBuilds:\n  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true\n  sharp: true\n';
 
+/** The environment of the site's own CI build (templates/site/verify.yml): the starter's placeholders stay warnings in a run that deploys nothing. */
+const CI_BUILD = { AGENTIC_CMS_PLACEHOLDERS: "warn" };
+
 const fail = (message) => { console.error(`pack-smoke: ${message}`); process.exit(1); };
-const run = (command, args, cwd) => {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: ENV });
+const run = (command, args, cwd, env = {}) => {
+  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: { ...ENV, ...env } });
   if (result.status !== 0) fail(`${command} ${args.join(" ")} failed in ${cwd}`);
 };
 /** Runs a command with its output shown as it comes and kept for the caller. */
@@ -99,17 +106,50 @@ function layOut(scratch, site, tarball) {
   fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
 }
 
-/** 3. The site's dependencies (no lockfile yet), the files the tarball must ship, then the build, the lint, the tests and the agent files through the installed command line. */
+/** 3. The site's dependencies (no lockfile yet), the files the tarball must ship and none of the example's, then the starter's builds, the lint, the tests and the agent files through the installed command line. */
 async function build(site) {
   await install(["--prefer-offline", "--no-frozen-lockfile"], site);
-  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "scripts/lib/agent-file-releases.json", "content/pages/home.yaml", "docs/commands.md"]) {
-    if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
+  const kit = path.join(site, "node_modules/agentic-cms");
+  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "scripts/lib/agent-file-releases.json", "templates/starter/content/pages/home.yaml", "content/_templates/page.yaml", "docs/commands.md"]) {
+    if (!fs.existsSync(path.join(kit, shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
   }
-  run("pnpm", ["build"], site);
+  for (const example of ["content/pages/home.yaml", "content/blog/pages-are-files.md", "content/reviews.yaml", "public/images/authors"]) {
+    if (fs.existsSync(path.join(kit, example))) fail(`the tarball ships the example's ${example}, which stays in the kit's repository`);
+  }
+  noExample(site);
+  starterBuilds(site);
   run("pnpm", ["lint"], site);
   guardFails(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+}
+
+/** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */
+function noExample(site) {
+  const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (["node_modules", ".next", ".git"].includes(e.name) ? [] : e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+  const left = files(site).filter((file) => /acme/i.test(path.basename(file)) || (!/\.(?:jpe?g|png|webp|ico)$/.test(file) && /acme/i.test(fs.readFileSync(file, "utf8"))));
+  if (left.length) fail(`the fresh site holds the example's brand: ${left.map((file) => path.relative(site, file)).join(", ")}`);
+}
+
+/**
+ * The starter's three builds: as the site's CI runs it, its placeholders
+ * warnings; a production build, which fails at the content lint naming each
+ * placeholder by file and field before next build starts; and, the copy
+ * replaced as a site writes its own (the marker gone with each string, an
+ * address of its own for each stand-in), the production build clean.
+ */
+function starterBuilds(site) {
+  run("pnpm", ["build"], site, CI_BUILD);
+  const production = spawnSync("pnpm", ["build"], { cwd: site, encoding: "utf8", env: ENV });
+  const output = `${production.stdout}${production.stderr}`;
+  if (production.status === 0 || !/^FAIL content\/pages\/home\.yaml placeholder: sections\[0\]\.heading is placeholder copy, which a production build never ships/m.test(output) || !/^FAIL src\/config\/site\.ts placeholder: line \d+ \(url\) "https:\/\/[\w-]+\.example"/m.test(output) || /Creating an optimized production build/.test(output)) {
+    fail(`a production build of the starter answered ${production.status}, and should fail at the content lint on its placeholders: ${output.trim().slice(-800)}`);
+  }
+  for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) {
+    const full = path.join(site, file);
+    fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
+  }
+  run("pnpm", ["build"], site);
 }
 
 /** The site's lint runs the installed guard after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
@@ -125,16 +165,17 @@ function guardFails(site) {
   if (result.status !== 1 || !/✗ src\/components\/sections\/Stray\.tsx {2}\[registry\]/.test(output)) fail(`pnpm lint with a stray section file answered ${result.status}: ${output.trim().slice(-600)}`);
 }
 
-/** 5. A site without dark mode, laid out by the installed init --light-only: it builds, lints and tests, and its pages carry no theme script. */
+/** 5. A site without dark mode, laid out by the installed init --light-only with a name of its own: it builds as its CI runs it, lints and tests, and its pages carry no theme script. */
 async function lightOnly(site, tarball) {
   const light = path.join(path.dirname(site), "light");
-  run("pnpm", ["exec", "agentic-cms", "init", light, "--light-only"], site);
+  run("pnpm", ["exec", "agentic-cms", "init", light, "--light-only", "--name", "Light & Co."], site);
   if (fs.existsSync(path.join(light, "src/components/ui/ThemeToggle.tsx"))) fail("init --light-only wrote the theme toggle");
+  if (!fs.readFileSync(path.join(light, "src/config/site.ts"), "utf8").includes('name: "Light & Co.",') || !fs.existsSync(path.join(light, "public/images/brand/light-co-logo.svg"))) fail("init --name did not name the site in src/config/site.ts and its logo");
   const pkg = JSON.parse(fs.readFileSync(path.join(light, "package.json"), "utf8"));
   pkg.dependencies["agentic-cms"] = `file:${tarball}`;
   fs.writeFileSync(path.join(light, "package.json"), JSON.stringify(pkg, null, 2));
   await install(["--prefer-offline", "--no-frozen-lockfile"], light);
-  run("pnpm", ["build"], light);
+  run("pnpm", ["build"], light, CI_BUILD);
   run("pnpm", ["lint"], light);
   run("pnpm", ["test"], light);
   const home = fs.readFileSync(path.join(light, ".next/server/app/index.html"), "utf8");
@@ -216,7 +257,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   await build(site);
   entries(site);
   await lightOnly(site, tarball);
-  console.log(`pack-smoke: the package builds a site, and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+  console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
   if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
   else fs.rmSync(scratch, { recursive: true, force: true });
 }

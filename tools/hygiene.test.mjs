@@ -38,10 +38,12 @@ test("a site's name outside the README's showcase is a finding, and so is a mach
   assert.ok(found.some((f) => f.includes("docs/x.md") && f.includes("203.0.113.9:8000")));
 });
 
-test("a PNG outside docs/ and public/, a tracked .parity file and a scratch file are findings", () => {
-  const files = { ...clean, "scripts/shot.png": "x", ".parity/visual/a.png": "x", "notes.tmp": "x" };
+test("a PNG outside docs/ and public/ (the example's, the starter's), a tracked .parity file and a scratch file are findings", () => {
+  const files = { ...clean, "scripts/shot.png": "x", "templates/site/shot.webp": "x", "templates/starter/public/images/home-og.jpg": "x", ".parity/visual/a.png": "x", "notes.tmp": "x" };
   const found = findings(tree(files), Object.keys(files), { brands: ["nimbus"] });
   assert.ok(found.some((f) => f.includes("scripts/shot.png")));
+  assert.ok(found.some((f) => f.includes("templates/site/shot.webp")));
+  assert.ok(!found.some((f) => f.includes("templates/starter/public/")), "the starter's public/ is a site's, in waiting");
   assert.ok(found.some((f) => f.includes(".parity/visual/a.png")));
   assert.ok(found.some((f) => f.includes("notes.tmp")));
 });

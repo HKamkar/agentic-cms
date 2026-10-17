@@ -1,8 +1,9 @@
 # Starting a site: `agentic-cms init`
 
-Two ways to start, one result. **Fork** this repo when you want the example
-around you and replace it piece by piece; or **install** the package and let
-it lay the site out, in one line:
+Two ways to start. **Fork** this repo when you want the example around you
+and replace it piece by piece; or **install** the package and let it lay a
+site of its own out — the example's code with a starter of the site's name
+in place of the example's content — in one line:
 
 ```bash
 pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site
@@ -10,7 +11,10 @@ cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
 `pnpm dlx` installs the kit in a temporary place and runs its `init`, which
-lays the site out in `my-site/` (`.` for the folder you are in). The kit is
+lays the site out in `my-site/` (`.` for the folder you are in), named after
+the folder (`my-site` → My Site); `--name "<Site>"` at the end of the line
+gives the name as it is spelled, `--url` and `--email` its address
+([§ The starter](#the-starter)). The kit is
 a git dependency: it builds its `dist/` as it installs (`prepare`), which
 pnpm runs only for a package its build approvals name by that exact key — a
 bare `--allow-build=agentic-cms` does not match a git-hosted package. `init`
@@ -31,12 +35,10 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
 
 ## What it writes
 
-- **The example**: `src/app/`, `src/components/`, `src/config/`,
+- **The example's code**: `src/app/`, `src/components/`, `src/config/`,
   `src/styles/`, `src/kit.ts` (the one place the engine is composed),
-  `content/` (the registries, the FAQ set, the page files, three posts that
-  describe how a post is built), `public/` (the placeholders and the OG
-  images), `STANDARD.md` (the wireframe's standard, with a note that the
-  `design` skill replaces it as the look lands). Its `src/config/harness.ts`
+  `STANDARD.md` (the wireframe's standard, with a note that the `design`
+  skill replaces it as the look lands). Its `src/config/harness.ts`
   holds the site's profile — the widths a capture takes (390, 768, 1440 and
   1920), the schemes a proof runs a pass in (light and dark), the ref a
   proof's baseline is built from ([visual-parity.md](visual-parity.md#the-sites-profile)),
@@ -44,6 +46,13 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   the layers, the content engine's route folders and the named exceptions
   outside it, each with its reason, the frozen `inherited` list
   ([primitives.md § Placed](primitives.md#placed-agentic-cms-check-components)).
+- **The starter**, in place of the example's content and pictures
+  ([§ The starter](#the-starter)): `content/` (one home page and the blog
+  index, their copy marked as placeholder; the collections empty; the
+  voice file with the site's name; the templates, the editorial plan and
+  the door, `content/README.md`), `public/images/` (the wireframe's neutral
+  placeholders and a logo placeholder with the site's name), and
+  `src/config/site.ts` and `src/config/forms.ts` written for the site.
 - **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
   it), `.claude/rules/` (path-scoped invariants for the content engine, the
   blog, forms, SEO, styling, design and the components, pointing at the
@@ -71,7 +80,10 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   `.gitignore`, `.env.example`, `.nvmrc`, `README.md`, `PLAN.md`.
 - **CI**: `.github/workflows/verify.yml`, on every pull request and every
   push to `develop` or `main`: `pnpm install --frozen-lockfile`, `pnpm lint`,
-  `pnpm test`, `pnpm build` and `agentic-cms init . --agent-files --check`,
+  `pnpm test`, `pnpm build` (with `AGENTIC_CMS_PLACEHOLDERS=warn`: this run
+  deploys nothing, so the starter's placeholders warn here and a new site is
+  green before its copy is written) and
+  `agentic-cms init . --agent-files --check`,
   with pnpm from `packageManager` (Node 25 and later ship no corepack), Node
   from `.nvmrc`, and every action pinned to a commit.
 - **The setup script**: `scripts/setup.sh`, which a clone runs first on any
@@ -81,11 +93,77 @@ From a checkout of the kit, `pnpm kit init ../my-site` does the same.
   package scripts include `urls` (`agentic-cms urls`), and none is named
   `setup`: `pnpm setup` is pnpm's own command.
 
-Nothing of the package's source; nothing about a host (Cloudflare, Azure,
-a VPS are a site's decision, written into its `PLAN.md`). An existing file
-is never overwritten unless `--force`; each file prints `created`,
-`updated` or `kept`. `package.json` and `pnpm-workspace.yaml` are merged,
-with `--force` too, and print `merged` with what changed.
+Nothing of the package's source, nothing of the example's content, and
+nothing about a host (Cloudflare, Azure, a VPS are a site's decision,
+written into its `PLAN.md`). An existing file is never overwritten unless
+`--force`; each file prints `created`, `updated` or `kept`. A site's own is
+never overwritten, `--force` included: its `content/` and `public/`,
+`src/config/site.ts` and `src/config/forms.ts`. The starter's content and
+pictures go only into a folder with no `content/` yet: `init` on an existing
+site, `--agent-files` or not, never deletes or rewrites the site's own
+content. `package.json` and `pnpm-workspace.yaml` are merged, with `--force`
+too, and print `merged` with what changed.
+
+## The starter
+
+A new site starts from its own name, never from the example's brand:
+
+```bash
+pnpm exec agentic-cms init my-site --name "My Site" --url https://my-site.com --email hello@my-site.com
+```
+
+- **The name** (`--name`, default the folder's, its words capitalised) goes
+  where the example says its own: `site.ts`'s `name` and `shortName`, the
+  starter's copy, `content/VOICE.md`'s brand (the prose, `brand.name` and
+  the claim and stack expressions), the logo placeholder's text, title and
+  file name (`public/images/brand/<slug>-logo.svg`, which `site.logo`
+  names).
+- **The address** (`--url`, the origin; `--email`) goes into `site.ts` and
+  the home page's contact card. Without them it stands on a domain reserved
+  for examples, `https://<slug>.example` and `hello@<slug>.example`, and so
+  do the navbar's sign-in link and the footer's one profile, until the site
+  has its own.
+- **The content**: one home page (`content/pages/home.yaml`: the hero, the
+  service split, the five feature cards, the statement and its figures, the
+  contact form and the contact cards — sections the wireframe renders) and
+  the blog index (`content/pages/blog.yaml`), each string of their copy
+  starting with the marker `(placeholder)` and saying what goes there; the
+  collections empty (`authors.json` and `categories.json` `{}`,
+  `reviews.yaml` and `use-cases.yaml` `[]`, `content/faqs/` with a note and
+  no set, `content/blog/` with its template and no post), and each read and
+  built as it is: the blog index, the feed and the sitemap with no post;
+  `content/_templates/` for everything else. None of the example's posts,
+  reviews, use cases, FAQs, author, catalogue pages or pictures: whoever
+  wants to read the example reads it in the kit's repository.
+- **The pictures**: under `public/images/`, only the wireframe's neutral
+  placeholders (the home page's two, its icon, the pull-quote glyph and the
+  two OG images, written by `pnpm kit placeholder`) and the logo placeholder.
+- **The standard**: `STANDARD.md`'s passages on the example's own pages
+  (its page table, its catalogue in the footer, its nav's anchors) are
+  marked `<!-- example:start -->` … `<!-- example:end -->` in the kit, with
+  `<!-- starter: … -->` for what a new site reads in their place, as the
+  dark-mode passages are marked; a marker `init` cannot find stops it
+  before any file is written, naming the file — a kit bug to report.
+
+`pnpm content:lint` names every placeholder by file and field — a string
+carrying the marker in a content file or in `src/config/` (by line there),
+and an address on a reserved domain (`.example`, `.test`, `.invalid`,
+`localhost`, example.com) — as a `placeholder` WARN while the site is
+written. A production build fails on them: the site's `pnpm build` runs
+`agentic-cms lint --production`, so every build that deploys (`pnpm run
+deploy` and `pnpm upload` build through `pnpm build`, and `agentic-cms
+assemble` refuses to package while one remains) stops at the first step,
+naming each. The one exception is the site's own CI, which deploys
+nothing: its build step sets `AGENTIC_CMS_PLACEHOLDERS=warn`, so a new site
+is green before its copy is written. Replace them with the site's own:
+`/editorial:new-page` writes a page's copy, or edit by hand; the marker
+goes with each string it replaces.
+
+The kit example's brand fails in a site at any time: `Acme` as a word,
+`acme.example`, and the example's author `acme-editorial`, in any file
+under `content/` and `src/config/`, in an SVG's text and in a picture's
+name under `public/` (`example-brand`). The kit's own repository, where the
+example is the example, is told by its package name and exempt.
 
 ## A site without dark mode
 
@@ -96,7 +174,7 @@ already has the kit,
 pnpm exec agentic-cms init my-site --light-only
 ```
 
-— lays the same example out with one scheme, light:
+— lays the same site out with one scheme, light:
 
 - the profile says `schemes: ["light"]`, so no proof and no lab ground is in
   a scheme the site does not have;
@@ -127,22 +205,27 @@ browsers, `.env.local`, the checks, and the URLs `pnpm dev` answers on.
 Then `pnpm kit serve`: the dev server (and the lab, once it has a scene),
 every URL to hand over in one table ([dev-server.md](dev-server.md)).
 
-1. `src/config/site.ts`: the brand, the URL, the address, the nav, the
-   footer, the calls to action (data only).
+1. The copy first: `content/VOICE.md` (the starter's carries the site's
+   name and the generic rules the lint enforces; write its sections for
+   the site), then the home page and the blog index, from the owner or
+   `/editorial:new-page`, and `src/config/site.ts` (the tagline, the
+   address, the URL, the nav, the footer, the calls to action; data only).
+   `pnpm content:lint` lists what is still placeholder; `content/README.md`
+   is the door.
 2. `src/app/globals.css`: the tokens — or start the `design` skill, which
-   begins there.
-3. `content/VOICE.md` from `content/_templates/VOICE.md`: the voice and
-   claim rules the lint enforces.
-4. Replace the content: `content/README.md` is the door.
-5. Where the contact form delivers: it ships on `mailto`; the endpoint
+   begins there and designs around the site's real copy, never the
+   starter's placeholders.
+3. More pages and posts: `/editorial:new-page`, `/editorial:new-post`, the
+   templates in `content/_templates/`.
+4. Where the contact form delivers: it ships on `mailto`; the endpoint
    sends it to a webhook or a provider of your choosing
    ([forms.md](forms.md)).
-6. Analytics, if the site measures visits: `GOOGLE_TAG_ID` where the
+5. Analytics, if the site measures visits: `GOOGLE_TAG_ID` where the
    production build runs switches on the Google tag behind a consent banner
    (`src/config/analytics.ts`, the banner the site's to design;
    [consent.md](consent.md)).
-7. `pnpm content:lint` until clean, `pnpm build`, then the host of your
-   choice (a Node server: [deploy.md](deploy.md)).
+6. `pnpm content:lint` until clean, no placeholder left, `pnpm build`,
+   then the host of your choice (a Node server: [deploy.md](deploy.md)).
 
 ## After a kit upgrade
 

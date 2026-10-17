@@ -1,7 +1,8 @@
 // The content lint: the rules on top of the content engine that a schema
 // cannot carry — the voice and claim rules of content/VOICE.md, the SEO
 // limits at the source, the post body's structure, the images on disk, the
-// dates that parse but are not days. `lint({ root, collections, site })`
+// dates that parse but are not days, the starter's placeholders and the kit
+// example's brand (lib/placeholders.mjs). `lint({ root, collections, site })`
 // reads every collection of the site's registry exactly as a build would (an engine error is reported first, verbatim, and
 // that collection is skipped), then walks every validated entry and returns
 // findings; `scripts/content-lint.mjs` prints them, `scripts/content-lint.test.mjs`
@@ -10,10 +11,12 @@
 // grammar with the engine's `file: path problem` shape). The exact rules
 // (the banned list, the patterns, the model names, the mark, the em dash,
 // the alt pairs, the counts, the dates, the structure, the images, the
-// workshop file's shape) FAIL; the
+// workshop file's shape, the example's brand in a site) FAIL; the
 // heuristics (voice-claim, voice-cloud) and the soft ranges (a title over 60,
 // a description outside 70–160, a future date, a stale draft, an orphan, a
-// stray file) WARN — the CLI's --strict promotes those too.
+// stray file) WARN — the CLI's --strict promotes those too. Placeholder copy
+// and a placeholder address WARN, and FAIL with `production` (`lint
+// --production`, the first step of a site's `pnpm build`).
 //
 // Loaded through scripts/lib/load-ts.mjs: the tests via `node --import`, the
 // CLI via a dynamic import after the hook (in the package's own checkout the
@@ -23,6 +26,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { ContentError, formatPath, readCollection, sourceOf } from "agentic-cms/content";
+import { exampleBrandIn, exampleBrandLeftovers, hasPlaceholder, isKit, NOT_CONTENT, onReservedDomain, placeholderLines, REPLACE } from "./placeholders.mjs";
 
 export const LIMITS = {
   title: { warnMax: 60, failMax: 70 }, // = check-seo
@@ -39,8 +43,6 @@ const titleSuffix = (site) => ` | ${site.name}`;
 const VOICE_FILE = "content/VOICE.md";
 const VOICE_START = "<!-- voice-rules:start -->";
 const VOICE_END = "<!-- voice-rules:end -->";
-/** Files and folders under content/ that are not collections but belong there. */
-const KNOWN_IN_CONTENT = new Set(["README.md", "VOICE.md", "editorial"]);
 const IMAGE_KEYS = new Set(["image", "thumbnail", "ogImage", "icon", "photo"]);
 const ALT_OF = { image: "imageAlt", thumbnail: "thumbnailAlt", photo: "photoAlt" };
 /** Strings that are identifiers, not prose: the voice rules skip them. */
@@ -200,19 +202,19 @@ const isProse = (key, value) => !SKIP_KEYS.has(key) && !IMAGE_KEYS.has(key) && !
 const isCalendarDay = (day) => new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 const words = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 
-/** `collections` is the site's registry (kit.collections), `site` its config (kit.site): the lint reads the site it is given, never a module of its own. */
-export function lint({ root = process.cwd(), collections, site, voice, now = new Date() }) {
+/** `collections` is the site's registry (kit.collections), `site` its config (kit.site): the lint reads the site it is given, never a module of its own. `production`: placeholders FAIL. */
+export function lint({ root = process.cwd(), collections, site, voice, now = new Date(), production = false }) {
   if (!collections || !site) throw new Error("lint(): collections and site are required");
   const previous = process.cwd();
   process.chdir(root);
   try {
-    return lintTree({ root, collections, site, given: voice, now });
+    return lintTree({ root, collections, site, given: voice, now, marks: { level: production ? "FAIL" : "WARN", kit: isKit(root) } });
   } finally {
     process.chdir(previous);
   }
 }
 
-function lintTree({ root, collections, site, given, now }) {
+function lintTree({ root, collections, site, given, now, marks }) {
   const findings = [];
   const rows = [];
   const add = (level, file, rule, path, problem) => findings.push({ level, file, rule, path, problem });
@@ -242,12 +244,13 @@ function lintTree({ root, collections, site, given, now }) {
       const ctx = { file: entry.file, collection: def.name };
       for (const leaf of leaves(entry.data, base)) {
         const p = formatPath(leaf.segments);
+        findings.push(...placeholderRules(marks, { file: entry.file, path: p, value: leaf.value }));
         if (IMAGE_KEYS.has(leaf.key) || leaf.value.startsWith("/images/")) images.push({ file: entry.file, path: p, value: leaf.value });
         else if (matchers && isProse(leaf.key, leaf.value)) findings.push(...textRules(matchers, { ...ctx, path: p, key: leaf.key }, leaf.value));
       }
       if (def.name === "posts") {
         posts.push(entry);
-        findings.push(...postRules(root, entry, now, matchers, images, retired, titleSuffix(site)));
+        findings.push(...postRules(root, entry, now, matchers, images, retired, titleSuffix(site), marks));
       }
       if (def.name === "pages") findings.push(...pageRules(entry, now));
       if (def.name === "authors" || def.name === "reviews") findings.push(...altRules(entry, base));
@@ -257,7 +260,29 @@ function lintTree({ root, collections, site, given, now }) {
   findings.push(...orphanRules(root, posts, images));
   findings.push(...strayRules(root, collections));
   findings.push(...workshopRules(root));
+  findings.push(...configPlaceholders(root, marks));
+  if (!marks.kit) findings.push(...brandRules(root, site));
   return { findings, collections: rows };
+}
+
+/** The starter's marker in a string, or a stand-in address on a reserved domain (outside the kit, whose example is on one by design). */
+function placeholderRules(marks, { file, path: p, value }) {
+  if (hasPlaceholder(value)) return [{ level: marks.level, file, rule: "placeholder", path: p, problem: `is placeholder copy${shipsNone(marks)}: ${REPLACE}` }];
+  if (!marks.kit && onReservedDomain(value) && !exampleBrandIn(value)) return [domainFinding(marks, file, p, value)];
+  return [];
+}
+
+const shipsNone = (marks) => (marks.level === "FAIL" ? ", which a production build never ships" : "");
+const domainFinding = (marks, file, p, value) => ({ level: marks.level, file, rule: "placeholder", path: p, problem: `${q(value)} is a stand-in on a domain reserved for examples${shipsNone(marks)}: set the site's own (init --url and --email, or by hand)` });
+
+/** The config under src/config/ by line: the marker anywhere, a reserved domain in site.ts (lib/placeholders.mjs). */
+function configPlaceholders(root, marks) {
+  return placeholderLines(root, { content: false }).map(({ file, path: p, value, domain }) => (domain ? domainFinding(marks, file, p, value) : { level: marks.level, file, rule: "placeholder", path: p, problem: `holds placeholder copy${shipsNone(marks)}: ${REPLACE}` }));
+}
+
+/** The kit example's brand, its domain or its author left in a site: FAIL at any time (never run in the kit's own repository). */
+function brandRules(root, site) {
+  return exampleBrandLeftovers(root, { siteName: `${site.name} ${site.shortName}` }).map(({ file, path: p, found }) => ({ level: "FAIL", file, rule: "example-brand", path: p, problem: `${q(found)} is the kit example's ${/editorial/i.test(found) ? "author" : /\./.test(found) ? "domain" : "brand"}, which a site never keeps: write the site's own${p ? "" : " (rename or delete the file)"}, or delete what came from the example` }));
 }
 
 /** `content/editorial/workshop.yaml`, when it exists, has the shape the plugin reads; whether the folder is present is no finding (a fresh clone has no workshop). */
@@ -319,7 +344,7 @@ function retiredSlugs(root) {
   return new Set(rows.filter((cells) => cells.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(cells[1]) && cells[3] === "retired").map((cells) => cells[2]));
 }
 
-function postRules(root, entry, now, matchers, images, retired, suffix) {
+function postRules(root, entry, now, matchers, images, retired, suffix, marks) {
   const { file, data } = entry;
   const out = [];
   out.push(...altRules(entry, []));
@@ -342,7 +367,7 @@ function postRules(root, entry, now, matchers, images, retired, suffix) {
     const days = Math.floor((now - new Date(`${data.date}T00:00:00Z`)) / DAY);
     if (days > LIMITS.draftDays) out.push({ level: "WARN", file, rule: "draft-stale", path: "draft", problem: `for ${days} days (date ${data.date}); publish it, or retire it with a "retired" row in ${CALENDAR}` });
   }
-  out.push(...bodyRules(root, entry, matchers, images));
+  out.push(...bodyRules(root, entry, matchers, images, marks));
   return out.filter(Boolean);
 }
 
@@ -369,7 +394,7 @@ function bodyLines(root, entry) {
 const plainText = (text) => text.replace(/`[^`]*`/g, " ").replace(MARKDOWN_IMAGE, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/<[^>]+>/g, " ");
 const attribute = (tag, name) => tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
 
-function bodyRules(root, entry, matchers, images) {
+function bodyRules(root, entry, matchers, images, marks) {
   const out = [];
   const { file, slug } = entry;
   const add = (level, rule, line, problem) => out.push({ level, file, rule, path: `line ${line}`, problem });
@@ -394,6 +419,7 @@ function bodyRules(root, entry, matchers, images) {
     }
     if (faq && text.trim() && faq.questions.length) faq.questions.at(-1).answered = true;
     for (const image of bodyImages(text)) out.push(...bodyImageRules(root, file, slug, line, image, images));
+    if (hasPlaceholder(text)) out.push(...placeholderRules(marks, { file, path: `line ${line}`, value: text }));
     if (matchers && text.trim()) out.push(...textRules(matchers, { file, path: `line ${line}`, collection: "posts" }, plainText(text)));
   }
   if (faq) out.push(...faqFindings(file, faq));
@@ -480,7 +506,7 @@ function strayRules(root, collections) {
   const content = path.join(root, "content");
   if (!fs.existsSync(content)) return out;
   const defs = Object.values(collections);
-  const known = new Set([...KNOWN_IN_CONTENT, ...defs.map((def) => (def.kind === "folder" ? def.dir : def.file))]);
+  const known = new Set([...NOT_CONTENT, ...defs.map((def) => (def.kind === "folder" ? def.dir : def.file))]);
   for (const entry of fs.readdirSync(content, { withFileTypes: true })) {
     if (entry.name.startsWith("_") || known.has(entry.name)) continue;
     out.push({ level: "WARN", file: `content/${entry.name}`, rule: "stray-file", path: "", problem: entry.isDirectory() ? "is not a collection folder; nothing reads it" : "is not a collection file; nothing reads it" });

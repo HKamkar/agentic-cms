@@ -284,7 +284,7 @@ part a site brings.
 
 ## Start your own site
 
-Two ways, one result. **Fork** this repo when you want the example around
+Two ways. **Fork** this repo when you want the example around
 you — the wireframe, the section galleries, the posts that describe it —
 and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
@@ -298,6 +298,18 @@ The kit is a git dependency that builds its `dist/` as it installs, which
 pnpm runs only when allowed by that exact key; `init` writes it into the
 site's `pnpm-workspace.yaml` with the others the site's install needs, and
 the site's CI workflow with it.
+
+`init` lays out the example's code with a starter in place of its content,
+named after the folder (`--name "<Site>"` gives the name as it is spelled,
+`--url` and `--email` the site's address): one home page and the blog index
+whose copy is marked `(placeholder)`, the collections empty, the wireframe's
+neutral pictures and a logo placeholder with the site's name. Nothing of the
+example's brand, posts, reviews, use cases, FAQs, author or catalogue pages
+comes along, so a design starts from the site, never from the example.
+`pnpm content:lint` names each placeholder by file and field; a production
+build fails while one remains (the site's own CI, which deploys nothing,
+keeps them warnings), and the example's brand fails the lint in a site at
+any time.
 
 Either way the site carries, from the first session and with nothing
 installed, what an agent needs to design it: the rules (`AGENTS.md`, and
@@ -326,22 +338,28 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 
    and `package.json` names the commands: `"content:lint": "agentic-cms
    lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
-   "agentic-cms"`, `"build": "agentic-cms lint && agentic-cms docs --check
-   && next build && agentic-cms seo"`, and for the site's own tests
+   "agentic-cms"`, `"build": "agentic-cms lint --production && agentic-cms
+   docs --check && next build && agentic-cms seo"`, and for the site's own tests
    `"test": "node --import agentic-cms/loader --test \"src/**/*.test.ts\""`.
-2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
+2. `content/VOICE.md`, your voice and claim rules; the prose and the fenced
+   block say the same thing. Installing: `init` wrote it from
+   `content/_templates/VOICE.md` with your site's name and the generic
+   rules, so write its sections. Forking: copy the blank and write it.
+3. The copy, before any design: installing, the starter's placeholders —
+   the home page, the blog index, the tagline and the address in
+   `src/config/site.ts` — from you or `/editorial:new-page`; forking, the
+   example's registries, reviews, FAQ sets, use cases, page files and
+   posts, and keep or delete the `/sections/*` demo pages.
+   `content/README.md` is the door; `content/_templates/` has an annotated
+   template per collection.
+4. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
    the footer, the calls to action (data only, `satisfies SiteConfig`).
-3. `src/app/globals.css`: the tokens — or start the `design` skill, which
-   begins there. Each colour is a `light-dark()` pair, so both themes
-   follow; a site without dark mode starts from `init --light-only`.
-4. Copy `content/_templates/VOICE.md` to `content/VOICE.md` and write your
-   rules; the prose and the fenced block say the same thing.
-5. Replace the content: the registries, the reviews, the FAQ sets, the use
-   cases, the page files, the posts. `content/README.md` is the door;
-   `content/_templates/` has an annotated template per collection. Keep or
-   delete the `/sections/*` demo pages.
-6. `pnpm content:lint` until clean, `pnpm build`, then the host of your
-   choice: the example's Cloudflare Worker, or a Node server
+5. `src/app/globals.css`: the tokens — or start the `design` skill, which
+   begins there and designs around your real copy. Each colour is a
+   `light-dark()` pair, so both themes follow; a site without dark mode
+   starts from `init --light-only`.
+6. `pnpm content:lint` until clean, no placeholder left, `pnpm build`, then
+   the host of your choice: the example's Cloudflare Worker, or a Node server
    ([docs/deploy.md](docs/deploy.md): `output: "standalone"` and
    `agentic-cms assemble` as the build's last step).
 
@@ -386,7 +404,7 @@ pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last; waits for it on the dev server and prints its URLs
-pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
+pnpm kit init <dir> --name "<Site>"  # a site from the package: the example's code, a starter of the site's name, the agent files, the config
 pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
 pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
 pnpm kit serve       # next dev and the lab for a look: every demo route waited for, every URL (localhost, LAN, public) in one table; Ctrl-C stops both
@@ -450,6 +468,7 @@ content/editorial/           calendar.md, backlog.md, and workshop.yaml when mar
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
 .claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
 templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow, scripts/setup.sh; templates/lab-demo/ the lab's route
+templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
 src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas

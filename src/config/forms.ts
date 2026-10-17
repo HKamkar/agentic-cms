@@ -42,7 +42,7 @@ export const forms = {
     ],
     submit: { label: "Submit now", waitLabel: "Please wait..." },
     messages: {
-      success: "Thank you. Your message has reached Acme; the person who reads that mailbox replies.",
+      success: `Thank you. Your message has reached ${site.name}; the person who reads that mailbox replies.`,
       error: `Something went wrong. Please email us directly at ${site.email}.`,
     },
     // Opens the visitor's mail client: nothing to run. To deliver instead, set

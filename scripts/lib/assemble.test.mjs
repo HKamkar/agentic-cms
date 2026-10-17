@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -93,4 +94,20 @@ test("the package sits at relativeAppDir when the trace root lies above the site
   const bare = site({ "public/a.txt": "a" });
   assert.ok(!hasPackage(bare));
   for (const dir of [root, bare]) fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("what deploys holds no placeholder: the command packages nothing while the starter's copy or address remains, unless the run deploys nothing", () => {
+  const bin = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
+  const root = site({ ...BUILD, "content/pages/home.yaml": 'seo:\n  title: "(placeholder) The title"\n', "src/config/site.ts": 'export const site = { url: "https://my-site.example" };\n' });
+  const env = { ...process.env };
+  delete env.AGENTIC_CMS_PLACEHOLDERS;
+  const refused = spawnSync(process.execPath, [bin, "assemble"], { cwd: root, encoding: "utf8", env });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /^assemble: 2 placeholder\(s\) left from the starter, and what deploys ships none — write the site's own \(\/editorial:new-page, or by hand; pnpm content:lint names each by field\), then build again; nothing was packaged:\n {2}content\/pages\/home\.yaml line 2 \(title\): title: "\(placeholder\) The title"\n {2}src\/config\/site\.ts line 1: https:\/\/my-site\.example$/m);
+  assert.ok(!fs.existsSync(path.join(root, ".next/standalone/public/images/hero.webp")), "nothing copied");
+  const ci = spawnSync(process.execPath, [bin, "assemble"], { cwd: root, encoding: "utf8", env: { ...env, AGENTIC_CMS_PLACEHOLDERS: "warn" } });
+  assert.equal(ci.status, 0, ci.stderr);
+  assert.match(ci.stderr, /assemble: 2 placeholder\(s\) left, packaged anyway \(AGENTIC_CMS_PLACEHOLDERS=warn: this run deploys nothing\)/);
+  assert.ok(fs.existsSync(path.join(root, ".next/standalone/public/images/hero.webp")));
+  fs.rmSync(root, { recursive: true, force: true });
 });
