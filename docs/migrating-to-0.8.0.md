@@ -842,9 +842,16 @@ Each row goes only after its step works.
   `pnpm build`, 0 failures.
 - `pnpm exec agentic-cms init . --agent-files --check` is clean: every file
   the kit's text, or your edit of it (`modified`).
-- `pnpm kit visual-parity proof migrate --ref develop --build` is identical,
-  except for the design changes you chose and committed apart (3.4's
-  toggle).
+- The three passes on every page are identical, except for the design
+  changes you chose and committed apart (3.4's toggle):
+  `pnpm kit visual-parity proof migrate --ref develop --build --all-pages`,
+  then the same with `--states` and with `--motion` in place of `--build`,
+  as in § 1's check. A bare `proof` covers only the profile's `proof.pages`
+  or `proof.sample` (§ 3.1), the short proof of a change to a few pages,
+  while §§ 3.5–3.7 change code that every route renders. Where the profile
+  samples (`proof.sample`: many pages of one template), `--sample 1` in
+  place of `--all-pages` keeps every page that is no template's and one
+  page of each template.
 - The owner looks on the dev server (`pnpm kit serve`), then the merge.
 
 ## When something fails
