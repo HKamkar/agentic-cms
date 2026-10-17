@@ -646,7 +646,14 @@ the imports.
 4. Run `pnpm exec agentic-cms init . --agent-files`: with the config
    present, it writes the components rule (`.claude/rules/components.md`)
    and its row in `AGENTS.md`'s scoped-rules table. Without the config it
-   never writes the rule, and `--check` does not report it missing.
+   never writes the rule, and `--check` does not report it missing. You
+   may add your own lines to the rule before you commit it: `init`
+   records its base, the hash in `.agentic-cms.json` and the text in the
+   package's record of its releases (or, for a text no release has, a copy
+   in `.agentic-cms/base/`), so `--check` calls your copy `modified` and a
+   later `--diff` prints the kit's change alone. That is 0.8.1 and later;
+   with 0.8.0 itself, commit the rule as `init` wrote it before you edit
+   it.
 
 **Check:** `pnpm lint` passes on the current tree, and
 `pnpm exec agentic-cms init . --agent-files --check` is clean. A planted

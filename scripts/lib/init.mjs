@@ -15,9 +15,11 @@
 // releases, its commit; so `init --agent-files --check` can tell a site's own
 // edit (never clobbered) from a file the kit has since updated, and an edit
 // of the kit's current text from one the kit has moved past. The text of the
-// base of each file the site edited is kept beside it (.agentic-cms/base/),
+// base of each file the site edited, and of each base no release of the kit
+// holds (a pin between releases), is kept beside it (.agentic-cms/base/),
 // recovered from the kit's releases or the site's git history for a manifest
-// older than the copies, so `--diff` prints the kit's change alone. A file
+// older than the copies, so `--diff` prints the kit's change alone, even for
+// a file the site edits before it commits the kit's text. A file
 // the manifest records no base for (the site wrote it first) takes its base
 // from the kit's releases (RELEASES, every release's text of every agent
 // file): the release whose text it is, else the kit's text at the version
@@ -370,12 +372,16 @@ const removeEmptyDirs = (dir) => {
   if (!fs.readdirSync(dir).length) fs.rmdirSync(dir);
 };
 
-/** Leaves under BASES the copy of each base a site's edit differs from — the one there, or recovered from the kit's releases or the site's git history — and nothing else. */
+/** Whether a base needs its copy under BASES: the site's text differs from it, or no release of the kit holds its text to give it back once the site edits the file. */
+const keepsCopy = (onDisk, base, releases) => (onDisk !== null && sha(onDisk) !== base) || releases.texts[base] === undefined;
+
+/** Leaves under BASES the copy of each base keepsCopy() names — the one there, the site's file when it is the base, or recovered from the kit's releases or the site's git history — and nothing else. */
 function keepBaseCopies(target, bases, releases) {
   const wanted = new Set();
   for (const [file, base] of Object.entries(bases)) {
     const onDisk = readText(path.join(target, file));
-    const found = onDisk === null || sha(onDisk) === base ? null : baseText(target, file, base, releases);
+    if (!keepsCopy(onDisk, base, releases)) continue;
+    const found = onDisk !== null && sha(onDisk) === base ? { text: onDisk, from: file } : baseText(target, file, base, releases);
     if (!found) continue;
     wanted.add(basePath(file));
     if (found.from !== basePath(file)) writeBaseCopy(target, file, found.text);
@@ -397,8 +403,8 @@ const kitPath = (file) => { const [from, to] = Object.entries(AGENT_DIRS).find((
 
 /**
  * Records the kit's current text as the base of each file the site merged by
- * hand (--accept), its base copy kept while the site's text differs; nothing
- * else changes. [{ file, status }], the status --check now gives. Throws an
+ * hand (--accept), its base copy kept while the site's text differs or no
+ * release of the kit holds it; nothing else changes. [{ file, status }], the status --check now gives. Throws an
  * AgentFileError, before anything is written, for a name that is not one of
  * the site's agent files or a file that is not there.
  */
@@ -407,12 +413,13 @@ export function acceptAgentFiles(target, files, { kitRoot }) {
   const named = [...new Set(files.map((given) => agentFileName(target, given, kit)))];
   for (const file of named) if (!fs.existsSync(path.join(target, file))) throw new AgentFileError(`${file} is missing: agentic-cms init --agent-files writes it`);
   const manifest = readManifest(target);
+  const releases = readReleases(kitRoot);
   const report = named.map((file) => {
     const onDisk = readText(path.join(target, file));
     const base = sha(kit.get(file));
     manifest.files[file] = base;
-    if (sha(onDisk) === base) fs.rmSync(path.join(target, basePath(file)), { force: true });
-    else writeBaseCopy(target, file, kit.get(file));
+    if (keepsCopy(onDisk, base, releases)) writeBaseCopy(target, file, kit.get(file));
+    else fs.rmSync(path.join(target, basePath(file)), { force: true });
     return { file, status: statusOf(onDisk, base, base) };
   });
   writeManifest(target, manifest);

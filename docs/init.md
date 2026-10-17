@@ -171,9 +171,13 @@ where the site's edits sit apart from it), and `--accept <file>` then
 records the kit's current text as the file's base. The text of the base of
 each file the site edited is kept in `.agentic-cms/base/`, under the file's
 path without its leading dot so no agent loads the copies as rules or
-skills; the first time, it comes from the kit's releases or the site's
-git history (the commit that has the file as the kit wrote it). Commit the
-folder with the manifest.
+skills, and so is the text of a base no release of the kit holds (a pin
+between releases; a release's text is in the package's record of its
+releases). So a file `init` writes and the site edits before committing
+it keeps its base, and `--diff` prints the kit's change alone with nothing
+committed first. The first time, a base's text comes from the kit's
+releases or the site's git history (the commit that has the file as the
+kit wrote it). Commit the folder with the manifest.
 
 A file the site wrote before the manifest recorded its base has none, so
 it is measured against the kit's text at the version the site was on: the
