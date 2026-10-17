@@ -41,7 +41,7 @@ rules for an agent working on the code.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
   next: the tag, the agent files, and each release's own steps.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
-  0.8.0: the one required step, what it may adopt, what it deletes if it
+  0.8 (pin 0.8.1): the one required step, what it may adopt, what it deletes if it
   wrote its own.
 - [icons.md](icons.md) — icons as families: the Lucide / Simple Icons map,
   the site's own marks from primitives, the inventory of every icon.

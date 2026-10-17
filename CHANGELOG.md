@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.8.1] — 2026-10-17
 
 - Docs: `docs/migrating-to-0.8.0.md` § 3.5's heading loses the job marker the release commit missed.
 - `init --agent-files`: a rule or skill that a site wrote before `.agentic-cms.json` recorded its base is measured against the kit's text at the version the site was on: the manifest's `version`, else the last other version its `package.json` named in git. It is `modified`, noted "no base: kit unchanged since 0.7.6", when the kit's text has not changed since. It is `modified, kit changed` with that text as its base when it has, and `--diff` then prints the kit's change alone. It is `stale` when it is a release's text untouched. The refresh and `--accept` record the base. Before, every such file was `modified, kit changed`, and `--diff` printed the site's whole file against the kit's as if it were the kit's change. Where no release is known as the file's source, `--diff` now says plainly that it is the site's whole file and must not be applied whole. The package carries every release's text of every agent file for this (`scripts/lib/agent-file-releases.json`, written from the tags by `pnpm agent-files:releases` and checked by `pnpm hygiene`; a release commit rewrites it). `docs/init.md` and `docs/migrating-to-0.8.0.md` § 1 say that only a `--diff` from a base goes into a copy whole.

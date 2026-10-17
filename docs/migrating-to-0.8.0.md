@@ -1,4 +1,4 @@
-# Migrating a site from 0.7.6 to 0.8.0
+# Migrating a site from 0.7.6 to 0.8
 
 This is for a site on agentic-cms 0.7.6. Upgrading changes nothing a reader
 sees: a site that does only § 1 builds, lints and proves identical.
@@ -38,16 +38,18 @@ own version.
 ## 1. Upgrade (required)
 
 ```bash
-# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.0"
+# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.1"
 pnpm install
 pnpm exec agentic-cms init . --agent-files --check   # what will change, writes nothing
 pnpm exec agentic-cms init . --agent-files           # skills, rules, the rules table
 ```
 
-**Before the tag** exists, a site that runs this guide as the release's
-gate pins the release commit, `github:HKamkar/agentic-cms#<develop sha>`,
-and moves to `#v0.8.0` once the tag exists. `.agentic-cms.json` records
-`"version": "0.8.0"`, with that commit from the lockfile beside it.
+**Take 0.8.1.** It is 0.8.0 with the fixes this guide's runs on two sites
+found, and the checks below use its `--all-pages`. Before a release is
+tagged, a site that runs this guide as its gate pins the release commit,
+`github:HKamkar/agentic-cms#<develop sha>`, and moves to the tag once it
+exists; `.agentic-cms.json` records the version, with that commit from the
+lockfile beside it.
 
 **What `--agent-files` updates:** the skills, the scoped rules and the rules
 table in `AGENTS.md`.
