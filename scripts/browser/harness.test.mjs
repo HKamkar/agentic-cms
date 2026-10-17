@@ -11,7 +11,7 @@ import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
-import { LAZY_PAGE, LOOP_PAGE, SPIN_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
+import { CANVAS_PAGE, LAZY_PAGE, LOOP_PAGE, SPIN_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -224,6 +224,45 @@ test("an infinite CSS loop never enters the animation inventory, however often i
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("a settled frame with a loop the harness cannot hold differs between two captures of one build: without retakes it is CHANGED and unretaken, with them UNSTABLE where the loop runs; a change beyond that region is still CHANGED", { skip, timeout: 240000 }, () => {
+  const root = fixtureSite();
+  try {
+    addPage(root, "/canvas", CANVAS_PAGE);
+    const args = ["--motion", "--widths", "800", "--pages", "/canvas"];
+    const capture = (label, ...more) => { const r = run(root, ["capture", label, ...args, ...more]); assert.equal(r.status, 0, r.stderr); };
+    const settled = "canvas@800--s00-settled.png";
+    capture("one", "--fresh");
+    capture("two", "--fresh");
+    const bare = run(root, ["compare", "one", "two", "--json"]);
+    assert.equal(bare.status, 1, "one build, two captures: the settled frame differs");
+    const unjudged = JSON.parse(bare.stdout);
+    assert.equal(unjudged.files.find((f) => f.name === settled).status, "CHANGED");
+    assert.deepEqual(unjudged.unretaken, [settled]);
+    assert.match(bare.stderr, /^ {9}cause: scroll step 0, settled, rows \d+-\d+: no section geometry for this kind of shot; the diff image shows where$/m, "no claim that a settled frame never moves");
+    assert.doesNotMatch(bare.stderr, /never jitters/);
+    capture("one-retake", "--no-cache");
+    capture("two-retake", "--no-cache");
+    const judged = run(root, ["compare", "one", "two", "--retake-before", "one-retake", "--retake-after", "two-retake", "--json"]);
+    assert.equal(judged.status, 1, "an UNSTABLE frame is not a pass");
+    const report = JSON.parse(judged.stdout);
+    const frame = report.files.find((f) => f.name === settled);
+    assert.equal(frame.status, "UNSTABLE", frame.line);
+    assert.ok(frame.cause.noise.every(([, y0, , y1]) => y0 >= 0 && y1 <= 300 + 16), "the region is the canvas's rows, grown by the margin");
+    assert.match(judged.stderr, /^UNSTABLE canvas@800--s00-settled\.png/m);
+    assert.match(judged.stderr, /^ {9}cause: unstable — scroll step 0, settled: the shot also differs between two takes of one build at rows \d+-\d+, x \d+-\d+/m);
+    assert.deepEqual([report.summary.unstable, report.summary.changed, report.unretaken], [1, 0, []]);
+    // the heading below the canvas changes for real: the frame differs beyond the canvas's region too
+    addPage(root, "/canvas", CANVAS_PAGE.replace("Below the canvas", "Below the canvas, retitled"));
+    capture("three", "--fresh");
+    capture("three-retake", "--no-cache");
+    const changed = run(root, ["compare", "one", "three", "--retake-before", "one-retake", "--retake-after", "three-retake", "--json"]);
+    const real = JSON.parse(changed.stdout).files.find((f) => f.name === settled);
+    assert.equal(real.status, "CHANGED", real.line);
+    assert.ok(real.cause.outside > 0, "the changed heading lies outside the region the canvas moves in");
+    assert.match(changed.stderr, /; reproduced on a fresh retake of each side, \d+ pixels of it outside where the shot also differs between two takes of one build$/m);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 // The fixture's /lazy page served by the test, which holds /images/late.svg back: `hold(n)` says whether the nth
 // request for it (from 1) gets no answer. A capture of it runs as a child, so this process stays free to answer.
 async function lazyServer(root, hold) {
@@ -349,7 +388,7 @@ test("compare: a page whose section changed and grew is a SIZE line with the row
     assert.match(r.stderr, /\n {9}cause: hero height [\d.]+ → [\d.]+ \(\+40\.000 px\)\n/);
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.before)) && fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.after)));
     assert.equal(report.files.find((f) => f.name === "about@800.png").status, "ok");
-    assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, flaky: 0, exit: 1 });
+    assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, flaky: 0, unstable: 0, exit: 1 });
     assert.deepEqual(report.unretaken, ["home@800.png"], "a bare compare names the shot it could not retake");
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after/report.json")));
     assert.match(r.stderr, /1 file\(s\) differ/);

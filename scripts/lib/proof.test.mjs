@@ -148,7 +148,13 @@ test("retakeSteps: the shots no retake judged, captured again at their pages and
   assert.deepEqual(retakeSteps(compare, { report, before: { label: "b", pages: ["/"], meta: {} }, after: side("a", ["/"]) }), [], "a baseline with no sha cannot be built again");
   const states = plan({ passes: ["states"] }).find((s) => s.step === "compare");
   assert.deepEqual(retakeSteps(states, { report, before: side("b", null), after: side("a", null) }), [], "a --states capture has no --pages: its pass is not retaken");
-  assert.deepEqual(RETAKEN_PASSES, ["static"]);
+  assert.deepEqual(RETAKEN_PASSES, ["static", "motion"]);
+  const [motion] = plan({ passes: ["motion"] }).filter((s) => s.step === "compare");
+  const frames = retakeSteps(motion, { report: { unretaken: ["home@390--s02-settled.png", "home@1440--s00-500.png"] }, before: side("proof-before-motion", ["/"]), after: side("proof-after-motion", ["/"]) });
+  assert.deepEqual(frames.slice(0, 2).map((s) => s.args), [
+    ["capture", "proof-before-retake-motion", "--ref", SHA, "--motion", "--scheme", "light", "--pages", "/", "--widths", "390,1440", "--no-cache", "--json"],
+    ["capture", "proof-after-retake-motion", "--motion", "--scheme", "light", "--pages", "/", "--widths", "390,1440", "--no-cache", "--json"],
+  ], "--motion's noise floor: the base taken again, and the tree, for the page-widths of the frames that differ");
 });
 
 test("a run retakes a pass whose compare left shots unretaken: the first compare is quiet and its lines are not printed, the compare with the retakes reports the pass", async () => {

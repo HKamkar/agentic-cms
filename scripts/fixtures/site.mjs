@@ -32,6 +32,15 @@ export const SPIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="ut
 const observer = new IntersectionObserver((entries) => { for (const { target, isIntersecting } of entries) { clearInterval(target.timer); if (!isIntersecting) { target.classList.remove("on"); continue; } target.classList.add("seen"); restart(target); target.timer = setInterval(() => restart(target), 700); } });
 for (const tile of document.querySelectorAll(".tile")) observer.observe(tile);</script></body></html>`;
 
+// A page with a canvas redrawn on every animation frame, a 40 px square at a new place each time, and a heading
+// below it: a loop the harness cannot hold (no CSS or Web Animation to pause), so two captures of one build never
+// photograph it alike, as a canvas drawn every frame or a script's own loop does on a real page.
+export const CANVAS_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Canvas</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } canvas { display: block; } h2 { margin: 80px 2rem 0; }</style></head>
+<body><main><section data-section="canvas"><canvas width="760" height="300"></canvas><h2>Below the canvas</h2></section></main>
+<script>const pen = document.querySelector("canvas").getContext("2d");
+const draw = () => { pen.clearRect(0, 0, 760, 300); pen.fillStyle = "#000"; pen.fillRect(Math.floor(Math.random() * 720), Math.floor(Math.random() * 260), 40, 40); requestAnimationFrame(draw); };
+draw();</script></body></html>`;
+
 // A page with one lazy image far below the fold, 400 × 400, at /images/late.svg: a test that serves the page
 // itself decides when (or whether) that image arrives.
 export const LAZY_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Lazy</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } .gap { height: 1600px; }</style></head>

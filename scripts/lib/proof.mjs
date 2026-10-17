@@ -13,8 +13,12 @@ import { routeName } from "./browser.mjs";
 /** The passes, and the flag that makes each. */
 export const PASSES = { static: [], motion: ["--motion"], states: ["--states"] };
 
-/** The passes whose changed shots are retaken before they report: a --states capture has no --pages to retake one state with. */
-export const RETAKEN_PASSES = ["static"];
+/**
+ * The passes whose changed shots are retaken before they report: the static pass and --motion, whose retake of the
+ * base is its noise floor (a frame that moves between two takes of one build); a --states capture has no --pages to
+ * retake one state with.
+ */
+export const RETAKEN_PASSES = ["static", "motion"];
 
 /** The passes a proof runs: static, then motion and states when asked (or all). */
 export const passesOf = ({ motion = false, states = false, all = false } = {}) => ["static", ...(motion || all ? ["motion"] : []), ...(states || all ? ["states"] : [])];

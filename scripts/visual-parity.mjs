@@ -370,7 +370,7 @@ async function compare(before, after) {
   if (lacking.length && report.files.some((f) => f.cause?.kind === "geometry")) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);
   const unloaded = report.files.filter((f) => f.cause?.kind === "unloaded").length;
   if (unloaded) out(`\n${unloaded} shot(s) taken with an image still loading after a reload: retake those pages with --fresh before reading them as differences`);
-  if (report.unretaken.length) out(`\n${report.unretaken.length} shot(s) differ and no retake judged them: a compare cannot take a shot. \`visual-parity proof\` retakes each once on both sides, fresh, before it reports, and a difference that does not reproduce is FLAKY; by hand, capture each side again with --pages, --widths and --no-cache, and compare with --retake-before and --retake-after`);
+  if (report.unretaken.length) out(`\n${report.unretaken.length} shot(s) differ and no retake judged them: a compare cannot take a shot. \`visual-parity proof\` retakes each once on both sides, fresh, before it reports: a difference that does not reproduce is FLAKY, and one that lies where the shot also differs between two takes of one build is UNSTABLE; by hand, capture each side again with --pages, --widths and --no-cache, and compare with --retake-before and --retake-after`);
   const failures = report.files.length - report.summary.ok;
   out(failures ? `\n${failures} file(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
   fs.writeFileSync(path.join(diffDir, "report.json"), JSON.stringify(report, null, 1));
@@ -428,8 +428,8 @@ function evictJittered(passes) {
   return evicted;
 }
 
-/** The statuses of a line that is neither ok nor evidence of a change: the shot was not evidence (an image still loading) or did not reproduce. */
-const NOT_EVIDENCE = ["FLAKY"];
+/** The statuses of a line that is neither ok nor evidence of a change: the shot was not evidence (an image still loading), did not reproduce, or moved only where it moves between two takes of one build. */
+const NOT_EVIDENCE = ["FLAKY", "UNSTABLE"];
 
 /** The proof's summary: a line per pass (the compare's counts, each side's time and reuse, the retakes'), then the verdict. */
 function printProof(label, ref, { passes, exit, failed }, evicted) {
@@ -438,7 +438,7 @@ function printProof(label, ref, { passes, exit, failed }, evicted) {
   for (const p of passes) {
     const s = p.report?.summary;
     const retaken = p.retakes ? `; retaken ${p.retakes.before?.seconds ?? "—"} s + ${p.retakes.after?.seconds ?? "—"} s` : "";
-    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing${s.flaky ? `, ${s.flaky} flaky` : ""}` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}${retaken}`);
+    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing${s.flaky ? `, ${s.flaky} flaky` : ""}${s.unstable ? `, ${s.unstable} unstable` : ""}` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}${retaken}`);
   }
   if (evicted) console.log(`proof: ${evicted} jittered shot(s) left .parity/shot-cache, so the next capture takes them again`);
   if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : failed.step.startsWith("retake-") ? `retake ${failed.label}` : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);

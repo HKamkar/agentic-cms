@@ -401,12 +401,12 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--pages /a,/b` | judge only these routes' files, on both sides, at the widths the after capture took (a partial capture) |
 | `--mixed-seed` | compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes |
 | `--retake-before <label>` | a capture --no-cache of the before side's build (the same build id, scheme, mode and seed), whose shots are fresh retakes of the before shots that differ |
-| `--retake-after <label>` | the same for the after side: a shot of which some take of the after build matches some take of the before build does not reproduce, and is FLAKY |
+| `--retake-after <label>` | the same for the after side: a shot of which some take of the after build matches some take of the before build does not reproduce, and is FLAKY; one whose every changed pixel lies where it also differs between two takes of one build is UNSTABLE |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file or a flaky shot (one taken with an image still loading, or a difference a retake did not reproduce); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, captures seeded differently (without --mixed-seed), or a retake that is not a fresh take of its side's build.
+Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file, a flaky shot (one taken with an image still loading, or a difference a retake did not reproduce) or an unstable one (it differs only where it also moves between two takes of one build); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, captures seeded differently (without --mixed-seed), or a retake that is not a fresh take of its side's build.
 
-`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, retakes: { before, after } | null, unretaken: [name], summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional, retake? } | { kind: unloaded | jitter | in-place | geometry | frame | missing | inventory | settle, …, retake? } }] }`.
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, retakes: { before, after } | null, unretaken: [name], summary: { ok, changed, size, missing, flaky, unstable, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional, retake?, outside? } | { kind: unloaded | jitter | unstable | in-place | geometry | frame | missing | inventory | settle, …, retake?, outside? } }] }`.
 
 ```bash
 agentic-cms visual-parity compare before after --json
@@ -417,7 +417,7 @@ agentic-cms visual-parity compare before after --retake-before before-retake --r
 
 #### `visual-parity proof`
 
-A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare, each static shot that differs retaken once on both sides, fresh, before the pass reports; one summary, exit 1 on any line that is not ok.
+A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare, each static shot and --motion frame that differs retaken once on both sides, fresh, before the pass reports; one summary, exit 1 on any line that is not ok.
 
 ```bash
 agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
@@ -444,7 +444,7 @@ agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] 
 | `--no-storage` | leave out the site's seed on both sides (capture --no-storage) |
 | `--json` | print the proof as JSON: each pass's captures and compare report |
 
-Exit: `0` every pass identical within the thresholds; `1` a line that is not ok in any pass — a difference, or a FLAKY shot that proves nothing either way — or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, captures of two schemes, or a retake of another build (the tree rebuilt during the proof).
+Exit: `0` every pass identical within the thresholds; `1` a line that is not ok in any pass — a difference, or a FLAKY or UNSTABLE shot that proves nothing either way — or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, captures of two schemes, or a retake of another build (the tree rebuilt during the proof).
 
 `--json` prints `{ label, ref, schemes, passes: [{ pass, scheme, before, after, retakes: { before, after } | undefined, report, seconds }], exit, failed?, evicted }`.
 

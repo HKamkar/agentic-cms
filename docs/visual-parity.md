@@ -29,9 +29,10 @@ counts, each side's time and how much the shot cache reused — and one exit:
 `0` when every pass is identical, `1` on any difference or a failed capture.
 Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
 so a pass that differs is read like any compare. `--json` prints every
-pass's captures and report. A static shot that differs is retaken before
-the pass reports ([below](#a-difference-retaken)), into
-`<label>-before-retake` and `<label>-after-retake`. What it runs on — the ref, the schemes, the
+pass's captures and report. A static shot or a `--motion` frame that
+differs is retaken before the pass reports
+([below](#a-difference-retaken)), into `<label>-before-retake` and
+`<label>-after-retake` (`-motion`). What it runs on — the ref, the schemes, the
 widths, the pages — is the site's profile unless a flag says otherwise
 ([below](#the-sites-profile)): a site with two schemes gets every pass in
 each, the dark one's captures ending in `-dark` (`proof-before-dark`,
@@ -107,11 +108,15 @@ retakes only the home page, at the widths where the menu is now tried
 ## A difference, retaken
 
 One shot is one sample. A renderer can lay a line of text a pixel lower
-once in a few hundred page-widths, and a shot copied from the cache repeats
-whatever its first take was. So a difference is evidence only once it
-reproduces, and `proof` asks before it reports: when a static pass's
-compare has shots that differ (`CHANGED` or `SIZE`), it takes those pages
-again at those widths alone, once on each side and with the same seed —
+once in a few hundred page-widths; a canvas drawn every frame, a loop the
+harness cannot hold (a script's own, not a CSS or Web Animation), a spring
+still moving near the settle time all move a `--motion` frame between two
+captures of one build; and a shot copied from the cache repeats whatever
+its first take was. So a difference is evidence only once it reproduces
+outside what moves on its own, and `proof` asks before it reports: when a
+static or `--motion` pass's compare has shots that differ (`CHANGED` or
+`SIZE`), it takes those pages again at those widths alone, once on each
+side and with the same seed —
 the baseline from the sha it was built from (`capture --ref <sha>`), the
 after side from the tree — with `--no-cache`, so nothing comes from the
 cache and nothing goes into it. Then it compares again, judged against the
@@ -124,13 +129,23 @@ two retakes (`compare --retake-before <label> --retake-after <label>`):
   reproduce: the line is `FLAKY`, its cause says which take jittered, and
   the shot that jittered leaves the shot cache, so the next capture takes it
   again instead of copying it.
-- When none matches, the line stands as it was, `CHANGED` or `SIZE`, and its
-  cause ends `reproduced on a fresh retake of each side`.
+- When none matches, each side's retake against its own first take shows
+  where the shot moves between two takes of one build: the noise floor, a
+  box around each band of rows that differ, as wide as their changed pixels
+  and grown by 16 px. When every pixel that differs between the two sides
+  lies inside those boxes, the line is `UNSTABLE`: the region is no
+  evidence either way (a change there would be hidden by what moves), and
+  outside it the two sides are identical; its cause names the region.
+- Otherwise the line stands as it was, `CHANGED` or `SIZE`, and its cause
+  ends `reproduced on a fresh retake of each side`, with how many of its
+  pixels lie outside the noise floor when there is one.
 
-Only the shots that differ pay, two shots each (their page-widths: the
-retake takes the pages it needs at the widths it needs, so a page and a
-width that only differed together may come along). The first compare's
-lines are not printed; the compare with the retakes is the pass's report.
+The base against itself is what `--motion` pays for its noise floor, and
+only for the page-widths with a frame that differs. Only the shots that
+differ pay, two page-widths each (the retake takes every page with a shot
+that differs at every width with one, so a page-width that did not differ
+may come along). The first compare's lines are not printed; the compare
+with the retakes is the pass's report.
 Its retake captures must photograph the same build as their side — the
 build id `meta.json` records, and the sha — in the same scheme, mode and
 seed, taken with `--no-cache`; one that is not is refused (exit 2), so a
@@ -144,9 +159,9 @@ finds it, and ends with how many shots no retake judged
 capture each side again with `--pages`, `--widths` and `--no-cache` and
 compare with both retakes.
 
-`FLAKY` still counts against the exit: a proof with a `FLAKY` line exits 1
-and says the difference did not reproduce, and the line is read, never
-passed silently.
+`FLAKY` and `UNSTABLE` still count against the exit: a proof with such a
+line exits 1 and says it found no difference that reproduces, and the line
+is read, never passed silently.
 
 ## Where the build comes from
 
@@ -379,7 +394,14 @@ agree. An infinite CSS or Web Animation loop is left out, read from its
 effect's timing in the page (DevTools reports one with no iteration count
 at all): how often a page starts or restarts a loop, from an observer or a
 timer, depends on timing, and the frames show it held at its first frame.
-Motion mode covers every page of the build and its first post.
+What the harness cannot hold still moves: a canvas drawn every frame, a
+script's own loop, a spring that has not come to rest by the settle time.
+Such a region differs between two captures of one build, settled frame
+included, and only a second take tells it from a change: `proof` retakes
+every frame that differs, the base against itself among them, and calls a
+difference that lies only there `UNSTABLE`
+([above](#a-difference-retaken)). Motion mode covers every page of the
+build and its first post.
 
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a
@@ -418,8 +440,8 @@ CHANGED  about@390.png                                                          
          cause: no section moved; the change at rows 2017-2060 is inside cards: its content changed in place; reproduced on a fresh retake of each side
 FLAKY    blog-post__pages-are-files@390.png                                     0.024% (1180 px) rows 2210-2228
          cause: the difference does not reproduce — a fresh retake of the after side matches the before shot: the first after shot jittered, the capture's doing, not the build's
-CHANGED  home@1440--s02-500.png                                                18.100% (…)  mid-flight
-         cause: scroll step 2, 500 ms after it (mid-flight: re-run once with --fresh, and identical then means accepted)
+UNSTABLE home@1440--s02-settled.png                                            0.310% (4018 px) rows 120-188
+         cause: unstable — scroll step 2, settled: the shot also differs between two takes of one build at rows 104-204, x 612-1180, and every changed pixel lies there: that region is no evidence either way, and outside it the two sides are identical
 SIZE     blog@800.png                                                           800x3160 -> 800x3210 (+50)  same to row 1204, tail 1550 rows, band 1204-1610 -> 1204-1660: shift
          cause: hero height 812.000 → 862.000 (+50.000 px)
 FLAKY    blog-post__pages-are-files@1440.png                                    3.214% (…) rows 3320-3610
@@ -462,6 +484,10 @@ ok       home@1440.animations.json                                              
   ([above](#a-difference-retaken)): a take of the after build matched a take
   of the before build, so the first shot jittered. It counts against the
   exit like any other line that is not `ok`.
+- `UNSTABLE`: a shot whose every changed pixel lies where it also differs
+  between two takes of one build ([above](#a-difference-retaken)): a
+  canvas, a loop, a spring still moving. The region proves nothing either
+  way; outside it the sides are identical. It counts against the exit too.
 - `cause:` — under every line that is not `ok`, what is behind it:
   - a page shot's section, from the geometry a static capture writes beside
     each shot (`<page>@<width>.sections.json`: every `[data-section]`, else
@@ -475,11 +501,14 @@ ok       home@1440.animations.json                                              
     cause says so and names the side to redo;
   - on a `FLAKY` line, the image that had not arrived (its side, its place
     and its source), or which take a retake matched;
+  - on an `UNSTABLE` line, the region where the shot moves on its own (its
+    rows and columns, and how many more regions);
   - on a line a retake reproduced, `reproduced on a fresh retake of each
-    side` (or of the one side retaken) after the cause;
+    side` (or of the one side retaken) after the cause, with how many of
+    its pixels lie outside where the shot moves on its own;
   - for a shot that has no geometry by kind, what it shows: the open menu,
-    a motion step's frame (a mid-flight one may move with timing, a settled
-    one never does) or a state's box; the diff image shows where;
+    a motion step's frame (whether it moves with timing is the retakes' to
+    say) or a state's box; the diff image shows where;
   - for a `MISSING` file, why the other side lacks it: a state it skipped
     for want of a target, a page it did not take at all or not at that
     width, or a motion step past its end because the page's height changed;
@@ -497,7 +526,7 @@ ok       home@1440.animations.json                                              
 
 `--json` prints the same as one document (`{ before, after, scheme,
 baseline, retakes, unretaken, summary: { ok, changed, size, missing, flaky,
-exit }, files: [{ name, kind, status, line, cause, … }] }`; every file's
+unstable, exit }, files: [{ name, kind, status, line, cause, … }] }`; every file's
 entry carries its printed `line` and its numbers, and every one that is not
 `ok` its `cause`) and it is always written as `report.json` in the `-vs-`
 directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
@@ -582,17 +611,18 @@ falls through after 10 s.
   listens on the port before capturing against it, kill a stale one by its
   pid (a standalone Next server renames itself, so a pattern on the path
   misses it), and print its `git log -1` first.
-- A mid-flight motion frame (a 500 ms frame at 20–30 %) can differ by timing
-  jitter: re-run it once with `--fresh` (without it an unchanged page's
-  frames are copied from `.parity/shot-cache`, which proves nothing about
-  jitter), and identical on the re-run means accepted. A
-  settled frame never jitters — that is a real difference. A static shot
-  is not promised that: once in a few hundred page-widths a line of text
-  can land a pixel off, which is why `proof` retakes every static shot that
-  differs before calling it a difference ([above](#a-difference-retaken)).
-  A sequence that runs longer than two seconds after its section enters is
-  not settled at the default: the section declares `data-settle="<ms>"`
-  (or the capture raises `--settle`), and the settled frame waits.
+- No shot is promised never to move. A mid-flight motion frame (a 500 ms
+  frame at 20–30 %) can differ by timing; a settled frame differs wherever
+  a canvas, a script's loop or a spring still runs; and once in a few
+  hundred page-widths a static line of text lands a pixel off. `proof`
+  retakes every static shot and `--motion` frame that differs before
+  calling it a difference ([above](#a-difference-retaken)); after a bare
+  `compare`, retake by hand (`capture --no-cache` of each side, then
+  `compare --retake-before … --retake-after …`). A sequence that runs
+  longer than two seconds after its section enters is not settled at the
+  default: the section declares `data-settle="<ms>"` (or the capture raises
+  `--settle`), and the settled frame waits — the fix too for a spring an
+  `UNSTABLE` line keeps finding near the settle time.
 - A stacking context (`position: relative` alone is enough) on the copy of a
   section whose animated elements overflow it can flip how the compositor
   rasterises everything below it: every text line under that section loses

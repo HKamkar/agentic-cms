@@ -275,13 +275,17 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
 `pnpm kit visual-parity proof upgrade --ref develop --build --all`: the
 static pass, `--states` and `--motion`, in each scheme the site has. Every
 pass must be identical: each page shot, each state's box, and each
-`--motion` step's settled frame. A mid-flight frame (`-150`, `-500`) that
-differs is re-run once with `--fresh`, and identical then is accepted. A
-`FLAKY` line is a shot taken with an image still loading, retaken with
-`--pages <route> --fresh`, or a static difference that did not reproduce:
-the proof retook it once on each side, a take of one build matched a take
-of the other, and its cause says which jittered; that one is accepted. Any
-other difference is a kit bug: report it
+`--motion` step's frames. Before a pass reports, the proof retakes every
+static shot and `--motion` frame that differs, once on each side; for
+`--motion` that is a second take of the base build, the base against
+itself. A `FLAKY` line is a shot taken with an image still loading,
+retaken with `--pages <route> --fresh`, or a difference that did not
+reproduce: a take of one build matched a take of the other, and its cause
+says which jittered; that one is accepted. An `UNSTABLE` line is a frame
+that also differs between two takes of one build, where a canvas, a loop
+or a spring still runs, and is identical outside that region: accepted
+too (a spring it keeps finding near the settle time takes a
+`data-settle`). Any other difference is a kit bug: report it
 with the `cause:` line the compare prints under it rather than adjusting
 the site.
 
