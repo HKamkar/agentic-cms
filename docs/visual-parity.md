@@ -29,7 +29,9 @@ counts, each side's time and how much the shot cache reused — and one exit:
 `0` when every pass is identical, `1` on any difference or a failed capture.
 Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
 so a pass that differs is read like any compare. `--json` prints every
-pass's captures and report. What it runs on — the ref, the schemes, the
+pass's captures and report. A static shot that differs is retaken before
+the pass reports ([below](#a-difference-retaken)), into
+`<label>-before-retake` and `<label>-after-retake`. What it runs on — the ref, the schemes, the
 widths, the pages — is the site's profile unless a flag says otherwise
 ([below](#the-sites-profile)): a site with two schemes gets every pass in
 each, the dark one's captures ending in `-dark` (`proof-before-dark`,
@@ -101,6 +103,50 @@ compare as `MISSING` files. A site that writes into its profile the widths
 it used to pass as a flag keeps its shot cache: the first proof after it
 retakes only the home page, at the widths where the menu is now tried
 ([below](#unchanged-shots-are-reused)).
+
+## A difference, retaken
+
+One shot is one sample. A renderer can lay a line of text a pixel lower
+once in a few hundred page-widths, and a shot copied from the cache repeats
+whatever its first take was. So a difference is evidence only once it
+reproduces, and `proof` asks before it reports: when a static pass's
+compare has shots that differ (`CHANGED` or `SIZE`), it takes those pages
+again at those widths alone, once on each side and with the same seed —
+the baseline from the sha it was built from (`capture --ref <sha>`), the
+after side from the tree — with `--no-cache`, so nothing comes from the
+cache and nothing goes into it. Then it compares again, judged against the
+two retakes (`compare --retake-before <label> --retake-after <label>`):
+
+- A real change never renders the before build's pixels. When some take of
+  the after build matches some take of the before build — the after side's
+  retake matches the before shot, the before side's retake matches the
+  after shot, or the two retakes match each other — the difference does not
+  reproduce: the line is `FLAKY`, its cause says which take jittered, and
+  the shot that jittered leaves the shot cache, so the next capture takes it
+  again instead of copying it.
+- When none matches, the line stands as it was, `CHANGED` or `SIZE`, and its
+  cause ends `reproduced on a fresh retake of each side`.
+
+Only the shots that differ pay, two shots each (their page-widths: the
+retake takes the pages it needs at the widths it needs, so a page and a
+width that only differed together may come along). The first compare's
+lines are not printed; the compare with the retakes is the pass's report.
+Its retake captures must photograph the same build as their side — the
+build id `meta.json` records, and the sha — in the same scheme, mode and
+seed, taken with `--no-cache`; one that is not is refused (exit 2), so a
+tree rebuilt while the proof ran stops it rather than judging the new build
+against the old one.
+
+A bare `compare` judges two captures and cannot take a shot. Without
+`--retake-before` / `--retake-after` it reports every difference as it
+finds it, and ends with how many shots no retake judged
+(`unretaken` in its `--json`), which `proof` would have retaken. By hand,
+capture each side again with `--pages`, `--widths` and `--no-cache` and
+compare with both retakes.
+
+`FLAKY` still counts against the exit: a proof with a `FLAKY` line exits 1
+and says the difference did not reproduce, and the line is read, never
+passed silently.
 
 ## Where the build comes from
 
@@ -254,8 +300,11 @@ it alone — the home page of a static capture at the menu's widths — so a
 change to those widths retakes the home page there and reuses every other
 page-width. A shot taken with an image still loading (below) and a state
 skipped for want of its target are never stored, so a later capture takes
-them again. `--fresh` takes every shot again and refreshes the cache: to
-prove a frame deterministic, or whenever a copied shot is in doubt. Four
+them again; so is a retake (`--no-cache` takes every shot and stores none),
+and a shot a retake found to have jittered is removed from it
+([above](#a-difference-retaken)). `--fresh` takes every shot again and
+refreshes the cache: to prove a frame deterministic, or whenever a copied
+shot is in doubt. Four
 entries are kept per page-width, the least recently used going first;
 `visual-parity clean --cache` empties it.
 
@@ -358,14 +407,17 @@ sides.
 
 ## Reading a compare
 
-One line per file, sorted:
+One line per file, sorted (here a proof's compare, judged against its
+retakes):
 
 ```
 baseline: develop 55ab6af3d59bee8ce99b1e572c2bbf5ba360f106
 seed: storage consent={"analytics":"denied","at":"{now}","version":1}, on both
 ok       home@1440.png                                                          0.000% (0 px)
 CHANGED  about@390.png                                                          0.412% (1234 px) rows 2017-2060
-         cause: no section moved; the change at rows 2017-2060 is inside cards: its content changed in place
+         cause: no section moved; the change at rows 2017-2060 is inside cards: its content changed in place; reproduced on a fresh retake of each side
+FLAKY    blog-post__pages-are-files@390.png                                     0.024% (1180 px) rows 2210-2228
+         cause: the difference does not reproduce — a fresh retake of the after side matches the before shot: the first after shot jittered, the capture's doing, not the build's
 CHANGED  home@1440--s02-500.png                                                18.100% (…)  mid-flight
          cause: scroll step 2, 500 ms after it (mid-flight: re-run once with --fresh, and identical then means accepted)
 SIZE     blog@800.png                                                           800x3160 -> 800x3210 (+50)  same to row 1204, tail 1550 rows, band 1204-1610 -> 1204-1660: shift
@@ -402,10 +454,13 @@ ok       home@1440.animations.json                                              
 
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
-- `FLAKY`: a static shot that differs and that one side took with an image
-  still loading, after a reload had not brought it (below): the empty box
-  is the capture's, not the build's, so the line proves nothing either way.
-  Retake that page with `--pages <route> --fresh`. It counts against the
+- `FLAKY`: a shot that differs and proves nothing either way. Either one
+  side took it with an image still loading, after a reload had not brought
+  it (below): the empty box is the capture's, not the build's; retake that
+  page with `--pages <route> --fresh`. Or a fresh retake showed the
+  difference does not reproduce
+  ([above](#a-difference-retaken)): a take of the after build matched a take
+  of the before build, so the first shot jittered. It counts against the
   exit like any other line that is not `ok`.
 - `cause:` — under every line that is not `ok`, what is behind it:
   - a page shot's section, from the geometry a static capture writes beside
@@ -418,8 +473,10 @@ ok       home@1440.animations.json                                              
     first changed row, whose content changed in place. No section measured
     by hand. A capture from before the kit wrote geometry has none; the
     cause says so and names the side to redo;
-  - on a `FLAKY` line, the image that had not arrived: its side, its place
-    and its source;
+  - on a `FLAKY` line, the image that had not arrived (its side, its place
+    and its source), or which take a retake matched;
+  - on a line a retake reproduced, `reproduced on a fresh retake of each
+    side` (or of the one side retaken) after the cause;
   - for a shot that has no geometry by kind, what it shows: the open menu,
     a motion step's frame (a mid-flight one may move with timing, a settled
     one never does) or a state's box; the diff image shows where;
@@ -439,11 +496,13 @@ ok       home@1440.animations.json                                              
   differ; the diff directory then holds the entries only one side has.
 
 `--json` prints the same as one document (`{ before, after, scheme,
-baseline, summary: { ok, changed, size, missing, flaky, exit }, files: [{
-name, kind, status, line, cause, … }] }`; every file's entry carries its
-printed `line` and its numbers, and every one that is not `ok` its `cause`)
-and it is always written as `report.json` in the `-vs-` directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
-a usage error, a missing capture or two captures of different schemes.
+baseline, retakes, unretaken, summary: { ok, changed, size, missing, flaky,
+exit }, files: [{ name, kind, status, line, cause, … }] }`; every file's
+entry carries its printed `line` and its numbers, and every one that is not
+`ok` its `cause`) and it is always written as `report.json` in the `-vs-`
+directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
+a usage error, a missing capture, two captures of different schemes, or a
+retake that is not a fresh take of its side's build.
 
 ## What the harness waits for, and why
 
@@ -527,7 +586,10 @@ falls through after 10 s.
   jitter: re-run it once with `--fresh` (without it an unchanged page's
   frames are copied from `.parity/shot-cache`, which proves nothing about
   jitter), and identical on the re-run means accepted. A
-  settled frame or a static shot never jitters — that is a real difference.
+  settled frame never jitters — that is a real difference. A static shot
+  is not promised that: once in a few hundred page-widths a line of text
+  can land a pixel off, which is why `proof` retakes every static shot that
+  differs before calling it a difference ([above](#a-difference-retaken)).
   A sequence that runs longer than two seconds after its section enters is
   not settled at the default: the section declares `data-settle="<ms>"`
   (or the capture raises `--settle`), and the settled frame waits.

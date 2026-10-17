@@ -269,6 +269,47 @@ test("a lazy image that has not arrived is never photographed silently: the page
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("a static shot that differs and does not reproduce is FLAKY: a retake --no-cache that matches the other side, judged by compare --retake-after; a retake of another build, or one that may come from the cache, is refused", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    const home = path.join(root, ".next/server/app/index.html");
+    const html = fs.readFileSync(home, "utf8");
+    fs.writeFileSync(path.join(root, ".next/BUILD_ID"), "build-1");
+    const args = ["--widths", "800", "--pages", "/"];
+    assert.equal(run(root, ["capture", "base", ...args]).status, 0);
+    // the after side's first take, as a jittered one looks: the list's labels and its heading a pixel lower, about 0.06 % of the shot
+    fs.writeFileSync(home, html.replace(/> (one|two)<\/li>/g, '><span style="position: relative; top: 1px">$1</span></li>').replace("<h2>Fits the stack</h2>", '<h2 style="position: relative; top: 1px">Fits the stack</h2>'));
+    assert.equal(run(root, ["capture", "first", ...args]).status, 0);
+    fs.writeFileSync(home, html);
+    const cached = () => fs.readdirSync(path.join(root, ".parity/shot-cache")).flatMap((key) => fs.existsSync(path.join(root, ".parity/shot-cache", key, "home@800")) ? fs.readdirSync(path.join(root, ".parity/shot-cache", key, "home@800")) : []).length;
+    const entries = cached();
+    const retake = run(root, ["capture", "retake", ...args, "--no-cache", "--json"]);
+    assert.equal(retake.status, 0, retake.stderr);
+    assert.equal(JSON.parse(retake.stdout).reused, null, "nothing copied from the cache");
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/retake/meta.json"), "utf8")).build, "build-1");
+    assert.equal(cached(), entries, "and nothing stored in it");
+    const bare = run(root, ["compare", "base", "first"]);
+    assert.equal(bare.status, 1);
+    assert.match(bare.stdout, /^CHANGED  home@800\.png/m);
+    assert.match(bare.stdout, /^1 shot\(s\) differ and no retake judged them: a compare cannot take a shot\. `visual-parity proof` retakes each once on both sides/m);
+    const judged = run(root, ["compare", "base", "first", "--retake-after", "retake", "--json"]);
+    assert.equal(judged.status, 1, "a FLAKY line is not a pass");
+    const entry = JSON.parse(judged.stdout).files.find((f) => f.name === "home@800.png");
+    assert.equal(entry.status, "FLAKY");
+    assert.match(judged.stderr, /^FLAKY {4}home@800\.png/m);
+    assert.match(judged.stderr, /^ {9}cause: the difference does not reproduce — a fresh retake of the after side matches the before shot: the first after shot jittered, the capture's doing, not the build's$/m);
+    assert.doesNotMatch(judged.stderr, /no retake judged them/);
+    const cachedRetake = run(root, ["compare", "base", "first", "--retake-after", "base"]);
+    assert.equal(cachedRetake.status, 2);
+    assert.match(cachedRetake.stderr, /base cannot stand as a retake of first: it may have copied shots from the shot cache/);
+    fs.writeFileSync(path.join(root, ".next/BUILD_ID"), "build-2");
+    assert.equal(run(root, ["capture", "rebuilt", ...args, "--no-cache"]).status, 0);
+    const rebuilt = run(root, ["compare", "base", "first", "--retake-after", "rebuilt"]);
+    assert.equal(rebuilt.status, 2);
+    assert.match(rebuilt.stderr, /rebuilt cannot stand as a retake of first: it photographed another build \(build id build-2, the side's build-1\)/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("compare names the section behind a sub-pixel shift: a hero half a pixel taller, every row below re-antialiased", { skip }, () => {
   const root = fixtureSite();
   try {
@@ -309,6 +350,7 @@ test("compare: a page whose section changed and grew is a SIZE line with the row
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.before)) && fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.after)));
     assert.equal(report.files.find((f) => f.name === "about@800.png").status, "ok");
     assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, flaky: 0, exit: 1 });
+    assert.deepEqual(report.unretaken, ["home@800.png"], "a bare compare names the shot it could not retake");
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after/report.json")));
     assert.match(r.stderr, /1 file\(s\) differ/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

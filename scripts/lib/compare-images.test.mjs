@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
-import { causeLine, compareCapture, compareSameSize, explainShift, judged, mergeBands, rowDiff } from "./compare-images.mjs";
+import { causeLine, compareCapture, compareSameSize, explainShift, judgeRetakes, judged, mergeBands, retakeRefusal, rowDiff } from "./compare-images.mjs";
+import { sameSeed } from "./storage-seed.mjs";
 
 // A synthetic page: width w, every row a colour by index (so rows differ from each other), 3 channels.
 const W = 40;
@@ -214,4 +215,69 @@ test("every line that is not ok carries a cause: an image still loading is FLAKY
   assert.equal(report.summary.flaky, 1);
   assert.equal(report.summary.exit, 1, "a flaky shot proves nothing: the compare does not pass it");
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("judgeRetakes: a take of the after build that matches a take of the before build means the difference does not reproduce; none matching, it does", () => {
+  const base = image(page(100));
+  const moved = page(100); moved[60] = [250, 250, 250];
+  const other = page(100); other[20] = [250, 250, 250];
+  const [jittered, changed] = [image(moved), image(other)];
+  const judge = (takes) => judgeRetakes({ before: base, after: jittered, ...takes }, { threshold: 0.02 }).matched;
+  assert.equal(judge({ retakeAfter: image(page(100)) }), "after", "the after side's retake is the before shot: its first take jittered");
+  assert.equal(judge({ retakeBefore: image(moved) }), "before", "the before side's retake is the after shot");
+  assert.equal(judge({ retakeBefore: changed, retakeAfter: image(other) }), "both", "the two retakes agree with each other");
+  assert.equal(judge({ retakeBefore: image(page(100)), retakeAfter: image(moved) }), null, "each side reproduces its own shot: the difference is real");
+  assert.equal(judge({ retakeAfter: image(page(101)) }), null, "a retake of another height matches nothing");
+  assert.equal(judge({}), null, "no retake, no verdict");
+  assert.equal(judgeRetakes({ before: base, after: jittered, retakeAfter: image(page(100), { tint: 10 }) }, { threshold: 0.02 }).matched, "after", "within the tolerance is a match");
+});
+
+test("compareCapture with retakes: a difference no retake reproduces is FLAKY with its cause, one each retake reproduces stays with the sides named, and a shot no retake holds is unretaken", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-retakes-"));
+  const write = async (label, name, rows) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(rows); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  const before = page(100), lower = [...before], real = [...before];
+  lower[70] = [250, 250, 250]; // one row a pixel off on the after side's first take
+  real[30] = [5, 250, 5];
+  const geo = JSON.stringify([{ id: "hero", section: "hero", top: 0, height: 50 }, { id: null, section: "links", top: 50, height: 50 }]);
+  for (const name of ["post@40.png", "about@40.png", "home@40.png", "home@40--state-cta-hover.png"]) await write("a", name, before);
+  await write("b", "post@40.png", lower);
+  for (const name of ["about@40.png", "home@40.png", "home@40--state-cta-hover.png"]) await write("b", name, real);
+  for (const label of ["a", "b"]) for (const shot of ["post@40", "about@40", "home@40"]) fs.writeFileSync(path.join(dir, label, `${shot}.sections.json`), geo);
+  // the retakes: the post's after retake is the before shot again; about reproduces on each side; home and the state were not retaken
+  await write("ra", "post@40.png", before);
+  await write("rb", "post@40.png", before);
+  await write("rb", "about@40.png", before);
+  await write("ra", "about@40.png", real);
+  const compare = (retakes) => compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20, retakes });
+  const bare = await compare(null);
+  assert.deepEqual(bare.files.filter((f) => f.status !== "ok").map((f) => [f.name, f.status]), [["about@40.png", "CHANGED"], ["home@40--state-cta-hover.png", "CHANGED"], ["home@40.png", "CHANGED"], ["post@40.png", "CHANGED"]]);
+  assert.deepEqual(bare.unretaken, ["about@40.png", "home@40.png", "post@40.png"], "a bare compare retakes nothing; a state's box is not a shot a retake takes");
+  assert.equal(bare.retakes, null);
+  const report = await compare({ before: path.join(dir, "rb"), after: path.join(dir, "ra") });
+  const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
+  assert.equal(byName["post@40.png"].status, "FLAKY");
+  assert.match(byName["post@40.png"].line, /^FLAKY {4}post@40\.png +1\.000% \(40 px\) rows 70-70$/);
+  assert.deepEqual(byName["post@40.png"].cause, { kind: "jitter", matched: "after" });
+  assert.equal(causeLine(byName["post@40.png"].cause), "cause: the difference does not reproduce — a fresh retake of the after side matches the before shot: the first after shot jittered, the capture's doing, not the build's");
+  assert.equal(byName["about@40.png"].status, "CHANGED");
+  assert.equal(causeLine(byName["about@40.png"].cause), "cause: no section moved; the change at row 30 is inside hero: its content changed in place; reproduced on a fresh retake of each side");
+  assert.deepEqual(report.unretaken, ["home@40.png"], "home has no retake on either side");
+  assert.deepEqual(report.retakes, { before: "rb", after: "ra" });
+  assert.deepEqual(report.summary, { ok: 0, changed: 3, size: 0, missing: 0, flaky: 1, exit: 1 }, "a FLAKY line still proves nothing: the compare does not pass it");
+  assert.equal(causeLine({ kind: "jitter", matched: "both" }), "cause: the difference does not reproduce — fresh retakes of both sides match each other: the first shots jittered, the capture's doing, not the build's");
+  assert.match(causeLine({ kind: "in-place", section: null, rows: [3, 4], retake: ["after"] }), /; reproduced on a fresh retake of the after side$/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("retakeRefusal: a retake is a fresh take of its side's build, in its scheme, mode and seed", () => {
+  const side = { scheme: "light", motion: false, states: false, build: "b1", sha: "a".repeat(40), seed: { storage: { consent: "{now}" }, at: "x" } };
+  const retake = { ...side, fresh: true, seed: { storage: { consent: "{now}" }, at: "y" } };
+  const refusal = (changes) => retakeRefusal(side, { ...retake, ...changes }, { sameSeed });
+  assert.equal(refusal({}), null, "the same build and seed, taken fresh; when {now} was replaced does not count");
+  assert.match(refusal({ fresh: undefined }), /may have copied shots from the shot cache: a retake is captured with --no-cache/);
+  assert.match(refusal({ build: "b2" }), /another build \(build id b2, the side's b1\)/);
+  assert.match(refusal({ sha: "b".repeat(40) }), /another commit \(bbbbbbb, the side's aaaaaaa\)/);
+  assert.match(refusal({ scheme: "dark" }), /captured in dark, the side in light/);
+  assert.match(refusal({ motion: true }), /another mode/);
+  assert.match(refusal({ seed: null }), /seeded differently/);
 });

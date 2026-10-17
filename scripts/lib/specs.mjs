@@ -104,7 +104,7 @@ export const SPECS = {
     subcommands: {
       capture: {
         command: "visual-parity capture", summary: "screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed",
-        usage: `agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] ${seedUsage}`,
+        usage: `agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh | --no-cache] ${seedUsage}`,
         positionals: [{ name: "label", required: true, help: "the capture's name under .parity/visual/" }],
         flags: {
           motion: { type: "boolean", help: "play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation" },
@@ -121,29 +121,32 @@ export const SPECS = {
           ...seed,
           jobs: { type: "number", value: "<n>", help: "browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed" },
           fresh: { type: "boolean", help: "take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same)" },
+          "no-cache": { type: "boolean", help: "take every shot and store none in .parity/shot-cache: a retake of shots in doubt (proof takes one of each shot that differs), which compare --retake-before / --retake-after accepts" },
           json: { type: "boolean", help: "print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished)" },
         },
         examples: ["agentic-cms visual-parity capture before --ref develop", "agentic-cms visual-parity capture after --scheme dark --pages /,/blog", "agentic-cms visual-parity capture after --motion --json", "agentic-cms visual-parity capture after --storage 'consent={\"analytics\":\"denied\",\"at\":\"{now}\"}'"],
         exit: { 0: "captured (a static shot taken with an image still loading after a reload is recorded beside it as <page>@<width>.unloaded.json, and a compare calls it FLAKY)", 1: "a page failed twice (no shot is taken of a stalled page), or the build failed", 2: "usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named)" },
-        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }",
+        json: "{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, build, fresh, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }",
       },
       compare: {
         command: "visual-parity compare", summary: "diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/",
-        usage: "agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed]",
+        usage: "agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed] [--retake-before <label>] [--retake-after <label>]",
         positionals: [{ name: "before", required: true, help: "the baseline's label" }, { name: "after", required: true, help: "the label to judge" }],
         flags: {
           threshold: { type: "number", default: 0.02, help: "percent of pixels a static or settled frame may differ by" },
           "threshold-mid": { type: "number", default: 20, help: "the same for the mid-flight motion frames (150 and 500 ms)" },
           pages: { type: "string", value: "/a,/b", help: "judge only these routes' files, on both sides, at the widths the after capture took (a partial capture)" },
           "mixed-seed": { type: "boolean", help: "compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes" },
+          "retake-before": { type: "string", value: "<label>", help: "a capture --no-cache of the before side's build (the same build id, scheme, mode and seed), whose shots are fresh retakes of the before shots that differ" },
+          "retake-after": { type: "string", value: "<label>", help: "the same for the after side: a shot of which some take of the after build matches some take of the before build does not reproduce, and is FLAKY" },
           json: { type: "boolean", help: "print the report as JSON (also written as report.json in the diff directory)" },
         },
-        examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog", "agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes"],
-        exit: { 0: "identical within the thresholds", 1: "a difference, a size change, a missing file or a flaky shot (one taken with an image still loading); each line that is not ok has its cause: line under it", 2: "usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed)" },
-        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional } | { kind: unloaded | in-place | geometry | frame | missing | inventory | settle, … } }] }",
+        examples: ["agentic-cms visual-parity compare before after --json", "agentic-cms visual-parity compare before after --pages /,/blog", "agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes", "agentic-cms visual-parity compare before after --retake-before before-retake --retake-after after-retake"],
+        exit: { 0: "identical within the thresholds", 1: "a difference, a size change, a missing file or a flaky shot (one taken with an image still loading, or a difference a retake did not reproduce); each line that is not ok has its cause: line under it", 2: "usage, a missing capture, captures of two schemes, captures seeded differently (without --mixed-seed), or a retake that is not a fresh take of its side's build" },
+        json: "{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, retakes: { before, after } | null, unretaken: [name], summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional, retake? } | { kind: unloaded | jitter | in-place | geometry | frame | missing | inventory | settle, …, retake? } }] }",
       },
       proof: {
-        command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference",
+        command: "visual-parity proof", summary: "a whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare, each static shot that differs retaken once on both sides, fresh, before the pass reports; one summary, exit 1 on any line that is not ok",
         usage: `agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] ${seedUsage}`,
         positionals: [{ name: "label", help: "the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof" }],
         flags: {
@@ -165,8 +168,8 @@ export const SPECS = {
           json: { type: "boolean", help: "print the proof as JSON: each pass's captures and compare report" },
         },
         examples: ["agentic-cms visual-parity proof", "agentic-cms visual-parity proof nav-fix --states --build", "agentic-cms visual-parity proof --all --ref main --json"],
-        exit: { 0: "every pass identical within the thresholds", 1: "a difference in any pass, or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, a seed that does not read, or captures of two schemes" },
-        json: "{ label, ref, schemes, passes: [{ pass, scheme, before, after, report, seconds }], exit, failed? }",
+        exit: { 0: "every pass identical within the thresholds", 1: "a line that is not ok in any pass — a difference, or a FLAKY shot that proves nothing either way — or a capture that failed (a page stalled twice, the build failed)", 2: "usage, no build, no browser, a seed that does not read, captures of two schemes, or a retake of another build (the tree rebuilt during the proof)" },
+        json: "{ label, ref, schemes, passes: [{ pass, scheme, before, after, retakes: { before, after } | undefined, report, seconds }], exit, failed?, evicted }",
       },
       clean: {
         command: "visual-parity clean", summary: "removes old captures from .parity/visual/ — all but the newest, and every compare of a removed capture — and, with --cache, the shot cache; a capture still running is kept",
