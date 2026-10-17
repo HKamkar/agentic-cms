@@ -48,8 +48,9 @@ dev server and its own commit; never all at once.
    section's card content is its own, inside the site's card frame where
    it has one (`ui/Panel` on a site that has the example's), and a card is
    not a generic component.
-4. **Motion**, last, with `agentic-cms/ix`, in the layer the site has
-   (its `STANDARD.md` §7). Where the layout renders `motionScript()`, the
+4. **Motion**, last, in the layer the site has (its `STANDARD.md` §7): a
+   motion folder of the site's own while it keeps one, otherwise
+   `agentic-cms/ix`. Where the layout renders `motionScript()`, the
    play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) is the
    default, timed by the `--ease-*` / `--motion-*` tokens, and `Fx` and
    `OnView` serve only where a replay on re-entry is wanted. A site that
