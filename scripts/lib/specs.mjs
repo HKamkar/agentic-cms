@@ -218,7 +218,7 @@ export const SPECS = {
   },
   probe: {
     command: "probe", script: "probe", group: "look & measure", summary: "the numbers behind a screenshot claim: an element's box, computed styles and stacking contexts, the reveals still pending, the console — JSON only",
-    usage: `agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] ${seedUsage}`,
+    usage: `agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] ${seedUsage} [--json]`,
     positionals: [{ name: "target", required: true, help: "a route of the build (/about) or a URL" }],
     flags: {
       url: { type: "string", value: "<base>", help: "a served site (a dev server) instead of the build under .next" },
@@ -236,6 +236,7 @@ export const SPECS = {
       timeline: { type: "number", default: 0, help: "with --motion: scroll the element into view and sample opacity, transform and box top for this many ms" },
       every: { type: "number", default: 100, help: "the timeline's sampling interval in ms" },
       ...seed,
+      json: { type: "boolean", help: "print one JSON document on stdout: what probe always prints, so the flag changes nothing; it is taken, as every command that prints JSON takes it" },
     },
     examples: ["agentic-cms probe / --select \".card\" --all", "agentic-cms probe / --heading \"pricing\" --motion --timeline 2000 --every 100"],
     exit: { 0: "printed", 1: "no element matched", 2: "usage, no build, no browser, or a seed that does not read" },

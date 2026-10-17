@@ -212,6 +212,16 @@ test("visual-parity proof: its help names the passes and the ref; a wrong choice
   assert.match(wrong.stderr, /did you mean --motion\?/);
 });
 
+test("probe takes --json like every command that prints JSON: the flag parses, and the run goes on to its own checks", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "probe-json-"));
+  try {
+    const r = run(["probe", "/", "--select", ".card", "--motion", "--json"], dir);
+    assert.equal(r.status, 2);
+    assert.doesNotMatch(r.stderr, /unknown flag/);
+    assert.match(r.stderr, /^probe: no production build: run `pnpm build` first/m, "past the parser, at the missing build");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("visual-parity proof --build runs its baseline step (no three-sources refusal), and --pages with --sample is refused before any capture", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proof-build-"));
   try {

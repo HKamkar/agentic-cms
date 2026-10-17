@@ -534,7 +534,7 @@ agentic-cms shot /about --url http://localhost:8000 --select "picture" --transpa
 The numbers behind a screenshot claim: an element's box, computed styles and stacking contexts, the reveals still pending, the console — JSON only.
 
 ```bash
-agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage] [--json]
 ```
 
 - `<target>` — a route of the build (/about) or a URL
@@ -558,6 +558,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
 | `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
+| `--json` | print one JSON document on stdout: what probe always prints, so the flag changes nothing; it is taken, as every command that prints JSON takes it |
 
 Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
