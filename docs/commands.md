@@ -420,7 +420,7 @@ agentic-cms visual-parity compare before after --retake-before before-retake --r
 A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare, each static shot and --motion frame that differs retaken once on both sides, fresh, before the pass reports; one summary, exit 1 on any line that is not ok.
 
 ```bash
-agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n> | --all-pages] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
@@ -434,8 +434,9 @@ agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] 
 | `--build` | run the site's `pnpm build` before the first after capture |
 | `--scheme light|dark` | prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light (one of `light`, `dark`) |
 | `--widths w,w` | the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own |
-| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page |
-| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages is given |
+| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample or --all-pages is given, else every page |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages or --all-pages is given |
+| `--all-pages` | every page of the build, whatever the profile's proof.pages or proof.sample: for a change that reaches every template, such as a kit upgrade |
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
@@ -452,6 +453,7 @@ Exit: `0` every pass identical within the thresholds; `1` a line that is not ok 
 agentic-cms visual-parity proof
 agentic-cms visual-parity proof nav-fix --states --build
 agentic-cms visual-parity proof --all --ref main --json
+agentic-cms visual-parity proof upgrade --all --all-pages --build   # a kit upgrade: every pass, every page
 ```
 
 #### `visual-parity clean`

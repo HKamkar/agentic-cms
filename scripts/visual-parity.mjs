@@ -76,6 +76,7 @@ if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2
 if (subcommand === "capture" && [flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
 // The proof refuses it under its own name before any capture starts, not as a failed baseline step.
 if (subcommand === "proof" && flags.sample !== undefined && onlyPages.length) { console.error("visual-parity proof: --pages and --sample both choose the pages of a capture; pass one"); process.exit(2); }
+if (subcommand === "proof" && flags["all-pages"] && (flags.sample !== undefined || onlyPages.length)) { console.error(`visual-parity proof: --all-pages and ${onlyPages.length ? "--pages" : "--sample"} both choose the pages of a capture; pass one`); process.exit(2); }
 // Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
 // a --url site is served by its own server and captured as it serves itself.
 const THIRD_PARTY = flags["third-party"] ?? "hold";

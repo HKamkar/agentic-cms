@@ -272,8 +272,10 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   prints each scene's own page, `/scene/<name>`, on every address.
 
 **Check:** the verify block, then
-`pnpm kit visual-parity proof upgrade --ref develop --build --all`: the
-static pass, `--states` and `--motion`, in each scheme the site has. Every
+`pnpm kit visual-parity proof upgrade --ref develop --build --all --all-pages`:
+the static pass, `--states` and `--motion`, in each scheme the site has, on
+every page — an upgrade reaches every template, so `--all-pages` sets aside
+any `proof.pages` or `proof.sample` the profile names (§ 3.1). Every
 pass must be identical: each page shot, each state's box, and each
 `--motion` step's frames. Before a pass reports, the proof retakes every
 static shot and `--motion` frame that differs, once on each side; for
@@ -353,7 +355,9 @@ export const harness = {
 Every key is optional; one you leave out keeps the built-in default. A
 site whose short proof is one page of each template says
 `proof: { sample: 1 }` in place of `pages` (one or the other: both exit 2),
-and `--pages` or `--sample` on the command line sets it aside for a run.
+and `--pages` or `--sample` on the command line sets it aside for a run;
+`--all-pages` sets it aside for every page, the proof of a change that
+reaches every template, such as the next kit upgrade.
 Then make the profile the site's proof in `AGENTS.md`, where it gives the
 screenshot harness's rules: after the line that names their contract,
 `node_modules/agentic-cms/docs/visual-parity.md`, add

@@ -66,7 +66,7 @@ test("the profile's proof.sample is the static pass's --sample: a --sample flag 
   const steps = plan({ ref, schemes, passes: ["static", "motion", "states"], pages: forwarded({ pages }, ["pages"]), sample: forwarded({ sample }, ["sample"]) });
   assert.deepEqual(steps.filter((s) => s.args.includes("--sample")).map((s) => [s.label, s.args[s.args.indexOf("--sample") + 1]]), [["proof-before", "1"], ["proof-after", "1"]], "the static pass's two captures, as --sample does");
   assert.ok(steps.every((s) => !s.args.includes("--pages")), "no --pages beside it");
-  assert.match(SPECS["visual-parity"].subcommands.proof.flags.sample.help, /default the profile's proof\.sample \(src\/config\/harness\.ts\) unless --pages is given/);
+  assert.match(SPECS["visual-parity"].subcommands.proof.flags.sample.help, /default the profile's proof\.sample \(src\/config\/harness\.ts\) unless --pages or --all-pages is given/);
 });
 
 test("without a profile, a bare command does what it did: the parser fills no scheme and no ref, and the fallbacks are the old defaults", () => {
@@ -178,4 +178,17 @@ test("a run retakes a pass whose compare left shots unretaken: the first compare
   const clean = await runProof(steps, { run: (args) => (args[0] === "compare" ? { status: 0, stdout: JSON.stringify({ unretaken: [], summary: { exit: 0 } }), stderr: "identical\n" } : capture(args[1])), print: (text) => printed.push(text) });
   assert.equal(clean.exit, 0);
   assert.deepEqual(printed, ["identical\n"], "no retake follows: the quiet compare's lines are printed");
+});
+
+test("--all-pages sets aside the profile's proof.pages and proof.sample: every page on every capture and compare, and every page of each template on the static pass", () => {
+  for (const proof of [{ sample: 1 }, { pages: ["/"] }]) {
+    const profile = { widths: [390, 1440], schemes: ["light"], proof: { ref: undefined, pages: undefined, sample: undefined, ...proof } };
+    const flags = parse(SPECS["visual-parity"], ["proof", "--all-pages"]).flags;
+    assert.equal(flags["all-pages"], true);
+    const { pages, sample } = proofSettings(flags, profile);
+    assert.deepEqual([pages, sample], [undefined, undefined], JSON.stringify(proof));
+    const steps = plan({ passes: ["static", "motion"], pages: forwarded({ pages }, ["pages"]), sample: forwarded({ sample }, ["sample"]) });
+    assert.ok(steps.every((s) => !s.args.includes("--pages") && !s.args.includes("--sample")), "no capture or compare is narrowed");
+  }
+  assert.deepEqual(proofSettings({}, { proof: { sample: 1 } }).sample, 1, "without it, the profile's sample is the default");
 });

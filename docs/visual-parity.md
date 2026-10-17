@@ -20,6 +20,7 @@ The same in one command, after the change is built:
 pnpm kit visual-parity proof                          # baseline of develop, the tree as it stands, the compare
 pnpm kit visual-parity proof nav-fix --states --build # the states pass too; build the tree first
 pnpm kit visual-parity proof --all --ref main         # static, --motion and --states against main
+pnpm kit visual-parity proof upgrade --all --all-pages # a kit upgrade: every pass on every page, whatever the profile names
 ```
 
 `proof` runs the three steps of each pass as the commands above (static
@@ -78,8 +79,8 @@ leaves out, gets what it always got:
 | the home page's menu, opened and shot | — | each of `widths` where the menu button shows | 767 and 390, where it shows |
 | one command's scheme (`capture`, `shot`, `probe`, `sheet`, `icons audit`, `icons round publish`, `lab render`) | `--scheme` | the first of `schemes` | light |
 | `proof`'s schemes | `--scheme` (one) | a pass in each of `schemes` | light |
-| `proof`'s pages, on every capture and compare | `--pages` (or `--sample`) | `proof.pages` | every page |
-| `proof`'s sample, the first n pages of each template on the static pass | `--sample` (or `--pages`) | `proof.sample` | every page |
+| `proof`'s pages, on every capture and compare | `--pages` (or `--sample`; `--all-pages` for every page) | `proof.pages` | every page |
+| `proof`'s sample, the first n pages of each template on the static pass | `--sample` (or `--pages`; `--all-pages` for every page) | `proof.sample` | every page |
 | `proof`'s baseline | `--ref` | `proof.ref` | `develop` |
 | `lab serve`'s grounds | — | a box per scheme in `schemes` | light and dark |
 
@@ -91,7 +92,10 @@ read from the tree like the seed, so a `--ref` baseline is captured at the
 tree's widths and in its schemes even when the ref predates the profile.
 `proof.pages` and `proof.sample` are two ways of choosing a proof's pages,
 like the flags: a profile sets one, and either flag sets aside the
-profile's choice. A key of the wrong shape exits 2 naming it: widths are
+profile's choice. `--all-pages` sets it aside for every page of the build,
+which neither flag can say: the proof of a change that reaches every
+template and what each page renders from its own content, such as a kit
+upgrade. It is refused beside `--pages` or `--sample`. A key of the wrong shape exits 2 naming it: widths are
 whole pixels, schemes are `light` and `dark` (each once), pages are routes
 starting with `/`, a sample is a whole number from 1, and pages and sample
 together are refused.
@@ -589,6 +593,8 @@ falls through after 10 s.
   the same on both captures and the compare; `proof.pages` for what a bare
   proof covers), one page per template (`--sample 1`, or `proof.sample` for
   a site whose bare proof is that) only when the change is site-wide,
+  every page (`proof --all-pages`, whatever the profile says) when it can
+  reach what any page renders from its own content, as a kit upgrade can,
   `--states` / `--motion` only when hover or animation
   changed. A page is left
   out because the change cannot reach it, never to save time: every
