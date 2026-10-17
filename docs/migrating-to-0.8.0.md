@@ -75,8 +75,14 @@ without your edits.
 What `--diff` shows for each file is listed here, each line with the step
 it belongs to. A line for a step your site has not taken is worded to hold
 without it ("where the layout renders `motionScript()`", "on a site that
-has the example's"), so the whole `--diff` can go into your copy: a line
-marked § 1 applies to every site, the others once you take their step. If
+has the example's"), so a `--diff` from a base can go into your copy whole:
+a line marked § 1 applies to every site, the others once you take their
+step. A file your site wrote before `.agentic-cms.json` recorded its base
+takes the kit's text at your previous version (the manifest's, 0.7.6) as
+its base, and `--check` notes it ("no base: kit unchanged since 0.7.6" is
+`modified`, nothing to take). Where no such text is known, `--diff` says
+so and prints your whole file against the kit's text: that is not the
+kit's change, so never apply it whole; take this list's lines from it. If
 you leave a later step's lines out, take them from this list when you take
 that step: once you `--accept`, `--diff` no longer shows them.
 
@@ -104,8 +110,8 @@ that step: once you `--accept`, `--diff` no longer shows them.
 - **The design rule:**
   - § 1: rejected and unapproved candidates are deleted, never archived,
     moved aside or kept "for later".
-  - 3.6: a section's card content is its own, inside the site's one card
-    frame (`ui/Panel` on a site that has the example's).
+  - 3.6: a section's card content is its own, inside the site's card
+    frame where it has one (`ui/Panel` on a site that has the example's).
 - **The components rule:** 3.7. It is new, and `--agent-files` writes it
   only once the site has `src/config/components.json`.
 - **The pages rule:** § 1. It is new, written whole: a page is a content
@@ -124,8 +130,8 @@ that step: once you `--accept`, `--diff` no longer shows them.
     wanted.
   - 3.6: where the site has role tokens, the design gives the roles their
     values first.
-  - 3.6: a section's cards sit in the site's one card frame (`ui/Panel`
-    where it has the example's).
+  - 3.6: a section's cards sit in the site's card frame where it has one
+    (`ui/Panel` where it has the example's).
 - **`design-options`:**
   - § 1: step 4's hand-over. `pnpm kit serve` starts next dev and the lab
     and prints every URL in one table, and `demo new` waits until the
@@ -560,9 +566,9 @@ applies, never the hue behind it.
   own content, and `Section` draws its box with `Panel`; a site that adopts
   `Panel` moves its card frames the same way and keeps what goes inside
   them. The design rule `--agent-files` writes says "a section's card
-  content is its own, its frame the site's one card frame (`ui/Panel` on a
-  site that has the example's)"; an edited copy takes that line by hand
-  (§ 1).
+  content is its own, inside the site's card frame where it has one
+  (`ui/Panel` on a site that has the example's)"; an edited copy takes that
+  line by hand (§ 1).
 - **The guide:** `docs/primitives.md` is the checklist of what a site builds
   on day one and what waits for a second use.
 

@@ -157,13 +157,13 @@ test("init --agent-files: --check fails a site's edit with no base, --diff print
     fs.appendFileSync(path.join(site, ".claude/rules/seo.md"), "\n- The site's own line.\n");
     const gap = run(["init", site, "--agent-files", "--check"]);
     assert.equal(gap.status, 1);
-    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md$/m);
+    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md — no base, and no release of the kit found as its source: --diff is the site's whole file$/m, "a refresh with this version wrote the manifest, and no git history names another");
     assert.match(gap.stdout, /modified, kit changed: the site edited it and the kit's text changed since the site took it \(agentic-cms init --agent-files --diff <file>, merge the change by hand, then --accept <file>\)/);
     const diff = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
     assert.equal(diff.status, 1);
     assert.match(diff.stdout, /^--- a\/\.claude\/rules\/seo\.md\n\+\+\+ b\/\.claude\/rules\/seo\.md\n@@ /);
     assert.match(diff.stdout, /^-- The site's own line\.$/m);
-    assert.match(diff.stderr, /has no base \(the site wrote it before the manifest\)/);
+    assert.match(diff.stderr, /^init: \.claude\/rules\/seo\.md has no base, and no release of the kit is known as its source: what follows is the site's whole file against the kit's current text, not the kit's change — never apply it whole;/m);
     const accepted = run(["init", site, "--agent-files", "--accept", ".claude/rules/seo.md"]);
     assert.equal(accepted.status, 0, accepted.stderr);
     assert.match(accepted.stdout, /^accepted \.claude\/rules\/seo\.md — its base is the kit's current text; --check: modified$/m);
