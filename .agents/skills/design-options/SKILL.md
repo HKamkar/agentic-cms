@@ -29,7 +29,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 1. **The ask.** The owner asks for a design or says what looks wrong
    ("this section looks empty", "redesign the closing band"). Read the
    section and its copy before answering; the copy is what the candidates
-   are for.
+   are for. Copy that is still the starter's placeholder, or the kit
+   example's brand, is no copy to design around (`pnpm content:lint` lists
+   both; `demo new` names them before it writes the round): **stop** and
+   get the real copy first, from the owner or `/editorial:new-page` (the
+   `design` skill § The copy first).
 2. **Ideas, three to five, one message.** Each one line: what it shows,
    what moves and why the motion is the meaning (or that nothing moves),
    what it reuses from the library. No building yet. **Stop for the

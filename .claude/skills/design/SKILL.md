@@ -24,6 +24,19 @@ static` block, the only place a token lives) and `src/styles/base.css`;
 Then look, not guess: `pnpm build` and `pnpm kit shot / --width 1440`,
 `--width 390`, one shot per page the job touches (`.parity/shots/`).
 
+## The copy first
+
+A design is drawn around the site's own words, so the copy comes before
+any round. `pnpm content:lint` says whether it is there: a `placeholder`
+line is the starter's copy (a site from `agentic-cms init` starts with its
+home page, its blog index and the tagline in `src/config/site.ts` marked
+`(placeholder)`), an `example-brand` line is the kit example's brand (its
+name, its domain, its author). Get the copy first — from the owner, or
+`/editorial:new-page`, which writes a page's real copy and removes the
+marker — and never design around a placeholder, the example's brand or its
+sample content. `pnpm kit demo new` says so too, naming the fields, before
+it writes a round on such a page: stop there and get the copy.
+
 ## The order
 
 Design lands in this order, each step its own branch, its own look on the
@@ -114,5 +127,6 @@ pnpm kit serve                                                # the owner's look
 
 ## Stop for the user
 
-Every pick (step 2); the dev-server look before a merge; any change to a
-public URL, to the content or to the SEO fields — those are not design.
+The copy, when a page still holds placeholders (§ The copy first); every
+pick (step 2); the dev-server look before a merge; any change to a public
+URL, to the content or to the SEO fields — those are not design.

@@ -1,12 +1,18 @@
 // The scaffold behind `agentic-cms init`: a site laid out from the package's
-// own files — the wireframe example (its app, components, config, styles,
-// content and images), the agent files (a site's path-scoped rules from
+// own files — the wireframe example's code (its app, components, config and
+// styles), the starter in place of the example's content (lib/starter.mjs: one
+// home page and the blog index with their copy marked as placeholder, empty
+// collections, the wireframe's neutral pictures, the site's name where the
+// example says its own), the agent files (a site's path-scoped rules from
 // templates/site/rules/, the design skills for Claude Code and Codex), the
 // site templates (AGENTS.md, CLAUDE.md, README, PLAN, the Next
 // config, the Claude settings, .gitignore, the CI workflow, the setup
 // script that installs what a package cannot install for itself) and the
 // generated config (package.json, tsconfig.json, pnpm-workspace.yaml).
-// Nothing of the package's source. Existing files are kept unless forced;
+// Nothing of the package's source, and nothing of the example's content. Existing
+// files are kept unless forced, and a site's own (its content, its pictures,
+// its brand and forms config) even then: the starter's content and pictures go
+// only into a site with no content/ yet;
 // package.json and pnpm-workspace.yaml are merged, forced or not, so what
 // `pnpm init` or an older install left there cannot stop the first install
 // or the first test. A manifest (.agentic-cms.json) records each agent file's
@@ -29,8 +35,8 @@
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
 // needs to find .claude/rules/ (lib/rules-table.mjs), written from the
 // site's rules as they stand, and measured against Codex's 32 KiB. With
-// lightOnly the example is laid out as a site without dark mode
-// (lib/light-only.mjs), every edit made before the first file is written.
+// lightOnly the site is laid out without dark mode (lib/light-only.mjs),
+// every edit made before the first file is written.
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -38,10 +44,11 @@ import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
 import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
+import { isSiteOwn, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
 import { unifiedDiff } from "./unified-diff.mjs";
 
-/** The example, copied as it is. */
-export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
+/** The example's code, copied as it is but where the starter has a file of its own (lib/starter.mjs): the content and the pictures are the starter's. */
+export const EXAMPLE = ["src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
 /** The templates under templates/site/, and where each lands. */
 export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "setup.sh": "scripts/setup.sh" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
@@ -98,24 +105,28 @@ function put(target, file, text, { force, result, log }) {
 /** The example's files under one entry: the entry itself when it is a file. */
 const filesOf = (kitRoot, entry) => (fs.statSync(path.join(kitRoot, entry)).isFile() ? [entry] : walk(path.join(kitRoot, entry)).map((rel) => `${entry}/${rel}`));
 
-/** Copies an entry of the example; a file `changed` names is written as its text there, or not at all for null. */
-function copyTree(kitRoot, target, entry, opts, changed = new Map()) {
-  for (const file of filesOf(kitRoot, entry)) {
-    if (!changed.has(file)) put(target, file, fs.readFileSync(path.join(kitRoot, file)), opts);
-    else if (changed.get(file) !== null) put(target, file, changed.get(file), opts);
-  }
+/**
+ * Every file the scaffold lays out from the kit, by the path it lands at: the
+ * example's code, then the starter over it (in a site with content/ already,
+ * none of the starter's content or pictures), then STANDARD.md, its passages
+ * on the example's own pages in the starter's words.
+ */
+function sitePlan(kitRoot, identity, { fresh, standard }) {
+  const plan = new Map(EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).map((file) => [file, fs.readFileSync(path.join(kitRoot, file))]));
+  for (const [file, text] of starterFiles(kitRoot, identity)) if (fresh || !/^(?:content|public)\//.test(file)) plan.set(file, text);
+  plan.set("STANDARD.md", starterMarkdown(standard, "STANDARD.md"));
+  return plan;
 }
 
-/** The files --light-only writes otherwise than the example has them: each to its text, or to null for one it leaves out. Throws a LightOnlyError, before anything is written, when an edit misses. */
-function lightOnlyExample(kitRoot, standard) {
-  const changed = new Map();
-  for (const file of EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter(editsText)) {
-    const text = fs.readFileSync(path.join(kitRoot, file), "utf8");
-    const out = lightOnlyFile(file, text);
-    if (out !== text) changed.set(file, out);
+/** The plan without dark mode: each text file edited, a file a light-only site does not get left out. Throws a LightOnlyError, before anything is written, when an edit misses. */
+function lightOnlyPlan(plan) {
+  for (const [file, text] of plan) {
+    if (!editsText(file)) continue;
+    const out = lightOnlyFile(file, text.toString("utf8"));
+    if (out === null) plan.delete(file);
+    else plan.set(file, out);
   }
-  changed.set("STANDARD.md", lightOnlyFile("STANDARD.md", standard));
-  return changed;
+  return plan;
 }
 
 const kitPackage = (kitRoot) => JSON.parse(fs.readFileSync(path.join(kitRoot, "package.json"), "utf8"));
@@ -135,7 +146,7 @@ function sitePackage(target, { kitRoot, version }) {
     type: "module",
     engines: kit.engines,
     packageManager: kit.packageManager,
-    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
+    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
     dependencies: { "agentic-cms": `github:HKamkar/agentic-cms#v${version}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
     devDependencies: { "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], eslint: dev.eslint, "eslint-config-next": dev["eslint-config-next"], "playwright-core": dev["playwright-core"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   };
@@ -211,15 +222,24 @@ function putWorkspace(target, { result, log }) {
   return "merged";
 }
 
-/** Lays the site out under target — with lightOnly, as a site without dark mode; { created, updated, kept, lightOnly }. */
-export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, log = console.log }) {
-  const result = { created: [], updated: [], kept: [], lightOnly };
+/**
+ * Lays the site out under target — named `name` (default: the folder's), at
+ * `url` with `email` (default: stand-ins on a reserved domain), with
+ * lightOnly as a site without dark mode; { created, updated, kept, lightOnly,
+ * site: { name, url, email, starter } }, `starter` false for a site whose
+ * content/ was there already. Throws a StarterError (a name, a URL or an
+ * address it cannot use) or a LightOnlyError before anything is written.
+ */
+export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, name, url, email, now, log = console.log }) {
+  const identity = siteIdentity(target, { name, url, email, now });
+  const fresh = !fs.existsSync(path.join(target, "content"));
+  const result = { created: [], updated: [], kept: [], lightOnly, site: { name: identity.name, url: identity.url, email: identity.email, starter: fresh } };
   const opts = { force, result, log };
   const standard = fs.readFileSync(path.join(kitRoot, "STANDARD.md"), "utf8").replace(/^(# .*\n)/, `$1\n${STANDARD_NOTE}`);
-  const changed = lightOnly ? lightOnlyExample(kitRoot, standard) : new Map();
+  const plan = sitePlan(kitRoot, identity, { fresh, standard });
+  if (lightOnly) lightOnlyPlan(plan);
   fs.mkdirSync(target, { recursive: true });
-  for (const entry of EXAMPLE) copyTree(kitRoot, target, entry, opts, changed);
-  put(target, "STANDARD.md", changed.get("STANDARD.md") ?? standard, opts);
+  for (const [file, text] of plan) put(target, file, text, { ...opts, force: force && !isSiteOwn(file) });
   for (const [from, to] of Object.entries(TEMPLATES)) put(target, to, fs.readFileSync(path.join(kitRoot, "templates/site", from), "utf8"), opts);
   const pkg = sitePackage(target, { kitRoot, version });
   if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log(`merged   package.json${pkg.notes.length ? ` (${pkg.notes.join("; ")})` : ""}`); } else put(target, "package.json", pkg.text, opts);

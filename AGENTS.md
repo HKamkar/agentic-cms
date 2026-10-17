@@ -271,7 +271,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   assert the trees identical); design work on the example starts with the
   `design` skill like on any site. `templates/site/` is what `agentic-cms
   init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`); the
+  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
+  `templates/starter/` the content it starts from in the example's place
+  (a home page and the blog index marked `(placeholder)`, empty
+  collections, neutral pictures; `scripts/lib/starter.mjs`): nothing of
+  the example's content or brand reaches a site. The
   kit's own `AGENTS.md` and
   `.claude/rules/` describe this repo and are not what a site gets. A
   change to a rule of the kit that a site shares goes to both.

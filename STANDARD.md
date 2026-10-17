@@ -245,7 +245,7 @@ the example uses:
 | a card or list icon | 64 square `.svg` |
 
 Where they live: `public/images/<page>/` for one page's, `public/images/ui/` for
-shared ones, `public/images/brand/logo.svg` (the brand mark, always
+shared ones, `public/images/brand/` (the brand mark, always
 `site.logo`), `public/images/blog/<slug>/` for a post's and
 `public/images/blog/ui/` for the body's own furniture, `public/images/authors/`.
 A page's OG image sits at the top level, named for its route with hyphens:
@@ -475,10 +475,17 @@ reveals.
   `variant: about` or `variant: contact` under its title block. The field is
   real content a fork's design will use; the wireframe has no two ways to draw
   a list.
+<!-- example:start -->
 - **The landing page's nav links are anchors.** `Use cases` is
   `/#use-case-cards` and `Contact` is `/#contact-form`, because a section's id
   is its type and the landing page carries both sections. Only an exact path
   match marks a link `aria-current="page"`, so an anchor never does.
+<!-- example:end -->
+<!-- starter: - **The home page's nav link to the contact form is an anchor.**
+  `Contact` is `/#contact-form`, because a section's id is its type and the
+  home page carries the section. Only an exact path match marks a link
+  `aria-current="page"`, so an anchor never does.
+-->
 - **Every link is underlined** and inherits its colour (`base.css`:
   `a { color: inherit; text-decoration: underline; }`). A wireframe has one
   accent and it is the underline; buttons and cards that are links opt out with
@@ -488,9 +495,9 @@ reveals.
 - **The theme button reads `Theme: system`.** Three states — the reader's system
   setting (no attribute at all), then light, then dark, then back. The attribute
   *is* the state, so the server renders `system`, the first client render agrees
-  with it, and the label is never wrong for a frame.<!-- dark-mode:end -->
+  with it, and the label is never wrong for a frame.<!-- dark-mode:end --><!-- example:start -->
 - **`/sections/*` are in the footer, not the nav.** They are agentic-cms showing its
-  section types to whoever forks it, not pages a visitor is being sent to.
+  section types to whoever forks it, not pages a visitor is being sent to.<!-- example:end -->
 
 A design change is its own commit and says so in the message; it is never folded
 into a refactor.
@@ -501,10 +508,14 @@ A page is a file, `content/pages/<slug>.yaml`: its `seo` block, the copy of its
 structured data (`jsonld`), and its sections in order (`type` plus that type's
 copy), rendered by `src/app/[[...slug]]/page.tsx` through the registry in
 `src/components/sections/render.tsx`. Twenty-five section types exist
-(`src/components/sections/schemas.ts`); the landing page uses nine of them and
+(`src/components/sections/schemas.ts`); <!-- example:start -->the landing page uses nine of them and
 the four `/sections/*` demos show the rest, with slot copy that says what each
-field holds.
+field holds.<!-- example:end --><!-- starter: a site that `agentic-cms init` laid out
+starts with two pages, the home page, with six of them, and the blog index; the
+kit's own repository shows every type in place, on its example's `/sections/*`
+pages. -->
 
+<!-- example:start -->
 | Route | File | Sections |
 |---|---|---|
 | `/` | `pages/home.yaml` | `home-hero`, `home-feature`, `home-service`, `home-about`, `use-case-cards`, `reviews`, `faq`, `contact-form`, `contact-details` |
@@ -515,6 +526,14 @@ field holds.
 | `/blog` | `pages/blog.yaml` | `blog-index` → the hero plus the card grid (`blog-index`, `blog-index-list`) |
 | `/blog-post/<slug>` | `content/blog/<slug>.md` | `post-hero`, `post-body`, `post-related`, `post-author` — the route file's own boxes, not registry types |
 | `/404` | — | `not-found` (`src/app/not-found.tsx`) |
+<!-- example:end -->
+<!-- starter: | Route | File | Sections |
+|---|---|---|
+| `/` | `pages/home.yaml` | `home-hero`, `home-service`, `home-feature`, `home-about`, `contact-form`, `contact-details` |
+| `/blog` | `pages/blog.yaml` | `blog-index` → the hero plus the card grid (`blog-index`, `blog-index-list`) |
+| `/blog-post/<slug>` | `content/blog/<slug>.md` | `post-hero`, `post-body`, `post-related`, `post-author` — the route file's own boxes, not registry types |
+| `/404` | — | `not-found` (`src/app/not-found.tsx`) |
+-->
 
 Public URLs are indexed: never change one without a redirect.
 

@@ -53,22 +53,24 @@ canvas.
 The content rules: every collection read as the build reads it, then the voice, SEO, body, image and date rules.
 
 ```bash
-agentic-cms lint [--root <dir>] [--strict] [--report] [--json]
+agentic-cms lint [--root <dir>] [--strict] [--production] [--report] [--json]
 ```
 
 | flag | what |
 |---|---|
 | `--root <dir>` | another site tree (its content/ and public/) instead of the current directory |
 | `--strict` | every WARN counts as a FAIL |
+| `--production` | a production build: the starter's placeholder copy (a string carrying "(placeholder)") and a placeholder address (a URL, an e-mail or a domain reserved for examples: .example, .test, .invalid, localhost, example.com) FAIL instead of warning — a site's pnpm build passes it; AGENTIC_CMS_PLACEHOLDERS=warn in the environment keeps them warnings for that run, which a CI build that deploys nothing sets (the site's verify.yml) and a deploy never does |
 | `--report` | also write the findings to .parity/content-lint-report.txt |
 | `--json` | print the findings as one JSON document (the progress goes to stderr) |
 
-Exit: `0` no FAIL; `1` a FAIL (a WARN is read, not failed, unless --strict); `2` not a site (no src/kit.ts here).
+Exit: `0` no FAIL; `1` a FAIL (a WARN is read, not failed, unless --strict): in a site, the kit example's brand at any time (Acme, acme.example, its author acme-editorial), and with --production a placeholder; `2` not a site (no src/kit.ts here).
 
-`--json` prints `{ root, collections: [{ name, entries, source }], findings: [{ level, file, rule, path, problem }], summary: { fails, warns, strict } }`.
+`--json` prints `{ root, collections: [{ name, entries, source }], findings: [{ level, file, rule, path, problem }], summary: { fails, warns, strict, production, placeholders } }`.
 
 ```bash
 agentic-cms lint
+agentic-cms lint --production              # a site's pnpm build: placeholders fail
 agentic-cms lint --strict --report        # every WARN counts; the findings also in .parity/content-lint-report.txt
 agentic-cms lint --json | jq '.findings[] | select(.level == "FAIL")'
 ```
@@ -203,7 +205,7 @@ agentic-cms critical-css --check --json
 
 ### `assemble`
 
-Packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there.
+Packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there; nothing is packaged while the starter's placeholder copy or address remains.
 
 ```bash
 agentic-cms assemble [--check] [--json]
@@ -214,7 +216,7 @@ agentic-cms assemble [--check] [--json]
 | `--check` | copy nothing: only check the package against public/ and .next/static (in CI, or after a copy made by hand) |
 | `--json` | print the report as one JSON document |
 
-Exit: `0` the package holds every file of public/ and .next/static; `1` a file missing or different, or a copy nested inside the folder it should fill (each named); `2` usage, or no standalone build (output: "standalone", then next build).
+Exit: `0` the package holds every file of public/ and .next/static; `1` a placeholder left from the starter under content/ or src/config/ (each named by line; nothing packaged unless AGENTIC_CMS_PLACEHOLDERS=warn, for a CI run that deploys nothing), a file missing or different, or a copy nested inside the folder it should fill (each named); `2` usage, or no standalone build (output: "standalone", then next build).
 
 `--json` prints `{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }`.
 
@@ -961,7 +963,7 @@ agentic-cms demo <new | clean> …
 
 #### `demo new`
 
-Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with this clone's next dev running, waits until the route answers and prints the URLs to hand over.
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame (a page that still holds the starter's placeholder copy or the kit example's brand is said so first, naming the fields: a round designs around the site's real copy), with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with this clone's next dev running, waits until the route answers and prints the URLs to hand over.
 
 ```bash
 agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
@@ -985,7 +987,7 @@ agentic-cms demo new <name> <--section <type> | --component <file> | --showcase 
 
 Exit: `0` written (and the route answered, or no dev server runs, or --no-wait); `1` written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once); `2` neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage.
 
-`--json` prints `{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }`.
+`--json` prints `{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, copy: { placeholders, brand } | null (the page's fields that are not the site's copy), urls: [{ where, url }], ready: true|false|null, status }`.
 
 ```bash
 agentic-cms demo new services --section home-service        # with the dev server running: waits for /services-demo, prints its URLs
@@ -1025,10 +1027,10 @@ agentic-cms demo clean                     # every *-demo route
 
 ### `init`
 
-A site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
+A site from the package: the wireframe example's code with a starter of the site's name in place of the example's content (a home page and the blog index whose copy is marked as placeholder, empty collections, neutral pictures), the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
-agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check | --diff <file> | --accept <file>] [--force]
+agentic-cms init [dir] [--name <Site>] [--url <origin>] [--email <address>] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check | --diff <file> | --accept <file>] [--force]
 ```
 
 - `<dir>` — where the site goes (default: the current directory)
@@ -1039,16 +1041,20 @@ agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent
 | `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, kit changed (the site edited it and the kit's text changed since its base: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing — and AGENTS.md too big past the 32 KiB Codex reads; a file the manifest records no base for is measured against the kit's text at the version the site was on (the manifest's version, else the last other one its package.json named in git), which the package keeps for every release, and noted ("no base: kit unchanged since 0.7.6"); exit 1 on any but ok and modified; write nothing |
 | `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/, the kit's releases or the site's git history; for a file with no base, from the kit's text at the version the site was on, or, when no release is known as its source, the site's whole file against the kit's text, which says so and is never applied whole; repeat for more files; write nothing (repeatable) |
 | `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs, or while no release of the kit holds it), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
-| `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
+| `--name <Site>` | the site's name as it is spelled: src/config/site.ts's name and short name, the starter's copy, content/VOICE.md's brand and the logo placeholder (public/images/brand/<slug>-logo.svg, its text and title); default the folder's name, its words capitalised (my-site → My Site) |
+| `--url <origin>` | the site's origin, https://<host> without a path: site.ts's url, the canonicals, the sitemap and the feed; default https://<slug>.example, a stand-in on a reserved domain that the content lint marks as placeholder |
+| `--email <address>` | the site's public address: site.ts's email and the home page's contact card; default hello@<slug>.example, a stand-in the lint marks |
+| `--force` | overwrite files that exist, but never a site's own: its content/ and public/, src/config/site.ts and src/config/forms.ts (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy, the kit's releases nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
+Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, an empty --name, a --url that is not an origin or an --email that is not an address (nothing is written), --name, --url or --email with --agent-files, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy, the kit's releases nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, note?, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff, note? }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly, site: { name, url, email, starter } } | { version, files: [{ file, status, note?, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff, note? }] }`.
 
 ```bash
 agentic-cms init .
+agentic-cms init my-site --name "My Site" --url https://my-site.com --email hello@my-site.com
 agentic-cms init my-site --light-only      # a site with one scheme, light
 agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
 agentic-cms init . --agent-files --check  # what drifted, for CI
@@ -1067,7 +1073,7 @@ agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit
 | flag | what |
 |---|---|
 | `--check` | report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap |
-| `--build` | verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute) |
+| `--build` | verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute), the starter's placeholders warnings (AGENTIC_CMS_PLACEHOLDERS=warn: this build deploys nothing) |
 | `--no-browsers` | skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium) |
 | `--engines <a,b>` | the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md) (default `chromium,webkit`) |
 | `--deps` | on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed) |

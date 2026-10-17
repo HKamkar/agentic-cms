@@ -67,7 +67,9 @@ structure, a missing, misplaced or heavy image, a date that is not a day.
 A claim word near a regulation with the brand as the subject, and a cloud
 named as what the stack runs on, warn (heuristics); so do the soft ranges
 (a title over 60, a description outside 70–160, a future date, a stale
-draft, an orphaned image, a stray file). It cannot judge rhythm, a
+draft, an orphaned image, a stray file), and so does copy still marked
+`(placeholder)` or an address on a domain reserved for examples, which
+fails a production build. It cannot judge rhythm, a
 rhetorical question, an unsupported number or a misattributed date: those
 are the `review-voice` and `critic` passes of the editorial plugin.
 

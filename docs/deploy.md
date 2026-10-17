@@ -21,6 +21,11 @@ pnpm run deploy    # build and deploy; `deploy` alone is a pnpm built-in
 pnpm upload        # build and upload a version without deploying it
 ```
 
+- **No placeholder deploys.** `opennextjs-cloudflare build` runs the
+  site's `pnpm build`, whose content lint (`--production`) fails while the
+  starter's placeholder copy or address remains
+  ([init.md § The starter](init.md#the-starter)), so `pnpm run deploy` and
+  `pnpm upload` stop there, naming each.
 - **Static-only.** The Worker serves the prerendered pages from its
   static-assets cache and has no filesystem at request time; the form
   endpoint is the one route that runs per request. `revalidate`,
@@ -52,14 +57,18 @@ copies them in. `agentic-cms assemble` does that copy and then proves the
 package complete, as the last step of the build:
 
 ```json
-"build": "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms critical-css && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
+"build": "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms critical-css && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
 "preview": "pnpm build && HOSTNAME=0.0.0.0 PORT=8000 node .next/standalone/server.js"
 ```
 
 (`guard-email` belongs there only on a site that keeps its address out of
 the HTML; [email.md](email.md); `critical-css` is the next section.) What
 deploys is the `.next/standalone` folder, whose start command is
-`node server.js`.
+`node server.js`. Nothing of the starter's placeholders deploys: the
+build's first step fails on them (`lint --production`), and `assemble`
+packages nothing while one remains, naming each by line — unless the run's
+environment says `AGENTIC_CMS_PLACEHOLDERS=warn`, which only a CI build
+that deploys nothing sets ([init.md § The starter](init.md#the-starter)).
 
 ## Critical CSS
 

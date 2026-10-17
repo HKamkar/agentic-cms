@@ -1,0 +1,102 @@
+# The home page (/): its SEO block, its structured data and its sections in
+# order, as `agentic-cms init` wrote it for a new site. Every string that
+# starts with the placeholder marker, and the address on a domain reserved
+# for examples (.example), stands in for the site's own copy: `pnpm content:lint` names
+# each by field, a production build (`pnpm build`) fails while one remains,
+# and /editorial:new-page writes the page's real copy (the marker goes with
+# each string it replaces). Every field is checked at build time (pageSchema;
+# the section types and their fields are tabled in content/README.md);
+# template in content/_templates/page.yaml.
+seo:
+  path: /
+  title: "(placeholder) {{name}}, in a few words"
+  description: "(placeholder) One sentence of 70 to 160 characters on what a reader gets from {{name}}, shown in search results."
+  ogImage: /images/home-og.jpg
+  updated: "{{today}}"
+  breadcrumb: Home
+  changeFrequency: monthly
+  priority: 1
+jsonld:
+  type: WebPage
+sections:
+  - type: home-hero
+    eyebrow: "(placeholder) The eyebrow"
+    heading: "(placeholder) The promise of {{name}}, in one line."
+    text: "(placeholder) Two or three sentences under the heading: who the site is for and what they get from it."
+    cta: Get in touch
+  - type: home-service
+    eyebrow: "(placeholder) What is offered"
+    heading: "(placeholder) The main offer, named the way the site names it."
+    text: "(placeholder) A paragraph on the offer: what it is, who it serves and what changes for them."
+    feature:
+      title: "(placeholder) One feature of the offer"
+      text: "(placeholder) A sentence or two on that feature."
+    cta: Get in touch
+    dashboard:
+      title: "(placeholder) The picture's title"
+      text: "(placeholder) A line on what the picture shows."
+      image: /images/home/service.webp
+      imageAlt: "(placeholder) What the picture shows, in a sentence"
+  - type: home-feature
+    eyebrow: "(placeholder) Features"
+    heading: "(placeholder) What sets the offer apart."
+    text: "(placeholder) A paragraph that introduces the five cards below."
+    cards:
+      - icon: /images/ui/icon.svg
+        title: "(placeholder) The first feature"
+        text: "(placeholder) One sentence on it."
+      - icon: /images/ui/icon.svg
+        title: "(placeholder) The second feature"
+        text: "(placeholder) One sentence on it."
+      - icon: /images/ui/icon.svg
+        title: "(placeholder) The third feature"
+        text: "(placeholder) One sentence on it."
+      - icon: /images/ui/icon.svg
+        title: "(placeholder) The fourth feature"
+        text: "(placeholder) One sentence on it."
+      - icon: /images/ui/icon.svg
+        title: "(placeholder) The fifth feature"
+        text: "(placeholder) One sentence on it."
+    monitoring:
+      image: /images/home/feature.webp
+      imageAlt: "(placeholder) What the tall picture shows, in a sentence"
+  - type: home-about
+    eyebrow: "(placeholder) About {{name}}"
+    statement: "(placeholder) A statement of two or three sentences on who is behind {{name}} and why it exists."
+    cards:
+      - title: "(placeholder) The first figure's label"
+        stat: "(placeholder) 1"
+        text: "(placeholder) What the figure counts."
+      - title: "(placeholder) The second figure's label"
+        stat: "(placeholder) 2"
+        text: "(placeholder) What the figure counts."
+      - title: "(placeholder) The third figure's label"
+        stat: "(placeholder) 3"
+        text: "(placeholder) What the figure counts."
+  - type: contact-form
+    form: contact
+  - type: contact-details
+    eyebrow: "(placeholder) Reach us"
+    heading: "(placeholder) How to reach {{name}}."
+    cards:
+      - icon: /images/ui/icon.svg
+        title: Office
+        text:
+          - "(placeholder) A line on where the office is, or that there is none to visit."
+        highlight:
+          kind: text
+          value: "(placeholder) The street, the number and the city"
+      - icon: /images/ui/icon.svg
+        title: E-mail
+        text:
+          - "(placeholder) A line on who reads the mailbox and when they reply."
+        highlight:
+          kind: email
+          value: "{{email}}"
+      - icon: /images/ui/icon.svg
+        title: The blog
+        text:
+          - "(placeholder) A line on what the blog covers."
+        highlight:
+          kind: text
+          value: "{{domain}}/blog"

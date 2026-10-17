@@ -1,0 +1,4 @@
+# The reviews shown by a page's `reviews` section, in slide order: none yet.
+# Add one from content/_templates/review.yaml (a list item); a page shows them
+# with a `reviews` section once there is one to show.
+[]

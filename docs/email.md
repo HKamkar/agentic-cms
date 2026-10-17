@@ -91,7 +91,7 @@ chunks — for an address at the site's domain, and fails naming each file.
 The documented place is the last step of the site's build:
 
 ```json
-"build": "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"
+"build": "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"
 ```
 
 The wireframe example keeps `hello@acme.example` visible in its config on

@@ -32,8 +32,8 @@ function memfs(files = { "package.json": PKG, ".env.example": EXAMPLE }) {
 /** The machine: which browsers are installed, whether WebKit's libraries are, what each pnpm script returns; exec records every command. */
 function machine({ installed = [], libraries = false, scripts = {}, installStatus = 0, pnpm = "12.4.1" } = {}) {
   const state = { installed: new Set(installed), libraries, calls: [] };
-  const exec = (command, args, { capture = false } = {}) => {
-    state.calls.push([command, ...args].join(" ").replace(process.execPath, "<node>"));
+  const exec = (command, args, { capture = false, env = {} } = {}) => {
+    state.calls.push([...Object.entries(env).map(([key, value]) => `${key}=${value}`), command, ...args].join(" ").replace(process.execPath, "<node>"));
     if (command === "pnpm" && args[0] === "--version") return pnpm ? { status: 0, stdout: `${pnpm}\n` } : { status: null, stdout: "" };
     if (command === "pnpm" && args[1] === "playwright-core") { if (installStatus === 0) for (const e of args.slice(3)) state.installed.add(e); return { status: installStatus, stdout: "" }; }
     if (command === "sudo") { state.libraries = true; return { status: 0, stdout: "" }; }
@@ -139,11 +139,12 @@ test("--build verifies with pnpm build too; a failing step stops the verify ther
   const built = machine({ installed: ["chromium"] });
   const env = { "package.json": PKG, ".env.local": "ALLOWED_DEV_ORIGINS=192.0.2.10,203.0.113.5\n" };
   assert.deepEqual((await run(built, memfs(env), { build: true, engines: ["chromium"] })).steps.filter((s) => s.step === "verify").map((s) => s.detail), ["pnpm lint", "pnpm test", "pnpm build"]);
+  assert.ok(built.state.calls.includes("AGENTIC_CMS_PLACEHOLDERS=warn pnpm build"), "the verify build deploys nothing: a new site's placeholders stay warnings, as in its CI");
   const failing = machine({ installed: ["chromium"], scripts: { test: 1 } });
   const report = await run(failing, memfs(env), { build: true, engines: ["chromium"] });
   assert.equal(report.exit, 1);
   assert.deepEqual(report.steps.at(-1), { step: "verify", status: "failed", detail: "pnpm test failed: its output is above; fix the cause, then run setup again", command: "pnpm test" });
-  assert.ok(!failing.state.calls.includes("pnpm build"), "nothing after the failure");
+  assert.ok(!failing.state.calls.some((call) => call.endsWith("pnpm build")), "nothing after the failure");
 });
 
 test("--no-browsers skips them, --engines chromium leaves WebKit alone, --no-public asks no service, and a Mac launches nothing to check", async () => {

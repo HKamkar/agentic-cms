@@ -25,7 +25,9 @@ a patch under `node_modules`.
   sections in order). The door for editing is `content/README.md`; the
   templates are `content/_templates/`; the voice and claim rules are
   `content/VOICE.md`, enforced by `agentic-cms lint` first in `pnpm build`.
-  The content jobs are the `editorial` plugin (`/editorial:write-post`,
+  A string marked `(placeholder)` is the starter's: the site's own copy
+  replaces it (`/editorial:new-page`) before any design, and a production
+  build fails while one remains. The content jobs are the `editorial` plugin (`/editorial:write-post`,
   `new-post`, `update-post`, `new-page`, `review-voice`, `content-status`,
   `retire-content`), enabled by `.claude/settings.json` from the kit's
   marketplace. Never read `content/` at request time: every page is

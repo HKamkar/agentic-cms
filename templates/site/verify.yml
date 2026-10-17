@@ -29,5 +29,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test
+      # The starter's placeholder copy warns here and fails every other
+      # production build, a deploy's included: this run deploys nothing, so a
+      # new site is green before its copy is written (docs/init.md).
       - run: pnpm build
+        env:
+          AGENTIC_CMS_PLACEHOLDERS: warn
       - run: pnpm exec agentic-cms init . --agent-files --check

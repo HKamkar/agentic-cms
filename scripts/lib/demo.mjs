@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { copyNotes, isKit } from "./placeholders.mjs";
 
 export const REGISTRY = "src/components/sections/render.tsx";
 export const PAGES = "content/pages";
@@ -239,6 +240,26 @@ function writeCandidates(root, { name, type, page, count, component: override, t
   fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data), timeline }));
   writeManifest(route, { demo: name, kind: "candidates", component: component.file, base, untracked, created: candidates.map((c) => c.file) });
   return { route: demoFile(name), path: `/${name}-demo`, kind: "candidates", section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
+}
+
+/**
+ * What a round would design around that is not the site's copy: the page's
+ * fields that hold the starter's placeholder copy, or the kit example's brand
+ * (lib/placeholders.mjs). { page, placeholders, brand } for the page a
+ * section's route reads, null when there is none to read (the error is
+ * writeDemo's to give).
+ */
+export function roundCopy(root, { type, page }) {
+  const slug = page ?? pagesWith(root, type)[0]?.slug;
+  const file = slug && path.join(root, PAGES, `${slug}.yaml`);
+  if (!file || !fs.existsSync(file)) return null;
+  return { page: `${PAGES}/${slug}.yaml`, ...copyNotes(parseYaml(fs.readFileSync(file, "utf8")), { kit: isKit(root), siteName: siteName(root) }) };
+}
+
+/** The site's name as src/config/site.ts writes it (its `name:` line), so a site that carries the example's name as its own is not told it does; "" when it reads none. */
+function siteName(root) {
+  const file = path.join(root, "src/config/site.ts");
+  return (fs.existsSync(file) && fs.readFileSync(file, "utf8").match(/^\s*name:\s*"((?:[^"\\]|\\.)*)"/m)?.[1]) || "";
 }
 
 /** The page whose copy a section's route reads: --page, checked to carry it, else the first that does. */

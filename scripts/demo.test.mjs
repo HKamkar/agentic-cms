@@ -52,7 +52,7 @@ test("demo new: the route and a candidate per letter from the registry's compone
     const r = run(root, ["new", "hero-card", "--section", "home-hero", "--json"]);
     assert.equal(r.status, 0, r.stderr);
     const report = JSON.parse(r.stdout);
-    assert.deepEqual(report, { route: "src/app/hero-card-demo/page.tsx", path: "/hero-card-demo", kind: "candidates", section: "home-hero", page: "home", component: "src/components/home/Hero.tsx", candidates: [{ letter: "A", file: "src/components/home/HeroA.tsx" }, { letter: "B", file: "src/components/home/HeroB.tsx" }], data: false, urls: [], ready: false, status: null }, "no dev server (no package.json here): nothing asked, nothing to hand over yet");
+    assert.deepEqual(report, { route: "src/app/hero-card-demo/page.tsx", path: "/hero-card-demo", kind: "candidates", section: "home-hero", page: "home", component: "src/components/home/Hero.tsx", candidates: [{ letter: "A", file: "src/components/home/HeroA.tsx" }, { letter: "B", file: "src/components/home/HeroB.tsx" }], data: false, copy: { placeholders: [], brand: [] }, urls: [], ready: false, status: null }, "no dev server (no package.json here): nothing asked, nothing to hand over yet");
     const route = fs.readFileSync(path.join(root, report.route), "utf8");
     assert.match(route, /export const metadata = \{ robots: \{ index: false \} \};/);
     assert.match(route, /import \{ Hero \} from "@\/components\/home\/Hero";\nimport \{ HeroA \} from "@\/components\/home\/HeroA";\nimport \{ HeroB \} from "@\/components\/home\/HeroB";/);
@@ -83,6 +83,27 @@ test("demo new: the route and a candidate per letter from the registry's compone
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("demo new on a page that still holds the starter's placeholder copy, or the kit example's brand, says so first, naming the fields; then writes the round", () => {
+  const root = site();
+  try {
+    put(root, "content/pages/home.yaml", 'seo: {}\nsections:\n  - type: home-hero\n    heading: "(placeholder) The promise, in one line."\n    text: Built by Acme.\n    cards:\n      - value: hello@my-site.example\n');
+    const r = run(root, ["new", "hero-card", "--section", "home-hero", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    const [placeholders, brand] = r.stderr.trim().split("\n");
+    assert.match(placeholders, /^demo new: content\/pages\/home\.yaml still holds the starter's placeholder copy \(sections\[0\]\.heading, sections\[0\]\.cards\[0\]\.value\): a round designs around the site's real copy — write it first \(\/editorial:new-page/);
+    assert.match(brand, /^demo new: content\/pages\/home\.yaml still carries the kit example's brand \(sections\[0\]\.text\): a round never designs around it/);
+    assert.deepEqual(JSON.parse(r.stdout).copy, { placeholders: ["sections[0].heading", "sections[0].cards[0].value"], brand: ["sections[0].text"] });
+    assert.ok(fs.existsSync(path.join(root, "src/app/hero-card-demo/page.tsx")), "the round is written all the same");
+    put(root, "package.json", JSON.stringify({ name: "agentic-cms" }));
+    fs.rmSync(path.join(root, "src/app/hero-card-demo"), { recursive: true });
+    for (const letter of "AB") fs.rmSync(path.join(root, `src/components/home/Hero${letter}.tsx`));
+    const kit = run(root, ["new", "hero-card", "--section", "home-hero", "--json"]);
+    assert.deepEqual(JSON.parse(kit.stdout).copy, { placeholders: ["sections[0].heading"], brand: [] }, "in the kit's own repository the example is the example: its brand and its domain are no finding, the marker still is");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("demo new --component alone: a props-free route for a piece of the chrome, no page file read", () => {
   const root = site();
   try {
@@ -90,7 +111,7 @@ test("demo new --component alone: a props-free route for a piece of the chrome, 
     const r = run(root, ["new", "footer", "--component", "src/components/ui/Footer.tsx", "--json"]);
     assert.equal(r.status, 0, r.stderr);
     const report = JSON.parse(r.stdout);
-    assert.deepEqual(report, { route: "src/app/footer-demo/page.tsx", path: "/footer-demo", kind: "candidates", section: null, page: null, component: "src/components/ui/Footer.tsx", candidates: [{ letter: "A", file: "src/components/ui/FooterA.tsx" }, { letter: "B", file: "src/components/ui/FooterB.tsx" }], data: false, urls: [], ready: false, status: null });
+    assert.deepEqual(report, { route: "src/app/footer-demo/page.tsx", path: "/footer-demo", kind: "candidates", section: null, page: null, component: "src/components/ui/Footer.tsx", candidates: [{ letter: "A", file: "src/components/ui/FooterA.tsx" }, { letter: "B", file: "src/components/ui/FooterB.tsx" }], data: false, copy: null, urls: [], ready: false, status: null });
     const route = fs.readFileSync(path.join(root, report.route), "utf8");
     assert.match(route, /candidates for Footer, a piece of the site's chrome — its copy comes\n\/\/ from the site's config \(src\/config\/site\.ts\), not a page file/);
     assert.match(route, /import type { ComponentType } from "react";\nimport { Footer } from "@\/components\/ui\/Footer";\nimport { FooterA }/);
@@ -278,7 +299,7 @@ test("demo new --showcase: a review page of the pieces named, each in a block of
     put(root, "src/components/ui/Bare.tsx", "export default function Bare() { return null; }\n");
     const r = run(root, ["new", "library", "--showcase", "--component", "src/components/ui/Button.tsx", "--component", "src/components/ui/Panel.tsx", "--json"]);
     assert.equal(r.status, 0, r.stderr);
-    assert.deepEqual(JSON.parse(r.stdout), { route: "src/app/library-demo/page.tsx", path: "/library-demo", kind: "showcase", section: null, page: null, component: null, components: ["src/components/ui/Button.tsx", "src/components/ui/Panel.tsx"], candidates: [], data: false, urls: [], ready: false, status: null });
+    assert.deepEqual(JSON.parse(r.stdout), { route: "src/app/library-demo/page.tsx", path: "/library-demo", kind: "showcase", section: null, page: null, component: null, components: ["src/components/ui/Button.tsx", "src/components/ui/Panel.tsx"], candidates: [], data: false, copy: null, urls: [], ready: false, status: null });
     const manifest = JSON.parse(fs.readFileSync(path.join(root, "src/app/library-demo/demo.json"), "utf8"));
     assert.deepEqual({ ...manifest, base: undefined, untracked: undefined }, { demo: "library", kind: "showcase", component: null, components: ["src/components/ui/Button.tsx", "src/components/ui/Panel.tsx"], base: undefined, untracked: undefined, created: [] });
     const route = fs.readFileSync(path.join(root, "src/app/library-demo/page.tsx"), "utf8");

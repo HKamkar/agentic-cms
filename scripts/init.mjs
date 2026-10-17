@@ -1,8 +1,11 @@
 #!/usr/bin/env node
-// A site from the package: `agentic-cms init [dir]` lays out the wireframe
-// example, the agent files (the rules and the design skills, so an agent
-// designs from the first session with nothing installed), the config and a
-// manifest; `--agent-files` refreshes only the rules and skills of an
+// A site from the package: `agentic-cms init [dir] [--name <Site>]` lays out
+// the wireframe example's code with the starter in place of its content (one
+// home page and the blog index, their copy marked as placeholder; the site's
+// name, and its address from --url and --email or a stand-in, where the
+// example says its own), the agent files (the rules and the design skills, so
+// an agent designs from the first session with nothing installed), the
+// config and a manifest; `--agent-files` refreshes only the rules and skills of an
 // existing site, keeping the site's own edits, `--check` reports what
 // drifted instead of writing, `--diff` prints the kit's change to a file the
 // site edited since the site took it (for a file the manifest has no base
@@ -10,16 +13,18 @@
 // whole file when no release is known as its source), and `--accept`
 // records the kit's current text as that file's base once the site merged
 // the change by hand;
-// `--light-only` lays the example out as a site without dark mode
-// (lib/light-only.mjs). lib/init.mjs is the scaffold; docs/init.md says what
-// a new site does next.
+// `--light-only` lays the site out without dark mode (lib/light-only.mjs).
+// lib/init.mjs is the scaffold, lib/starter.mjs the starter; docs/init.md
+// says what a new site does next.
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { acceptAgentFiles, agentFileDiff, AgentFileError, agentFiles, scaffold } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
+import { onReservedDomain } from "./lib/placeholders.mjs";
 import { CODEX_LIMIT } from "./lib/rules-table.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { StarterError } from "./lib/starter.mjs";
 
 const { positionals: [dir = "."], flags } = parseOrExit(SPECS.init, process.argv.slice(2));
 const kitRoot = path.resolve(import.meta.dirname, "..");
@@ -36,6 +41,8 @@ const detail = (f) => (f.note ? ` — ${f.note}` : f.status === "too big" ? ` �
 
 const modes = ["check", "diff", "accept"].filter((name) => (name === "check" ? flags.check : flags[name].length));
 if (flags["agent-files"] && flags["light-only"]) usage("--light-only lays out a new site; --agent-files refreshes the rules and skills, which are the same for every site");
+const named = ["name", "url", "email"].find((name) => flags[name] !== undefined);
+if (flags["agent-files"] && named) usage(`--${named} names a new site; --agent-files refreshes the rules and skills, which carry no site's name`);
 if (modes.length && !flags["agent-files"]) usage(`--${modes[0]} goes with --agent-files`);
 if (modes.length > 1) usage(`--${modes.join(" and --")} are separate runs: one at a time`);
 if (!flags["agent-files"]) scaffoldSite();
@@ -100,13 +107,20 @@ function refresh() {
 
 function scaffoldSite() {
   let result;
-  try { result = scaffold(target, { kitRoot, version, force: flags.force, lightOnly: flags["light-only"], log }); } catch (error) {
+  try { result = scaffold(target, { kitRoot, version, force: flags.force, lightOnly: flags["light-only"], name: flags.name, url: flags.url, email: flags.email, log }); } catch (error) {
+    if (error instanceof StarterError) usage(`${error.message}; nothing was written`);
     if (!(error instanceof LightOnlyError)) throw error;
     console.error(`init --light-only: ${error.message}; nothing was written`);
     process.exit(2);
   }
   if (flags.json) return printJson({ target, version, ...result });
   const where = path.relative(process.cwd(), target);
+  const { site } = result;
   console.log(`init: ${result.created.length} created, ${result.updated.length} updated, ${result.kept.length} kept in ${where || "."}${result.lightOnly ? " — light only: one scheme, no theme toggle" : ""}`);
-  console.log(`next: ${where ? `cd ${where} && ` : ""}bash scripts/setup.sh && pnpm kit serve (the dev server, and every URL to hand over) — then src/config/site.ts, src/app/globals.css, content/VOICE.md, and the design skill`);
+  if (!site.starter) console.log("init: content/ was there: the site's own content and pictures are left as they are (the starter is for a new site), and --name, --url and --email name only what init writes fresh");
+  else {
+    const standIn = [site.url, site.email].filter(onReservedDomain);
+    console.log(`init: ${site.name} — the starter: a home page and the blog index whose copy is marked "(placeholder)"${standIn.length ? `, and ${standIn.join(" and ")} standing in for the site's address (--url, --email)` : ""}; pnpm content:lint names each, and a production build fails while one remains`);
+  }
+  console.log(`next: ${where ? `cd ${where} && ` : ""}bash scripts/setup.sh && pnpm kit serve (the dev server, and every URL to hand over) — then the copy first (/editorial:new-page writes the home page's; content/VOICE.md), then src/config/site.ts, src/app/globals.css and the design skill`);
 }

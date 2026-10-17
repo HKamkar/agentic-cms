@@ -1,0 +1,26 @@
+# The blog index (/blog): its SEO block, its structured data (a Blog
+# listing every published post) and its one section, as `agentic-cms init`
+# wrote it for a new site. It builds with no post at all; the posts are
+# content/blog/*.md, from content/blog/_template.md (or /editorial:new-post).
+# A string that starts with the placeholder marker stands in for the site's own copy:
+# `pnpm content:lint` names each by field and a production build fails while
+# one remains. Every field is checked at build time (pageSchema); template in
+# content/_templates/page.yaml.
+seo:
+  path: /blog
+  title: "(placeholder) The blog | {{name}}"
+  description: "(placeholder) One sentence of 70 to 160 characters on what the posts on {{name}}'s blog cover."
+  ogImage: /images/blog-og.jpg
+  updated: "{{today}}"
+  breadcrumb: Blog
+  changeFrequency: weekly
+  priority: 0.8
+jsonld:
+  type: Blog
+sections:
+  - type: blog-index
+    label: "(placeholder) The blog's label"
+    heading: "(placeholder) What the blog is about, in one line."
+    listEyebrow: Latest posts
+    listHeading: Every post, newest first
+    cta: Read the posts

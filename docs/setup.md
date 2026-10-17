@@ -26,7 +26,7 @@ itself, which has no `scripts/setup.sh`, the same is
 | Flag | What it adds or changes |
 |---|---|
 | `--check` | reports every step and writes, installs and runs nothing (after the install, which `setup.sh` always does); exit 1 on a gap |
-| `--build` | verifies with `pnpm build` too, about a minute |
+| `--build` | verifies with `pnpm build` too, about a minute (the starter's placeholders stay warnings: this build deploys nothing) |
 | `--deps` | on Linux, installs WebKit's system libraries with `sudo` when WebKit does not launch |
 | `--no-browsers` | skips the browsers: a machine that only edits content |
 | `--engines chromium` | installs only the browsers named (default `chromium,webkit`) |
@@ -69,7 +69,9 @@ the kit) is the doctor: Node, pnpm, the browsers, WebKit's libraries,
    They are found now, on this machine, and never go into a tracked file.
 7. **Verify** (`agentic-cms setup`): `pnpm lint` and `pnpm test`; with
    `--build`, `pnpm build` (the content lint first, the prerender, the SEO
-   audit last).
+   audit last), with `AGENTIC_CMS_PLACEHOLDERS=warn`: it proves the clone
+   builds and deploys nothing, so a new site's placeholder copy
+   ([init.md § The starter](init.md#the-starter)) warns here as in its CI.
 8. **The URLs** (`agentic-cms setup`, and `pnpm urls` any time after):
    localhost, the LAN and the public address on the dev server's port and
    the lab's, each server said running or not. The dev server is running
