@@ -634,6 +634,11 @@ the imports.
    `visual-parity proof`: a raw `<img>` becomes `Media`, an `<h3>`
    `Heading`, a bordered box `Panel`, an arbitrary grid a token. A file you
    cannot move yet goes into `ignores`, with its reason, until you can.
+   A restriction of your own on imports goes into the `restrictedImports`
+   option (`{ paths, patterns }`, as the rule takes them), never a second
+   `no-restricted-imports` block: flat config keeps the last block's
+   setting, so a block of yours over the component folders drops the
+   preset's layer and animation bans there without a warning.
 3. Change the lint script in `package.json` to
    `eslint; s=$?; agentic-cms check-components || s=1; exit $s`: both tools
    report, and either fails the lint, so CI's `pnpm lint` fails too.
