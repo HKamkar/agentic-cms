@@ -1,4 +1,4 @@
-# Migrating a site from 0.7.6 to 0.8.0
+# Migrating a site from 0.7.6 to 0.8
 
 This is for a site on agentic-cms 0.7.6. Upgrading changes nothing a reader
 sees: a site that does only § 1 builds, lints and proves identical.
@@ -38,16 +38,18 @@ own version.
 ## 1. Upgrade (required)
 
 ```bash
-# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.0"
+# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.1"
 pnpm install
 pnpm exec agentic-cms init . --agent-files --check   # what will change, writes nothing
 pnpm exec agentic-cms init . --agent-files           # skills, rules, the rules table
 ```
 
-**Before the tag** exists, a site that runs this guide as the release's
-gate pins the release commit, `github:HKamkar/agentic-cms#<develop sha>`,
-and moves to `#v0.8.0` once the tag exists. `.agentic-cms.json` records
-`"version": "0.8.0"`, with that commit from the lockfile beside it.
+**Take 0.8.1.** It is 0.8.0 with the fixes this guide's runs on two sites
+found, and the checks below use its `--all-pages`. Before a release is
+tagged, a site that runs this guide as its gate pins the release commit,
+`github:HKamkar/agentic-cms#<develop sha>`, and moves to the tag once it
+exists; `.agentic-cms.json` records the version, with that commit from the
+lockfile beside it.
 
 **What `--agent-files` updates:** the skills, the scoped rules and the rules
 table in `AGENTS.md`.
@@ -75,18 +77,25 @@ without your edits.
 What `--diff` shows for each file is listed here, each line with the step
 it belongs to. A line for a step your site has not taken is worded to hold
 without it ("where the layout renders `motionScript()`", "on a site that
-has the example's"), so the whole `--diff` can go into your copy: a line
-marked § 1 applies to every site, the others once you take their step. If
+has the example's"), so a `--diff` from a base can go into your copy whole:
+a line marked § 1 applies to every site, the others once you take their
+step. A file your site wrote before `.agentic-cms.json` recorded its base
+takes the kit's text at your previous version (the manifest's, 0.7.6) as
+its base, and `--check` notes it ("no base: kit unchanged since 0.7.6" is
+`modified`, nothing to take). Where no such text is known, `--diff` says
+so and prints your whole file against the kit's text: that is not the
+kit's change, so never apply it whole; take this list's lines from it. If
 you leave a later step's lines out, take them from this list when you take
 that step: once you `--accept`, `--diff` no longer shows them.
 
 - **The styling rule:**
-  - § 1: motion is `agentic-cms/ix` in the layer the site has (its
-    `STANDARD.md` §7): the play-once layer where the layout renders
-    `motionScript()`, and for a site's first motion; `Fx` and `OnView` on
-    a site that moves with them and has not adopted it, and elsewhere only
-    where a replay on re-entry is wanted. The `Fx` / `OnView` bullet opens
-    "Where the site uses them".
+  - § 1: motion is the layer the site has (its `STANDARD.md` §7): a
+    motion folder of the site's own while it keeps one (until 3.5 on a
+    site that wrote its own), otherwise `agentic-cms/ix` — the play-once
+    layer where the layout renders `motionScript()`, and for a site's
+    first motion; `Fx` and `OnView` on a site that moves with them and has
+    not adopted it, and elsewhere only where a replay on re-entry is
+    wanted. The `Fx` / `OnView` bullet opens "Where the site uses them".
   - § 1: a change that must not move a pixel proves it with
     `pnpm kit visual-parity proof` (the baseline of develop, the tree and
     the compare, once built), in place of `capture before`,
@@ -104,8 +113,8 @@ that step: once you `--accept`, `--diff` no longer shows them.
 - **The design rule:**
   - § 1: rejected and unapproved candidates are deleted, never archived,
     moved aside or kept "for later".
-  - 3.6: a section's card content is its own, inside the site's one card
-    frame (`ui/Panel` on a site that has the example's).
+  - 3.6: a section's card content is its own, inside the site's card
+    frame where it has one (`ui/Panel` on a site that has the example's).
 - **The components rule:** 3.7. It is new, and `--agent-files` writes it
   only once the site has `src/config/components.json`.
 - **The pages rule:** § 1. It is new, written whole: a page is a content
@@ -115,17 +124,18 @@ that step: once you `--accept`, `--diff` no longer shows them.
 - **`design`:**
   - § 1: the owner's look is `pnpm kit serve`, handing over the URLs it
     printed, in place of `pnpm dev`.
-  - § 1: motion comes last, in the layer the site has: a site on `Fx` and
-    `OnView` keeps them, and a site with no motion yet starts with the
-    play-once layer.
+  - § 1: motion comes last, in the layer the site has: a site with a
+    motion folder of its own keeps it (until 3.5 on a site that wrote its
+    own), a site on `Fx` and `OnView` keeps them, and a site with no
+    motion yet starts with the play-once layer.
   - 3.1: the colours in each scheme the profile names.
   - 3.5: where the layout renders `motionScript()`, the play-once layer
     is the default, and `Fx` and `OnView` serve only where a replay is
     wanted.
   - 3.6: where the site has role tokens, the design gives the roles their
     values first.
-  - 3.6: a section's cards sit in the site's one card frame (`ui/Panel`
-    where it has the example's).
+  - 3.6: a section's cards sit in the site's card frame where it has one
+    (`ui/Panel` where it has the example's).
 - **`design-options`:**
   - § 1: step 4's hand-over. `pnpm kit serve` starts next dev and the lab
     and prints every URL in one table, and `demo new` waits until the
@@ -164,8 +174,9 @@ that step: once you `--accept`, `--diff` no longer shows them.
     scheme the profile names (light and dark without one), in place of
     "light and dark" and `--scheme dark`.
 - **`setup`:** § 1. It is new, written whole. On a site that has not taken
-  3.2 it runs `pnpm install --frozen-lockfile` and
-  `pnpm exec agentic-cms setup` in place of `bash scripts/setup.sh`, and
+  3.2, where `scripts/setup.sh` is missing or is the site's own, it runs
+  `pnpm install --frozen-lockfile` and `pnpm exec agentic-cms setup` (with
+  the flags) in place of the kit's `bash scripts/setup.sh`, and
   `pnpm exec agentic-cms urls` in place of `pnpm urls`.
 
 **`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
@@ -262,16 +273,47 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
   prints each scene's own page, `/scene/<name>`, on every address.
 
-**Check:** the verify block, then
-`pnpm kit visual-parity proof upgrade --ref develop --build --all`: the
-static pass, `--states` and `--motion`, in each scheme the site has. Every
-pass must be identical: each page shot, each state's box, and each
-`--motion` step's settled frame. A mid-flight frame (`-150`, `-500`) that
-differs is re-run once with `--fresh`, and identical then is accepted; a
-`FLAKY` line is a shot taken with an image still loading, retaken with
-`--pages <route> --fresh`. Any other difference is a kit bug: report it
+**Check:** the verify block, then the static pass, `--states` and
+`--motion` as three proofs:
+
+```bash
+pnpm kit visual-parity proof upgrade --ref develop --build --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --states --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --motion --all-pages
+```
+
+Together they cover what one `--all` proof does, and the second and third
+copy the static shots of the first from the shot cache. One `--all` proof
+of a site without a profile took about 13 minutes, past the 10 minutes a
+foreground command gets; split in three, each run is only a part of that.
+Each runs in each scheme the site has, on every page: an upgrade reaches
+every template, so `--all-pages` sets aside any `proof.pages` or
+`proof.sample` the profile names (§ 3.1). Every pass must be identical:
+each page shot, each state's box, and each `--motion` step's frames. Before a pass reports, the proof retakes every
+static shot and `--motion` frame that differs, once on each side; for
+`--motion` that is a second take of the base build, the base against
+itself. A `FLAKY` line is a shot taken with an image still loading,
+retaken with `--pages <route> --fresh`, or a difference that did not
+reproduce: a take of one build matched a take of the other, and its cause
+says which jittered; that one is accepted. An `UNSTABLE` line is a frame
+that also differs between two takes of one build, where a canvas, a loop
+or a spring still runs, and is identical outside that region: accepted
+too (a spring it keeps finding near the settle time takes a
+`data-settle`). Any other difference is a kit bug: report it
 with the `cause:` line the compare prints under it rather than adjusting
 the site.
+
+**A mid-flight frame that differs on every take** can be the bundle, not
+the kit. The upgrade alone re-splits a site's client chunks (§ 2), and a
+`-150` or `-500` frame photographs a reveal at one instant of its flight:
+when the main thread's work around the scroll step lands differently, the
+same reveal is caught further along or further back, take after take. It
+is the bundle when the step's settled frame is identical and the same
+frame is identical build against itself: two
+`capture <label> --motion --pages <route>` of the upgraded build, the
+second with `--fresh`, then `compare`. Look at that frame with the owner
+and accept it on their look. This is for the mid-flight frames alone: a
+settled frame that differs is still a kit bug to report.
 
 The baseline is built in a sibling worktree, `../<checkout>-ref-<sha>`
 (this checkout's folder name and the first 12 characters of `develop`'s
@@ -294,6 +336,13 @@ Watch:
 - A site with no profile keeps the built-in widths: only the kit's own
   example moved to four, so nothing to recapture until the site writes a
   profile (§ 3.1).
+- The client bundle re-splits. The package declares
+  `"sideEffects": ["*.css"]`, so a page bundles only the kit modules it
+  uses: an `Fx` page no longer carries `InlineAnimation`, and gets none
+  of the play-once layer. The chunk files change in number and name, the total
+  is the same or a little smaller, and nothing a page renders changes. A
+  `--motion` mid-flight frame can move with it on every take; § 1's check
+  says how to tell that from a kit change.
 
 ## 3. Adopt what you want
 
@@ -318,7 +367,9 @@ export const harness = {
 Every key is optional; one you leave out keeps the built-in default. A
 site whose short proof is one page of each template says
 `proof: { sample: 1 }` in place of `pages` (one or the other: both exit 2),
-and `--pages` or `--sample` on the command line sets it aside for a run.
+and `--pages` or `--sample` on the command line sets it aside for a run;
+`--all-pages` sets it aside for every page, the proof of a change that
+reaches every template, such as the next kit upgrade.
 Then make the profile the site's proof in `AGENTS.md`, where it gives the
 screenshot harness's rules: after the line that names their contract,
 `node_modules/agentic-cms/docs/visual-parity.md`, add
@@ -460,7 +511,7 @@ remove it as `init --light-only` does for a new site:
 finds nothing, and a proof of the change is identical in light. The theme
 toggle is gone, and that is intended: say so in the commit.
 
-### 3.5 The play-once motion layer *(jobs 7, 8)*
+### 3.5 The play-once motion layer
 
 **Why:** `Fx` replays each time an element re-enters the viewport. The new
 layer in `agentic-cms/ix` plays once, when it first enters, never on hover
@@ -495,16 +546,39 @@ kept and documented.
   below the fold under `reveals.pending`, each with its kind;
 - `pnpm kit visual-parity proof motion --motion --build`.
 
-**If you wrote your own play-once layer:** switch the imports to
-`agentic-cms/ix`, then delete your components, your hooks and any lab
-timeline patch of your own. The timeline pins the fill of what it drives
-to `both`, so a fill override under `[data-lab-timeline]` goes; the
-layer plays at once under a timeline, as `docs/lab.md` § Inspecting
-motion asks of any motion. The layer's markup is `data-motion="on"` on
-`<html>`, `data-motion-root`, `data-part`, `data-play`, `data-visible` and
-`data-intro`, with `--d`, `--len` and `--dim`: a stylesheet of your own
-written for those names keeps working, any other takes the kit's block
-(step 2).
+The browser check and `reveals.pending` need a route that renders a root.
+Until one does, check the arming instead:
+`pnpm kit probe / --select 'html[data-motion="on"]' --motion` finds
+`<html>` (exit 0), the same without `--motion`, under reduced motion,
+finds nothing (exit 1), and the proof is identical. Run the two root
+checks on the first route that renders a root, or try them first on a
+throwaway demo route (`pnpm kit demo new`, probed with `--url` on the dev
+server, removed with `pnpm kit demo clean`).
+
+**If you wrote your own play-once layer**, it moves onto the kit's in one
+of two shapes, each matching one of § 3.7's configs:
+- **Keep your motion folder as a layer over the kit's.** Its files
+  re-export `agentic-cms/ix` (`export { Reveal, RevealGroup } from
+  "agentic-cms/ix";`), or wrap it where your names or props differ, and
+  your own components and hooks behind them go. The rest of the site
+  keeps importing from the folder, so a components rule or lint that lets
+  only that folder import `agentic-cms/ix` holds as it is. This is
+  `motion: "<folder>"` at § 3.7. A re-export costs nothing: a page still
+  bundles only the kit modules it uses.
+- **Delete the folder.** Every consumer imports `agentic-cms/ix` itself.
+  This is `motion: null` at § 3.7, where `agentic-cms/ix` is the motion
+  layer. A lint of your own that lets only the folder import
+  `agentic-cms/ix` fails on that, so take this shape together with § 3.7,
+  whose lint replaces yours, or keep the folder until then.
+
+Either way, delete any lab timeline patch of your own. The timeline pins
+the fill of what it drives to `both`, so a fill override under
+`[data-lab-timeline]` goes; the layer plays at once under a timeline, as
+`docs/lab.md` § Inspecting motion asks of any motion. The layer's markup
+is `data-motion="on"` on `<html>`, `data-motion-root`, `data-part`,
+`data-play`, `data-visible` and `data-intro`, with `--d`, `--len` and
+`--dim`: a stylesheet of your own written for those names keeps working,
+any other takes the kit's block (step 2).
 
 ### 3.6 `variants()`, tokens by role, the example's primitives
 
@@ -560,9 +634,9 @@ applies, never the hue behind it.
   own content, and `Section` draws its box with `Panel`; a site that adopts
   `Panel` moves its card frames the same way and keeps what goes inside
   them. The design rule `--agent-files` writes says "a section's card
-  content is its own, its frame the site's one card frame (`ui/Panel` on a
-  site that has the example's)"; an edited copy takes that line by hand
-  (§ 1).
+  content is its own, inside the site's card frame where it has one
+  (`ui/Panel` on a site that has the example's)"; an edited copy takes that
+  line by hand (§ 1).
 - **The guide:** `docs/primitives.md` is the checklist of what a site builds
   on day one and what waits for a second use.
 
@@ -629,18 +703,33 @@ the imports.
    folders, `sections/` and `blog/`) and pass `null` for a layer you do not
    have; with no `motion/` folder, `agentic-cms/ix` is your motion layer
    ([primitives.md § Enforced](primitives.md#enforced-agentic-cmseslint)
-   has every option). Run `pnpm lint`: each finding names the primitive to
-   use. Move the section onto it, pixel for pixel and proven with
-   `visual-parity proof`: a raw `<img>` becomes `Media`, an `<h3>`
-   `Heading`, a bordered box `Panel`, an arbitrary grid a token. A file you
-   cannot move yet goes into `ignores`, with its reason, until you can.
+   has every option). A site that moved its own play-once layer onto the
+   kit's (§ 3.5) passes its folder as `motion` where it kept it as a layer
+   over the kit's, and `null` where it deleted it. Run `pnpm lint`: each
+   finding names the primitive to use. Move the section onto it, pixel for
+   pixel and proven with `visual-parity proof`: a raw `<img>` becomes
+   `Media`, an `<h3>` `Heading`, a bordered box `Panel`, an arbitrary grid
+   a token. A file you cannot move yet goes into `ignores`, with its
+   reason, until you can.
+   A restriction of your own on imports goes into the `restrictedImports`
+   option (`{ paths, patterns }`, as the rule takes them), never a second
+   `no-restricted-imports` block: flat config keeps the last block's
+   setting, so a block of yours over the component folders drops the
+   preset's layer and animation bans there without a warning.
 3. Change the lint script in `package.json` to
    `eslint; s=$?; agentic-cms check-components || s=1; exit $s`: both tools
    report, and either fails the lint, so CI's `pnpm lint` fails too.
 4. Run `pnpm exec agentic-cms init . --agent-files`: with the config
    present, it writes the components rule (`.claude/rules/components.md`)
    and its row in `AGENTS.md`'s scoped-rules table. Without the config it
-   never writes the rule, and `--check` does not report it missing.
+   never writes the rule, and `--check` does not report it missing. You
+   may add your own lines to the rule before you commit it: `init`
+   records its base, the hash in `.agentic-cms.json` and the text in the
+   package's record of its releases (or, for a text no release has, a copy
+   in `.agentic-cms/base/`), so `--check` calls your copy `modified` and a
+   later `--diff` prints the kit's change alone. That is 0.8.1 and later;
+   with 0.8.0 itself, commit the rule as `init` wrote it before you edit
+   it.
 
 **Check:** `pnpm lint` passes on the current tree, and
 `pnpm exec agentic-cms init . --agent-files --check` is clean. A planted
@@ -755,9 +844,16 @@ Each row goes only after its step works.
   `pnpm build`, 0 failures.
 - `pnpm exec agentic-cms init . --agent-files --check` is clean: every file
   the kit's text, or your edit of it (`modified`).
-- `pnpm kit visual-parity proof migrate --ref develop --build` is identical,
-  except for the design changes you chose and committed apart (3.4's
-  toggle).
+- The three passes on every page are identical, except for the design
+  changes you chose and committed apart (3.4's toggle):
+  `pnpm kit visual-parity proof migrate --ref develop --build --all-pages`,
+  then the same with `--states` and with `--motion` in place of `--build`,
+  as in § 1's check. A bare `proof` covers only the profile's `proof.pages`
+  or `proof.sample` (§ 3.1), the short proof of a change to a few pages,
+  while §§ 3.5–3.7 change code that every route renders. Where the profile
+  samples (`proof.sample`: many pages of one template), `--sample 1` in
+  place of `--all-pages` keeps every page that is no template's and one
+  page of each template.
 - The owner looks on the dev server (`pnpm kit serve`), then the merge.
 
 ## When something fails

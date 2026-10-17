@@ -102,7 +102,7 @@ function layOut(scratch, site, tarball) {
 /** 3. The site's dependencies (no lockfile yet), the files the tarball must ship, then the build, the lint, the tests and the agent files through the installed command line. */
 async function build(site) {
   await install(["--prefer-offline", "--no-frozen-lockfile"], site);
-  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "content/pages/home.yaml", "docs/commands.md"]) {
+  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "scripts/lib/agent-file-releases.json", "content/pages/home.yaml", "docs/commands.md"]) {
     if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
   }
   run("pnpm", ["build"], site);

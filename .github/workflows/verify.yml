@@ -4,7 +4,9 @@
 # WebKit installed for it (the lab timeline's cases run in both). The pack
 # smoke (a scratch site built from the tarball, minutes) runs on pushes to
 # main. The token reads the repository and nothing else, checkout keeps no
-# credential in .git/config, and every action is pinned to a commit
+# credential in .git/config (and the test job fetches the history and the
+# tags, which the hygiene's record of the agent files at every release is
+# checked against), and every action is pinned to a commit
 # (.github/dependabot.yml proposes the updates).
 name: verify
 on:
@@ -20,6 +22,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:

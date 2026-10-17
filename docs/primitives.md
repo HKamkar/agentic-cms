@@ -123,8 +123,8 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
   array. The copy goes in the page's file, `content/pages/<slug>.yaml`, as
   a field of the section's schema, and arrives as a prop. A symbol (`→`,
   `·`) passes, and so does a decoration: the text of an `aria-hidden`
-  element, and the props of a primitive that draws them `aria-hidden`
-  (`Placeholder`, `TypeTag`).
+  element, and the props and children of a primitive that draws them
+  `aria-hidden` (`Placeholder`, `TypeTag`).
 
 | Option | Default | What it is |
 |---|---|---|
@@ -133,9 +133,34 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
 | `sections` | `["sections"]` | the section folders under `root` |
 | `registry` | `"sections/render.tsx"` | the section registry under `root`, left out of the section rules: it imports every section |
 | `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
-| `copy` | `{ props: [the six above], decorations: ["Placeholder", "TypeTag"] }` | the props whose strings are copy, and the primitives that draw theirs `aria-hidden`; `false` turns the copy rule off |
+| `copy` | `{ props: [the six above], decorations: ["Placeholder", "TypeTag"] }` | the props whose strings are copy, and the primitives that draw their props and children `aria-hidden`; `false` turns the copy rule off |
+| `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
 | `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban covers, and the tsconfig alias for it |
+
+**Extend the preset through its options, never a block that sets one of
+its rules again.** Flat config keeps one setting of a rule per file, the
+last block's: a block of the site's after `...componentRules()` that sets
+`no-restricted-imports` on the component folders replaces the preset's
+setting there, and those files lose the layers' and the animation bans
+without a warning. The same holds for `react/forbid-elements` and
+`no-restricted-syntax` in a section or a pattern file (the second has no
+option to extend it yet). A restriction of the site's own on imports goes
+into `restrictedImports`, a forbidden element into `elements`:
+
+```js
+...componentRules({
+  sections: ["sections"],
+  restrictedImports: {
+    paths: [{ name: "<package>", message: "<what to use instead>" }],
+    patterns: [{ group: ["@/lib/<folder>", "@/lib/<folder>/**"], message: "<why not here>" }],
+  },
+}),
+```
+
+Its restrictions hold wherever the kit's do, every file under `src` but
+`ignores`; a block of your own is still right for files the preset leaves
+alone (outside `src`, or in `ignores`).
 
 The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`
 and its six section folders, the page folders with `sections/` and

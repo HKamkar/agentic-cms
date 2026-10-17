@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { parse } from "../scripts/lib/args.mjs";
 import { SPECS } from "../scripts/lib/specs.mjs";
 
 
@@ -24,4 +25,11 @@ test("every spec names a script that exists, and its command is its key", () => 
       }
     }
   }
+});
+
+test("a command whose help says what --json prints takes --json: probe, which prints nothing else, takes it too", () => {
+  for (const leaf of Object.values(SPECS).flatMap(leavesOf).filter((spec) => spec.json)) {
+    assert.equal(leaf.flags?.json?.type, "boolean", `${leaf.command}: its help says "--json prints ${leaf.json.slice(0, 30)}…", so --json is a flag`);
+  }
+  assert.equal(parse(SPECS.probe, ["/", "--select", ".card", "--motion", "--json"]).flags.json, true);
 });

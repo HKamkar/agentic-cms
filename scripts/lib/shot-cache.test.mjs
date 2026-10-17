@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { captureWidths, menuWidths, opensMenu } from "./profile.mjs";
-import { CACHE_DIR, KEEP, createShotCache, digester, filesOf, harnessDigest, lookup, recordDeps, reuse, settingsKey, shotKey, store } from "./shot-cache.mjs";
+import { CACHE_DIR, KEEP, createShotCache, digester, evict, filesOf, harnessDigest, lookup, recordDeps, reuse, settingsKey, shotKey, store } from "./shot-cache.mjs";
 
 // A build as the harness serves it: a served path maps to a file under the root.
 function build(files) {
@@ -126,4 +126,23 @@ test("a cache keyed per page-width looks each one up under its own key", async (
   assert.deepEqual(shots.counts, { reused: 1, taken: 2 }, "the same key reused, the other key taken");
   assert.equal(new Set(keys).size, 2);
   fs.rmSync(site, { recursive: true, force: true });
+});
+
+test("evict removes, under every key, the entries of a page-width that hold a jittered shot's very bytes, and nothing else", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "shot-cache-evict-"));
+  try {
+    const shots = path.join(root, "shots");
+    fs.mkdirSync(shots);
+    const put = (key, deps, bytes) => { fs.writeFileSync(path.join(shots, "post@390.png"), bytes); fs.writeFileSync(path.join(shots, "post@390.sections.json"), "[]"); store(root, key, "post@390", deps, shots, ["post@390.png", "post@390.sections.json"]); };
+    put("k1", { "/post": "a" }, "jittered");
+    put("k1", { "/post": "b" }, "steady");
+    put("k2", { "/post": "a" }, "jittered");
+    fs.writeFileSync(path.join(shots, "post@390.png"), "jittered");
+    assert.equal(evict(root, "post@390", path.join(shots, "post@390.png")), 2, "the jittered shot under both keys");
+    const left = (key) => fs.readdirSync(path.join(root, CACHE_DIR, key, "post@390"));
+    assert.equal(left("k1").length, 1, "the steady entry stays");
+    assert.deepEqual(left("k2"), []);
+    assert.equal(evict(root, "home@390", path.join(shots, "post@390.png")), 0, "another page-width is not looked at");
+    assert.equal(evict(path.join(root, "nothing"), "post@390", path.join(shots, "post@390.png")), 0, "no cache, nothing to do");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

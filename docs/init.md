@@ -5,7 +5,7 @@ around you and replace it piece by piece; or **install** the package and let
 it lay the site out, in one line:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.0 init my-site
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
@@ -23,7 +23,7 @@ Into a project that already has a `package.json`, `pnpm add` takes the same
 approval and records it in the workspace:
 
 ```bash
-pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.0
+pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1
 pnpm exec agentic-cms init .
 ```
 
@@ -161,9 +161,8 @@ still carries the last release's version), the `commit` the site's
 lockfile installed. Against its base a rule is `ok` (the kit's text),
 `modified` (the site edited the kit's current text: kept, never
 overwritten), `modified, kit changed` (the site edited it and the kit's
-text changed since its base, or the manifest records no base, for a rule
-the site wrote before it), `stale` (the site never touched it and the kit
-has a newer one) or `missing`. `--check` exits 1 on the last three, so a
+text changed since its base), `stale` (the site never touched it and the
+kit has a newer one) or `missing`. `--check` exits 1 on the last three, so a
 site that keeps its own edits keeps a clean check, and the CI workflow
 `init` writes runs it on every pull request. A `modified, kit changed`
 file is merged by hand: `--diff <file>` prints the kit's change alone, from
@@ -172,9 +171,33 @@ where the site's edits sit apart from it), and `--accept <file>` then
 records the kit's current text as the file's base. The text of the base of
 each file the site edited is kept in `.agentic-cms/base/`, under the file's
 path without its leading dot so no agent loads the copies as rules or
-skills; the first time, it comes from the site's git history (the commit
-that has the file as the kit wrote it). Commit the folder with the
-manifest. A rule for a tool the site has not
+skills, and so is the text of a base no release of the kit holds (a pin
+between releases; a release's text is in the package's record of its
+releases). So a file `init` writes and the site edits before committing
+it keeps its base, and `--diff` prints the kit's change alone with nothing
+committed first. The first time, a base's text comes from the kit's
+releases or the site's git history (the commit that has the file as the
+kit wrote it). Commit the folder with the manifest.
+
+A file the site wrote before the manifest recorded its base has none, so
+it is measured against the kit's text at the version the site was on: the
+manifest's `version` (unless a refresh with the running version wrote it),
+else the last other version the site's `package.json` named in its git
+history. The package carries every release's text of every agent file for
+that (`scripts/lib/agent-file-releases.json`, written from the kit's tags),
+so a site needs no history of the kit. A file that is a release's text,
+untouched, is `stale`. One whose kit text has not changed since that
+version is `modified`, noted "no base: kit unchanged since 0.7.6": the
+site's own edit, nothing to take. One whose kit text has changed is
+`modified, kit changed` with that release's text as its base, and `--diff`
+prints the kit's change from it. The refresh and `--accept` record the
+base, as for any file. Where neither the version nor its text is known,
+the file is `modified, kit changed` with a note, and `--diff` says that
+what it prints is the site's whole file against the kit's current text:
+not the kit's change, and never applied whole — take the kit's lines from
+it by hand. Only a `--diff` from a base is the kit's change alone.
+
+A rule for a tool the site has not
 adopted is neither written nor checked: the components rule needs the
 component guard's config, `src/config/components.json`, so a site that
 predates the guard is never told the rule is missing

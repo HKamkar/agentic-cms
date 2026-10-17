@@ -15,6 +15,12 @@
 //   import { componentRules } from "agentic-cms/eslint";
 //   export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ sections: ["sections"] })]);
 //
+// A rule takes one setting per file in flat config: a later block of the
+// site's that sets one of these rules again replaces the preset's setting for
+// its files, and those files lose the kit's restrictions without a word. A
+// site extends them through the options instead (`elements`,
+// `restrictedImports`).
+//
 // Loosening a rule is its own pull request, said so in its title (the
 // components rule, .claude/rules/components.md).
 
@@ -35,6 +41,7 @@ export const DEFAULTS = {
   registry: "sections/render.tsx",
   elements: {},
   copy: { props: ["title", "alt", "aria-label", "placeholder", "label", "children"], decorations: ["Placeholder", "TypeTag"] },
+  restrictedImports: { paths: [], patterns: [] },
   ignores: [],
 };
 
@@ -81,8 +88,9 @@ export function compositionSyntax({ ui, motion }) {
 }
 
 // Copy: text with a letter or a digit in it. A symbol (→, ·, ×) has neither;
-// the text of an aria-hidden element, and the props of a primitive that draws
-// them aria-hidden (`copy.decorations`), are decorations, not something read.
+// the text of an aria-hidden element, and the props and children of a
+// primitive that draws them aria-hidden (`copy.decorations`), are decorations,
+// not something read.
 const WORDS = "/[\\p{L}\\p{N}]/u";
 const HIDDEN = ":has(> JSXAttribute[name.name='aria-hidden'])";
 const WORDED = [`Literal[value=${WORDS}]`, `TemplateLiteral > TemplateElement[value.raw=${WORDS}]`, `:matches(ConditionalExpression, LogicalExpression) > Literal[value=${WORDS}]`];
@@ -92,11 +100,12 @@ export function copySyntax({ copy, registry }) {
   if (!copy) return [];
   const { props, decorations } = { ...DEFAULTS.copy, ...copy };
   const schemas = registry ? `${registry.slice(0, registry.lastIndexOf("/"))}/schemas.ts` : "the sections' schemas";
-  const route = `it goes in the page's file, content/pages/<slug>.yaml → a field of the section (its schema in ${schemas}) → a prop here (a pattern gets it from its section). Symbols pass, and decorations: aria-hidden text${decorations.length ? ` and the props of ${decorations.join(", ")}` : ""}.`;
-  const text = `:matches(JSXElement:not(:has(> JSXOpeningElement${HIDDEN})), JSXFragment)`;
-  const decorated = decorations.length ? `, [name.name=/^(?:${decorations.join("|")})$/]` : "";
+  const route = `it goes in the page's file, content/pages/<slug>.yaml → a field of the section (its schema in ${schemas}) → a prop here (a pattern gets it from its section). Symbols pass, and decorations: aria-hidden text${decorations.length ? ` and the props and children of ${decorations.join(", ")}` : ""}.`;
+  // An opening element whose props and children are decoration: aria-hidden, or a primitive named in `decorations`.
+  const decoration = [HIDDEN, ...(decorations.length ? [`[name.name=/^(?:${decorations.join("|")})$/]`] : [])].join(", ");
+  const text = `:matches(JSXElement:not(:has(> JSXOpeningElement:matches(${decoration}))), JSXFragment)`;
   const names = `/^(?:${props.join("|")})$/`;
-  const prop = props.length ? `JSXOpeningElement:not(${HIDDEN}${decorated}) > JSXAttribute[name.name=${names}]` : null;
+  const prop = props.length ? `JSXOpeningElement:not(${decoration}) > JSXAttribute[name.name=${names}]` : null;
   const field = props.length ? `Property:matches([key.name=${names}], [key.value=${names}]) > :matches(Literal[value=${WORDS}], TemplateLiteral > TemplateElement[value.raw=${WORDS}])` : null;
   const expressions = (parent) => WORDED.map((part) => `${parent} > JSXExpressionContainer > ${part}`);
   const inText = [`${text} > JSXText[value=${WORDS}]`, ...expressions(text)];
@@ -137,11 +146,21 @@ function animationBans(opts) {
   return { paths: names.map((name) => ({ name, message })), patterns: [{ group: names.map((name) => `${name}/*`), message }] };
 }
 
-/** One no-restricted-imports setting: the animation bans (unless `animation` is false) plus a group per forbidden folder. */
+/** The site's own restricted imports, in the rule's `{ paths, patterns }` form (null for none); string patterns become one group, as the rule reads them. */
+function siteRestrictions(restricted) {
+  const { paths = [], patterns = [], ...unknown } = restricted ?? {};
+  const shape = typeof (restricted ?? {}) === "object" && !Array.isArray(restricted) && !Object.keys(unknown).length && Array.isArray(paths) && Array.isArray(patterns);
+  if (!shape) throw new TypeError("componentRules(): restrictedImports is { paths, patterns }, the object form of no-restricted-imports' options, each a list.");
+  const strings = patterns.filter((pattern) => typeof pattern === "string");
+  return { paths, patterns: [...patterns.filter((pattern) => typeof pattern !== "string"), ...(strings.length ? [{ group: strings }] : [])] };
+}
+
+/** One no-restricted-imports setting: the animation bans (unless `animation` is false), a group per forbidden folder, then the site's own (`restrictedImports`). */
 function restrictImports(opts, forbidden, { animation = true } = {}) {
   const bans = animation ? animationBans(opts) : { paths: [], patterns: [] };
   const layers = forbidden.filter(([folder]) => folder).map(([folder, message]) => ({ group: reach(folder, opts), message }));
-  return ["error", { paths: bans.paths, patterns: [...bans.patterns, ...layers] }];
+  const site = siteRestrictions(opts.restrictedImports);
+  return ["error", { paths: [...bans.paths, ...site.paths], patterns: [...bans.patterns, ...layers, ...site.patterns] }];
 }
 
 /** The layer configs: the animation ban over all of `src`, then each layer's one-way imports (a later config's setting replaces an earlier one's, so each repeats the ban). */
@@ -181,9 +200,12 @@ function compositionConfig(files, opts, elements) {
  * `registry` (the section registry under `root`, left out of the section
  * rules: it imports every section), `elements` ({ element: message } over
  * defaultElements(); false allows one), `copy` ({ props, decorations }: the
- * props whose strings are copy, and the primitives that draw theirs
- * aria-hidden; false turns the copy rule off) and `ignores` (globs left out
- * of every rule).
+ * props whose strings are copy, and the primitives that draw their props and
+ * children aria-hidden; false turns the copy rule off), `restrictedImports`
+ * ({ paths, patterns } in no-restricted-imports' own form: the site's own
+ * restrictions, added to every setting of that rule here, so they hold
+ * wherever the kit's do, all of `src` but `ignores`) and `ignores` (globs
+ * left out of every rule).
  */
 export function componentRules(options = {}) {
   const opts = resolveOptions(options);

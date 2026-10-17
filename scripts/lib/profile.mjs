@@ -56,11 +56,11 @@ export const opensMenu = ({ pagePath, width, menuWidths: at, motion = false, sta
 /**
  * What a proof runs on: the ref its baseline is built from, the schemes it runs a pass in each of, the pages
  * of every capture and compare, and the sample of each template its static pass takes (both undefined: every
- * page). A flag wins, then the profile, then the default; --pages and --sample are two ways of choosing the
- * pages, so either flag sets aside both of the profile's (which sets one at most).
+ * page). A flag wins, then the profile, then the default; --pages, --sample and --all-pages are three ways of
+ * choosing the pages, so any of them sets aside both of the profile's (which sets one at most).
  */
 export function proofSettings(flags, profile = null) {
-  const chosen = flags.pages !== undefined || flags.sample !== undefined;
+  const chosen = flags.pages !== undefined || flags.sample !== undefined || Boolean(flags["all-pages"]);
   const pages = flags.pages ?? (chosen ? undefined : profile?.proof?.pages?.join(","));
   const sample = flags.sample ?? (chosen ? undefined : profile?.proof?.sample);
   return { ref: flags.ref ?? profile?.proof?.ref ?? DEFAULT_REF, schemes: flags.scheme ? [flags.scheme] : profile?.schemes ?? DEFAULT_SCHEMES, pages, sample };

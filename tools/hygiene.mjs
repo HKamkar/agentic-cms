@@ -6,7 +6,9 @@
 // captures or screenshots committed, the two skills trees in step, the
 // CHANGELOG carrying an entry, docs/commands.md current, the scoped-rules
 // tables of AGENTS.md and the site template current and both files within
-// what Codex reads (tools/rules-table.mjs). Exit 1 with one line per finding.
+// what Codex reads (tools/rules-table.mjs), the record of the agent files at
+// every release current (tools/agent-file-releases.mjs, which needs the
+// tags). Exit 1 with one line per finding.
 //
 //   node tools/hygiene.mjs [--brand <name>]…     (pnpm hygiene; --brand adds a name to guard)
 import { execFileSync, spawnSync } from "node:child_process";
@@ -68,6 +70,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   if (docs.status !== 0) found.push(`docs/commands.md: ${docs.stderr.trim() || "out of date"}`);
   const rules = spawnSync(process.execPath, [path.join(import.meta.dirname, "rules-table.mjs"), "--check"], { cwd: root, encoding: "utf8" });
   if (rules.status !== 0) found.push(...rules.stderr.trim().split("\n").filter(Boolean));
+  const releases = spawnSync(process.execPath, [path.join(import.meta.dirname, "agent-file-releases.mjs"), "--check"], { cwd: root, encoding: "utf8" });
+  if (releases.status !== 0) found.push(releases.stderr.trim() || "scripts/lib/agent-file-releases.json: out of date");
   for (const line of found) console.error(`hygiene: ${line}`);
   console.log(found.length ? `hygiene: ${found.length} finding(s)` : `hygiene: ${files.length} tracked files, clean`);
   process.exit(found.length ? 1 : 0);

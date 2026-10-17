@@ -24,6 +24,24 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.8.0 → 0.8.1
+
+The fixes from running the migration guide on two sites. Move the pin to
+`#v0.8.1`, `pnpm install`, then `init . --agent-files --check`, and take
+what it reports as § 1 of [migrating-to-0.8.0.md](migrating-to-0.8.0.md)
+says. The design skill's card frame, the styling rule's and the design
+skill's motion line, and the setup skill's flags changed. A rule the site
+wrote before the manifest recorded its base is now measured against the
+kit's text at the version it came from, so fewer files report `modified,
+kit changed`, and a `--diff` with no base says so. If the site's ESLint
+config has its own `no-restricted-imports` block over its component
+folders, move it into `componentRules({ restrictedImports })`: that block
+was replacing the kit's import bans for those files. A proof now retakes a
+differing shot once: `FLAKY` when the difference doesn't reproduce,
+`UNSTABLE` when it lies where two takes of one build differ. Both still
+exit 1, so read the cause. A proof builds its own baseline, so nothing needs
+recapturing.
+
 ## 0.7.6 → 0.8.0
 
 The steps are in [migrating-to-0.8.0.md](migrating-to-0.8.0.md). § 1 moves

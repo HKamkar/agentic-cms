@@ -14,9 +14,12 @@ the lab started, and this machine's URLs printed once the pages answer)
 and `pnpm urls` (the same URLs and the origins `next dev` serves, with no
 server started). On a site from before 0.8.0 that has not taken § 3.2 of
 the kit's `docs/migrating-to-0.8.0.md`, where `scripts/setup.sh` is
-missing the first is `pnpm install --frozen-lockfile`, then
-`pnpm exec agentic-cms setup`, and where `package.json` has no `urls`
-script the last is `pnpm exec agentic-cms urls`.
+missing, or is a script of the site's own rather than the kit's (the kit's
+is `templates/site/setup.sh` in the package, which ends in
+`agentic-cms setup` and takes its flags), the first is
+`pnpm install --frozen-lockfile`, then `pnpm exec agentic-cms setup`, and
+where `package.json` has no `urls` script the last is
+`pnpm exec agentic-cms urls`.
 
 ## Read first
 
@@ -27,17 +30,20 @@ script the last is `pnpm exec agentic-cms urls`.
 ## Steps
 
 1. **Look first, change nothing:** `pnpm exec agentic-cms setup --check`
-   once the dependencies are installed (`bash scripts/setup.sh --check`
-   before that: it installs pnpm and the dependencies, then checks). Read
-   each line: `✓` is there, `✗` is a gap setup fills, `!` is the owner's.
-2. **Run** `bash scripts/setup.sh`. Add `--build` when asked for the full
-   gate, `--deps` when the owner agreed to WebKit's libraries (sudo), and
-   `--no-public` on a machine no viewer reaches from outside. It is
-   idempotent: after fixing what a step reported, run it again. In a
+   once the dependencies are installed (before that, the kit's
+   `bash scripts/setup.sh --check`, which installs pnpm and the
+   dependencies, then checks; without the kit's script,
+   `pnpm install --frozen-lockfile` first). Read each line: `✓` is there,
+   `✗` is a gap setup fills, `!` is the owner's.
+2. **Run** the kit's `bash scripts/setup.sh`. Add `--build` when asked for
+   the full gate, `--deps` when the owner agreed to WebKit's libraries
+   (sudo), and `--no-public` on a machine no viewer reaches from outside.
+   It is idempotent: after fixing what a step reported, run it again. In a
    checkout of the kit itself it is `pnpm install --frozen-lockfile`, then
-   `pnpm kit setup` with the same flags; on a site without the script,
-   `pnpm install --frozen-lockfile`, then `pnpm exec agentic-cms setup`
-   with them.
+   `pnpm kit setup` with the same flags; on a site without the kit's
+   script (none, or one of the site's own that does not take these
+   flags), `pnpm install --frozen-lockfile`, then
+   `pnpm exec agentic-cms setup` with them.
 3. **When a step fails**, fix the cause its line names (the Node version,
    pnpm, the network for the browsers) and run it again. Never edit the
    lockfile, skip `pnpm lint` or a test, or loosen a rule to get through.

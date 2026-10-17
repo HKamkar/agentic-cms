@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import sharp from "sharp";
-import { causeLine, compareCapture, compareSameSize, explainShift, judged, mergeBands, rowDiff } from "./compare-images.mjs";
+import { causeLine, changedBoxes, changedOutside, compareCapture, compareSameSize, explainShift, judgeRetakes, judged, mergeBands, retakeRefusal, rowDiff } from "./compare-images.mjs";
+import { sameSeed } from "./storage-seed.mjs";
 
 // A synthetic page: width w, every row a colour by index (so rows differ from each other), 3 channels.
 const W = 40;
@@ -97,7 +98,7 @@ test("compareCapture: two capture directories give the report, the lines and the
   assert.equal(byName["only@40.png"].in, "before");
   assert.equal(byName["home@40.animations.json"].status, "CHANGED");
   assert.deepEqual(byName["home@40.animations.json"].onlyAfter, [{ name: "y" }]);
-  assert.deepEqual(report.summary, { ok: 1, changed: 2, size: 1, missing: 1, flaky: 0, exit: 1 });
+  assert.deepEqual(report.summary, { ok: 1, changed: 2, size: 1, missing: 1, flaky: 0, unstable: 0, exit: 1 });
   for (const file of report.files.filter((f) => f.status !== "ok")) assert.match(causeLine(file.cause), /^cause: \S/, `${file.name} carries a cause`);
   assert.equal(report.baseline.sha, "abc123");
   assert.match(report.files.find((f) => f.name === "about@40.png").line, /^SIZE {5}about@40\.png +40x300 -> 40x330 \(\+30\) {2}same to row 100, tail 190 rows, band 100-110 -> 100-140: shift$/);
@@ -202,8 +203,8 @@ test("every line that is not ok carries a cause: an image still loading is FLAKY
   assert.match(byName["blank@40.png"].line, /^FLAKY {4}blank@40\.png/);
   assert.equal(lineOf("blank@40.png"), "cause: image not loaded on after at y=64 (/images/x.webp, 40x20): the shot is not evidence; retake the page with --fresh");
   assert.equal(lineOf("inside@40.png"), "cause: no section moved; the change at row 70 is inside cards: its content changed in place");
-  assert.match(lineOf("home@40--s01-500.png"), /^cause: scroll step 1, 500 ms after it \(mid-flight: re-run once with --fresh/);
-  assert.match(lineOf("home@40--s01-settled.png"), /^cause: scroll step 1, settled \(a settled frame never jitters: the difference is real\)/);
+  assert.match(lineOf("home@40--s01-500.png"), /^cause: scroll step 1, 500 ms after it \(mid-flight\), row 70: no section geometry/);
+  assert.match(lineOf("home@40--s01-settled.png"), /^cause: scroll step 1, settled, row 70: no section geometry for this kind of shot; the diff image shows where$/, "no claim that a settled frame cannot move: only a retake tells");
   assert.match(lineOf("home@1440--state-cta-hover.png"), /^cause: the cta-hover state's box/);
   assert.equal(lineOf("gone@40.png"), "cause: only in the before capture: the after capture has no gone page (one added or removed, or a capture of other pages)");
   assert.equal(lineOf("inside@80.png"), "cause: only in the before capture: the after capture took inside at 40 only");
@@ -213,5 +214,118 @@ test("every line that is not ok carries a cause: an image still loading is FLAKY
   assert.equal(lineOf("home@40.settle.json"), "cause: step 1 waited 2000 → 2600 ms");
   assert.equal(report.summary.flaky, 1);
   assert.equal(report.summary.exit, 1, "a flaky shot proves nothing: the compare does not pass it");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("judgeRetakes: a take of the after build that matches a take of the before build means the difference does not reproduce; none matching, it does", () => {
+  const base = image(page(100));
+  const moved = page(100); moved[60] = [250, 250, 250];
+  const other = page(100); other[20] = [250, 250, 250];
+  const [jittered, changed] = [image(moved), image(other)];
+  const judge = (takes) => judgeRetakes({ before: base, after: jittered, ...takes }, { threshold: 0.02 }).matched;
+  assert.equal(judge({ retakeAfter: image(page(100)) }), "after", "the after side's retake is the before shot: its first take jittered");
+  assert.equal(judge({ retakeBefore: image(moved) }), "before", "the before side's retake is the after shot");
+  assert.equal(judge({ retakeBefore: changed, retakeAfter: image(other) }), "both", "the two retakes agree with each other");
+  assert.equal(judge({ retakeBefore: image(page(100)), retakeAfter: image(moved) }), null, "each side reproduces its own shot: the difference is real");
+  assert.equal(judge({ retakeAfter: image(page(101)) }), null, "a retake of another height matches nothing");
+  assert.equal(judge({}), null, "no retake, no verdict");
+  assert.equal(judgeRetakes({ before: base, after: jittered, retakeAfter: image(page(100), { tint: 10 }) }, { threshold: 0.02 }).matched, "after", "within the tolerance is a match");
+});
+
+test("compareCapture with retakes: a difference no retake reproduces is FLAKY with its cause, one each retake reproduces stays with the sides named, and a shot no retake holds is unretaken", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-retakes-"));
+  const write = async (label, name, rows) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); const img = image(rows); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  const before = page(100), lower = [...before], real = [...before];
+  lower[70] = [250, 250, 250]; // one row a pixel off on the after side's first take
+  real[30] = [5, 250, 5];
+  const geo = JSON.stringify([{ id: "hero", section: "hero", top: 0, height: 50 }, { id: null, section: "links", top: 50, height: 50 }]);
+  for (const name of ["post@40.png", "about@40.png", "home@40.png", "home@40--state-cta-hover.png"]) await write("a", name, before);
+  await write("b", "post@40.png", lower);
+  for (const name of ["about@40.png", "home@40.png", "home@40--state-cta-hover.png"]) await write("b", name, real);
+  for (const label of ["a", "b"]) for (const shot of ["post@40", "about@40", "home@40"]) fs.writeFileSync(path.join(dir, label, `${shot}.sections.json`), geo);
+  // the retakes: the post's after retake is the before shot again; about reproduces on each side; home and the state were not retaken
+  await write("ra", "post@40.png", before);
+  await write("rb", "post@40.png", before);
+  await write("rb", "about@40.png", before);
+  await write("ra", "about@40.png", real);
+  const compare = (retakes) => compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20, retakes });
+  const bare = await compare(null);
+  assert.deepEqual(bare.files.filter((f) => f.status !== "ok").map((f) => [f.name, f.status]), [["about@40.png", "CHANGED"], ["home@40--state-cta-hover.png", "CHANGED"], ["home@40.png", "CHANGED"], ["post@40.png", "CHANGED"]]);
+  assert.deepEqual(bare.unretaken, ["about@40.png", "home@40.png", "post@40.png"], "a bare compare retakes nothing; a state's box is not a shot a retake takes");
+  assert.equal(bare.retakes, null);
+  const report = await compare({ before: path.join(dir, "rb"), after: path.join(dir, "ra") });
+  const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
+  assert.equal(byName["post@40.png"].status, "FLAKY");
+  assert.match(byName["post@40.png"].line, /^FLAKY {4}post@40\.png +1\.000% \(40 px\) rows 70-70$/);
+  assert.deepEqual(byName["post@40.png"].cause, { kind: "jitter", matched: "after" });
+  assert.equal(causeLine(byName["post@40.png"].cause), "cause: the difference does not reproduce — a fresh retake of the after side matches the before shot: the first after shot jittered, the capture's doing, not the build's");
+  assert.equal(byName["about@40.png"].status, "CHANGED");
+  assert.equal(causeLine(byName["about@40.png"].cause), "cause: no section moved; the change at row 30 is inside hero: its content changed in place; reproduced on a fresh retake of each side");
+  assert.deepEqual(report.unretaken, ["home@40.png"], "home has no retake on either side");
+  assert.deepEqual(report.retakes, { before: "rb", after: "ra" });
+  assert.deepEqual(report.summary, { ok: 0, changed: 3, size: 0, missing: 0, flaky: 1, unstable: 0, exit: 1 }, "a FLAKY line still proves nothing: the compare does not pass it");
+  assert.equal(causeLine({ kind: "jitter", matched: "both" }), "cause: the difference does not reproduce — fresh retakes of both sides match each other: the first shots jittered, the capture's doing, not the build's");
+  assert.match(causeLine({ kind: "in-place", section: null, rows: [3, 4], retake: ["after"] }), /; reproduced on a fresh retake of the after side$/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("retakeRefusal: a retake is a fresh take of its side's build, in its scheme, mode and seed", () => {
+  const side = { scheme: "light", motion: false, states: false, build: "b1", sha: "a".repeat(40), seed: { storage: { consent: "{now}" }, at: "x" } };
+  const retake = { ...side, fresh: true, seed: { storage: { consent: "{now}" }, at: "y" } };
+  const refusal = (changes) => retakeRefusal(side, { ...retake, ...changes }, { sameSeed });
+  assert.equal(refusal({}), null, "the same build and seed, taken fresh; when {now} was replaced does not count");
+  assert.match(refusal({ fresh: undefined }), /may have copied shots from the shot cache: a retake is captured with --no-cache/);
+  assert.match(refusal({ build: "b2" }), /another build \(build id b2, the side's b1\)/);
+  assert.match(refusal({ sha: "b".repeat(40) }), /another commit \(bbbbbbb, the side's aaaaaaa\)/);
+  assert.match(refusal({ scheme: "dark" }), /captured in dark, the side in light/);
+  assert.match(refusal({ motion: true }), /another mode/);
+  assert.match(refusal({ seed: null }), /seeded differently/);
+});
+
+// A square of `size` px in a page of 100 rows, a fixed ground otherwise: what a moving part of a frame looks like.
+const withSquare = (x, y, size = 6, colour = [250, 250, 250]) => { const img = image(page(100)); for (let r = y; r < y + size; r++) for (let c = x; c < x + size; c++) img.data.set(colour, (r * W + c) * 3); return img; };
+
+test("changedBoxes outlines each band of changed rows as wide as its changed pixels, grown by the margin within the image; changedOutside counts what lies beyond", () => {
+  const base = image(page(100));
+  const twice = withSquare(2, 10); twice.data.set([250, 250, 250], (60 * W + 30) * 3);
+  assert.deepEqual(changedBoxes(base, twice, { margin: 0 }), [[2, 10, 7, 15], [30, 60, 30, 60]], "two bands, each its own box");
+  assert.deepEqual(changedBoxes(base, twice, { margin: 4 }), [[0, 6, 11, 19], [26, 56, 34, 64]], "grown, and kept inside the image");
+  assert.deepEqual(changedBoxes(base, image(page(100))), [], "nothing differs, no box");
+  assert.equal(changedOutside(base, twice, [[0, 0, 39, 20]]), 1, "the square is inside, the lone pixel is not");
+  assert.equal(changedOutside(base, twice, []), 37, "no box: every changed pixel");
+});
+
+test("judgeRetakes: a difference that lies where each build's own retake moves too is unstable; one that also reaches beyond it reproduces, with how much", () => {
+  // a part that lands somewhere else on every take (a canvas drawn every frame), and a heading that changed for real
+  const takes = { before: withSquare(2, 10), retakeBefore: withSquare(20, 12), after: withSquare(10, 30), retakeAfter: withSquare(28, 26) };
+  const unstable = judgeRetakes(takes, { threshold: 0.02 });
+  assert.equal(unstable.matched, null);
+  assert.equal(unstable.unstable, true, "every pixel that differs between the sides lies where a side differs from itself");
+  assert.equal(unstable.outside, 0);
+  assert.equal(unstable.noise.length, 2, "one region per side's pair of takes");
+  const changed = structuredClone(takes.after); for (let c = 0; c < W; c++) changed.data.set([1, 2, 3], (80 * W + c) * 3);
+  const real = judgeRetakes({ ...takes, after: changed, retakeAfter: (() => { const r = withSquare(28, 26); for (let c = 0; c < W; c++) r.data.set([1, 2, 3], (80 * W + c) * 3); return r; })() }, { threshold: 0.02 });
+  assert.deepEqual([real.matched, real.unstable, real.outside], [null, false, W], "the changed row is outside every region the takes moved in");
+  const still = judgeRetakes({ before: image(page(100)), after: withSquare(2, 10), retakeBefore: image(page(100)), retakeAfter: withSquare(2, 10) }, { threshold: 0.02 });
+  assert.deepEqual([still.matched, still.unstable, still.outside, still.noise], [null, false, null, []], "neither build moves on its own: the difference reproduces, all of it");
+});
+
+test("compareCapture with retakes: a motion frame whose difference lies where it moves between two takes of one build is UNSTABLE, with the region; a change beyond it stays CHANGED", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-unstable-"));
+  const write = async (label, name, img) => { fs.mkdirSync(path.join(dir, label), { recursive: true }); await sharp(img.data, { raw: img.info }).png().toFile(path.join(dir, label, name)); };
+  const frame = "home@40--s00-settled.png", real = "home@40--s01-settled.png";
+  const banded = (img) => { const out = structuredClone(img); for (let c = 0; c < W; c++) out.data.set([1, 2, 3], (80 * W + c) * 3); return out; };
+  await write("a", frame, withSquare(2, 10)); await write("ra", frame, withSquare(20, 12));
+  await write("b", frame, withSquare(10, 30)); await write("rb", frame, withSquare(28, 26));
+  await write("a", real, withSquare(2, 10)); await write("ra", real, withSquare(20, 12));
+  await write("b", real, banded(withSquare(10, 30))); await write("rb", real, banded(withSquare(28, 26)));
+  const report = await compareCapture(path.join(dir, "a"), path.join(dir, "b"), { before: "a", after: "b", diffDir: path.join(dir, "a-vs-b"), threshold: 0.02, thresholdMid: 20, retakes: { before: path.join(dir, "ra"), after: path.join(dir, "rb") } });
+  const byName = Object.fromEntries(report.files.map((f) => [f.name, f]));
+  assert.equal(byName[frame].status, "UNSTABLE");
+  assert.match(byName[frame].line, /^UNSTABLE home@40--s00-settled\.png +[\d.]+% \(\d+ px\) rows /);
+  assert.match(causeLine(byName[frame].cause), /^cause: unstable — scroll step 0, settled: the shot also differs between two takes of one build at rows \d+-\d+, x \d+-\d+ \(and 1 more region\), and every changed pixel lies there: that region is no evidence either way, and outside it the two sides are identical$/);
+  assert.equal(byName[real].status, "CHANGED");
+  assert.match(causeLine(byName[real].cause), /^cause: scroll step 1, settled, rows \d+-\d+: no section geometry for this kind of shot; the diff image shows where; reproduced on a fresh retake of each side, 40 pixels of it outside where the shot also differs between two takes of one build$/);
+  assert.deepEqual(report.summary, { ok: 0, changed: 1, size: 0, missing: 0, flaky: 0, unstable: 1, exit: 1 }, "an UNSTABLE frame proves nothing either way: the compare does not pass it");
   fs.rmSync(dir, { recursive: true, force: true });
 });

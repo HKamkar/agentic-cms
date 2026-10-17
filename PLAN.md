@@ -331,6 +331,56 @@ icon data. CI (`verify.yml`), `CHANGELOG.md`, `tools/hygiene.mjs` and `docs/`
 arrived with the first job. The version stayed 0.3.3 on `develop` until
 the release commit.
 
+## Phase 11 — 0.8.0, a new site in minutes (released 2026-10-17)
+
+`docs/roadmap.md` was the plan and is now the record. Its twelve jobs, 0 to
+11, ran in two lanes as fourteen pull requests into `develop` (jobs 9 and 10
+took two each). Each ran in its own session and merged once CI was green.
+
+**What changed:**
+- **Starting a site:** `init` worked the first time, with one install line,
+  a CI workflow and `scripts/setup.sh` written into the site. `setup` got a
+  clone's pnpm, dependencies, browsers and WebKit libraries in one step,
+  `urls` printed the dev server's addresses, and `serve` started it. A demo
+  or lab route handed itself over to the server already running.
+- **Short proofs:** a site's widths, schemes and proof pages became its
+  profile (`src/config/harness.ts`), so a bare `visual-parity proof` was
+  short by default.
+- **Motion:** `agentic-cms/ix` gained a play-once layer (`Reveal`,
+  `RevealGroup`, `Sequence`, `part()`, `motionScript()`), and the lab
+  timeline drove it.
+- **Design:** tokens were named by role, `variants()` came to
+  `agentic-cms/cx`, and the example gained day-one primitives.
+- **Enforcement:** the `agentic-cms/eslint` preset and `check-components`
+  kept components in the library. The content engine became the standard:
+  every page is `content/pages/<slug>.yaml`, and any other route is a named
+  exception.
+- **Upgrades:** `init --agent-files` gained a manifest with `--check`,
+  `--diff` and `--accept`, so a site's edited rule was merged rather than
+  overwritten.
+- **Know-how:** the setup, dev-server, browsers and gotchas guides came with
+  pointers to them from a site's `AGENTS.md`.
+
+**The gate.** The owner ran the migration guide
+(`docs/migrating-to-0.8.0.md`) on two sites on 0.7.6, in their own
+sessions. What it found came back as kit fixes (#110–#113, #115, #117):
+- the agent files' base, and what a site has adopted;
+- the motion inventory's loops and a stable cache key;
+- the dev lock read by `urls` and `setup`;
+- images decoded before a shot, and a `cause:` under every line of a
+  compare.
+
+Four browser tests that failed on a slow runner were fixed along the way
+(#98, #109, #118, #119).
+
+**The release.** CodeQL, which scans only pull requests into `main`, raised
+five alerts on the release PR (#121), all in this cycle's new `scripts/`
+code. Four were fixed. The fifth, on the terminal text of a 5xx page, was
+dismissed because that text never reaches HTML.
+
+`package.json` stayed at 0.7.6 on `develop` until the release commit. The
+next plan, 0.9.0 (the package on npm), is `docs/roadmap-0.9.0.md`.
+
 ## Verification recipe
 
 ```bash

@@ -242,7 +242,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   request (`tools/hygiene.mjs`: no one site's name outside the README's
   showcase, no machine paths or addresses, no captures, pictures or scratch
   files committed, the two skills trees identical, the changelog,
-  `docs/commands.md` and the scoped-rules tables current). `pnpm lint`
+  `docs/commands.md`, the scoped-rules tables and the agent files' record
+  of every release, which `init` reads (`pnpm agent-files:releases`, from
+  the tags; a release commit rewrites it), current). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
   (`.github/workflows/verify.yml`) runs the same on every pull request and
   push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;

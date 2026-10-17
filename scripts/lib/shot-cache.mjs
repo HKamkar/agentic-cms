@@ -84,6 +84,24 @@ export function store(root, key, name, deps, from, files) {
   for (const [stale] of byAge.slice(KEEP)) fs.rmSync(stale, { recursive: true, force: true });
 }
 
+/**
+ * Removes every stored entry of `name` (a page-width), under any key, that holds a file with the very bytes of `file`:
+ * a shot a retake found to have jittered, which a later capture would otherwise copy and report again. How many went.
+ */
+export function evict(root, name, file) {
+  const cache = path.join(root, CACHE_DIR);
+  if (!fs.existsSync(cache) || !fs.existsSync(file)) return 0;
+  const bytes = fs.readFileSync(file);
+  let removed = 0;
+  for (const key of fs.readdirSync(cache)) {
+    for (const entry of entriesOf(path.join(cache, key, name))) {
+      const held = path.join(entry, path.basename(file));
+      if (fs.existsSync(held) && fs.readFileSync(held).equals(bytes)) { fs.rmSync(entry, { recursive: true, force: true }); removed++; }
+    }
+  }
+  return removed;
+}
+
 /** The files of a capture directory that belong to one page-width or state: `<name>.…` and `<name>--…`. */
 export const filesOf = (dir, name) => fs.readdirSync(dir).filter((f) => f.startsWith(`${name}.`) || f.startsWith(`${name}--`)).sort();
 

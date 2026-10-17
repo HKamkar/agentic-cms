@@ -178,8 +178,9 @@ export function formatUrls(report) {
 function devState(dev) {
   const elsewhere = dev.ownPort && !dev.own ? `; this clone's next dev runs on port ${dev.ownPort} (pnpm urls --port ${dev.ownPort})` : "";
   if (dev.own) return "running";
-  if (dev.up) return `answers, but not as this clone's next dev (${DEV_LOCK} names none on it)${elsewhere || ": stop what holds it before pnpm dev (docs/dev-server.md § Stopping a server), or serve this clone on another port (pnpm kit serve --port <n>)"}`;
-  return `not running${elsewhere || " (pnpm dev starts it)"}`;
+  // the owner's look starts with `pnpm kit serve` (next dev and the lab, every URL printed), so a hint names that, never bare next dev
+  if (dev.up) return `answers, but not as this clone's next dev (${DEV_LOCK} names none on it)${elsewhere || ": stop what holds it before pnpm kit serve (docs/dev-server.md § Stopping a server), or serve this clone on another port (pnpm kit serve --port <n>)"}`;
+  return `not running${elsewhere || " (pnpm kit serve starts it)"}`;
 }
 
 /** The origins in words; a restart named only while this clone's next dev runs, on whichever port, since nothing else reads its .env.local. */

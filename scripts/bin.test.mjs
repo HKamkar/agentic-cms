@@ -157,13 +157,13 @@ test("init --agent-files: --check fails a site's edit with no base, --diff print
     fs.appendFileSync(path.join(site, ".claude/rules/seo.md"), "\n- The site's own line.\n");
     const gap = run(["init", site, "--agent-files", "--check"]);
     assert.equal(gap.status, 1);
-    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md$/m);
+    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md — no base, and no release of the kit found as its source: --diff is the site's whole file$/m, "a refresh with this version wrote the manifest, and no git history names another");
     assert.match(gap.stdout, /modified, kit changed: the site edited it and the kit's text changed since the site took it \(agentic-cms init --agent-files --diff <file>, merge the change by hand, then --accept <file>\)/);
     const diff = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
     assert.equal(diff.status, 1);
     assert.match(diff.stdout, /^--- a\/\.claude\/rules\/seo\.md\n\+\+\+ b\/\.claude\/rules\/seo\.md\n@@ /);
     assert.match(diff.stdout, /^-- The site's own line\.$/m);
-    assert.match(diff.stderr, /has no base \(the site wrote it before the manifest\)/);
+    assert.match(diff.stderr, /^init: \.claude\/rules\/seo\.md has no base, and no release of the kit is known as its source: what follows is the site's whole file against the kit's current text, not the kit's change — never apply it whole;/m);
     const accepted = run(["init", site, "--agent-files", "--accept", ".claude/rules/seo.md"]);
     assert.equal(accepted.status, 0, accepted.stderr);
     assert.match(accepted.stdout, /^accepted \.claude\/rules\/seo\.md — its base is the kit's current text; --check: modified$/m);
@@ -212,6 +212,16 @@ test("visual-parity proof: its help names the passes and the ref; a wrong choice
   assert.match(wrong.stderr, /did you mean --motion\?/);
 });
 
+test("probe takes --json like every command that prints JSON: the flag parses, and the run goes on to its own checks", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "probe-json-"));
+  try {
+    const r = run(["probe", "/", "--select", ".card", "--motion", "--json"], dir);
+    assert.equal(r.status, 2);
+    assert.doesNotMatch(r.stderr, /unknown flag/);
+    assert.match(r.stderr, /^probe: no production build: run `pnpm build` first/m, "past the parser, at the missing build");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("visual-parity proof --build runs its baseline step (no three-sources refusal), and --pages with --sample is refused before any capture", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proof-build-"));
   try {
@@ -222,6 +232,11 @@ test("visual-parity proof --build runs its baseline step (no three-sources refus
     const both = run(["visual-parity", "proof", "--pages", "/", "--sample", "1"], dir);
     assert.equal(both.status, 2);
     assert.match(both.stderr, /^visual-parity proof: --pages and --sample both choose the pages of a capture; pass one\n$/, "nothing else ran");
+    for (const [flag, value] of [["--pages", "/"], ["--sample", "1"]]) {
+      const every = run(["visual-parity", "proof", "--all-pages", flag, value], dir);
+      assert.equal(every.status, 2);
+      assert.match(every.stderr, new RegExp(`^visual-parity proof: --all-pages and ${flag} both choose the pages of a capture; pass one\\n$`), "refused before any capture");
+    }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

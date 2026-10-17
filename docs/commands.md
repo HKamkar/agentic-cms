@@ -346,7 +346,7 @@ agentic-cms visual-parity <capture | compare | proof | clean> …
 Screenshots of the build (or of a served site) into .parity/visual/<label>/; the site's own build is copied first, so the tree is free once the snapshot line is printed.
 
 ```bash
-agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|dark] [--url <base>] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh | --no-cache] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the capture's name under .parity/visual/
@@ -369,11 +369,12 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
+| `--no-cache` | take every shot and store none in .parity/shot-cache: a retake of shots in doubt (proof takes one of each shot that differs), which compare --retake-before / --retake-after accepts |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
 Exit: `0` captured (a static shot taken with an image still loading after a reload is recorded beside it as <page>@<width>.unloaded.json, and a compare calls it FLAKY); `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, build, fresh, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop
@@ -387,7 +388,7 @@ agentic-cms visual-parity capture after --storage 'consent={"analytics":"denied"
 Diffs two captures pixel by pixel; diff images under .parity/visual/<before>-vs-<after>/.
 
 ```bash
-agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed]
+agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--threshold-mid 20] [--pages /a,/b] [--mixed-seed] [--retake-before <label>] [--retake-after <label>]
 ```
 
 - `<before>` — the baseline's label
@@ -399,24 +400,27 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--threshold-mid <n>` | the same for the mid-flight motion frames (150 and 500 ms) (default `20`) |
 | `--pages /a,/b` | judge only these routes' files, on both sides, at the widths the after capture took (a partial capture) |
 | `--mixed-seed` | compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes |
+| `--retake-before <label>` | a capture --no-cache of the before side's build (the same build id, scheme, mode and seed), whose shots are fresh retakes of the before shots that differ |
+| `--retake-after <label>` | the same for the after side: a shot of which some take of the after build matches some take of the before build does not reproduce, and is FLAKY; one whose every changed pixel lies where it also differs between two takes of one build is UNSTABLE |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file or a flaky shot (one taken with an image still loading); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
+Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file, a flaky shot (one taken with an image still loading, or a difference a retake did not reproduce) or an unstable one (it differs only where it also moves between two takes of one build); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, captures seeded differently (without --mixed-seed), or a retake that is not a fresh take of its side's build.
 
-`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional } | { kind: unloaded | in-place | geometry | frame | missing | inventory | settle, … } }] }`.
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, retakes: { before, after } | null, unretaken: [name], summary: { ok, changed, size, missing, flaky, unstable, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional, retake?, outside? } | { kind: unloaded | jitter | unstable | in-place | geometry | frame | missing | inventory | settle, …, retake?, outside? } }] }`.
 
 ```bash
 agentic-cms visual-parity compare before after --json
 agentic-cms visual-parity compare before after --pages /,/blog
 agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed changes
+agentic-cms visual-parity compare before after --retake-before before-retake --retake-after after-retake
 ```
 
 #### `visual-parity proof`
 
-A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
+A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare, each static shot and --motion frame that differs retaken once on both sides, fresh, before the pass reports; one summary, exit 1 on any line that is not ok.
 
 ```bash
-agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n> | --all-pages] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
@@ -430,8 +434,9 @@ agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] 
 | `--build` | run the site's `pnpm build` before the first after capture |
 | `--scheme light|dark` | prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light (one of `light`, `dark`) |
 | `--widths w,w` | the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own |
-| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page |
-| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages is given |
+| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample or --all-pages is given, else every page |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages or --all-pages is given |
+| `--all-pages` | every page of the build, whatever the profile's proof.pages or proof.sample: for a change that reaches every template, such as a kit upgrade |
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
@@ -440,14 +445,15 @@ agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] 
 | `--no-storage` | leave out the site's seed on both sides (capture --no-storage) |
 | `--json` | print the proof as JSON: each pass's captures and compare report |
 
-Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, or captures of two schemes.
+Exit: `0` every pass identical within the thresholds; `1` a line that is not ok in any pass — a difference, or a FLAKY or UNSTABLE shot that proves nothing either way — or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, captures of two schemes, or a retake of another build (the tree rebuilt during the proof).
 
-`--json` prints `{ label, ref, schemes, passes: [{ pass, scheme, before, after, report, seconds }], exit, failed? }`.
+`--json` prints `{ label, ref, schemes, passes: [{ pass, scheme, before, after, retakes: { before, after } | undefined, report, seconds }], exit, failed?, evicted }`.
 
 ```bash
 agentic-cms visual-parity proof
 agentic-cms visual-parity proof nav-fix --states --build
 agentic-cms visual-parity proof --all --ref main --json
+agentic-cms visual-parity proof upgrade --all --all-pages --build   # a kit upgrade: every pass, every page
 ```
 
 #### `visual-parity clean`
@@ -528,7 +534,7 @@ agentic-cms shot /about --url http://localhost:8000 --select "picture" --transpa
 The numbers behind a screenshot claim: an element's box, computed styles and stacking contexts, the reveals still pending, the console — JSON only.
 
 ```bash
-agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--props <list>] [--timeline <ms> [--every 100]] [--url <base>] [--width 1440] [--motion] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage] [--json]
 ```
 
 - `<target>` — a route of the build (/about) or a URL
@@ -552,6 +558,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
 | `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
+| `--json` | print one JSON document on stdout: what probe always prints, so the flag changes nothing; it is taken, as every command that prints JSON takes it |
 
 Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
@@ -1029,16 +1036,16 @@ agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent
 | flag | what |
 |---|---|
 | `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept ("kept, kit changed" when the kit's text changed since the site took it), and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
-| `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, kit changed (the site edited it and the kit's text changed since the base the manifest records, or the manifest records none: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any but ok and modified; write nothing |
-| `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/ or the site's git history; for a file with no base, the site's text against the kit's; repeat for more files; write nothing (repeatable) |
-| `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
+| `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, kit changed (the site edited it and the kit's text changed since its base: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing — and AGENTS.md too big past the 32 KiB Codex reads; a file the manifest records no base for is measured against the kit's text at the version the site was on (the manifest's version, else the last other one its package.json named in git), which the package keeps for every release, and noted ("no base: kit unchanged since 0.7.6"); exit 1 on any but ok and modified; write nothing |
+| `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/, the kit's releases or the site's git history; for a file with no base, from the kit's text at the version the site was on, or, when no release is known as its source, the site's whole file against the kit's text, which says so and is never applied whole; repeat for more files; write nothing (repeatable) |
+| `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs, or while no release of the kit holds it), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
 | `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
+Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy, the kit's releases nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, note?, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff, note? }] }`.
 
 ```bash
 agentic-cms init .
