@@ -154,7 +154,7 @@ test("urlsReport: a port another checkout's server holds answers, but not as thi
     const other = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, fs, ...net0 });
     assert.deepEqual([other.dev.up, other.dev.own, other.dev.ownPort], [true, false, null]);
     const text = formatUrls(other).join("\n");
-    assert.match(text, /^dev server, port 8000: answers, but not as this clone's next dev \(\.next\/dev\/lock names none on it\): stop what holds it before pnpm dev \(docs\/dev-server\.md § Stopping a server\), or serve this clone on another port \(pnpm kit serve --port <n>\)\n {2}localhost {2}http:\/\/localhost:8000\n/);
+    assert.match(text, /^dev server, port 8000: answers, but not as this clone's next dev \(\.next\/dev\/lock names none on it\): stop what holds it before pnpm kit serve \(docs\/dev-server\.md § Stopping a server\), or serve this clone on another port \(pnpm kit serve --port <n>\)\n {2}localhost {2}http:\/\/localhost:8000\n/);
     assert.doesNotMatch(text, /8000: running|restart/);
     const written = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, write: true, fs, ...net0 });
     assert.match(formatUrls(written).join("\n"), /added 192\.0\.2\.10, 198\.51\.100\.7 to ALLOWED_DEV_ORIGINS in \.env\.local$/, "the other server reads its own .env.local: no restart applies these");
@@ -171,6 +171,10 @@ test("urlsReport: a port another checkout's server holds answers, but not as thi
     const freed = await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, write: true, fs, ...net0, up: async (port) => port === 8002 });
     const freedText = formatUrls(freed).join("\n");
     assert.match(freedText, /^dev server, port 8000: not running; this clone's next dev runs on port 8002 \(pnpm urls --port 8002\)$/m);
+    fs.rmSync(path.join(root, ".next/dev/lock"));
+    const idle = formatUrls(await urlsReport({ root, port: 8000, labPort: 8001, lookupPublic: false, fs, ...net0, up: async () => false })).join("\n");
+    assert.match(idle, /^dev server, port 8000: not running \(pnpm kit serve starts it\)$/m, "nothing runs: the hint is the command the owner's look starts with");
+    assert.doesNotMatch(idle, /pnpm dev\b/);
     assert.match(freedText, /; restart the dev server to apply it$/, "this clone's next dev runs, on another port: a restart applies the origins");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

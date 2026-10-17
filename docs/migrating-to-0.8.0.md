@@ -271,14 +271,33 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
   prints each scene's own page, `/scene/<name>`, on every address.
 
-**Check:** the verify block, then
-`pnpm kit visual-parity proof upgrade --ref develop --build --all`: the
-static pass, `--states` and `--motion`, in each scheme the site has. Every
-pass must be identical: each page shot, each state's box, and each
-`--motion` step's settled frame. A mid-flight frame (`-150`, `-500`) that
-differs is re-run once with `--fresh`, and identical then is accepted; a
-`FLAKY` line is a shot taken with an image still loading, retaken with
-`--pages <route> --fresh`. Any other difference is a kit bug: report it
+**Check:** the verify block, then the static pass, `--states` and
+`--motion` as three proofs:
+
+```bash
+pnpm kit visual-parity proof upgrade --ref develop --build --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --states --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --motion --all-pages
+```
+
+Together they cover what one `--all` proof does, and the second and third
+copy the static shots of the first from the shot cache. One `--all` proof
+of a site without a profile took about 13 minutes, past the 10 minutes a
+foreground command gets; split in three, each run is only a part of that.
+Each runs in each scheme the site has, on every page: an upgrade reaches
+every template, so `--all-pages` sets aside any `proof.pages` or
+`proof.sample` the profile names (§ 3.1). Every pass must be identical:
+each page shot, each state's box, and each `--motion` step's frames. Before a pass reports, the proof retakes every
+static shot and `--motion` frame that differs, once on each side; for
+`--motion` that is a second take of the base build, the base against
+itself. A `FLAKY` line is a shot taken with an image still loading,
+retaken with `--pages <route> --fresh`, or a difference that did not
+reproduce: a take of one build matched a take of the other, and its cause
+says which jittered; that one is accepted. An `UNSTABLE` line is a frame
+that also differs between two takes of one build, where a canvas, a loop
+or a spring still runs, and is identical outside that region: accepted
+too (a spring it keeps finding near the settle time takes a
+`data-settle`). Any other difference is a kit bug: report it
 with the `cause:` line the compare prints under it rather than adjusting
 the site.
 
@@ -346,7 +365,9 @@ export const harness = {
 Every key is optional; one you leave out keeps the built-in default. A
 site whose short proof is one page of each template says
 `proof: { sample: 1 }` in place of `pages` (one or the other: both exit 2),
-and `--pages` or `--sample` on the command line sets it aside for a run.
+and `--pages` or `--sample` on the command line sets it aside for a run;
+`--all-pages` sets it aside for every page, the proof of a change that
+reaches every template, such as the next kit upgrade.
 Then make the profile the site's proof in `AGENTS.md`, where it gives the
 screenshot harness's rules: after the line that names their contract,
 `node_modules/agentic-cms/docs/visual-parity.md`, add
@@ -821,9 +842,16 @@ Each row goes only after its step works.
   `pnpm build`, 0 failures.
 - `pnpm exec agentic-cms init . --agent-files --check` is clean: every file
   the kit's text, or your edit of it (`modified`).
-- `pnpm kit visual-parity proof migrate --ref develop --build` is identical,
-  except for the design changes you chose and committed apart (3.4's
-  toggle).
+- The three passes on every page are identical, except for the design
+  changes you chose and committed apart (3.4's toggle):
+  `pnpm kit visual-parity proof migrate --ref develop --build --all-pages`,
+  then the same with `--states` and with `--motion` in place of `--build`,
+  as in § 1's check. A bare `proof` covers only the profile's `proof.pages`
+  or `proof.sample` (§ 3.1), the short proof of a change to a few pages,
+  while §§ 3.5–3.7 change code that every route renders. Where the profile
+  samples (`proof.sample`: many pages of one template), `--sample 1` in
+  place of `--all-pages` keeps every page that is no template's and one
+  page of each template.
 - The owner looks on the dev server (`pnpm kit serve`), then the merge.
 
 ## When something fails

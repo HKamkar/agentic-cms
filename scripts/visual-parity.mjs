@@ -24,13 +24,13 @@ import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, Stall, UNLOADED_IMAGES, addStyle, capturePages, fontsReady, imagesReady, isLoop, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
-import { causeLine, compareCapture } from "./lib/compare-images.mjs";
+import { causeLine, compareCapture, retakeRefusal, shotOf } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
 import { captureWidths, menuWidths, opensMenu, profileOrExit, proofSettings, schemeOf } from "./lib/profile.mjs";
 import { forwarded, passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
-import { createShotCache, harnessDigest, noShotCache, shotKey } from "./lib/shot-cache.mjs";
+import { createShotCache, evict, harnessDigest, noShotCache, shotKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
 import { statesFor } from "./lib/states.mjs";
@@ -76,6 +76,7 @@ if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2
 if (subcommand === "capture" && [flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
 // The proof refuses it under its own name before any capture starts, not as a failed baseline step.
 if (subcommand === "proof" && flags.sample !== undefined && onlyPages.length) { console.error("visual-parity proof: --pages and --sample both choose the pages of a capture; pass one"); process.exit(2); }
+if (subcommand === "proof" && flags["all-pages"] && (flags.sample !== undefined || onlyPages.length)) { console.error(`visual-parity proof: --all-pages and ${onlyPages.length ? "--pages" : "--sample"} both choose the pages of a capture; pass one`); process.exit(2); }
 // Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
 // a --url site is served by its own server and captured as it serves itself.
 const THIRD_PARTY = flags["third-party"] ?? "hold";
@@ -262,7 +263,8 @@ async function shootPage(page, { dir, name, pagePath, width, last = false, disca
 // that open the home page's menu alone, that they do (shotKey). A served --url site has no files of ours to digest, so nothing is reused there.
 const HARNESS_SOURCES = [import.meta.filename, ...["browser", "storage-seed", "states"].map((lib) => path.join(import.meta.dirname, `lib/${lib}.mjs`))];
 function shotCacheFor({ browser, root, baseUrl, build, kit }) {
-  if (flags.url) return noShotCache();
+  // a retake (--no-cache) is a second opinion on a shot in doubt: one copied from the cache would be the first opinion again
+  if (flags.url || flags["no-cache"]) return noShotCache();
   const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
   const base = { harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings };
   return createShotCache({ root: ROOT, key: (shot) => shotKey(base, shot), resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
@@ -284,7 +286,10 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const { pages, skipped } = pagesOf(root);
-  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}), ...(flags.url ? {} : { thirdParty: THIRD_PARTY }), ...(seed ? { seed: seedRecord(seed) } : {}) };
+  // the build id (a served --url site has none of ours) and whether every shot was taken here, none copied from the
+  // shot cache: what a compare checks before it lets this capture stand as a retake of another
+  const fresh = Boolean(flags.fresh || flags["no-cache"] || flags.url);
+  const meta = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: [...MOTION_FRAMES_MS, "settled"] } : {}), ...(baseline ? { ref: baseline.ref, sha: baseline.sha, ...(baseline.demos?.length ? { demosRemoved: baseline.demos } : {}) } : {}), ...(tree !== undefined ? { tree } : {}), ...(flags.url || !build ? {} : { build }), ...(fresh ? { fresh } : {}), ...(flags.sample ? { sample: { n: flags.sample, skipped } } : {}), ...(flags.url ? {} : { thirdParty: THIRD_PARTY }), ...(seed ? { seed: seedRecord(seed) } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
   if (seed) say(`seed: ${seedLine(seed.templates)}\n`);
   if (skipped.length) say(`sample: the first ${flags.sample} of each template's pages; ${skipped.length} left out (${skipped.slice(0, 3).join(", ")}${skipped.length > 3 ? ", …" : ""})\n`);
@@ -327,6 +332,23 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
 }
 
 // ---- compare ---------------------------------------------------------------
+/** The directories of --retake-before and --retake-after ({ before, after }, either null; null for neither), each checked to be a fresh take of its side's build; exit 2 when one is not. */
+function retakeDirs(sides, meta) {
+  const named = { before: flags["retake-before"], after: flags["retake-after"] };
+  if (!named.before && !named.after) return null;
+  const dirs = {};
+  for (const side of ["before", "after"]) {
+    if (!named[side]) { dirs[side] = null; continue; }
+    const [label, sideDir] = sides[side];
+    const dir = path.join(OUT, named[side]);
+    if (!fs.existsSync(path.join(dir, "capture.json"))) { console.error(`visual-parity compare: no finished capture ${named[side]} under .parity/visual/ to stand as the ${side} side's retake`); process.exit(2); }
+    const refusal = retakeRefusal(meta(sideDir), meta(dir), { sameSeed });
+    if (refusal) { console.error(`visual-parity compare: ${named[side]} cannot stand as a retake of ${label}: ${refusal}`); process.exit(2); }
+    dirs[side] = dir;
+  }
+  return dirs;
+}
+
 async function compare(before, after) {
   const a = path.join(OUT, before), b = path.join(OUT, after), diffDir = path.join(OUT, `${before}-vs-${after}`);
   for (const [label, dir] of [[before, a], [after, b]]) if (!fs.existsSync(dir)) { console.error(`visual-parity compare: no capture ${label} under .parity/visual/ — run agentic-cms visual-parity capture ${label} first`); process.exit(2); }
@@ -336,7 +358,8 @@ async function compare(before, after) {
   const seeds = [meta(a).seed, meta(b).seed];
   const alike = sameSeed(...seeds);
   if (!alike && !flags["mixed-seed"]) { console.error(`${before} was seeded with ${seedLine(seeds[0])} and ${after} with ${seedLine(seeds[1])}: compare captures seeded alike — recapture ${before} with the same seed (the site's ${SITE_SEED} and the same --storage flags), or pass --mixed-seed to see what the seed itself changes`); process.exit(2); }
-  const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages });
+  const retakes = retakeDirs({ before: [before, a], after: [after, b] }, meta);
+  const report = await compareCapture(a, b, { before, after, diffDir, threshold, thresholdMid, pages: onlyPages, retakes });
   const out = flags.json ? console.error : console.log;
   if (report.baseline) out(`baseline: ${report.baseline.ref ?? ""} ${report.baseline.sha ?? ""}`.trim());
   if (!alike) out(`seed: ${before} ${seedLine(seeds[0])}; ${after} ${seedLine(seeds[1])} (--mixed-seed: a difference may be the seed's)`);
@@ -346,7 +369,9 @@ async function compare(before, after) {
   for (const file of report.files) { out(file.line); if (file.cause) out(`         ${causeLine(file.cause)}`); }
   const lacking = [[before, report.geometry.before], [after, report.geometry.after]].filter(([, has]) => !has).map(([label]) => label);
   if (lacking.length && report.files.some((f) => f.cause?.kind === "geometry")) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);
-  if (report.summary.flaky) out(`\n${report.summary.flaky} shot(s) taken with an image still loading after a reload: retake those pages with --fresh before reading them as differences`);
+  const unloaded = report.files.filter((f) => f.cause?.kind === "unloaded").length;
+  if (unloaded) out(`\n${unloaded} shot(s) taken with an image still loading after a reload: retake those pages with --fresh before reading them as differences`);
+  if (report.unretaken.length) out(`\n${report.unretaken.length} shot(s) differ and no retake judged them: a compare cannot take a shot. \`visual-parity proof\` retakes each once on both sides, fresh, before it reports: a difference that does not reproduce is FLAKY, and one that lies where the shot also differs between two takes of one build is UNSTABLE; by hand, capture each side again with --pages, --widths and --no-cache, and compare with --retake-before and --retake-after`);
   const failures = report.files.length - report.summary.ok;
   out(failures ? `\n${failures} file(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
   fs.writeFileSync(path.join(diffDir, "report.json"), JSON.stringify(report, null, 1));
@@ -375,24 +400,55 @@ async function proof() {
   const { ref, schemes, pages, sample } = proofSettings(flags, profile);
   const steps = plan({ label, ref, passes: passesOf(flags), schemes, build: flags.build, shared: forwarded(flags, ["jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded({ pages }, ["pages"]), widths: forwarded(flags, ["widths"]), sample: forwarded({ sample }, ["sample"]) });
   const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
-  // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
-  const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });
-  const result = await runProof(steps, { run, log: (step) => console.error(`\nproof: ${step.pass} — ${step.step === "compare" ? "the compare" : `${step.step}: ${step.label}`}`) });
-  if (flags.json) console.log(JSON.stringify({ label, ref, schemes, ...result }, null, 1));
-  else printProof(label, ref, result);
+  // each step's progress and its compare lines go straight to the terminal (a quiet compare's lines once no retake follows it); its --json result comes back here
+  const run = (args, { quiet = false } = {}) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", quiet ? "pipe" : "inherit"] });
+  const result = await runProof(steps, { run, log: (step) => console.error(`\nproof: ${step.pass} — ${stepLine(step)}`), print: (text) => process.stderr.write(text) });
+  const evicted = evictJittered(result.passes);
+  if (flags.json) console.log(JSON.stringify({ label, ref, schemes, ...result, evicted }, null, 1));
+  else printProof(label, ref, result, evicted);
   process.exitCode = result.exit;
 }
 
-/** The proof's summary: a line per pass (the compare's counts, each side's time and reuse), then the verdict. */
-function printProof(label, ref, { passes, exit, failed }) {
+/** What a proof step does, for its progress line. */
+function stepLine(step) {
+  if (step.step.startsWith("retake-")) return `${step.shots} shot(s) differ: the ${step.step.slice("retake-".length)} side taken again, fresh: ${step.label}`;
+  if (step.step === "compare") return step.args.includes("--retake-after") ? "the compare, judged against the retakes" : "the compare";
+  return `${step.step}: ${step.label}`;
+}
+
+/** Every shot a retake found to have jittered leaves the shot cache, so the next capture takes it again rather than copying it; how many entries went. */
+function evictJittered(passes) {
+  let evicted = 0;
+  for (const { report } of passes) {
+    for (const file of report?.files ?? []) {
+      if (file.cause?.kind !== "jitter") continue;
+      const sides = file.cause.matched === "both" ? ["before", "after"] : [file.cause.matched];
+      for (const side of sides) evicted += evict(ROOT, shotOf(file.name), path.join(OUT, report[side], file.name));
+    }
+  }
+  return evicted;
+}
+
+/** The statuses of a line that is neither ok nor evidence of a change: the shot was not evidence (an image still loading), did not reproduce, or moved only where it moves between two takes of one build. */
+const NOT_EVIDENCE = ["FLAKY", "UNSTABLE"];
+
+/** The proof's summary: a line per pass (the compare's counts, each side's time and reuse, the retakes'), then the verdict. */
+function printProof(label, ref, { passes, exit, failed }, evicted) {
   const side = (c) => (c ? `${c.label} ${c.seconds} s${c.reused?.shots ? `, ${c.reused.shots} of ${c.reused.of} reused` : ""}` : "—");
   console.log(`\nproof ${label} against ${ref}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
   for (const p of passes) {
     const s = p.report?.summary;
-    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing${s.flaky ? `, ${s.flaky} flaky` : ""}` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
+    const retaken = p.retakes ? `; retaken ${p.retakes.before?.seconds ?? "—"} s + ${p.retakes.after?.seconds ?? "—"} s` : "";
+    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing${s.flaky ? `, ${s.flaky} flaky` : ""}${s.unstable ? `, ${s.unstable} unstable` : ""}` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}${retaken}`);
   }
-  if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);
-  else console.log(exit ? `proof: a difference — the diffs are in .parity/visual/<before>-vs-<after>, the lines above` : "proof: identical within the thresholds, every pass");
+  if (evicted) console.log(`proof: ${evicted} jittered shot(s) left .parity/shot-cache, so the next capture takes them again`);
+  if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : failed.step.startsWith("retake-") ? `retake ${failed.label}` : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);
+  else if (!exit) console.log("proof: identical within the thresholds, every pass");
+  else {
+    const lines = passes.flatMap((p) => p.report.files.filter((f) => f.status !== "ok"));
+    const noise = lines.filter((f) => NOT_EVIDENCE.includes(f.status)).length;
+    console.log(noise === lines.length ? `proof: no difference that reproduces, but ${noise} line(s) prove nothing either way (${NOT_EVIDENCE.join(", ")}): read their cause lines above` : `proof: a difference — the diffs are in .parity/visual/<before>-vs-<after>, the lines above`);
+  }
 }
 
 if (subcommand === "clean") {

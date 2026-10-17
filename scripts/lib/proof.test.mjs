@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parse } from "./args.mjs";
 import { DEFAULT_WIDTHS, MENU_WIDTHS, MOTION_WIDTHS, captureWidths, menuWidths, proofSettings, schemeOf } from "./profile.mjs";
-import { forwarded, labelOf, passesOf, plan, runProof } from "./proof.mjs";
+import { RETAKEN_PASSES, forwarded, labelOf, passesOf, plan, retakeSteps, runProof } from "./proof.mjs";
 import { SPECS } from "./specs.mjs";
 
 test("the passes: static alone by default, motion and states when asked, all three with all", () => {
@@ -66,7 +66,7 @@ test("the profile's proof.sample is the static pass's --sample: a --sample flag 
   const steps = plan({ ref, schemes, passes: ["static", "motion", "states"], pages: forwarded({ pages }, ["pages"]), sample: forwarded({ sample }, ["sample"]) });
   assert.deepEqual(steps.filter((s) => s.args.includes("--sample")).map((s) => [s.label, s.args[s.args.indexOf("--sample") + 1]]), [["proof-before", "1"], ["proof-after", "1"]], "the static pass's two captures, as --sample does");
   assert.ok(steps.every((s) => !s.args.includes("--pages")), "no --pages beside it");
-  assert.match(SPECS["visual-parity"].subcommands.proof.flags.sample.help, /default the profile's proof\.sample \(src\/config\/harness\.ts\) unless --pages is given/);
+  assert.match(SPECS["visual-parity"].subcommands.proof.flags.sample.help, /default the profile's proof\.sample \(src\/config\/harness\.ts\) unless --pages or --all-pages is given/);
 });
 
 test("without a profile, a bare command does what it did: the parser fills no scheme and no ref, and the fallbacks are the old defaults", () => {
@@ -130,4 +130,65 @@ test("a capture that fails stops the proof with its exit code and names the step
   const usage = await runProof(steps, { run: (args) => (args[0] === "compare" ? { status: 2, stdout: "" } : capture(args[1])) });
   assert.equal(usage.exit, 2);
   assert.equal(usage.failed.step, "compare");
+});
+
+const SHA = "c".repeat(40);
+const side = (label, pages) => ({ label, pages, meta: { sha: SHA } });
+
+test("retakeSteps: the shots no retake judged, captured again at their pages and widths alone on each side with --no-cache, the baseline from its sha, then the compare with both retakes", () => {
+  const [compare] = plan({ passes: ["static"], schemes: ["dark"], shared: ["--jobs", "2", "--fresh", "--storage", "consent=x"], pages: ["--pages", "/,/blog-post/a"] }).filter((s) => s.step === "compare");
+  const report = { unretaken: ["blog-post__a@390.png", "home@1440.png", "home@390--menu.png"] };
+  const steps = retakeSteps(compare, { report, before: side("proof-before", ["/", "/blog-post/a"]), after: side("proof-after", ["/", "/blog-post/a"]) });
+  assert.deepEqual(steps.map((s) => [s.step, s.label ?? null, s.shots]), [["retake-before", "proof-before-retake", 3], ["retake-after", "proof-after-retake", 3], ["compare", null, 3]]);
+  assert.deepEqual(steps[0].args, ["capture", "proof-before-retake", "--ref", SHA, "--scheme", "dark", "--jobs", "2", "--storage", "consent=x", "--pages", "/blog-post/a,/", "--widths", "390,1440", "--no-cache", "--json"], "the sha the baseline was built from, not the ref, which may have moved; --fresh is --no-cache's already");
+  assert.deepEqual(steps[1].args, ["capture", "proof-after-retake", "--scheme", "dark", "--jobs", "2", "--storage", "consent=x", "--pages", "/blog-post/a,/", "--widths", "390,1440", "--no-cache", "--json"]);
+  assert.deepEqual(steps[2].args, ["compare", "proof-before", "proof-after", "--pages", "/,/blog-post/a", "--retake-before", "proof-before-retake", "--retake-after", "proof-after-retake", "--json"]);
+  assert.equal(steps[2].retake, undefined, "the compare with the retakes is the pass's last word");
+  assert.deepEqual(retakeSteps(compare, { report: { unretaken: [] }, before: side("b", ["/"]), after: side("a", ["/"]) }), [], "nothing differs, nothing is retaken");
+  assert.deepEqual(retakeSteps(compare, { report, before: { label: "b", pages: ["/"], meta: {} }, after: side("a", ["/"]) }), [], "a baseline with no sha cannot be built again");
+  const states = plan({ passes: ["states"] }).find((s) => s.step === "compare");
+  assert.deepEqual(retakeSteps(states, { report, before: side("b", null), after: side("a", null) }), [], "a --states capture has no --pages: its pass is not retaken");
+  assert.deepEqual(RETAKEN_PASSES, ["static", "motion"]);
+  const [motion] = plan({ passes: ["motion"] }).filter((s) => s.step === "compare");
+  const frames = retakeSteps(motion, { report: { unretaken: ["home@390--s02-settled.png", "home@1440--s00-500.png"] }, before: side("proof-before-motion", ["/"]), after: side("proof-after-motion", ["/"]) });
+  assert.deepEqual(frames.slice(0, 2).map((s) => s.args), [
+    ["capture", "proof-before-retake-motion", "--ref", SHA, "--motion", "--scheme", "light", "--pages", "/", "--widths", "390,1440", "--no-cache", "--json"],
+    ["capture", "proof-after-retake-motion", "--motion", "--scheme", "light", "--pages", "/", "--widths", "390,1440", "--no-cache", "--json"],
+  ], "--motion's noise floor: the base taken again, and the tree, for the page-widths of the frames that differ");
+});
+
+test("a run retakes a pass whose compare left shots unretaken: the first compare is quiet and its lines are not printed, the compare with the retakes reports the pass", async () => {
+  const steps = plan({ passes: ["static"] });
+  const seen = [], printed = [];
+  const run = (args, { quiet } = {}) => {
+    seen.push([args[0], args[1], Boolean(quiet)]);
+    if (args[0] === "capture") return { status: 0, stdout: JSON.stringify({ label: args[1], pages: ["/"], meta: { sha: SHA }, seconds: 1 }) };
+    const judged = args.includes("--retake-after");
+    return { status: 1, stdout: JSON.stringify({ unretaken: judged ? [] : ["home@390.png"], summary: { ok: 1, changed: 0, flaky: judged ? 1 : 0, exit: 1 }, files: [] }), stderr: judged ? "" : "first compare's lines\n" };
+  };
+  const result = await runProof(steps, { run, print: (text) => printed.push(text) });
+  assert.deepEqual(seen, [["capture", "proof-before", false], ["capture", "proof-after", false], ["compare", "proof-before", true], ["capture", "proof-before-retake", false], ["capture", "proof-after-retake", false], ["compare", "proof-before", false]]);
+  assert.deepEqual(printed, [], "the first compare's lines would have been printed twice");
+  assert.equal(result.passes[0].report.summary.flaky, 1, "the pass's report is the compare with the retakes");
+  assert.deepEqual(Object.keys(result.passes[0].retakes), ["before", "after"]);
+  assert.equal(result.exit, 1);
+  const lost = [];
+  const stalled = await runProof(steps, { run: (args, options) => (args[1] === "proof-after-retake" ? { status: 1, stdout: "" } : run(args, options)), print: (text) => lost.push(text) });
+  assert.deepEqual([stalled.exit, stalled.failed.step, lost], [1, "retake-after", ["first compare's lines\n"]], "a retake that fails does not lose the lines of the compare before it");
+  const clean = await runProof(steps, { run: (args) => (args[0] === "compare" ? { status: 0, stdout: JSON.stringify({ unretaken: [], summary: { exit: 0 } }), stderr: "identical\n" } : capture(args[1])), print: (text) => printed.push(text) });
+  assert.equal(clean.exit, 0);
+  assert.deepEqual(printed, ["identical\n"], "no retake follows: the quiet compare's lines are printed");
+});
+
+test("--all-pages sets aside the profile's proof.pages and proof.sample: every page on every capture and compare, and every page of each template on the static pass", () => {
+  for (const proof of [{ sample: 1 }, { pages: ["/"] }]) {
+    const profile = { widths: [390, 1440], schemes: ["light"], proof: { ref: undefined, pages: undefined, sample: undefined, ...proof } };
+    const flags = parse(SPECS["visual-parity"], ["proof", "--all-pages"]).flags;
+    assert.equal(flags["all-pages"], true);
+    const { pages, sample } = proofSettings(flags, profile);
+    assert.deepEqual([pages, sample], [undefined, undefined], JSON.stringify(proof));
+    const steps = plan({ passes: ["static", "motion"], pages: forwarded({ pages }, ["pages"]), sample: forwarded({ sample }, ["sample"]) });
+    assert.ok(steps.every((s) => !s.args.includes("--pages") && !s.args.includes("--sample")), "no capture or compare is narrowed");
+  }
+  assert.deepEqual(proofSettings({}, { proof: { sample: 1 } }).sample, 1, "without it, the profile's sample is the default");
 });

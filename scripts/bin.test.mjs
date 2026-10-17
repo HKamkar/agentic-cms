@@ -212,6 +212,16 @@ test("visual-parity proof: its help names the passes and the ref; a wrong choice
   assert.match(wrong.stderr, /did you mean --motion\?/);
 });
 
+test("probe takes --json like every command that prints JSON: the flag parses, and the run goes on to its own checks", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "probe-json-"));
+  try {
+    const r = run(["probe", "/", "--select", ".card", "--motion", "--json"], dir);
+    assert.equal(r.status, 2);
+    assert.doesNotMatch(r.stderr, /unknown flag/);
+    assert.match(r.stderr, /^probe: no production build: run `pnpm build` first/m, "past the parser, at the missing build");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("visual-parity proof --build runs its baseline step (no three-sources refusal), and --pages with --sample is refused before any capture", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proof-build-"));
   try {
@@ -222,6 +232,11 @@ test("visual-parity proof --build runs its baseline step (no three-sources refus
     const both = run(["visual-parity", "proof", "--pages", "/", "--sample", "1"], dir);
     assert.equal(both.status, 2);
     assert.match(both.stderr, /^visual-parity proof: --pages and --sample both choose the pages of a capture; pass one\n$/, "nothing else ran");
+    for (const [flag, value] of [["--pages", "/"], ["--sample", "1"]]) {
+      const every = run(["visual-parity", "proof", "--all-pages", flag, value], dir);
+      assert.equal(every.status, 2);
+      assert.match(every.stderr, new RegExp(`^visual-parity proof: --all-pages and ${flag} both choose the pages of a capture; pass one\\n$`), "refused before any capture");
+    }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
