@@ -72,7 +72,8 @@ test("errorTail: a compile error from __NEXT_DATA__, a thrown error from the fli
   const thrown = `<html><body><script>self.__next_f.push([0])</script><script>self.__next_f.push(${JSON.stringify([1, "0:{\"P\":null}\n"])})</script><script>self.__next_f.push(${JSON.stringify([1, row])})</script></body></html>`;
   assert.equal(errorTail(thrown), "TypeError: props.items is undefined");
   assert.equal(errorTail("<html><style>p{}</style><body><h1>502</h1><p>Bad gateway</p></body></html>"), "502 Bad gateway");
-  assert.doesNotMatch(errorTail("<p>Bad gateway</p><scr<script>x</script>ipt>y</script><<b>p"), /[<>]/, "a removal that joins two halves into a tag removes that one too, and no bracket is left");
+  assert.doesNotMatch(errorTail("<p>Bad gateway</p><scr<script>x</script>ipt>y</script><<b>p"), /[<>]/, "halves of a tag around another tag leave no markup");
+  assert.equal(errorTail("<p>expected n > 0</p>"), "expected n > 0", "the text's own > stays: it is printed to a terminal, never put into HTML");
   assert.equal(errorTail(`<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ err: { message: Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n") } })}</script>`).split("\n").length, 12);
 });
 

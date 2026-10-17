@@ -62,20 +62,9 @@ function flightError(body) {
   return null;
 }
 
-/** A page's text for the terminal: script and style blocks and tags removed until none is left (a removal can join two halves into a new one), then any stray angle bracket. */
-function pageText(body) {
-  let text = body;
-  let before;
-  do {
-    before = text;
-    text = text.replace(/<(script|style)\b[\s\S]*?<\/\1>/g, "").replace(/<[^>]+>/g, " ");
-  } while (text !== before);
-  return text.replace(/[<>]/g, " ").replace(/[ \t]+/g, " ").trim().slice(-800);
-}
-
 /** The first lines of the error a 5xx page carries, without colour codes; the page's text when it carries none Next writes. */
 export function errorTail(body, { lines = 12 } = {}) {
-  const text = nextDataError(body) ?? flightError(body) ?? pageText(body);
+  const text = nextDataError(body) ?? flightError(body) ?? body.replace(/<(script|style)\b[\s\S]*?<\/\1>/g, "").replace(/<[^>]+>/g, " ").replace(/[ \t]+/g, " ").trim().slice(-800);
   return text.replace(ANSI, "").split("\n").map((line) => line.trimEnd()).filter((line) => line.trim()).slice(0, lines).join("\n");
 }
 
