@@ -53,7 +53,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   validated at build time and rendered by `src/app/[[...slug]]/page.tsx`
   through the section registry (`src/components/sections/render.tsx`).
   Presentation (sizes, ratios, class strings) stays in the components, keyed
-  by position.
+  by position. That is the standard, for the example and every site: a new
+  page is `/editorial:new-page`, never a `page.tsx`, and a page's copy
+  never lives in a component, a `page.tsx` or `src/config/` (the chrome is
+  configured in `site.ts`, a form in `forms.ts`). A route outside the
+  content engine (the API, the feed, the post template, a design round's
+  `*-demo`, `lab-demo`) is a named exception with its reason
+  (`exceptions` in `src/config/components.json`); `pnpm lint` fails any
+  other, and copy in a section or a pattern. The pages rule has the rest.
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
@@ -80,9 +87,11 @@ paths. The table is written from the rules' frontmatter by
 | Paths | Read and follow |
 | --- | --- |
 | `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/components/**`, `content/pages/**` | [Pages](.claude/rules/pages.md) |
 | `src/app/**`, `src/config/site.ts`, `src/lib/seo/**`, `src/kit.ts`, `scripts/check-seo.mjs`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->
@@ -97,15 +106,22 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   rules under `.prose` and the FAQ block. Plain CSS, no `@apply`, breakpoints
   spelled out (`@media (width >= 992px)`), joined to utilities with `cx()`.
 - Tokens only in the `@theme static` block of `src/app/globals.css`; the two
-  breakpoint steps of the scale in `src/styles/base.css`. Four colours, each
-  a `light-dark()` pair: `paper` (the page ground), `ink` (text and every
-  hairline), `fill` (a filled block), `muted` (secondary text). Nothing else
-  exists as a colour utility — never `bg-white`, `text-black`,
-  `border-gray-*`; a fifth colour is a token first. No radius, shadow, blur,
-  gradient, transition or animation utilities. The type scale is
-  `text-h1`…`text-h6` and `text-body` (never `text-base`/`text-sm`, which
-  carry Tailwind's own line-heights); the fonts are `font-sans` and
-  `font-label`. Breakpoints: `max-sm` < 480, `max-md` < 768, `max-lg` < 992,
+  breakpoint steps of the scale in `src/styles/base.css`. Four colour
+  values, each a `light-dark()` pair — `paper` (the page ground), `ink`
+  (text), `fill` (a filled block), `muted` (secondary text) — and role
+  tokens that alias them: `panel` (a panel's face), `line` (every
+  hairline), `on-ink` (text on an ink ground). A component uses the role
+  where one exists and a value only where no role does; a new value or
+  role is a token first, and nothing else exists as a colour utility —
+  never `bg-white`, `text-black`, `border-gray-*`. Radius and shadow exist
+  only as role tokens (`--radius-panel`, `--radius-control`,
+  `--shadow-panel`, `--shadow-glow`) held at the wireframe's `0` / none; no
+  other radius, shadow, blur, gradient, transition or animation utility
+  exists. The type scale is `text-h1`…`text-h6` and `text-body` (never
+  `text-base`/`text-sm`, which carry Tailwind's own line-heights), each
+  heading step with its letter-spacing token; the fonts are `font-sans`
+  and `font-label`, a label's letter-spacing `--tracking-label`.
+  Breakpoints: `max-sm` < 480, `max-md` < 768, `max-lg` < 992,
   `lg` ≥ 992, `xl` / `2xl` / `3xl` ≥ 1280 / 1440 / 1920.
 - The theme is `color-scheme: light dark` on `:root`, overridden by
   `data-theme` on `<html>` (the `ui/ThemeToggle` button, `localStorage.theme`,
@@ -114,17 +130,22 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   colours and both modes follow.
 - Every section renders inside `ui/Section`: its `type` is its YAML section
   type, its `id` and its `data-section`, and the tag is shown on purpose.
-  Cards are a `<ul>` of bordered boxes with `<h3>` titles after the section's
-  `<h2>`; a `statement` is the section's `<h2>`. What used to be an
+  Cards are a `<ul>` of `ui/Panel` frames (`as="li"`) with `<h3>` titles
+  after the section's `<h2>`; a `statement` is the section's `<h2>`. What used to be an
   illustration is a `ui/Placeholder` crossed box; content images are `<img>`
-  with `width`, `height`, `alt` and `block h-auto w-full border border-ink`.
-- No motion in the wireframe: no `Fx` or `OnView` in a section, no `data-ix`
-  attributes, no transitions. The `agentic-cms/ix` library and
-  `src/styles/motion.css` stay for a fork that adds reveals — and then the
-  old rules apply again: `data-ix` targets addressed through `ix(name)`,
-  start states in `motion.css`, `useReducedMotionPref()` honoured, and no
-  `translate-*` / `rotate-*` / `scale-*` utility on an element something else
-  moves.
+  with `width`, `height`, `alt` and `block h-auto w-full border border-line`
+  (`ui/Media` writes one).
+- No motion in the wireframe: no `Fx`, `OnView`, `Reveal` or `Sequence` in a
+  section, no `data-ix` or `data-part` attributes, no transitions. The
+  `agentic-cms/ix` library and `src/styles/motion.css` stay for a fork that
+  adds motion, in two layers (`STANDARD.md` §7 says which) — and then their
+  rules apply: the play-once layer plays a root once, runs loops only on
+  screen, hides nothing unless `motionScript()` armed the page and times
+  everything with the `--ease-*` / `--motion-*` tokens; `Fx` and `OnView`
+  address `data-ix` targets through `ix(name)` and honour
+  `useReducedMotionPref()`; start states and keyframes live in `motion.css`,
+  and no `translate-*` / `rotate-*` / `scale-*` utility sits on an element
+  something else moves.
 - Layers: `theme`, `base` (preflight, then `base.css`), `utilities`; outside
   them `src/styles/motion.css` and the modules. Preflight zeroes margins,
   paddings, borders and list markers: never `m-0`, `p-0`, `list-none`.
@@ -139,10 +160,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   reverts preflight's `height: auto`, so a `w-full` image carries `h-auto`
   itself. Do not convert to `next/image`. New placeholders come from
   `pnpm kit placeholder <out> <width> <height>`.
-- Proof: a refactor that must not move a pixel captures before and after with
-  `pnpm kit visual-parity capture <label>` and `compare` clean, in
-  both schemes (`--scheme dark`), with `--states` when hover / focus /
-  checked / open change and `--motion` only when there is motion to check.
+- Proof: a refactor that must not move a pixel proves it with
+  `pnpm kit visual-parity proof` (or `capture` before and after and
+  `compare`) clean, in each scheme the profile names (the example's two),
+  with `--states` when hover / focus / checked / open change and
+  `--motion` only when there is motion to check.
   Markup-only refactors: `agentic-cms parity`.
 
 ## Gotchas
@@ -207,9 +229,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `footer.quickLinks` in `src/config/site.ts` together if it belongs there
   (they are separate lists). A new section type is a schema + a component +
   a registry entry.
-- Verify = `pnpm lint` + `pnpm build` (which starts with the content lint
-  and ends with the SEO audit) + `pnpm preview`, with `pnpm test` (the
-  `node:test` suites, about a second) and `pnpm content:lint` when `content/`
+- Verify = `pnpm lint` (ESLint, then the component guard) + `pnpm build`
+  (which starts with the content lint and ends with the SEO audit) +
+  `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
+  and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
   schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
   or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
@@ -235,7 +258,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
 - `docs/` holds the guides (`docs/README.md` is the index): the command
   line, the screenshot harness, the one-shot page commands, designing, the
-  skills, starting a site, deploying as a Node server, the roadmap. A
+  skills, starting a site, setting up a clone (`setup.md`), serving
+  previews to the owner's devices (`dev-server.md`), Chrome and Safari
+  (`browsers.md`), a new site's primitives (`primitives.md`), the traps by
+  topic (`gotchas.md`), the hosts (`deploy.md`), the roadmap. A
   change to a command or the harness updates its guide in the same pull
   request; `CHANGELOG.md` gets a line under Unreleased.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
@@ -243,9 +269,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   assert the trees identical); design work on the example starts with the
   `design` skill like on any site. `templates/site/` is what `agentic-cms
   init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config); the kit's own `AGENTS.md` and `.claude/rules/` describe this
-  repo and are not what a site gets. A change to a rule of the kit that a
-  site shares goes to both.
+  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`); the
+  kit's own `AGENTS.md` and
+  `.claude/rules/` describe this repo and are not what a site gets. A
+  change to a rule of the kit that a site shares goes to both.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own
@@ -279,12 +306,16 @@ The contract — modes, file names, how to read a compare, the waits and why —
 is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
 
 - `pnpm kit visual-parity capture <label>` renders every prerendered page of
-  the current build at eight widths and `compare <before> <after>` diffs
-  them (`visual-parity proof` runs the baseline, the after capture and the
-  compare of each pass in one, with one exit); `--scheme dark` renders the
-  dark mode (a fresh browser context has no stored choice, so the default
-  capture is light), `--states` photographs hover, focus, checked and open,
-  `--motion` plays animations (only worth running where something animates).
+  the current build at the site's widths and `compare <before> <after>`
+  diffs them (`visual-parity proof` runs the baseline, the after capture
+  and the compare of each pass in one, with one exit). The widths, the
+  schemes and what a bare `proof` covers are the site's profile, in
+  `src/config/harness.ts` beside its seed (the example's: 390, 768, 1440
+  and 1920, light and dark, against `develop`): a flag wins, then the
+  profile, then the built-in default (eight widths, light); `proof` runs a
+  pass in each scheme, the dark one's captures ending in `-dark`.
+  `--states` photographs hover, focus, checked and open, `--motion` plays
+  animations (only worth running where something animates).
   `--pages /,/blog` limits a capture to the pages you are looking at — pass
   the same `--pages` to the compare; `--sample <n>` takes n pages of each
   template (the posts) and the compare leaves the rest out. The page list
@@ -294,10 +325,13 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   `.parity/shot-cache/` and runs several browsers (`--jobs`: every core but
   one, two for `--motion`), so a proof's second capture takes the changed
   pages alone and a repeated baseline takes seconds; the example's static
-  set is 44 s from nothing on four cores. Capture the full set, not a `--pages`
-  subset to save time — the cache already skips what did not change;
-  `--fresh` retakes everything. Only a first capture of a large site is
-  worth running in the background, its log under `.parity/<label>.log`.
+  set is 44 s from nothing on four cores. A proof is as short as the
+  change allows (the `design-proof` skill): the pages it touches, one page
+  per template only when it is site-wide, `--states` / `--motion` only
+  when hover or animation changed — a page is left out because the change
+  cannot reach it, never to save time; `--fresh` retakes everything. Only
+  a first capture of a large site is worth running in the background, its
+  log under `.parity/<label>.log`.
 - Static captures run with `prefers-reduced-motion`; `--motion` runs without
   it.
 - What a site shows until a visitor's choice is stored (a consent banner) is
@@ -368,9 +402,9 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   (start states in `src/styles/motion.css`). Never paste header, footer,
   button, container or title block markup into a page. Extract repeated
   markup into a component before its second use, driven by props or
-  `src/config/`. Cards are the exception: every section's cards are its own
-  design, so a section renders them from its own copy fields; do not build a
-  generic Card.
+  `src/config/`. Cards are the exception: a card's frame is `ui/Panel`, and
+  what goes inside it is each section's own design, from its own copy
+  fields; do not build a generic Card.
 - Four engines carry their full contract next to the code: `src/lib/blog/README.md`
   (posts, frontmatter, body conventions), `src/lib/content/README.md`
   (collections — posts, authors, categories, reviews, faqs, use cases, pages —

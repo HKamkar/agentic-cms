@@ -23,6 +23,20 @@ export const LOOP_PAGE = `<!doctype html><html lang="en"><head><meta charset="ut
 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-duration="2" data-rest="1.2"><rect width="200" height="100" fill="#ddd"/><circle cx="20" cy="50" r="15" fill="#000"><animate attributeName="cx" values="20;180;20" dur="2s" repeatCount="indefinite"/></circle></svg>
 </section></main></body></html>`;
 
+// A page of three tiles, each with an infinite CSS loop its IntersectionObserver starts when the tile comes
+// into view and restarts every 700 ms while it stays there, and a 300 ms fade (one iteration) the first time:
+// how many loops start during a capture depends on how long the capture spends on each tile, the fades do not.
+export const SPIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Spin</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } .tile { height: 700px; border: 1px solid; } .dot { display: block; width: 20px; height: 20px; background: #000; } .on .dot { animation: spin 1.3s linear infinite; } .seen { animation: fade 300ms ease-out; } @keyframes spin { to { transform: rotate(360deg); } } @keyframes fade { from { opacity: 0; } }</style></head>
+<body><main>${[0, 1, 2].map((i) => `<section class="tile" id="tile-${i}" data-section="tile-${i}"><span class="dot"></span></section>`).join("")}</main>
+<script>const restart = (tile) => { tile.classList.remove("on"); void tile.offsetWidth; tile.classList.add("on"); };
+const observer = new IntersectionObserver((entries) => { for (const { target, isIntersecting } of entries) { clearInterval(target.timer); if (!isIntersecting) { target.classList.remove("on"); continue; } target.classList.add("seen"); restart(target); target.timer = setInterval(() => restart(target), 700); } });
+for (const tile of document.querySelectorAll(".tile")) observer.observe(tile);</script></body></html>`;
+
+// A page with one lazy image far below the fold, 400 × 400, at /images/late.svg: a test that serves the page
+// itself decides when (or whether) that image arrives.
+export const LAZY_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Lazy</title><style>body { margin: 0; font: 16px/1.4 sans-serif; } .gap { height: 1600px; }</style></head>
+<body><main><section data-section="gap" class="gap"><h1>Far above the image</h1></section><section data-section="late"><img loading="lazy" src="/images/late.svg" width="400" height="400" alt="late"></section></main></body></html>`;
+
 // A page that shows a banner until a choice is stored, the way a consent banner does: its first inline
 // <head> script reads localStorage.consent (and sessionStorage.tab), notes what it found and, finding no
 // record, marks <html> so a fixed 240×64 box shows over the page's text, with a 16 px close icon (an

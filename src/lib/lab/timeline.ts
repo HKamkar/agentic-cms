@@ -20,6 +20,15 @@
 // cycle. An animated SVG inside an <img> is out of reach (its document is
 // not the page's), which is why inspection uses inline copies.
 //
+// Play-once motion stays on it: an animation the timeline has seen is kept
+// after it finishes (a finished CSS animation whose fill is none or
+// backwards leaves getAnimations(), and the range moved over a frozen end
+// pose), with its fill pinned to both so past its end it holds its last
+// frame — under the timeline only: a shipped page keeps its backwards fill
+// (src/styles/motion.css, the intro). And motion that starts after mount —
+// an observer sets the attribute that plays it — is found within a frame,
+// put on the timeline's time and measured into the cycle.
+//
 // mountTimeline is self-contained on purpose — no reference outside its own
 // body — because two hosts run it: LabTimeline calls it from a ref, and
 // the lab's served page, which has no React, inlines its source
@@ -48,7 +57,7 @@ export function timelineControlsHtml({ duration = 0 }: { duration?: number } = {
   return `<button type="button" data-lab-play>Play</button><button type="button" data-lab-replay>Replay</button><input type="range" data-lab-time min="0" max="${span || 1}" step="0.01" value="0" aria-label="Time" aria-valuetext="0.00 of ${span.toFixed(2)} seconds"><span data-lab-readout>0.00 s / ${span.toFixed(2)} s</span>`;
 }
 
-/** Wires the timeline whose root is `root` (it holds a [data-lab-controls] element and the previews) and starts it; the returned destroy() removes every listener, the frame callback and the watch on what is off screen. */
+/** Wires the timeline whose root is `root` (it holds a [data-lab-controls] element and the previews) and starts it; the returned destroy() removes every listener, the frame callbacks, the watch on what is off screen and the watch on changes under the root. */
 export function mountTimeline(root: HTMLElement, options: TimelineOptions = {}): Timeline {
   const READOUT_MS = 100;
   const controls = root.querySelector("[data-lab-controls]") as HTMLElement;
@@ -67,7 +76,20 @@ export function mountTimeline(root: HTMLElement, options: TimelineOptions = {}):
   const svgs = () => [...root.querySelectorAll("svg")].filter((svg) => !svg.parentElement?.closest("svg"));
   const frames = () => [...root.querySelectorAll("iframe")].flatMap((el) => { try { const lab = (el.contentWindow as (Window & { lab?: Lab }) | null)?.lab; return lab ? [{ el, lab }] : []; } catch { return []; } });
   const driven = (el: Element | null | undefined) => { if (!el) return false; if (el.closest("svg")) return true; const mark = el.closest("[data-lab-drive]"); return Boolean(mark && root.contains(mark)); };
-  const animations = () => (typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }).filter((a) => driven((a.effect as KeyframeEffect | null)?.target)) : []);
+  const targetOf = (a: Animation) => (a.effect as KeyframeEffect | null)?.target ?? null;
+  // Every driven animation seen so far, finished ones too; its fill pinned to both at first sight. A cancelled one (idle) or one whose element left the root drops out.
+  const seen = new Set<Animation>();
+  let adopted = 0;
+  function animations(): Animation[] {
+    for (const a of typeof root.getAnimations === "function" ? root.getAnimations({ subtree: true }) : []) {
+      if (seen.has(a) || !driven(targetOf(a))) continue;
+      (a.effect as KeyframeEffect).updateTiming({ fill: "both" });
+      seen.add(a);
+      adopted += 1;
+    }
+    for (const a of seen) if (a.playState === "idle" || !root.contains(targetOf(a))) seen.delete(a);
+    return [...seen];
+  }
 
   // Each thing it sets as a part: held on a frame (seek), set going from one (run), stopped where it is (stop). Its box is
   // what says whether it is on screen — its outermost SVG, its data-lab-drive element or its frame, or the nearest
@@ -188,18 +210,39 @@ export function mountTimeline(root: HTMLElement, options: TimelineOptions = {}):
   // A press on the range freezes the frame before it moves; every change (a drag, a tap, an arrow key) seeks.
   listen(slider, "pointerdown", pause);
   listen(slider, "input", () => seek(Number(slider.value)));
-  // A lab frame loads after the page: measure again when nothing was declared, and put it on the timeline's time.
-  for (const el of root.querySelectorAll("iframe")) listen(el, "load", () => {
-    if (!options.duration) setSpan(measure());
+  // Something new to drive (a lab frame loaded, an animation started late): on the timeline's time, and Play once there is a cycle.
+  function join() {
     if (playing) return go(clock(performance.now()), performance.now());
     hold(current);
     if (autoplay && current === 0) play();
+  }
+  // A lab frame loads after the page: measure again when nothing was declared, and put it on the timeline's time.
+  for (const el of root.querySelectorAll("iframe")) listen(el, "load", () => {
+    if (!options.duration) setSpan(measure());
+    join();
   });
+  // Motion that starts after mount: a change under the root (not in the controls, which the timeline writes) or an
+  // animationstart looks again on the next frame. What it finds joins the timeline's time, and with no cycle declared the
+  // cycle is measured again — it only grows — which turns the controls on.
+  let scan = 0, settled = 0;
+  function rescan() {
+    scan = 0;
+    animations();
+    if (adopted === settled) return;
+    settled = adopted;
+    if (!options.duration) setSpan(Math.max(span, measure()));
+    join();
+  }
+  const later = () => { if (!scan) scan = requestAnimationFrame(rescan); };
+  const changes = typeof MutationObserver === "function" ? new MutationObserver((records) => { if (records.some((r) => !controls.contains(r.target))) later(); }) : null;
+  changes?.observe(root, { attributes: true, childList: true, subtree: true });
+  listen(root, "animationstart", later);
 
   setSpan(options.duration || measure());
   if (autoplay && span) play();
   else seek(0);
-  return { play, pause, seek, replay, time: () => current, duration: () => span, destroy: () => { pause(); watcher?.disconnect(); events.abort(); } };
+  settled = adopted;
+  return { play, pause, seek, replay, time: () => current, duration: () => span, destroy: () => { pause(); watcher?.disconnect(); changes?.disconnect(); if (scan) cancelAnimationFrame(scan); events.abort(); } };
 }
 
 /** The inline script that mounts a timeline on a page without React (the lab's own): mountTimeline's own source, called on the root `selector` names. */

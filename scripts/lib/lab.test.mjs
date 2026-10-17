@@ -123,6 +123,22 @@ test("the pages: the bare page holds the scene in one scheme at its size with th
   assert.match(index, /64×32 · 2s/);
 });
 
+test("the grounds are the site's schemes: a light-only profile gets one box per row and a light page; without one, light and dark", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect/></svg>';
+  const meta = sceneMeta(svg);
+  const both = sceneHtml("dot", { file: "x.svg", meta, sizes: [24], animated: false });
+  const light = sceneHtml("dot", { file: "x.svg", meta, sizes: [24], animated: false, schemes: ["light"] });
+  const count = (html, scheme) => html.split(`class="lab-box" data-scheme="${scheme}"`).length - 1;
+  assert.ok(count(both, "light") > 0 && count(both, "dark") === count(both, "light"), "both grounds by default");
+  assert.ok(count(light, "light") === count(both, "light") && count(light, "dark") === 0, "no dark box on a light-only site");
+  assert.doesNotMatch(light, /scheme=dark/, "no dark frame either");
+  assert.match(light, /:root \{\n {2}color-scheme: light;/);
+  const index = indexHtml(new Map([["dot", "x.svg"]]), { metas: new Map([["dot", meta]]), schemes: ["light"] });
+  assert.equal(count(index, "dark"), 0);
+  assert.equal(count(index, "light"), 1);
+  assert.match(tokensCss({}, ["light"]), /color-scheme: light;/);
+});
+
 test("the server: the index, a scene page and its bare page, the file by id (and still), nothing outside the whitelist, and a change event after a save", async () => {
   const root = site();
   fs.mkdirSync(path.join(root, LAB_DIR), { recursive: true });

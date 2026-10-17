@@ -2,7 +2,7 @@
 
 `agentic-cms visual-parity` is the proof that a change moved no pixel — or
 moved exactly the pixels it meant to. It renders every prerendered page of
-the production build at several widths, makes the rendering deterministic,
+the production build at the site's widths, makes the rendering deterministic,
 and diffs two captures pixel by pixel. The flags and exit codes are in
 [commands.md](commands.md#visual-parity); this page is what the captures
 contain, how to read a compare, and the traps a long run meets.
@@ -29,7 +29,12 @@ counts, each side's time and how much the shot cache reused — and one exit:
 `0` when every pass is identical, `1` on any difference or a failed capture.
 Its captures are `<label>-before` / `<label>-after` (`-motion`, `-states`),
 so a pass that differs is read like any compare. `--json` prints every
-pass's captures and report.
+pass's captures and report. What it runs on — the ref, the schemes, the
+widths, the pages — is the site's profile unless a flag says otherwise
+([below](#the-sites-profile)): a site with two schemes gets every pass in
+each, the dark one's captures ending in `-dark` (`proof-before-dark`,
+`proof-after-states-dark`); `--widths` reaches the static pass alone, as
+`--sample` does.
 
 Captures live in `.parity/visual/<label>/` (gitignored; a capture wipes its
 own directory first and writes `capture.json` **last** — its presence means
@@ -43,6 +48,59 @@ and sha in `meta.json` — for the site's own build also the checkout it was
 seeded with (`seed`, [below](#a-visitors-choice-seeded)); `compare` refuses
 two captures of different schemes or seeded differently, and prints the
 baseline it is judging against.
+
+## The site's profile
+
+A site says once what it is, in the `harness` export of
+`src/config/harness.ts` beside its seed ([below](#a-visitors-choice-seeded)),
+and every command takes that as its default:
+
+```ts
+export const harness = {
+  storage: { /* the seed */ },
+  widths: [390, 768, 1440, 1920],          // the widths it is designed and proved at
+  schemes: ["light"],                       // or ["light", "dark"]
+  proof: { pages: ["/"], ref: "develop" },  // what a bare proof covers, and its baseline
+  // or proof: { sample: 1, ref: "develop" } — one page of each template
+};
+```
+
+A flag wins, then the profile, then the built-in default — the value the
+command had before profiles existed, so a site without one, or a key it
+leaves out, gets what it always got:
+
+| Setting | Flag | Profile | Built-in |
+|---|---|---|---|
+| a static capture's widths | `--widths` | `widths` | 1920, 1440, 1280, 1100, 992, 800, 767, 390 |
+| the home page's menu, opened and shot | — | each of `widths` where the menu button shows | 767 and 390, where it shows |
+| one command's scheme (`capture`, `shot`, `probe`, `sheet`, `icons audit`, `icons round publish`, `lab render`) | `--scheme` | the first of `schemes` | light |
+| `proof`'s schemes | `--scheme` (one) | a pass in each of `schemes` | light |
+| `proof`'s pages, on every capture and compare | `--pages` (or `--sample`) | `proof.pages` | every page |
+| `proof`'s sample, the first n pages of each template on the static pass | `--sample` (or `--pages`) | `proof.sample` | every page |
+| `proof`'s baseline | `--ref` | `proof.ref` | `develop` |
+| `lab serve`'s grounds | — | a box per scheme in `schemes` | light and dark |
+
+`--motion` keeps its own widths (1440 and 390) and `--states` its 1440,
+whatever the profile says. The menu shots are taken at the widths below the
+site's menu breakpoint, found where the button shows rather than named: 390
+and 768 for the example's four widths and its menu below 992. The profile is
+read from the tree like the seed, so a `--ref` baseline is captured at the
+tree's widths and in its schemes even when the ref predates the profile.
+`proof.pages` and `proof.sample` are two ways of choosing a proof's pages,
+like the flags: a profile sets one, and either flag sets aside the
+profile's choice. A key of the wrong shape exits 2 naming it: widths are
+whole pixels, schemes are `light` and `dark` (each once), pages are routes
+starting with `/`, a sample is a whole number from 1, and pages and sample
+together are refused.
+
+A site without dark mode says `schemes: ["light"]` and is never proved in a
+scheme it does not have; `init --light-only` writes that profile with a
+light-only example ([init.md](init.md)). A site whose widths change
+recaptures its baselines: a capture at the old widths and one at the new
+compare as `MISSING` files. A site that writes into its profile the widths
+it used to pass as a flag keeps its shot cache: the first proof after it
+retakes only the home page, at the widths where the menu is now tried
+([below](#unchanged-shots-are-reused)).
 
 ## Where the build comes from
 
@@ -61,11 +119,15 @@ the branch as pushed, and `HEAD`, a sha or `HEAD~2` in this checkout; checked
 out as a detached worktree in a sibling directory `../<site>-ref-<sha>` — never inside
 the site, whose `tsconfig` would include it — its demo routes removed
 (`src/app/<name>-demo`: never production, and the build's SEO audit rejects
-them by design, so a commit made mid-round still builds), installed with the
-lockfile as it was, built there, served and captured; a sibling whose build
-finished for the same sha is reused (its `.parity/ref-build.json` says so —
-one whose build failed is rebuilt, never reused), older ref siblings are
-removed, and the sha and the demo routes it removed go into `meta.json`).
+them by design, so a commit made mid-round still builds), given the tree's
+`.env.local` (gitignored, so a checkout has none, while the tree's own build
+reads it: without the copy a build-time value could differ between the two
+sides), installed with the lockfile as it was, built there, served and
+captured; a sibling whose build finished for the same sha and the same
+`.env.local` is reused (its `.parity/ref-build.json` says so, with a digest
+of the file, never its values — one whose build failed, or that read another
+`.env.local`, is rebuilt), older ref siblings are removed, and the sha and
+the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
 
@@ -187,10 +249,15 @@ Only the build is an input: a third-party script or image, an analytics
 beacon, is not; nor is a router prefetch, which shows nothing. A change to
 the harness's own sources, the browser, the scheme, the motion settings, the
 seed or (for `--states`) the site's config starts from nothing, and a `--url`
-capture reuses nothing. `--fresh` takes every shot again and refreshes the
-cache: to prove a frame deterministic, or whenever a copied shot is in
-doubt. Four entries are kept per page-width, the least recently used going
-first; `visual-parity clean --cache` empties it.
+capture reuses nothing. The menu is a setting of the page-widths that open
+it alone — the home page of a static capture at the menu's widths — so a
+change to those widths retakes the home page there and reuses every other
+page-width. A shot taken with an image still loading (below) and a state
+skipped for want of its target are never stored, so a later capture takes
+them again. `--fresh` takes every shot again and refreshes the cache: to
+prove a frame deterministic, or whenever a copied shot is in doubt. Four
+entries are kept per page-width, the least recently used going first;
+`visual-parity clean --cache` empties it.
 
 ## Several browsers at once
 
@@ -220,13 +287,15 @@ and `--pages` names its own. Off by default.
 
 ## Three modes
 
-**Static** (the default) photographs every page at eight widths — 1920,
-1440, 1280, 1100, 992, 800, 767 and 390 — as a full-page shot,
-`<page>@<width>.png` (`home` for `/`, `/` → `__` elsewhere:
-`blog-post__pages-are-files@1440.png`), and the home page's menu open at
-767 and 390 (`home@767--menu.png`, viewport only). The rendering is made
-deterministic: `prefers-reduced-motion` (the reveal library snaps to its
-end state), every CSS animation and transition disabled, infinite loops
+**Static** (the default) photographs every page at the site's widths (the
+profile's; without one, eight: 1920, 1440, 1280, 1100, 992, 800, 767 and
+390) as a full-page shot, `<page>@<width>.png` (`home` for `/`, `/` → `__`
+elsewhere: `blog-post__pages-are-files@1440.png`), and the home page's menu
+open at each of the profile's widths where its button shows (without a
+profile, 767 and 390), `home@390--menu.png`, viewport only. The rendering is made
+deterministic: `prefers-reduced-motion` (the reveals snap to their end
+state, and the play-once layer arms nothing, so its parts are at rest from
+the first paint), every CSS animation and transition disabled, infinite loops
 held at their first frame, every inline SVG's SMIL clock paused at its
 `data-rest` (seconds; else 0), scroll anchoring off, every image loaded
 before the shot. SMIL is not a CSS or Web Animation, so nothing else stops
@@ -257,17 +326,30 @@ during the scroll-through is recorded with its timing and its target's
 position (`<page>@<width>.animations.json`), and so is every inline SMIL
 loop (`type: "smil"`, its cycle, its rest, its box), and compared exactly,
 which catches a retimed or missing animation even when the frames happen to
-agree. Motion mode covers every page of the build and its first post.
+agree. An infinite CSS or Web Animation loop is left out, read from its
+effect's timing in the page (DevTools reports one with no iteration count
+at all): how often a page starts or restarts a loop, from an observer or a
+timer, depends on timing, and the frames show it held at its first frame.
+Motion mode covers every page of the build and its first post.
 
 **`--states`** photographs what the other modes never reach: the CTA, a nav
 link, a footer link and a blog card hovered; a form field focused; a
 checkbox checked; the first FAQ open on the first page that has one and on
-the first post. Elements are located by role and text from the site's
-config and page files (`src/kit.ts`), never by class, so the same list
-works before and after a markup rewrite. Each shot is the element's box
-with a margin, at 1440 (`home@1440--state-cta-hover.png`).
+the first post whose body has one (the kit's own test, the FAQPage its page
+emits: the accordion's toggle gets its `aria-expanded` only once the page
+hydrates, so the built HTML cannot say). A build without such a page or
+post has no row for it. Elements are located by role and text from the
+site's config and page files (`src/kit.ts`), never by class, so the same
+list works before and after a markup rewrite. Each shot is the element's
+box with a margin, at 1440 (`home@1440--state-cta-hover.png`). A state
+whose target does not show within 10 s of the page being ready is skipped,
+`<state> (skipped: no target)` on the progress line and `skipped: [{ state,
+page, file, reason }]` in `capture.json`, and the run goes on; the compare
+calls its shot `MISSING` and says which side skipped it. It used to time
+out twice and end the run.
 
-`--scheme dark` renders any mode under `prefers-color-scheme: dark`.
+`--scheme dark` renders any mode under `prefers-color-scheme: dark`; without
+the flag a capture takes the first of the profile's schemes, else light.
 `--url <base>` captures a served site instead of the build under `.next`
 (print its `git log -1` first: a baseline from a checkout that had moved on
 proves nothing). `--pages /a,/b` captures only those routes; pass the same
@@ -283,9 +365,15 @@ baseline: develop 55ab6af3d59bee8ce99b1e572c2bbf5ba360f106
 seed: storage consent={"analytics":"denied","at":"{now}","version":1}, on both
 ok       home@1440.png                                                          0.000% (0 px)
 CHANGED  about@390.png                                                          0.412% (1234 px) rows 2017-2060
+         cause: no section moved; the change at rows 2017-2060 is inside cards: its content changed in place
 CHANGED  home@1440--s02-500.png                                                18.100% (…)  mid-flight
+         cause: scroll step 2, 500 ms after it (mid-flight: re-run once with --fresh, and identical then means accepted)
 SIZE     blog@800.png                                                           800x3160 -> 800x3210 (+50)  same to row 1204, tail 1550 rows, band 1204-1610 -> 1204-1660: shift
+         cause: hero height 812.000 → 862.000 (+50.000 px)
+FLAKY    blog-post__pages-are-files@1440.png                                    3.214% (…) rows 3320-3610
+         cause: image not loaded on before at y=3320 (/images/blog/pages-are-files-mid.webp, 1440x810): the shot is not evidence; retake the page with --fresh
 MISSING  contact@1920.png (only in before)
+         cause: only in the before capture: the after capture took contact at 390, 768, 1440 only
 ok       home@1440.animations.json                                              12 -> 12 animations
 ```
 
@@ -314,15 +402,32 @@ ok       home@1440.animations.json                                              
 
   The band's crops (`<name>.before.png`, `<name>.after.png`, with a margin)
   are in the `-vs-` directory for a look at the section that moved.
-- `cause:` — under a `SIZE` or `CHANGED` page shot, the section behind it,
-  from the geometry a static capture writes beside each shot
-  (`<page>@<width>.sections.json`: every `[data-section]`, else the header,
-  `main`'s children and the footer, with its top and height in fractional
-  pixels): the first one in page order whose height changed, and by how
-  much — `fractional` when the change is not a whole pixel — or the first
-  whose top moved, when something above the sections changed. No section
-  measured by hand. A capture from before the kit wrote geometry has none;
-  the compare says so and names the capture to redo.
+- `FLAKY`: a static shot that differs and that one side took with an image
+  still loading, after a reload had not brought it (below): the empty box
+  is the capture's, not the build's, so the line proves nothing either way.
+  Retake that page with `--pages <route> --fresh`. It counts against the
+  exit like any other line that is not `ok`.
+- `cause:` — under every line that is not `ok`, what is behind it:
+  - a page shot's section, from the geometry a static capture writes beside
+    each shot (`<page>@<width>.sections.json`: every `[data-section]`, else
+    the header, `main`'s children and the footer, with its top and height
+    in fractional pixels): the first one in page order whose height
+    changed, and by how much — `fractional` when the change is not a whole
+    pixel — or the first whose top moved, when something above the
+    sections changed; when none moved, the section whose box holds the
+    first changed row, whose content changed in place. No section measured
+    by hand. A capture from before the kit wrote geometry has none; the
+    cause says so and names the side to redo;
+  - on a `FLAKY` line, the image that had not arrived: its side, its place
+    and its source;
+  - for a shot that has no geometry by kind, what it shows: the open menu,
+    a motion step's frame (a mid-flight one may move with timing, a settled
+    one never does) or a state's box; the diff image shows where;
+  - for a `MISSING` file, why the other side lacks it: a state it skipped
+    for want of a target, a page it did not take at all or not at that
+    width, or a motion step past its end because the page's height changed;
+  - for an inventory, how many animations each side alone has and the first
+    of them; for a settle record, the step whose wait changed.
 - `MISSING`: a file only one capture has (a page added or removed, or a
   partial capture without `--pages` on the compare). With `--pages` the
   compare judges only those pages' files, on both sides, and of the before
@@ -334,10 +439,10 @@ ok       home@1440.animations.json                                              
   differ; the diff directory then holds the entries only one side has.
 
 `--json` prints the same as one document (`{ before, after, scheme,
-baseline, summary: { ok, changed, size, missing, exit }, files: [{ name,
-kind, status, line, … }] }`; every file's entry carries its printed `line`
-and its numbers) and it is always written as `report.json` in the `-vs-`
-directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
+baseline, summary: { ok, changed, size, missing, flaky, exit }, files: [{
+name, kind, status, line, cause, … }] }`; every file's entry carries its
+printed `line` and its numbers, and every one that is not `ok` its `cause`)
+and it is always written as `report.json` in the `-vs-` directory. Exit `0` when everything is `ok`, `1` on any other line, `2` on
 a usage error, a missing capture or two captures of different schemes.
 
 ## What the harness waits for, and why
@@ -345,16 +450,30 @@ a usage error, a missing capture or two captures of different schemes.
 A static shot is taken only when the page has proved itself: fonts ready
 (with a grace period, so a font that never arrives shows up as a diff rather
 than a hang); every reveal at its end state, which is the trace hydration
-leaves under reduced motion; a scroll-through whose steps are counted in the
+leaves under reduced motion (an armed part of the play-once layer whose root
+has not played counts as a reveal still pending, which a static capture
+never has: under reduced motion nothing is armed); a scroll-through whose steps are counted in the
 renderer's animation frames rather than milliseconds, so a loaded machine
 slows the capture instead of photographing a reveal before it ran — each
 600 px step done once the page has not changed (no DOM mutation) for two
 frames in a row, two frames at least and never more than eight, so a busy
 section gets the eight a step always had and a quiet one is not held; every
-image loaded; and, on a site whose footer hairlines are drawn by a sequence
+image arrived and decoded; and, on a site whose footer hairlines are drawn by a sequence
 (`data-ix="footer-line-*"`), those lines drawn. A page whose renderer stalls
 is reloaded once; a second stall fails the capture — no shot is ever taken of
 a stalled page.
+
+An image is waited for until it has arrived and then decoded
+(`img.decode()`): arrived is not painted, and a renderer may decode a large
+image off its main thread and draw the box empty until it has. The wait
+listens beside the page's own `load` handlers, never in place of them, and
+gives up after 10 s. Then, just before the shot, every image that shows and
+has not arrived is counted: a page with one is loaded again, once, as a
+stalled one is; if the second load still has one, the shot is taken, the
+images are listed beside it (`<page>@<width>.unloaded.json`: source, place,
+size), the shot is kept out of the cache and the compare calls a difference
+on it `FLAKY` with that image as its cause. A broken image (a 404) is the
+build's, and is photographed as it is.
 
 The scroll-through exists to run what entering the view runs — reveals,
 lazy images, observers — so it runs with every element `visibility:
@@ -376,14 +495,21 @@ falls through after 10 s.
 
 ## Traps a long run meets
 
-- Capture the full set, not a `--pages` subset to save time: every
+- A proof is as short as the change allows: the site's widths and its
+  schemes, which the profile gives every capture without a flag (never a
+  scheme the site does not have), the pages the change touches (`--pages`,
+  the same on both captures and the compare; `proof.pages` for what a bare
+  proof covers), one page per template (`--sample 1`, or `proof.sample` for
+  a site whose bare proof is that) only when the change is site-wide,
+  `--states` / `--motion` only when hover or animation
+  changed. A page is left
+  out because the change cannot reach it, never to save time: every
   page-width whose build files did not change is copied from
-  `.parity/shot-cache/`, and several browsers work at once, so the second
-  capture of a proof takes the changed pages alone (on the example, one post
-  edited: 18.7 s for 80 page-widths; the whole static set from nothing,
-  44 s on four cores). `--pages` is for looking at one page while
-  iterating. Only a first capture of a large site is worth the background,
-  with its output in a log (`.parity/<label>.log`) whose tail you read.
+  `.parity/shot-cache/`, and several browsers work at once, so a wider
+  capture stays cheap (on the example, one post edited: 18.7 s for 80
+  page-widths; the whole static set from nothing, 44 s on four cores).
+  Only a first capture of a large site is worth the background, with its
+  output in a log (`.parity/<label>.log`) whose tail you read.
 - A capture photographs a copy of the build and `public/`, taken before
   the browser starts: once it prints `snapshot:`, building, editing
   `public/` or moving assets no longer reaches it. Still build the exact

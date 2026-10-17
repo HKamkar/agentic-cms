@@ -4,11 +4,11 @@
  * and list markers; what is left is the page ground, the type and the two
  * things a reader needs without a class: a heading that looks like one and a
  * link that looks clickable.
- *
- * The theme is one attribute on :root, so a light and a dark page share every
- * rule below: the `light-dark()` colours in globals.css read `color-scheme`.
- * Without the attribute the reader's own system setting decides.
  */
+
+/* The theme is one attribute on :root, so a light and a dark page share every
+   rule below: the `light-dark()` colours in globals.css read `color-scheme`.
+   Without the attribute the reader's own system setting decides. */
 :root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
@@ -41,12 +41,12 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
 }
-h1 { font-size: var(--text-h1); line-height: var(--text-h1--line-height); }
-h2 { font-size: var(--text-h2); line-height: var(--text-h2--line-height); }
-h3 { font-size: var(--text-h3); line-height: var(--text-h3--line-height); }
-h4 { font-size: var(--text-h4); line-height: var(--text-h4--line-height); }
-h5 { font-size: var(--text-h5); line-height: var(--text-h5--line-height); }
-h6 { font-size: var(--text-h6); line-height: var(--text-h6--line-height); }
+h1 { font-size: var(--text-h1); line-height: var(--text-h1--line-height); letter-spacing: var(--text-h1--letter-spacing); }
+h2 { font-size: var(--text-h2); line-height: var(--text-h2--line-height); letter-spacing: var(--text-h2--letter-spacing); }
+h3 { font-size: var(--text-h3); line-height: var(--text-h3--line-height); letter-spacing: var(--text-h3--letter-spacing); }
+h4 { font-size: var(--text-h4); line-height: var(--text-h4--line-height); letter-spacing: var(--text-h4--letter-spacing); }
+h5 { font-size: var(--text-h5); line-height: var(--text-h5--line-height); letter-spacing: var(--text-h5--letter-spacing); }
+h6 { font-size: var(--text-h6); line-height: var(--text-h6--line-height); letter-spacing: var(--text-h6--letter-spacing); }
 
 /* The wireframe has one accent and it is the underline: a link is a link. */
 a { color: inherit; text-decoration: underline; }

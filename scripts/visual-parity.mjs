@@ -23,15 +23,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, addStyle, capturePages, fontsReady, imagesReady, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
+import { FREEZE_CSS, HOLD_SMIL, NO_ANCHORING_CSS, PAUSE_LOOPS, SECTIONS, SMIL_INVENTORY, Stall, UNLOADED_IMAGES, addStyle, capturePages, fontsReady, imagesReady, isLoop, launch, listPages, onceMore, revealed, routeName, sampleRoutes, servedFile, serveStatic, settle, snap, templatesOf, withPage } from "./lib/browser.mjs";
 import { causeLine, compareCapture } from "./lib/compare-images.mjs";
 import { buildRef } from "./lib/ref-build.mjs";
 import { planClean, readEntries, removeEntries } from "./lib/parity-clean.mjs";
+import { captureWidths, menuWidths, opensMenu, profileOrExit, proofSettings, schemeOf } from "./lib/profile.mjs";
 import { forwarded, passesOf, plan, runProof } from "./lib/proof.mjs";
 import { inPool } from "./lib/pool.mjs";
-import { createShotCache, harnessDigest, noShotCache, settingsKey } from "./lib/shot-cache.mjs";
+import { createShotCache, harnessDigest, noShotCache, shotKey } from "./lib/shot-cache.mjs";
 import { SNAPSHOTS, buildId, snapshotBuild, treeState } from "./lib/snapshot.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { statesFor } from "./lib/states.mjs";
 import { SITE_SEED, sameSeed, seedLine, seedOrExit, seedRecord } from "./lib/storage-seed.mjs";
 
 const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-parity"], process.argv.slice(2));
@@ -41,17 +43,21 @@ const { subcommand, positionals: labels, flags } = parseOrExit(SPECS["visual-par
 const loadKit = async () => (await import("@/kit")).kit;
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".parity/visual");
-const DEFAULT_WIDTHS = [1920, 1440, 1280, 1100, 992, 800, 767, 390];
-const MENU_WIDTHS = [767, 390];
+// The site's profile (src/config/harness.ts, lib/profile.mjs): its widths, schemes and proof settings are the
+// defaults a flag overrides for one run; read from the tree, so a --ref baseline is captured like the tree.
+const profile = subcommand === "capture" || subcommand === "proof" ? await profileOrExit(`visual-parity ${subcommand}`) : null;
 
 const motion = Boolean(flags.motion);
 // The theme follows prefers-color-scheme (and a stored choice, absent in a fresh browser context), so a scheme is a capture option.
-const scheme = flags.scheme ?? "light";
+const scheme = schemeOf(flags.scheme, profile);
 const states = Boolean(flags.states);
 if (subcommand === "capture" && motion && states) { console.error("visual-parity capture: --motion and --states are two captures, not one"); process.exit(2); }
-const MOTION_WIDTHS = [1440, 390];
 const MOTION_FRAMES_MS = [150, 500];
-const widths = (flags.widths ?? (motion ? MOTION_WIDTHS : DEFAULT_WIDTHS).join(",")).split(",").map(Number);
+const widths = captureWidths({ flag: flags.widths, motion, profile });
+// The home page's menu is opened at these widths wherever its button shows: the site's own widths below its menu breakpoint.
+const MENU_WIDTHS = menuWidths(profile);
+const menuAt = (pagePath, width) => opensMenu({ pagePath, width, menuWidths: MENU_WIDTHS, motion, states });
+const MENU_BUTTON = ".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]";
 const threshold = flags.threshold ?? 0.02;
 const thresholdMid = flags["threshold-mid"] ?? 20;
 const onlyPages = (flags.pages ?? "").split(",").filter(Boolean);
@@ -66,7 +72,10 @@ if (subcommand === "capture" && flags.sample !== undefined) {
 }
 const settleMs = flags.settle ?? 2000;
 if (subcommand === "capture" && flags.settle !== undefined && flags.settle !== 2000 && !motion) { console.error("visual-parity capture: --settle is for the settled frame of a --motion capture"); process.exit(2); }
-if ([flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+// A proof passes --ref to its baseline and --build to its first after capture, never both to one capture (lib/proof.mjs).
+if (subcommand === "capture" && [flags.url, flags.build, flags.ref].filter(Boolean).length > 1) { console.error("visual-parity capture: --url, --build and --ref are three sources of one build; pass one"); process.exit(2); }
+// The proof refuses it under its own name before any capture starts, not as a failed baseline step.
+if (subcommand === "proof" && flags.sample !== undefined && onlyPages.length) { console.error("visual-parity proof: --pages and --sample both choose the pages of a capture; pass one"); process.exit(2); }
 // Other origins' scripts and connections are held back from a build the harness serves (HOLD_THIRD_PARTY);
 // a --url site is served by its own server and captured as it serves itself.
 const THIRD_PARTY = flags["third-party"] ?? "hold";
@@ -90,8 +99,14 @@ const motionPages = (root = ROOT) => {
 // geometry, which transforms do not move, since the element is already
 // mid-flight when the event arrives). Compared as data, so it is immune to
 // frame jitter: a missing, extra or retimed animation is a diff even when the
-// screenshots happen to agree. The inline SMIL loops, which the browser does
-// not report as animations, join them from SMIL_INVENTORY.
+// screenshots happen to agree. An infinite loop is left out: how often a page
+// starts or restarts one (an observer, a timer) depends on timing, so the
+// count would, and its frames are held at its first anyway (PAUSE_LOOPS). The
+// effect's own timing in the page says which is a loop, as PAUSE_LOOPS reads
+// it; the protocol's report (isLoop) when the page no longer holds the
+// animation. The inline SMIL loops, which the browser does not report as
+// animations and whose list is the page's markup, join them from
+// SMIL_INVENTORY.
 const byPlace = (a, b) => (a.target?.top ?? 0) - (b.target?.top ?? 0) || JSON.stringify(a).localeCompare(JSON.stringify(b));
 async function recordAnimations(page) {
   const cdp = await page.context().newCDPSession(page);
@@ -100,9 +115,18 @@ async function recordAnimations(page) {
   await cdp.send("Animation.enable");
   const seen = new Set();
   const records = [];
+  const loops = async (animation) => {
+    try {
+      const { remoteObject } = await cdp.send("Animation.resolveAnimation", { animationId: animation.id });
+      const { result } = await cdp.send("Runtime.callFunctionOn", { objectId: remoteObject.objectId, returnByValue: true, functionDeclaration: "function () { return this.effect?.getTiming().iterations === Infinity; }" });
+      if (typeof result.value === "boolean") return result.value;
+    } catch { /* gone from the page: the protocol's report decides */ }
+    return isLoop(animation.source?.iterations);
+  };
   cdp.on("Animation.animationStarted", async ({ animation }) => {
     if (seen.has(animation.id)) return;
     seen.add(animation.id);
+    if (await loops(animation)) return;
     const src = animation.source ?? {};
     let target = null;
     try {
@@ -115,7 +139,7 @@ async function recordAnimations(page) {
   return async () => {
     await page.waitForTimeout(200);
     await cdp.detach().catch(() => {});
-    return records.filter((r) => r.iterations !== Infinity);
+    return records;
   };
 }
 
@@ -151,34 +175,6 @@ async function captureMotion(page, dir, name) {
   return count;
 }
 
-// The first disclosure toggle on the page (FAQ), whatever element carries it.
-const faqToggle = (p) => p.getByRole("main").locator("[aria-expanded]").first();
-
-/** The route of the first page file (folder order) with a section of that type, looking inside group wrappers; undefined when none has one. */
-function pageWith(kit, type) {
-  const holds = (sections) => sections.some((section) => section.type === type || (section.type === "group" && holds(section.sections)));
-  return kit.content.getPages().find((entry) => holds(entry.data.sections))?.data.seo.path;
-}
-
-// Interaction states. `act` performs the interaction and returns the element
-// whose box is photographed; the page is prepared like a static capture
-// (motion frozen), so the box shows the settled end state of the transition.
-// The three labels a hover state looks for come from the site's own config
-// (the CTA, a nav entry that is a page of its own rather than an anchor, the
-// second footer quick link); `post` is the build's first post route, `form`
-// and `faq` the first pages that show a form and a FAQ; a build without one
-// of them drops those rows.
-const STATES = ({ site, post, form, faq }) => [
-  { page: "/", width: 1440, name: "cta-hover", act: async (p) => { const l = p.getByRole("link", { name: site.cta.label }).first(); await l.hover(); return l; } },
-  { page: "/", width: 1440, name: "nav-link-hover", act: async (p) => { const l = p.getByRole("navigation").getByRole("link", { name: (site.nav.find((item) => item.href !== "/" && !item.href.includes("#")) ?? site.nav[1]).label }).first(); await l.hover(); return l; } },
-  { page: "/", width: 1440, name: "footer-link-hover", act: async (p) => { const l = p.getByRole("contentinfo").getByRole("link", { name: site.footer.quickLinks[1].label }); await l.hover(); return l; } },
-  { page: site.links.blog, width: 1440, name: "card-hover", act: async (p) => { const l = p.getByRole("main").locator("a:has(img[alt]:not([alt='']))").first(); await l.hover(); return l; } },
-  { page: form, width: 1440, name: "field-focus", act: async (p) => { const l = p.getByRole("textbox").first(); await l.focus(); return l; } },
-  { page: form, width: 1440, name: "checkbox-checked", act: async (p) => { const l = p.locator("label:has(input[type=checkbox])").first(); await l.click(); return l; } },
-  { page: faq, width: 1440, name: "faq-open", act: async (p) => { const b = faqToggle(p); await b.click(); return b.locator("xpath=ancestor::section[1]"); } },
-  { page: post, width: 1440, name: "post-faq-open", act: async (p) => { const b = faqToggle(p); await b.scrollIntoViewIfNeeded(); await b.click(); return b.locator("xpath=ancestor::div[1]"); } },
-].filter((state) => state.page);
-
 /** How long each page-width (or state) took, for capture.json: where a run's time went. */
 const timings = [];
 const timed = async (name, fn) => { const start = Date.now(); try { return await fn(); } finally { timings.push([name, Date.now() - start]); } };
@@ -189,32 +185,47 @@ function timingSummary() {
   return { taken: timings.length, seconds: s(total), mean: timings.length ? s(total / timings.length) : 0, slowest: [...timings].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, ms]) => ({ name, seconds: s(ms) })) };
 }
 
+// How long a state's target may take to show once the page is ready: the FAQ's toggle gets its aria-expanded when the
+// page hydrates. A target that never shows is skipped and recorded, where the state used to time out twice (30 s, a
+// reload, 30 s) and end the whole run.
+const TARGET_MS = 10000;
+const skippedStates = [];
+
 async function captureStates(open, baseUrl, dir, { root, kit, shots }) {
   let count = 0;
-  const all = STATES({ site: kit.site, post: firstPost(root), form: pageWith(kit, "contact-form"), faq: pageWith(kit, "faq") });
+  const all = statesFor(kit, listPages(root));
   await inPool(all, { slots: JOBS, open, work: async (state, { context }) => {
     const name = `${routeName(state.page)}@${state.width}--state-${state.name}`;
-    await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
+    const shot = await shots.take(name, dir, (watch, discard) => timed(name, () => onceMore(name, () => withPage(context, state.width, baseUrl + state.page, async (page) => {
       await addStyle(page, FREEZE_CSS);
       await fontsReady(page);
       await revealed(page);
       await settle(page);
       await page.evaluate(HOLD_SMIL, { rest: true });
-      const target = await state.act(page);
+      const el = state.target(page);
+      if (!(await el.first().waitFor({ state: "visible", timeout: TARGET_MS }).then(() => true, () => false))) { discard(); return 0; }
+      const target = await state.act(page, el);
       await page.waitForTimeout(800);
       const box = await target.boundingBox();
       const scrollY = await page.evaluate(() => window.scrollY);
       const pad = 24;
       await snap(page, path.join(dir, `${name}.png`), { fullPage: true, clip: { x: Math.max(0, box.x - pad), y: Math.max(0, box.y + scrollY - pad), width: box.width + 2 * pad, height: box.height + 2 * pad } });
+      return 1;
     }, { before: watch }))));
-    count++;
-    say(`${state.name} `);
+    if (shot) { count++; say(`${state.name} `); return; }
+    skippedStates.push({ state: state.name, page: state.page, file: `${name}.png`, reason: "no target" });
+    say(`${state.name} (skipped: no target) `);
   } });
   return count;
 }
 
-/** A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and (the home page at the menu widths) the open menu; the number of PNGs. */
-async function shootPage(page, { dir, name, pagePath, width }) {
+/**
+ * A page-width's shots: a --motion page's frames and inventories, or the static full page, its section geometry and
+ * (the home page at a menu width where its button shows) the open menu; the number of PNGs. A static page with an
+ * image that shows and has not arrived is loaded again (a Stall, which onceMore answers with one reload); on the
+ * `last` try it is photographed, the images listed in <name>.unloaded.json, and the shot kept out of the cache.
+ */
+async function shootPage(page, { dir, name, pagePath, width, last = false, discard = () => {} }) {
   await fontsReady(page);
   await addStyle(page, NO_ANCHORING_CSS);
   if (motion) {
@@ -227,24 +238,34 @@ async function shootPage(page, { dir, name, pagePath, width }) {
   await revealed(page);
   await settle(page);
   await page.evaluate(HOLD_SMIL, { rest: true });
+  const unloaded = await page.evaluate(UNLOADED_IMAGES);
+  if (unloaded.length && !last) throw new Stall(`${unloaded.length} image(s) not loaded on ${page.url()}, the first ${unloaded[0].src} at y=${unloaded[0].top}`);
   await snap(page, path.join(dir, `${name}.png`), { fullPage: true });
   fs.writeFileSync(path.join(dir, `${name}.sections.json`), JSON.stringify(await page.evaluate(SECTIONS)));
-  if (pagePath !== "/" || !MENU_WIDTHS.includes(width)) return 1;
-  await page.locator(".w-nav-button, [aria-controls='w-nav-overlay-0'], header button[aria-expanded]").first().click();
+  if (unloaded.length) {
+    fs.writeFileSync(path.join(dir, `${name}.unloaded.json`), JSON.stringify(unloaded));
+    discard();
+    say(`(${name}: ${unloaded.length} image(s) still loading after a reload; recorded as flaky) `);
+  }
+  if (!menuAt(pagePath, width)) return 1;
+  const menu = page.locator(MENU_BUTTON).first();
+  if (!(await menu.isVisible())) return 1;
+  await menu.click();
   await page.waitForTimeout(600);
   await snap(page, path.join(dir, `${name}--menu.png`));
   return 2;
 }
 
-// What decides a shot besides the page's own files: the harness's sources (this file, the browser library and
-// the seed), the browser's version and the capture's settings — the seed's templates among them, never the time
-// {now} became — for --states also the site's config, whose labels the states look for. A served --url site has no files of ours to digest, so nothing is reused there.
-const HARNESS_SOURCES = [import.meta.filename, path.join(import.meta.dirname, "lib/browser.mjs"), path.join(import.meta.dirname, "lib/storage-seed.mjs")];
+// What decides a shot besides the page's own files: the harness's sources (this file, the browser library, the
+// seed and the states), the browser's version and the capture's settings — the seed's templates among them, never the time
+// {now} became — for --states also the site's config, whose labels the states look for; and, for the page-widths
+// that open the home page's menu alone, that they do (shotKey). A served --url site has no files of ours to digest, so nothing is reused there.
+const HARNESS_SOURCES = [import.meta.filename, ...["browser", "storage-seed", "states"].map((lib) => path.join(import.meta.dirname, `lib/${lib}.mjs`))];
 function shotCacheFor({ browser, root, baseUrl, build, kit }) {
   if (flags.url) return noShotCache();
-  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), menu: MENU_WIDTHS, thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
-  const key = settingsKey({ harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings });
-  return createShotCache({ root: ROOT, key, resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
+  const settings = { scheme, motion, states, ...(motion ? { settle: settleMs, frames: MOTION_FRAMES_MS } : {}), thirdParty: THIRD_PARTY, ...(seed ? { seed: seed.templates } : {}), ...(states ? { site: kit.site } : {}) };
+  const base = { harness: harnessDigest(HARNESS_SOURCES), browser: browser.version(), settings };
+  return createShotCache({ root: ROOT, key: (shot) => shotKey(base, shot), resolve: (served) => servedFile(root, served), buildId: build, origin: baseUrl, fresh: flags.fresh });
 }
 const reusedNote = (counts, what) => (counts?.reused ? ` (${counts.reused} of ${counts.reused + counts.taken} ${what} reused from .parity/shot-cache: every build file they load is unchanged)` : "");
 
@@ -277,7 +298,7 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   const finish = () => {
     const files = fs.readdirSync(dir).filter((f) => f !== "meta.json").sort();
     const reused = shots.counts ? { shots: shots.counts.reused, of: shots.counts.reused + shots.counts.taken } : null;
-    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, jobs: JOBS, reused, timings: timingSummary(), meta };
+    const summary = { label, dir: `.parity/visual/${label}`, pages: states ? null : pages, widths: states ? null : widths, files: files.length, seconds: Math.round((Date.now() - started) / 100) / 10, jobs: JOBS, reused, timings: timingSummary(), ...(states ? { skipped: skippedStates } : {}), meta };
     // written last: its presence is the sign that the capture finished (the directory is wiped at the start)
     fs.writeFileSync(path.join(dir, "capture.json"), JSON.stringify(summary, null, 1));
     if (flags.json) console.log(JSON.stringify(summary, null, 1));
@@ -294,7 +315,8 @@ async function capture(label, baseUrl, { root = ROOT, baseline = null, tree, bui
   const left = new Map(pages.map((pagePath) => [pagePath, widths.length]));
   await inPool(tasks, { slots: JOBS, open, work: async ({ pagePath, width, name }, { context }) => {
     // taken before it is added: `count += await …` reads count first, and two workers would lose each other's shots
-    const taken = await shots.take(name, dir, (watch) => timed(name, () => onceMore(name, () => withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width }), { before: watch }))));
+    let tries = 0;
+    const taken = await shots.take(name, dir, (watch, discard) => timed(name, () => onceMore(name, () => { const last = tries++ > 0; return withPage(context, width, baseUrl + pagePath, (page) => shootPage(page, { dir, name, pagePath, width, last, discard }), { before: watch }); })), { menu: menuAt(pagePath, width) });
     count += taken;
     left.set(pagePath, left.get(pagePath) - 1);
     if (!left.get(pagePath)) say(`${pagePath} `);
@@ -320,9 +342,11 @@ async function compare(before, after) {
   if (!alike) out(`seed: ${before} ${seedLine(seeds[0])}; ${after} ${seedLine(seeds[1])} (--mixed-seed: a difference may be the seed's)`);
   else if (seeds[1]) out(`seed: ${seedLine(seeds[1])}, on both`);
   if (report.sampledOut) out(`sampled: ${report.sampledOut.length} page(s) left out by --sample on one side or both, not judged`);
+  // every line that is not ok has its cause under it: the section that moved, an image still loading, what a shot without geometry shows
   for (const file of report.files) { out(file.line); if (file.cause) out(`         ${causeLine(file.cause)}`); }
   const lacking = [[before, report.geometry.before], [after, report.geometry.after]].filter(([, has]) => !has).map(([label]) => label);
-  if (lacking.length && report.files.some((f) => f.cause === null)) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);
+  if (lacking.length && report.files.some((f) => f.cause?.kind === "geometry")) out(`\nno section geometry in ${lacking.join(" and ")}: recapture ${lacking.length > 1 ? "them" : "it"} to have a shift's cause named`);
+  if (report.summary.flaky) out(`\n${report.summary.flaky} shot(s) taken with an image still loading after a reload: retake those pages with --fresh before reading them as differences`);
   const failures = report.files.length - report.summary.ok;
   out(failures ? `\n${failures} file(s) differ; diffs in .parity/visual/${before}-vs-${after}` : "\nidentical within threshold");
   fs.writeFileSync(path.join(diffDir, "report.json"), JSON.stringify(report, null, 1));
@@ -347,23 +371,25 @@ function clean() {
 async function proof() {
   const label = labels[0] ?? "proof";
   // the seed's flags go to both sides of every pass, and each capture reads the site's src/config/harness.ts from this tree
-  const steps = plan({ label, ref: flags.ref ?? "develop", passes: passesOf(flags), build: flags.build, shared: forwarded(flags, ["scheme", "jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded(flags, ["pages"]), sample: forwarded(flags, ["sample"]) });
+  // a flag, then the site's profile, then the built-in default: the ref, a pass in each scheme, the pages or the sample
+  const { ref, schemes, pages, sample } = proofSettings(flags, profile);
+  const steps = plan({ label, ref, passes: passesOf(flags), schemes, build: flags.build, shared: forwarded(flags, ["jobs", "fresh", "third-party", "storage", "session-storage", "no-storage"]), pages: forwarded({ pages }, ["pages"]), widths: forwarded(flags, ["widths"]), sample: forwarded({ sample }, ["sample"]) });
   const bin = path.join(import.meta.dirname, "../bin/agentic-cms.mjs");
   // each step's progress and its compare lines go straight to the terminal; its --json result comes back here
   const run = (args) => spawnSync(process.execPath, [bin, "visual-parity", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });
   const result = await runProof(steps, { run, log: (step) => console.error(`\nproof: ${step.pass} — ${step.step === "compare" ? "the compare" : `${step.step}: ${step.label}`}`) });
-  if (flags.json) console.log(JSON.stringify({ label, ref: flags.ref ?? "develop", ...result }, null, 1));
-  else printProof(label, result);
+  if (flags.json) console.log(JSON.stringify({ label, ref, schemes, ...result }, null, 1));
+  else printProof(label, ref, result);
   process.exitCode = result.exit;
 }
 
 /** The proof's summary: a line per pass (the compare's counts, each side's time and reuse), then the verdict. */
-function printProof(label, { passes, exit, failed }) {
+function printProof(label, ref, { passes, exit, failed }) {
   const side = (c) => (c ? `${c.label} ${c.seconds} s${c.reused?.shots ? `, ${c.reused.shots} of ${c.reused.of} reused` : ""}` : "—");
-  console.log(`\nproof ${label} against ${flags.ref ?? "develop"}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
+  console.log(`\nproof ${label} against ${ref}${passes[0]?.before?.meta?.sha ? ` (${passes[0].before.meta.sha.slice(0, 7)})` : ""}`);
   for (const p of passes) {
     const s = p.report?.summary;
-    console.log(`  ${p.pass.padEnd(7)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
+    console.log(`  ${p.pass.padEnd(12)} ${s ? `${s.ok} ok, ${s.changed} changed, ${s.size} size, ${s.missing} missing${s.flaky ? `, ${s.flaky} flaky` : ""}` : "not compared"} — before ${side(p.before)}; after ${side(p.after)}`);
   }
   if (failed) console.log(`proof stopped: the ${failed.step === "compare" ? "compare" : `${failed.step} capture ${failed.label}`} failed (exit ${exit}); its output is above`);
   else console.log(exit ? `proof: a difference — the diffs are in .parity/visual/<before>-vs-<after>, the lines above` : "proof: identical within the thresholds, every pass");

@@ -85,11 +85,14 @@ section's copy that flips how everything below it is rasterised.
 
 With `--motion --timeline <ms>` the element is scrolled into view and its
 opacity, transform and top are sampled every `--every` ms: whether a reveal
-fires, when, and how far it travels. Always included: `reveals.pending`, the
-elements with a reveal start-state class (`ix-init--*`, `ix-main-init--*`)
-still below opacity 1 after the page was prepared (under reduced motion that
-list must be empty: a reveal that never fires shows up here), and
-`console`, the page's errors and warnings.
+fires, when, and how far it travels. Always included: `console`, the page's
+errors and warnings, and `reveals.pending` — the elements with a reveal
+start-state class (`ix-init--*`, `ix-main-init--*`) still below opacity 1
+after the page was prepared, and the parts of the play-once layer that are
+armed while their root has not played, each with its kind (`part`). Under
+reduced motion that list must be empty (a reveal that never fires shows up
+here); under `--motion` it holds the parts below the fold until their root
+is scrolled to.
 
 Exit 1 when nothing matches, with the selector or heading named.
 
@@ -119,7 +122,7 @@ rows:
     cells:
       - { label: health, svg: "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6'>…</svg>" }
       - { label: finance, file: candidates/finance.svg }
-      - { label: chip, html: "<span class='font-label border border-ink px-2'>tag</span>" }
+      - { label: chip, html: "<span class='font-label border border-line px-2'>tag</span>" }
 ```
 
 ```bash

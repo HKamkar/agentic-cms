@@ -1,8 +1,9 @@
 import { Container } from "./Container";
 import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
+import { Panel } from "./Panel";
 import { analytics } from "@/config/analytics";
-import { site } from "@/config/site";
+import { chrome, site } from "@/config/site";
 
 const columnTitle = "font-label uppercase";
 
@@ -21,12 +22,12 @@ function LinkColumn({ title, links }: { title: string; links: readonly { href: s
   );
 }
 
-/** The site footer: who this is, where to write, the two link columns and, when a tag asks for consent, Cookie settings, in one box. */
+/** The site footer: who this is, where to write, the two link columns and, when a tag asks for consent, Cookie settings, in one panel. */
 export function Footer() {
   return (
     <footer className="py-section">
       <Container>
-        <div className="grid gap-6 border border-ink p-6 lg:grid-cols-[2fr_1fr_1fr]">
+        <Panel className="grid gap-6 p-6 lg:grid-cols-[2fr_1fr_1fr]">
           <div className="flex flex-col gap-2">
             <NavLink href="/" label={site.shortName} className="self-start font-semibold no-underline" />
             <p>{site.tagline}</p>
@@ -42,13 +43,13 @@ export function Footer() {
               {site.email}
             </a>
           </div>
-          <LinkColumn title="Quick links" links={site.footer.quickLinks} />
-          <LinkColumn title="Follow us" links={site.footer.social} />
+          <LinkColumn title={chrome.footer.quickLinks} links={site.footer.quickLinks} />
+          <LinkColumn title={chrome.footer.social} links={site.footer.social} />
           <p className="text-muted lg:col-span-3">
             © {new Date().getFullYear()} {site.name}
           </p>
           {analytics.tagId && <CookieSettingsButton className="justify-self-start underline lg:col-span-3" />}
-        </div>
+        </Panel>
       </Container>
     </footer>
   );

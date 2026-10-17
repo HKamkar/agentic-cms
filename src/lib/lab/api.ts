@@ -5,12 +5,26 @@
 // render` sets it frame by frame, and the lab's own page frames each scene
 // in one, whose timeline (timeline.ts) seeks every frame's window.lab and
 // plays it from there. A finite animation already past its end is not
-// played: play() would rewind it to its first frame.
+// played: play() would rewind it to its first frame. As on the timeline, an
+// animation once seen stays — a finished CSS animation whose fill is none
+// or backwards leaves getAnimations(), so a render that read the duration
+// or a frame after it missed it — with its fill pinned to both, so past its
+// end it holds its last frame. It is looked for when the script runs, on
+// every animationstart (one that starts and ends between two calls) and on
+// every call; a cancelled one, or one whose element left the page, drops
+// out. The bare page is the lab's, never a shipped one.
 
 /** window.lab: duration() in seconds (an infinite loop counts one cycle; data-duration on a root wins), seek(t), play(), pause(), time(). */
 export const LAB_API = `window.lab = (() => {
   const roots = () => [...document.querySelectorAll("svg")].filter((s) => !s.parentElement.closest("svg"));
-  const anims = () => document.getAnimations();
+  const seen = new Set();
+  function anims() {
+    for (const a of document.getAnimations()) if (!seen.has(a)) { a.effect?.updateTiming({ fill: "both" }); seen.add(a); }
+    for (const a of seen) if (a.playState === "idle" || !a.effect?.target?.isConnected) seen.delete(a);
+    return [...seen];
+  }
+  anims();
+  document.addEventListener("animationstart", anims);
   const declared = () => roots().map((s) => Number(s.dataset.duration)).find((n) => n > 0) || 0;
   function duration() {
     let max = declared();

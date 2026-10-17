@@ -4,6 +4,450 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.8.0] — 2026-10-17
+
+- `docs/roadmap.md` is the 0.8.0 plan — a new site in minutes: ten jobs,
+  the release and what comes after it, toward 1.0.0 — in place of the
+  0.4.0 roadmap, whose open items it carries under Later.
+  `docs/migrating-to-0.8.0.md` is the draft of the guide a site on 0.7.6
+  follows, filled in as each job lands.
+- The know-how a site used to bring in mid-build is in the kit, in five
+  new guides: `docs/setup.md` (a fresh clone on a new machine, and what to
+  do when a step fails), `docs/dev-server.md` (serving previews to the
+  owner's devices: the ports, which address, `ALLOWED_DEV_ORIGINS`,
+  stopping a server), `docs/browsers.md` (what headless Chromium,
+  headless WebKit and the owner's Safari each check, what headless cannot
+  show, the engines' differences), `docs/primitives.md` (what a new site
+  builds first, against what the example has) and `docs/gotchas.md` (the
+  traps by topic). `docs/deploy.md` adds Cloudflare Workers, Google Cloud
+  Run and Azure App Service; `docs/design.md` § Handing over and merging;
+  `docs/lab.md` a phone drawing for a chart; `docs/consent.md` GA4's late
+  event after a Reject. The agent files carry the practice: rejected
+  candidates are deleted, never archived (`design-options`, the design
+  rule); a proof is as short as the change allows, in place of "capture
+  the full set" (`design-proof`, `docs/visual-parity.md`); the site is
+  measured at its widths (the styling rule); a new site's `AGENTS.md`
+  points at the five guides, and a site on 0.7.6 adds those lines by hand
+  (`docs/migrating-to-0.8.0.md` § 1, § 3.8).
+- `visual-parity proof --build` builds the tree before its first after
+  capture, as documented. It exited 2 on every call ("three sources of one
+  build"): the capture's guard against `--url`, `--build` and `--ref`
+  together ran for `proof` too, whose `--ref` always has a value. `proof`
+  with both `--pages` and `--sample` is refused before any capture starts.
+- A `--ref` baseline is built with the tree's `.env.local`, copied into its
+  sibling worktree: the file is gitignored, so the checkout had none, and a
+  build-time value could differ between the two sides of a proof. The
+  sibling's stamp keeps a digest of the file, never its values; a sibling
+  built with another `.env.local`, or before this change, is rebuilt rather
+  than reused.
+- Docs: `lab clean --help` and `docs/commands.md` show its current summary
+  (the spec had two, and the older one won); `STANDARD.md` §5 and §7 and the
+  components catalogue list `useReveal`, `EASE` and `fillBox` of
+  `agentic-cms/ix`; the workspace snippet in `docs/init.md` and the README
+  has `unrs-resolver: true`, as `init` writes it; `src/styles/motion.css`
+  names the library `agentic-cms/ix`.
+- The lab timeline (`mountTimeline`, `LabTimeline`) keeps play-once motion
+  on its range. An animation it has driven stays after it ends, where a
+  finished CSS animation whose fill is `none` or `backwards` used to leave
+  `getAnimations()` and the range moved over a frozen end pose; its fill is
+  pinned to `both` under the timeline only, so a page without one keeps
+  `backwards`. Motion that starts after the timeline mounts (an observer
+  sets the attribute that plays it) is found on the next frame, through a
+  `MutationObserver` and `animationstart`: it joins the timeline's time,
+  the cycle is measured again and only grows, and a timeline that had
+  nothing to drive turns its controls on and plays. `lab render`'s clock
+  keeps finished animations the same way, and `InlineAnimation` leaves its
+  clock to a timeline it sits under. `docs/lab.md` § Inspecting motion
+  states the contract: motion of a site's own plays at once under
+  `[data-lab-timeline]`. A site's own fill override under the timeline can
+  go (`docs/migrating-to-0.8.0.md` § 4). CI's browser job installs WebKit
+  too, so the timeline's two-engine tests run there.
+- A site starts in one line, `pnpm dlx
+  --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git
+  agentic-cms@github:HKamkar/agentic-cms#v<x.y.z> init my-site`, in place of
+  `pnpm init`, a hand-written workspace, `pnpm add` and `init .`
+  (`docs/init.md`, the README). The build approval is the dependency's git
+  URL: `--allow-build=agentic-cms` alone does not match a git-hosted
+  package.
+- `init` merges an existing `pnpm-workspace.yaml` instead of keeping it:
+  the `allowBuilds` keys it lacks are added (a workspace from the old docs
+  had no `unrs-resolver`, and the install after `init` stopped at
+  `ERR_PNPM_IGNORED_BUILDS`), the names of a legacy `onlyBuiltDependencies`
+  list, which pnpm no longer reads, are carried into it, and the site's own
+  keys, values and comments stay. The file is written only on a change and
+  reported `merged`; `--force` merges too.
+- `init` replaces `pnpm init`'s placeholders in an existing `package.json`:
+  its failing `test` script gives way to the kit's (a real test script of
+  the site's is kept) and its `main: "index.js"` is dropped; its `license`,
+  `version`, `devEngines` and `packageManager` stay.
+- `init` writes the site's CI, `.github/workflows/verify.yml` (kept when
+  present): install, lint, test, build and
+  `init . --agent-files --check` on every pull request and every push to
+  `develop` or `main`, with pnpm from `packageManager`, Node from `.nvmrc`
+  and every action pinned to a commit. A site on 0.7.6 copies it from
+  `templates/site/verify.yml` (`docs/migrating-to-0.8.0.md` § 3.3).
+- `init`'s next-steps line drops its `cd .` when the site is the current
+  folder.
+- `pnpm test:pack` runs `docs/init.md`'s install line as written (the
+  tarball for the git spec), in a folder holding what the old docs left
+  there, and runs the scratch site's lint and tests after its build. Its
+  install retries once without `--prefer-offline` when pnpm's cached
+  metadata predates a published version (`ERR_PNPM_NO_MATCHING_VERSION`):
+  the online install refreshes that metadata, so no one clears the
+  machine's cache to get past it.
+- `agentic-cms/ix` gains a play-once layer beside `Fx` and `OnView`:
+  `Reveal`, `RevealGroup` and `Sequence` play a root once, the first time
+  it is 12 % into the viewport, never again on a second scroll or a hover;
+  `part(kind, delay)` makes an element a part (`fade`, `rise`, `scale`,
+  `pop`, `draw`, `grow`, `dim`, and the loops `flow`, `pulse`, `breathe`,
+  which run only while their root is on screen), with `staggerDelay`,
+  `useMotionRoot` (one shared observer; a root at the very end of a page
+  plays as soon as it shows; at once under a lab timeline) and
+  `motionScript()`, the inline script that arms the page unless the reader
+  prefers reduced motion. The keyframes, the armed start states, the loops,
+  the reduced-motion guard and the `--ease-*` / `--motion-*` tokens are a
+  block at the end of the example's `src/styles/motion.css`, used by
+  nothing in the wireframe; a site that adopts the layer copies it
+  (`docs/migrating-to-0.8.0.md` § 3.5). `STANDARD.md` §7 and the
+  components catalogue say which layer to choose, and the styling rule
+  (`templates/site/rules/styling.md`) names both. `revealed()` and
+  `probe`'s `reveals.pending` count an armed part whose root has not
+  played; a static capture runs under reduced motion, where nothing is
+  armed, so no captured frame moves.
+- The browser suite's `imagesReady` test no longer fails on a slow runner.
+  Its page hydrated on a 300 ms timer that started while `setContent` was
+  still parsing, so a slow load spent part of it before the test's clock
+  began (CI measured 172 ms of the 250 it asserted) and could carry the
+  "not touched yet" check, 120 ms in, past the hydration. The page now
+  hydrates when the test tells it to, and the test asserts that
+  `imagesReady` is still waiting and the image untouched at that moment.
+  `imagesReady` itself is unchanged.
+- `variants()` and `VariantProps` in `agentic-cms/cx`, beside `cx`: a
+  component's looks as one typed map (a base, each axis with its options
+  and its default, compounds for a combination) and the function that
+  picks one, so a new look is a line in the map, never a copy of the
+  component. An option an axis lacks throws and names the options it has.
+  No React: it loads under `node:test` and in server components alike.
+  `pnpm test:pack` runs it from the tarball.
+- Tokens by role, at the wireframe's values, so no pixel moves:
+  `--color-panel` (a panel's face) and `--color-on-ink` (text on an ink
+  ground) alias `paper`, `--color-line` (every hairline) aliases `ink`;
+  each heading step has `--text-hN--letter-spacing: normal`, read by
+  `text-hN` and by `base.css`'s `h1`–`h6`; `--tracking-label` is `normal`;
+  `--radius-panel`, `--radius-control`, `--shadow-panel` and
+  `--shadow-glow` are `0` / `0 0 #0000`, the only radius and shadow
+  tokens there are. The example's components ask for the colour roles
+  where one applies (`border-line`, `stroke-line`, `bg-panel`,
+  `text-on-ink`) and name a value only where no role does: the page
+  ground, text, a filled block, muted text. The rule says so in each place
+  it lives (`AGENTS.md`, the styling rule in both trees, `STANDARD.md` §1
+  and §6, the components catalogue, `globals.css`), and the `design` skill
+  has a design give the roles their values first. A site adds the roles by
+  hand (`docs/migrating-to-0.8.0.md` § 3.6).
+- A clone is set up by one command, `bash scripts/setup.sh`. `init` writes
+  it from `templates/site/setup.sh` (kept when present): it checks Node
+  22.18 or newer, gets pnpm at the `packageManager` version (corepack,
+  else `npm install -g`, since Node 25 and later ship no corepack), runs
+  the install (`--frozen-lockfile` once a lockfile exists), then hands
+  over to the new `agentic-cms setup`. That installs the browsers not
+  installed yet (`--engines chromium,webkit`), launches WebKit on Linux to
+  see whether its system libraries are there and prints the `sudo` line
+  when they are not (`--deps` runs it), writes `.env.local` from
+  `.env.example` and this machine's addresses into `ALLOWED_DEV_ORIGINS`,
+  runs `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`) and ends
+  with the URLs. Each step keeps what is there, so a re-run takes
+  seconds; `--check` reports every step and changes nothing (exit 1 on a
+  gap). There is no package script named `setup`: `pnpm setup` is pnpm's
+  own. The `setup` skill (`.claude/skills/`, `.agents/skills/`) runs it
+  for an agent asked to set a project up, and stops for `sudo` and the
+  firewall. `init`'s next step names it, and `docs/setup.md`,
+  `docs/browsers.md` and `docs/dev-server.md` give the commands in place
+  of the manual steps.
+- `agentic-cms urls` (`pnpm urls`; `init` adds the script) prints this
+  machine's URLs for the dev server and the lab (localhost, the LAN and
+  the public address), whether each server answers, and whether
+  `ALLOWED_DEV_ORIGINS` in `.env.local` covers every address, without
+  which a page opened from another device never hydrates. `--write` adds
+  the missing hostnames and keeps the file's other lines; it exits 1 on
+  a missing one without it. The dev port comes from the `-p` of
+  `scripts.dev`; `--no-public` skips the public lookup (api.ipify.org,
+  then ifconfig.me). `lab serve` lists its LAN URLs through the same
+  library (`scripts/lib/hosts.mjs`), so container and VM bridges are no
+  longer among them.
+- `scripts/lib/browser.mjs` gains `webkitPath()` and `launch({ engine })`
+  for WebKit beside Chromium, and the "no Chromium build found" message
+  names `bash scripts/setup.sh`.
+- `package.json` declares `"sideEffects": ["*.css"]`, so a bundler keeps
+  only the modules a page uses from the package's barrels: a server
+  component that imports `Reveal` from `agentic-cms/ix` no longer loads
+  the Motion library behind `Fx` and `OnView` on its page (69 KB in the
+  example's build), only `Reveal`'s own code.
+- The example has the day-one primitives in `src/components/ui/`, at the
+  wireframe's values and on the role tokens, each with its row in the
+  components catalogue: `Panel` (`solid`, `dashed`; `panel()` is the same
+  frame as a class string, for a card that is a link or a dialog with a
+  ref), `OutlineButton` (a choice on the page, a `<button>` with
+  `aria-pressed` when it toggles, never a call to action), `IconButton`
+  (44 px, its label required), `Heading` (its level apart from its `size`;
+  `entrance` renders the play-once `Reveal`, which the wireframe never
+  passes), `MetaLine` and `metaLabel`, `TextLink` (`next/link` for a path,
+  a new tab for `http(s)`), `Media` (`EagerImage` above the fold, a lazy
+  `<img>` otherwise) and `keepWords` (U+2011 in a hyphenated word, with its
+  test). `Button` declares its looks with `variants()` (`button`, behind
+  the same `buttonClass`). The catalogue gains § Library first and
+  § Extending a primitive, and `docs/primitives.md` its "In the example"
+  column.
+- The card frame is `ui/Panel`: `Section` draws its box with it,
+  `sections/Group` its dashed one, the footer its box, every section its
+  cards' frames (`<Panel as="li">`, in place of each file's
+  `const card = "… border border-line p-4"`), the blog card and the
+  consent banner `panel()`, whose answers are two `OutlineButton`s. What
+  goes inside a card stays each section's own design, and there is still
+  no shared `Card`. The design rule (both trees) says "a section's card
+  content is its own; the card frame is `ui/Panel`", and `AGENTS.md`,
+  `STANDARD.md`, the styling rule and the `design` skill agree. Panels
+  ask for `rounded-panel` and `shadow-panel`, `0` and none in the
+  wireframe, and have no ground of their own, as the boxes they replace
+  had none (a design adds `bg-panel` to `solid`): the proof is identical
+  in both schemes, with `--states`.
+- The site profile: `src/config/harness.ts` says once what a site is,
+  beside its seed — `widths`, `schemes` and `proof: { pages, ref }` —
+  and every command takes it as its default. A flag wins, then the
+  profile, then the built-in default, which is what the command took
+  before: `--scheme` (capture, proof, shot, probe, sheet, icons audit,
+  icons round publish, lab render) and proof's `--ref` lose the defaults
+  the parser used to fill in, and each command's help names its fallback.
+  A capture takes the profile's widths (`--motion` keeps 1440 and 390,
+  `--states` 1440) and opens the home page's menu at each of them where
+  its button shows; `proof` runs a pass in each of the profile's schemes
+  (the dark one's captures end in `-dark`), takes `--widths` for its
+  static pass alone and defaults `--pages` to the profile's; `lab serve`
+  shows a ground per scheme. A key of the wrong shape exits 2 naming it
+  (`docs/visual-parity.md` § The site's profile). Without a profile a bare
+  command does what it did, so nothing to recapture there.
+- The example's profile proves at 390, 768, 1440 and 1920, in light and
+  dark, against `develop`, in place of the eight built-in widths: the
+  kit's own captures change — **recapture baselines** taken at the eight.
+  Nothing on a page moved (identical at the old eight widths, in both
+  schemes, before the switch).
+- `init --light-only` lays a site out without dark mode: `schemes:
+  ["light"]` in its profile, each colour a single value under
+  `color-scheme: light`, no theme script, no `suppressHydrationWarning`,
+  no `ThemeToggle`, and `STANDARD.md` and the components catalogue
+  without their dark-mode passages, which the kit now marks
+  (`<!-- dark-mode:start -->` … `<!-- dark-mode:end -->`). An edit that
+  finds nothing to change stops `init` (exit 2) before a file is written.
+  `pnpm test:pack` builds, lints and tests a light-only site from the
+  tarball too (`docs/init.md`, `docs/migrating-to-0.8.0.md` § 3.4).
+- The design skills say "each scheme the profile names" where they said
+  "both themes" (`design`, `design-proof`, `design-options`,
+  `design-graphics`); `design-proof`, the styling rule and a new site's
+  `AGENTS.md` § Parity harness make a bare `proof` the site's proof,
+  read from the profile.
+- `agentic-cms/eslint`: `componentRules(options)`, the component
+  library's lint as flat ESLint configs a site spreads after
+  `eslint-config-next`. The layers import one way (motion ← ui ← patterns
+  ← sections), and only the motion layer imports `motion`, `framer-motion`
+  or `agentic-cms/ix` (with no motion folder, `agentic-cms/ix` is the
+  motion layer). A section or a pattern holds one component per file and
+  no raw button, link, picture, video, heading or form field (no `svg` in
+  a section), no `style`, no arbitrary value and no visual or motion class
+  in its class strings; each message names the primitive to use. The layer
+  folders, the section folders, the forbidden elements with their messages
+  and the files left out are options, and a layer may be missing
+  (`docs/primitives.md` § Enforced). ESLint becomes an optional peer;
+  `pnpm test:pack` loads the export from the tarball.
+- The example lints with it (`eslint.config.mjs`, which a new site from
+  `init` gets), pixel for pixel — the proof is identical in both schemes
+  with `--states`. Its sections write `Heading`, `Media`, `TextLink` and
+  `Panel` where they wrote raw headings, images, a link and bordered boxes;
+  `Media` gains a `size` (`fill`, `icon`, `portrait`, the `media` map),
+  `TextLink` passes every attribute through and draws the post body's
+  links, the corner tag of a section and of a group is one primitive,
+  `ui/TypeTag`, and the two uneven splits are tokens
+  (`lg:grid-cols-2-1`, `lg:grid-cols-1-2-1`). The three sections that held
+  a second component inline it (`docs/migrating-to-0.8.0.md` § 3.7).
+- The kit's own components rule, `.claude/rules/components.md`: the
+  library first, the layers, what a section may contain, primitives
+  extendable by construction, enforcement by the lint and CI, and
+  loosening a rule as its own pull request, said so in its title. A site
+  gets no copy yet: its rule waits for the placement guard it describes.
+- `agentic-cms serve` (`pnpm kit serve`) is the one command before a look.
+  It checks `ALLOWED_DEV_ORIGINS` first (`--write-origins` adds the
+  missing hosts before next dev starts), starts `next dev` on the site's
+  port on every interface — or reuses this site's own, found by
+  `.next/dev/lock`, and refuses anything else on the port, never stopping
+  it — and starts the lab in-process when `.parity/lab` has a scene (or
+  with `--lab`). It waits until the root and every `*-demo` route answer,
+  then prints one table: localhost, LAN and public × the routes, the lab's
+  index and each `/scene/<name>`, with the firewall note. It watches the
+  dev log for Turbopack's stale cache (`--fix-cache` clears `.next/dev`
+  and `.next/cache/turbopack` and restarts, once) and stops both servers
+  on Ctrl-C (`docs/dev-server.md`). `init`'s next-steps line and `setup`'s
+  last line name it.
+- `demo new` and `lab route` wait for their route. With the dev server
+  running (on the port of `scripts.dev`, or `--url`), the route is asked
+  until it stops answering 404, which compiles it too; then its URLs are
+  printed, with a warning for each host `ALLOWED_DEV_ORIGINS` lacks. A 5xx
+  prints the error's tail and exits 1. With no server running they say
+  `pnpm kit serve`. New flags: `--no-wait`, `--timeout`, `--url`,
+  `--no-public`. `--json` adds `urls`, `ready` and `status`, and `demo
+  new`'s report its `kind`.
+- `demo new <name> --showcase [--component <file>]…` writes a review page
+  that is not a section's candidates (the library's primitives, a motion
+  layer): a block per piece inside the site's layout, and a manifest
+  (`kind: "showcase"`), so `demo clean` removes it with every file only it
+  uses and keeps the pieces. `--component` repeats for a showcase only.
+- `demo new --timeline` wraps each block — every candidate and the current
+  version, or each piece of a showcase — in `<LabTimeline label><div
+  data-lab-drive>`, the edit `docs/lab.md` asked for by hand.
+- `lab serve` prints each scene's own page, `/scene/<name>`, on every
+  address it listens on.
+- The browser suite's dev server runs on `scripts/lib/dev-server.mjs`, the
+  helper `serve` uses (next dev started, watched and stopped by process
+  group); its `stop()` now resolves once the server exited.
+- `agentic-cms check-components`, the component library's placement
+  guard: the layers there and every file under `src/components` in one,
+  every component the motion layer, `ui/` and `patterns/` export named in
+  the catalogue (a PascalCase name with a lowercase letter, so an ALL_CAPS
+  constant passes), every component in a section folder imported by the
+  registry, route files only in `src/app`'s known route folders (a `*-demo`
+  folder is free), no component elsewhere in `src/`, CSS modules only in
+  `ui/` and the motion layer and `@keyframes` only there and in
+  `src/styles/motion.css`. A running design round's candidates (its
+  `demo.json`) and the files on the config's frozen `inherited` list pass;
+  a listed file that is gone is a finding. Each finding names its fix; exit
+  1 on any, 2 without a config. The config is `src/config/components.json`,
+  its layer keys `componentRules()`'s; the example's freezes the blog's
+  post template (`docs/primitives.md` § Placed).
+- `pnpm lint` runs ESLint, then the guard, and fails on either while both
+  report — the kit's own, and the one `init` writes into a new site's
+  `package.json`: `eslint; s=$?; agentic-cms check-components || s=1;
+  exit $s`. `pnpm test:pack` lints a fresh site with it, and a stray
+  section file planted there fails the lint.
+- A site's components rule, `templates/site/rules/components.md`, and with
+  it agent files that follow the tool they describe: `init --agent-files`
+  writes and checks the components rule only where the site has
+  `src/config/components.json`. A site on 0.7.6 without it is neither
+  given the rule nor told it is missing, and `--check` stays clean; a new
+  site from `init` gets the config, the rule and the lint script together
+  (`docs/migrating-to-0.8.0.md` § 3.7).
+- The browser suite's test of a timeline wrapped around a section no
+  longer fails on a slow runner, and runs in WebKit as well as Chromium.
+  It read the section's reveal, waited 300 ms of wall time and asserted
+  100 ms of progress, so a runner slow to draw the reveal's first frame
+  spent the margin first (CI measured 0 → 99.98 ms). It now waits for the
+  reveal's start time, reads the reveal against the page's animation clock
+  (`document.timeline`) on either side of the seek, and asserts that it
+  still runs, kept its start time and moved with that clock; the reveal
+  lasts a minute, so no runner sees it end. A timeline that sought the
+  reveal without pausing it, which the old test let through, now fails
+  it. The timeline is unchanged.
+- `init --agent-files` tells a site's edit of the kit's current text from
+  one the kit has moved past, so a site that keeps its own edits can have a
+  clean `--check`. The manifest's hash for each file is its base, the kit's
+  text the site last took. `--check` passes a file the site edited while
+  the kit's text is still its base (`modified`) and fails one the kit
+  changed since (`modified, kit changed`); before, it failed every edit.
+  `--diff <file>` prints the kit's change since the base alone, as a
+  unified diff that `git apply` reads, so a merge no longer mixes the
+  site's edits with the kit's changes. `--accept <file>` records the kit's
+  current text as the base once the site has merged by hand. The base text
+  of each edited file is kept in `.agentic-cms/base/`, recovered from the
+  site's git history the first time. The manifest also records the kit
+  `commit` the lockfile installed, because a pin between releases still
+  carries the last release's version. A 0.7.6 manifest reads as before.
+  Found by running the migration guide on a site on 0.7.6
+  (`docs/init.md` § After a kit upgrade, `docs/migrating-to-0.8.0.md` § 1).
+- The agent files `init --agent-files` writes describe only what a site
+  has adopted. Before, a site on 0.7.6 that took only § 1 of the migration
+  guide was told that its motion was the play-once layer and its card
+  frame `ui/Panel`. Now the styling rule and the `design` skill make the
+  play-once layer the default only where the layout renders
+  `motionScript()`: a site on `Fx` and `OnView` keeps them, and a site
+  with no motion yet starts on the play-once layer. The design rule and
+  the skill put a section's cards in the site's one card frame, which is
+  `ui/Panel` only on a site that has the example's. The role tokens are
+  named as a site from `init` has them since 0.8.0, and a proof without a
+  profile writes one first. The `setup` skill runs `agentic-cms setup` and
+  `agentic-cms urls` directly on a site without `scripts/setup.sh` or a
+  `urls` script. `docs/migrating-to-0.8.0.md` § 1 lists what `--diff`
+  shows for every rule and skill, each line with the step it belongs to,
+  and § 1 and § 3.1 name the places in a site's `AGENTS.md` by what they
+  hold, not by the template's headings.
+- `urls` and `setup` tell this clone's `next dev` from another server on
+  its port, as `serve` already did. With another checkout of the same site
+  serving on the `scripts.dev` port, both said `running`, listed that
+  server's URLs as this clone's, and `setup` asked for a restart of a
+  server that never reads this clone's `.env.local`. Now the dev server is
+  running only when `.next/dev/lock` names a live pid on the port; else
+  the port `answers, but not as this clone's next dev`, and no restart is
+  named. When this clone's `next dev` runs on another port, the line names
+  that port. `urls --json` adds `dev.own` and `dev.ownPort`. `serve` now
+  asks the same function (`ownDevServer`), and behaves as before.
+- `demo new` and `lab route` hand their route over on this clone's
+  `next dev`, found by `.next/dev/lock` as `serve`, `urls` and `setup`
+  find it. With another checkout of the same site, or another project,
+  serving on the `scripts.dev` port, each asked that server for its new
+  route for `--timeout` (120 s), and only then asked whether it was this
+  site's. Now each says at once that the port answers, but not as this
+  clone's next dev, and exits 1 with the route written: stop what holds
+  the port, or `pnpm kit serve --port <n>`. This clone's `next dev` on
+  another port is the one asked, and the hand-over names its port.
+  `--url` still names any server, with no lock read.
+- A `--motion` capture's animation inventory leaves infinite loops out, as
+  it always meant to: the DevTools protocol reports an infinite animation
+  with no iteration count at all, so the test for `Infinity` never matched,
+  and a loop that a page's observer or timer starts or restarts entered
+  `<page>@<width>.animations.json` as many times as it happened to start
+  (found by running the migration guide on a site on 0.7.6: one page-width
+  gave 40, 40, 66, 66 and 57 entries from one build). The loop is read from
+  the effect's own timing in the page, and from the protocol's report
+  (anything but a finite count) when the page no longer holds it. A
+  `--motion` capture writes fewer entries for a page with a loop:
+  **recapture baselines** of `--motion` captures taken before this change.
+- A profile that names the widths a site used to pass as `--widths` keeps
+  the shot cache: the menu is part of the key of the page-widths that open
+  it (the home page of a static capture at a menu width), no longer of
+  every shot, so writing the profile retakes the home page where the menu
+  is now tried and copies the rest, where it retook every shot of the site
+  (found by the same run: 0 of 176 reused, 579 s against 72 s). A
+  `--motion` or `--states` capture opens no menu and ignores it. What a
+  capture writes is unchanged.
+- `harness.proof.sample` in `src/config/harness.ts`: a site whose short
+  proof is one page of each template says so once (`proof: { sample: 1 }`)
+  instead of passing `--sample` every time. It reaches the static pass like
+  `--sample`; a `--sample` or `--pages` flag sets it aside for a run; it is
+  a whole number from 1, and a profile with both `proof.pages` and
+  `proof.sample` exits 2 naming them. `docs/migrating-to-0.8.0.md` § 3.1
+  says so, with the cache note, and its `--ref develop` note says the
+  branch resolves to `origin/develop` first.
+- `agentic-cms/eslint`: `componentRules()` fails copy in a section or a pattern: JSX text with a letter or a digit, and strings in `title`, `alt`, `aria-label`, `placeholder`, `label` and `children` (straight, as `{…}`, in a template or a fallback, or as a data array's field of that name). The message names the route the copy takes: the page's file, the section's schema field, the prop. The new option `copy: { props, decorations }` (or `false`) configures it; symbols, `aria-hidden` text and the props of `Placeholder` and `TypeTag` pass.
+- `check-components`: `routes` holds the content engine's route folders (the app folder and its catch-all), and every other route folder is a named exception, `"exceptions": { "<folder>": "<reason>" }` in `src/config/components.json`. A folder in `routes` that is neither, or an exception with no reason, is a finding that names the fix. The defaults carry the example's three reasons (the post template, the form endpoint, the feed), so a config from before still reads; `init` writes the example's set.
+- A new `pages` rule, which `init --agent-files` writes for every site, loads on `src/app/**`, `src/components/**` and `content/pages/**`: every page is a content file, a new one is `/editorial:new-page`, and a page's copy never lives in a component, a `page.tsx` or `src/config/`. The site template's `AGENTS.md` says it in one always-loaded bullet, which § 1 of the migration guide lists for existing sites.
+- `docs/migrating-to-0.8.0.md` § 3.9, pages as content files: for a site whose pages are hand-written routes, one page per commit, each proven identical, then the exceptions for what stays outside the engine.
+- The example's FAQ section marks its `variant:` note `aria-hidden`, a wireframe note like a `TypeTag`; no pixel moves.
+- The example's chrome takes its words from `chrome` in
+  `src/config/site.ts`, an `as const` block beside `consentBanner`. That
+  covers the skip link, the navbar's landmark name and menu button, the
+  theme toggle's label in each state, the footer's column titles, the
+  404's label, title and sentence, and the post template's eyebrow,
+  reading time and "Read next" heading. The 404's sentence is its parts in
+  reading order (strings and `{ label, href }` links), and the reading
+  time is a function of the minutes. `SiteConfig` is unchanged. `init
+  --light-only` leaves the toggle's labels out of `site.ts`. No pixel
+  moves.
+- A static capture never photographs an image before it arrives. The wait for images now decodes each one that shows (`img.decode()`) after it has arrived, for up to 10 s, and listens beside the page's own `load` handlers instead of replacing them; it used to give up after 5 s without a word. A page that still has an image loading at the shot is loaded again once; if the second load still has one, the shot is taken, the images are listed in `<page>@<width>.unloaded.json`, the shot is kept out of the shot cache, and the compare calls a difference on it `FLAKY` (retake that page with `--fresh`). Found by running the migration guide on a site on 0.7.6: 3 of 194 static shots changed by 4 to 6 % where a lazy image below the fold was blank on one side, and identical on a `--fresh` re-run. **Recapture baselines** taken before this change if a page of yours has lazy images: a baseline may hold such a blank.
+- Every line of a compare that is not `ok` has a `cause:` line under it: the section that moved, else the section whose content changed in place; the image that had not arrived (`FLAKY`); what a shot without geometry shows (the menu, a motion step, a state's box); why a file is in one capture alone; an inventory's first difference, a settle record's changed step. `--json` gives every such file its `cause`, and the summary a `flaky` count.
+- A `--states` capture puts the post FAQ state on the first post whose body has a FAQ (the kit's own test), not the first post, and drops it when no post has one; a state whose target does not show within 10 s is skipped and listed in `capture.json` (`skipped`), and the compare's `MISSING` line says which side skipped it. A build whose posts had no FAQ used to time out twice and end the run.
+- `docs/migrating-to-0.8.0.md` § 1: the check runs `--all` and says what each pass must show; the `--ref` baseline's sibling worktree, `../<checkout>-ref-<sha>`, is named with its cleanup.
+- Fixed: the `serve` browser test no longer fails on a port taken by a parallel test. Its ports come from `freePorts()`, which picks distinct ports below the ephemeral range, and next dev's EADDRINUSE exit is reported as a taken port.
+- Fixed: browser tests wait for the state they assert instead of sleeping a fixed time, so a slow runner no longer fails the timeline's mobile case (`B plays from one start: 0,0,0,0`) or the other sleep-then-assert checks in `timeline` and `dev-routes`.
+- Docs: `docs/roadmap-0.9.0.md` is the plan for 0.9.0, agentic-cms as a standard npm package. It covers publishing from CI through trusted publishing with provenance, release candidates on `next`, `pnpm create agentic-cms`, `agentic-cms upgrade`, a written public surface and peer ranges tested at both ends. The 0.8.0 roadmap's 0.9.0 sketch and the docs index link to it.
+- Fixed, from CodeQL on the release pull request:
+  - the fixture server in the browser suite serves only files under `public/`;
+  - two test stubs match the public-address lookup by its hostname, not by a URL prefix.
+
 ## [0.7.6] — 2026-10-13
 
 - The voice block's `models` takes an `except` list, like a `banned` or a

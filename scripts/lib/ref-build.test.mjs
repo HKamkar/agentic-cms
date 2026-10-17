@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildRef, refDirectory } from "./ref-build.mjs";
+import { ENV_FILE, buildRef, refDirectory } from "./ref-build.mjs";
 
 // A recorder in place of the shell and the file system: every command, removal and write is logged in order, rev-parse / log answer from a table, files and folders from `existing` and `listings`.
 function recorder({ answers = {}, existing = [], listings = {}, files = {} } = {}) {
@@ -19,6 +19,7 @@ function recorder({ answers = {}, existing = [], listings = {}, files = {} } = {
     readdir: (dir) => listings[dir] ?? [],
     read: (file) => files[file],
     write: (file, text) => { calls.push({ command: "write", args: [file] }); written[file] = text; },
+    copy: (from, to) => calls.push({ command: "copy", args: [from, to] }),
   };
   return { calls, io, written, keys: () => calls.map((c) => `${c.command} ${c.args.join(" ")}`) };
 }
@@ -132,4 +133,41 @@ test("a failed fetch is a warning, not the end: the ref may exist locally", () =
   const r = recorder({ answers: { "git fetch origin --quiet": new Error("no network"), "git rev-parse --verify origin/main^{commit}": SHA } });
   buildRef("main", { root, ...r.io, log: (l) => lines.push(l) });
   assert.ok(lines.some((l) => /could not fetch origin/.test(l)));
+});
+
+test("the tree's .env.local is copied into the worktree after checkout, before install and build; the stamp keeps its digest, never its values", () => {
+  const dir = "/work/site-ref-0123456789ab";
+  const lines = [];
+  const r = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, files: { [`${root}/${ENV_FILE}`]: "FORM_WEBHOOK_SECRET=not-in-the-stamp\n" } });
+  buildRef("main", { root, ...r.io, log: (l) => lines.push(l) });
+  const keys = r.keys();
+  const copied = `copy ${root}/.env.local ${dir}/.env.local`;
+  assert.ok(keys.includes(copied));
+  assert.ok(keys.indexOf(`git worktree add --detach ${dir} ${SHA}`) < keys.indexOf(copied));
+  assert.ok(keys.indexOf(copied) < keys.indexOf("pnpm install --frozen-lockfile --prefer-offline"));
+  assert.ok(lines.includes("visual-parity: baseline built with the tree's .env.local"));
+  const stamp = r.written[`${dir}/.parity/ref-build.json`];
+  assert.match(JSON.parse(stamp).env, /^[0-9a-f]{16}$/);
+  assert.doesNotMatch(stamp, /not-in-the-stamp/);
+  const none = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA } });
+  buildRef("main", { root, ...none.io, log: () => {} });
+  assert.ok(!none.keys().some((key) => key.startsWith("copy ")), "no .env.local, nothing copied");
+});
+
+test("a stamped sibling is reused only when it was built with the same .env.local; another one, or none, rebuilds it", () => {
+  const dir = "/work/site-ref-0123456789ab";
+  const envFile = `${root}/${ENV_FILE}`;
+  const first = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, files: { [envFile]: "A=1\n" } });
+  buildRef("main", { root, ...first.io, log: () => {} });
+  const stamp = first.written[`${dir}/.parity/ref-build.json`];
+  const same = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, existing: [dir], files: { [envFile]: "A=1\n", [`${dir}/.parity/ref-build.json`]: stamp } });
+  assert.equal(buildRef("main", { root, ...same.io, log: () => {} }).reused, true);
+  for (const [files, why] of [[{ [envFile]: "A=2\n" }, "another value"], [{}, "the tree has none now"]]) {
+    const lines = [];
+    const other = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, existing: [dir], files: { ...files, [`${dir}/.parity/ref-build.json`]: stamp } });
+    assert.equal(buildRef("main", { root, ...other.io, log: (l) => lines.push(l) }).reused, false, why);
+    assert.ok(lines.includes(`visual-parity: rebuilding ${dir} (its build read another .env.local)`), why);
+  }
+  const old = recorder({ answers: { "git rev-parse --verify origin/main^{commit}": SHA }, existing: [dir], files: { [envFile]: "A=1\n", [`${dir}/.parity/ref-build.json`]: JSON.stringify({ sha: SHA, demos: [] }) } });
+  assert.equal(buildRef("main", { root, ...old.io, log: () => {} }).reused, false, "a stamp from before the copy: built without it");
 });

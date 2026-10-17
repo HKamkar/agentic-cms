@@ -1,11 +1,16 @@
 /*
- * Start states for the reveal library in src/components/ix/. One class per
- * `Fx` preset, and an `ix-main-init--` twin inside the desktop media query for
- * the presets a fork limits to `mq="main"` (below 992 the element simply
- * shows). The animation code replaces these values on its first frame.
+ * Start states and keyframes for the motion library, agentic-cms/ix, in two
+ * blocks: the reveals that replay on each entry (Fx, first), and the
+ * play-once layer (Reveal, RevealGroup, Sequence, part(); the last block).
+ * STANDARD.md §7 says which to choose.
+ *
+ * The reveals: one class per `Fx` preset, and an `ix-main-init--` twin inside
+ * the desktop media query for the presets a fork limits to `mq="main"`
+ * (below 992 the element simply shows). The animation code replaces these
+ * values on its first frame.
  *
  * The wireframe animates nothing and uses none of this; the library is kept
- * whole so a fork that wants the reveals only has to render <Fx>.
+ * whole so a fork that wants motion only has to render <Fx> or <Reveal>.
  *
  * Loaded outside the cascade layers on purpose: a start state must beat any
  * utility class on the same element.
@@ -62,3 +67,86 @@
 @media (prefers-reduced-motion: reduce) {
   .ix-intro { animation: none; }
 }
+
+/*
+ * The play-once layer (agentic-cms/ix: Reveal, RevealGroup, Sequence, part()).
+ * A root (data-motion-root) plays once, the first time it is seen:
+ * useMotionRoot sets data-play, and each part inside the root — or the root
+ * itself when it is a part, as a Reveal is — runs its keyframes after its own
+ * delay (--d). A site that adopts the layer copies this block, its tokens
+ * with it (docs/migrating-to-0.8.0.md § 3.5).
+ *
+ * - Nothing is hidden unless armed. The start states hang on
+ *   <html data-motion="on">, which motionScript() sets before the first
+ *   paint when scripts run and the reader has not asked for reduced motion,
+ *   and they sit inside `prefers-reduced-motion: no-preference`: a reader
+ *   who turns reduced motion on mid-visit gets the page at rest at once. A
+ *   crawler, a reader without JavaScript and the harness's static captures
+ *   all get the finished page.
+ * - Fill backwards, for the intro's reason above: the start pose holds
+ *   through the delay, and a finished part lets go of the element. A lab
+ *   timeline pins the fill of what it drives itself.
+ * - An intro root (data-intro) plays from the first frame, without waiting
+ *   for the scripts.
+ * - Loops (flow, pulse, breathe) run only while their root is on screen
+ *   (data-visible); under a lab timeline, which stops its copies off screen
+ *   itself, always.
+ * - "Unplayed" below is a root with neither data-play nor data-intro, or
+ *   anything inside one; roots are not nested.
+ *
+ * The curves and durations are plain custom properties, not @theme tokens:
+ * in @theme they would bring back the ease-* utilities the wireframe removes.
+ */
+:root {
+  --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-move: cubic-bezier(0.45, 0, 0.2, 1);
+  --ease-pop: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --motion-fast: 300ms;
+  --motion-base: 600ms;
+  --motion-slow: 1000ms;
+  --motion-travel: 24px;
+  --motion-stagger: 80ms;
+}
+
+/* Whether or not motion is armed: the origin a part scales from, a dimmed part's resting opacity, a flow's dotted stroke. */
+svg :is([data-part="pop"], [data-part="scale"], [data-part="grow"], [data-part="pulse"]) { transform-box: fill-box; }
+[data-part="pop"], [data-part="scale"], [data-part="pulse"] { transform-origin: center; }
+[data-part="grow"] { transform-origin: left center; }
+[data-part="dim"] { opacity: var(--dim, 0.16); }
+[data-part="flow"] { stroke-dasharray: 0.1 12; stroke-linecap: round; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Armed and unplayed: the start pose. A draw's length is measured when the root mounts; until then it hides whole. */
+  :root[data-motion="on"] :is([data-part="fade"], [data-part="rise"], [data-part="scale"], [data-part="pop"]):is([data-motion-root]:not([data-play], [data-intro]), [data-motion-root]:not([data-play], [data-intro]) *) { opacity: 0; }
+  :root[data-motion="on"] [data-part="draw"]:is([data-motion-root]:not([data-play], [data-intro]), [data-motion-root]:not([data-play], [data-intro]) *) { stroke-dasharray: var(--len, 100000) var(--len, 100000); stroke-dashoffset: var(--len, 100000); }
+  :root[data-motion="on"] [data-part="grow"]:is([data-motion-root]:not([data-play], [data-intro]), [data-motion-root]:not([data-play], [data-intro]) *) { transform: scaleX(0); }
+  :root[data-motion="on"] [data-part="dim"]:is([data-motion-root]:not([data-play], [data-intro]), [data-motion-root]:not([data-play], [data-intro]) *) { opacity: 1; }
+
+  /* Played: each part once, after its delay. */
+  :root[data-motion="on"] [data-part="fade"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-fade var(--motion-base) var(--ease-enter) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="rise"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-rise var(--motion-base) var(--ease-enter) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="scale"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-scale var(--motion-base) var(--ease-enter) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="pop"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-pop var(--motion-fast) var(--ease-pop) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="draw"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-draw var(--motion-slow) var(--ease-move) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="grow"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-grow var(--motion-slow) var(--ease-enter) var(--d, 0ms) backwards; }
+  :root[data-motion="on"] [data-part="dim"]:is([data-play], [data-intro], [data-play] *, [data-intro] *) { animation: motion-dim var(--motion-fast) var(--ease-move) var(--d, 0ms) backwards; }
+
+  /* Loops: while the played root is on screen, or always under a lab timeline. */
+  :root[data-motion="on"] [data-part="flow"]:is([data-play][data-visible] *, [data-lab-timeline] [data-play] *) { animation: motion-flow var(--motion-slow) linear var(--d, 0ms) infinite; }
+  :root[data-motion="on"] [data-part="pulse"]:is([data-play][data-visible] *, [data-lab-timeline] [data-play] *) { animation: motion-pulse calc(2 * var(--motion-slow)) var(--ease-enter) var(--d, 0ms) infinite; }
+  :root[data-motion="on"] [data-part="breathe"]:is([data-play][data-visible] *, [data-lab-timeline] [data-play] *) { animation: motion-breathe calc(2 * var(--motion-slow)) var(--ease-move) var(--d, 0ms) infinite; }
+}
+
+@keyframes motion-fade { from { opacity: 0; } }
+@keyframes motion-rise { from { opacity: 0; transform: translateY(var(--motion-travel)); } }
+@keyframes motion-scale { from { opacity: 0; transform: scale(0.95); } }
+@keyframes motion-pop { from { opacity: 0; transform: scale(0.4); } }
+@keyframes motion-draw {
+  from { stroke-dasharray: var(--len, 100000) var(--len, 100000); stroke-dashoffset: var(--len, 100000); }
+  to { stroke-dasharray: var(--len, 100000) var(--len, 100000); stroke-dashoffset: 0; }
+}
+@keyframes motion-grow { from { transform: scaleX(0); } }
+@keyframes motion-dim { from { opacity: 1; } }
+@keyframes motion-flow { to { stroke-dashoffset: -24.1; } }
+@keyframes motion-pulse { from { opacity: 0.6; transform: scale(0.5); } to { opacity: 0; transform: scale(2); } }
+@keyframes motion-breathe { 50% { opacity: 0.5; } }

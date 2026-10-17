@@ -14,6 +14,10 @@
 // template is what a capture records and what a compare checks, so two runs
 // at different times are still seeded alike. docs/visual-parity.md has the
 // contract.
+//
+// The same file holds the site's profile beside the seed — its widths, its
+// schemes and what a proof covers (lib/profile.mjs reads it into every
+// command's defaults) — so the one loader below reads and checks both.
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -24,6 +28,11 @@ export const SITE_SEED = "src/config/harness.ts";
 
 /** Each storage area, by its key in the site's file, with the flag that adds to it. */
 const AREAS = { storage: "storage", sessionStorage: "session-storage" };
+
+/** The profile's keys, beside the storage areas: what a site says once about itself (lib/profile.mjs). */
+const PROFILE = ["widths", "schemes", "proof"];
+const SCHEMES = ["light", "dark"];
+const PROOF = ["pages", "ref", "sample"];
 
 export class SeedError extends Error {}
 
@@ -51,22 +60,53 @@ function areaOf(value, area, file) {
   }));
 }
 
-/** The site's `harness` export checked: only the areas the harness knows, each a map. */
+const isList = (value, ok) => Array.isArray(value) && value.length > 0 && value.every(ok);
+
+/** The profile's keys of a `harness` export checked — integer widths, schemes within light and dark, pages that are routes or a sample of each template — as { widths, schemes, proof: { pages, ref, sample } }, each absent key undefined. */
+export function validateProfile(harness, file = SITE_SEED) {
+  const { widths, schemes, proof = {} } = harness;
+  if (widths !== undefined && !isList(widths, (w) => Number.isInteger(w) && w > 0)) throw new SeedError(`${file}: harness.widths is a list of whole viewport widths in px ([390, 768, 1440, 1920])`);
+  if (schemes !== undefined && (!isList(schemes, (s) => SCHEMES.includes(s)) || new Set(schemes).size !== schemes.length)) throw new SeedError(`${file}: harness.schemes is "light", "dark" or both, each once (["light"] or ["light", "dark"])`);
+  if (!proof || typeof proof !== "object" || Array.isArray(proof)) throw new SeedError(`${file}: harness.proof is { pages: ["/", …], ref: "develop" } or { sample: 1, ref: "develop" }`);
+  for (const key of Object.keys(proof)) if (!PROOF.includes(key)) throw new SeedError(`${file}: harness.proof.${key} is not a setting${suggest(key, PROOF)} (${PROOF.join(", ")})`);
+  if (proof.pages !== undefined && !isList(proof.pages, (p) => typeof p === "string" && p.startsWith("/"))) throw new SeedError(`${file}: harness.proof.pages is a list of routes, each starting with / (["/", "/blog"])`);
+  if (proof.ref !== undefined && (typeof proof.ref !== "string" || !proof.ref.trim())) throw new SeedError(`${file}: harness.proof.ref is a git ref ("develop")`);
+  if (proof.sample !== undefined && (!Number.isInteger(proof.sample) || proof.sample < 1)) throw new SeedError(`${file}: harness.proof.sample is a whole number of pages per template, 1 or more (1: one page of each template)`);
+  if (proof.pages !== undefined && proof.sample !== undefined) throw new SeedError(`${file}: harness.proof.pages and harness.proof.sample both choose a proof's pages; set one`);
+  return { widths, schemes, proof: { pages: proof.pages, ref: proof.ref, sample: proof.sample } };
+}
+
+/** The site's `harness` export checked: only the areas and the profile keys the harness knows, each of its shape; the areas, each a map. */
 export function validateSiteSeed(harness, file = SITE_SEED) {
-  if (!harness || typeof harness !== "object" || Array.isArray(harness)) throw new SeedError(`${file}: export const harness = { storage: { <key>: <value> }, sessionStorage: { … } }`);
-  for (const key of Object.keys(harness)) if (!(key in AREAS)) throw new SeedError(`${file}: harness.${key} is not a setting${suggest(key, Object.keys(AREAS))} (${Object.keys(AREAS).join(", ")})`);
+  if (!harness || typeof harness !== "object" || Array.isArray(harness)) throw new SeedError(`${file}: export const harness = { storage: { <key>: <value> }, sessionStorage: { … }, widths: [ … ], schemes: [ … ], proof: { … } }`);
+  const known = [...Object.keys(AREAS), ...PROFILE];
+  for (const key of Object.keys(harness)) if (!known.includes(key)) throw new SeedError(`${file}: harness.${key} is not a setting${suggest(key, known)} (${known.join(", ")})`);
+  validateProfile(harness, file);
   return Object.fromEntries(Object.keys(AREAS).map((area) => [area, areaOf(harness[area], area, file)]));
 }
 
-/** The site's default seed from <root>/src/config/harness.ts, or null when the site has none. */
-export async function readSiteSeed(root = process.cwd()) {
+/** The site's `harness` export from <root>/src/config/harness.ts, checked whole; null when the site has no such file. */
+export async function readHarness(root = process.cwd()) {
   const file = path.join(root, SITE_SEED);
   if (!fs.existsSync(file)) return null;
   await import("./load-ts.mjs");
   let exported;
   try { exported = await import(pathToFileURL(file).href); } catch (error) { throw new SeedError(`${SITE_SEED}: ${error.message}`); }
   if (!("harness" in exported)) throw new SeedError(`${SITE_SEED} exports no harness: export const harness = { storage: { … } }`);
-  return validateSiteSeed(exported.harness);
+  validateSiteSeed(exported.harness);
+  return exported.harness;
+}
+
+/** The site's default seed from <root>/src/config/harness.ts, or null when the site has none. */
+export async function readSiteSeed(root = process.cwd()) {
+  const harness = await readHarness(root);
+  return harness && validateSiteSeed(harness);
+}
+
+/** The site's profile from <root>/src/config/harness.ts ({ widths, schemes, proof: { pages, ref, sample } }, a key it does not set undefined), or null when the site has no such file. */
+export async function readSiteProfile(root = process.cwd()) {
+  const harness = await readHarness(root);
+  return harness && validateProfile(harness);
 }
 
 const sorted = (map) => Object.fromEntries(Object.entries(map).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));

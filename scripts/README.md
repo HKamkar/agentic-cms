@@ -15,9 +15,10 @@ a value outside a flag's `choices` lists them, `--help` prints the spec
 with its `examples`; a spec's `group` is its family in the map the bin
 prints, `site: true` marks one that reads the site's registry and is
 refused outside a site's root).
-`lib/browser.mjs` is the Chromium, the static server and the waits the
-harness and the page commands share; `browser/` holds their tests, run
-against `fixtures/` by `pnpm test:browser`.
+`lib/browser.mjs` is the Chromium (and the WebKit beside it,
+`launch({ engine })`), the static server and the waits the harness and the
+page commands share; `browser/` holds their tests, run against `fixtures/`
+by `pnpm test:browser`.
 
 - `optimize-svg-rasters` — `pnpm kit optimize-svg-rasters [--lossy]
   [--dry-run] [file.svg ...]` re-encodes the PNGs that design-tool SVG
@@ -99,6 +100,25 @@ against `fixtures/` by `pnpm test:browser`.
   by the hook, which never touches `node_modules`, where a package ships
   JavaScript); every command loads `src/kit.ts` through it, and `pnpm test`
   (`src/**/*.test.ts` and `scripts/**/*.test.mjs`) uses it. No `.tsx`.
+- `lib/component-lint.mjs` — `componentRules(options)`, the component
+  library's ESLint configs (the package exports it as `./eslint`): the
+  layers' one-way imports, animation libraries only in the motion layer,
+  and what a section or a pattern may contain. Not a command: a site's
+  `eslint.config.mjs` spreads it, and `pnpm lint` runs it
+  (`docs/primitives.md` § Enforced).
+- `check-components` — `pnpm kit check-components [--json]`
+  (`check-components.mjs`; the work in `lib/check-components.mjs`, the file
+  system passed in) is the component library's placement guard, the second
+  half of `pnpm lint` (`eslint; s=$?; … check-components || s=1; exit $s`):
+  the layers there and every file under `src/components` in one, every
+  component the library exports named in its catalogue, every component in
+  a section folder imported by the registry, route files only in
+  `src/app`'s known route folders, no component elsewhere in `src/`, CSS
+  modules and `@keyframes` only where the library keeps them. Its config is
+  `src/config/components.json` (the layer keys are `componentRules()`'s);
+  the config's frozen `inherited` list and a running round's candidates
+  pass. Exit 1 on a finding, each with its fix (`docs/primitives.md`
+  § Placed).
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
 - `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
   --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one
@@ -141,24 +161,61 @@ against `fixtures/` by `pnpm test:browser`.
   `lib/icons-source.mjs`, `lib/icons-family.mjs`, `lib/icons-audit.mjs`,
   `lib/icons-round.mjs`).
 - `demo` — `pnpm kit demo new <name> --section <type> [--page <slug>]
-  [--candidates 2]` scaffolds the design round's throwaway route,
+  [--candidates 2] [--timeline]` scaffolds the design round's throwaway route,
   `src/app/<name>-demo/page.tsx`, with a candidate per letter (a copy of the
   section's component beside it, from the registry) reading the page's real
   copy from its file, in the section's frame inside the site's own layout,
-  the current version last; `demo clean [name]` removes the route, every
-  component file it alone imported and next dev's stale route types
-  (`docs/design.md` § The round; `lib/demo.mjs`).
+  the current version last (`--timeline`: each block under the lab's
+  timeline); `--showcase [--component <file>]…` writes a review page of
+  pieces instead. With the dev server running it waits until the route
+  answers and prints its URLs (`lib/handover.mjs`); `demo clean [name]`
+  removes the route, every component file it alone imported and next
+  dev's stale route types (`docs/design.md` § The round; `lib/demo.mjs`).
 - `lab` — `pnpm kit lab new <name> --kind icon|mark|loop` writes an SVG
   scene under `.parity/lab/` to start from; `lab serve` shows every scene
-  on the site's tokens (light and dark, inline and as an `<img>`, with a
+  on the site's tokens (in each of its schemes, inline and as an `<img>`, with a
   scrubber over its animations) on this machine and the LAN, reloading on
-  every save; `lab clean` removes the lab. The design canvas for the site's
+  every save, and prints each scene's `/scene/<name>`; `lab route` writes
+  the throwaway route and waits for it like `demo new`; `lab clean`
+  removes the lab. The design canvas for the site's
   own icons, graphics and short 2D loops, opened when a drawing is needed
   and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
   `lib/lab-page.mjs`, `lib/lab-server.mjs`).
+- `setup` — `pnpm kit setup [--check] [--build] [--no-browsers]
+  [--engines chromium,webkit] [--deps] [--no-public]` (`setup.mjs`) makes a
+  clone ready to work on, after a site's `scripts/setup.sh` (the kit's
+  `templates/site/setup.sh`, which `init` copies) checked Node, got pnpm at
+  the `packageManager` version and installed: the browsers not installed
+  yet, WebKit's Linux libraries (a launch tells; `--deps` runs the `sudo`
+  line, else it is printed for the owner), `.env.local` from
+  `.env.example`, this machine's addresses in `ALLOWED_DEV_ORIGINS`,
+  `pnpm lint` and `pnpm test` (`--build` adds `pnpm build`), then the URLs.
+  Every step keeps what is there; `--check` reports and changes nothing
+  (`docs/setup.md`; `lib/setup.mjs`, with the shell, the file system, the
+  browsers and the network passed in).
+- `urls` — `pnpm urls [--write] [--no-public] [--port <n>]` (`urls.mjs`)
+  prints this machine's URLs for the dev server (its port from
+  `scripts.dev`) and the lab, localhost, the LAN and the public address,
+  whether each server answers, and whether `ALLOWED_DEV_ORIGINS` in
+  `.env.local` covers every address; `--write` adds the missing hostnames,
+  keeping the file's other lines; exit 1 on a missing one without it
+  (`docs/dev-server.md`; `lib/hosts.mjs`, which the lab server lists its
+  LAN URLs from too).
+- `serve` — `pnpm kit serve [--port <n>] [--lab] [--write-origins]
+  [--fix-cache] [--no-public]` (`serve.mjs`) starts next dev on the site's
+  port on every interface (or reuses this site's, found by
+  `.next/dev/lock`; anything else on the port is refused) and the lab when
+  `.parity/lab` has scenes, waits until the root and every `*-demo` route
+  answer, prints one table of localhost, LAN and public × the routes and
+  the lab's pages, restarts next dev with a cleared cache on Turbopack's
+  stale-cache error (`--fix-cache`), and stops both on Ctrl-C
+  (`docs/dev-server.md`; `lib/serve.mjs`, `lib/dev-server.mjs` — next dev
+  started, watched and stopped by process group, which the browser tests
+  run too — and `lib/handover.mjs`, the wait and the URLs).
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
-  prerendered page of the current build at eight widths with motion frozen
+  prerendered page of the current build at the site's widths (its profile,
+  `src/config/harness.ts`; `lib/profile.mjs`) with motion frozen
   (`.parity/visual/<label>/`), and `compare <before> <after>` diffs two
   captures pixel by pixel and writes diff images. The page list is derived
   from the build's own output, so a new route is captured without editing the
@@ -173,8 +230,8 @@ against `fixtures/` by `pnpm test:browser`.
   `--pages /,/blog` limits a capture to some pages (pass it to the compare
   too, so it judges only those); `--scheme dark` renders with
   `prefers-color-scheme: dark` — a fresh browser context has no stored theme
-  choice, so the default capture is the light mode and a themed site is proven
-  twice. Compare any two captures with the same command. A static capture
+  choice, so a capture takes the profile's first scheme (else light) and
+  `proof` runs a pass in each scheme the profile names. Compare any two captures with the same command. A static capture
   scrolls each page through once, waiting in the renderer's animation frames
   rather than in milliseconds, so a loaded machine slows a capture instead of
   corrupting it; a page whose renderer stalls is reloaded once and then fails
@@ -182,7 +239,9 @@ against `fixtures/` by `pnpm test:browser`.
   prove hydration and the footer hairlines that prove the scroll-through ran
   its sequences — look for `ix`/`OnView` markers, so they have nothing to wait
   for while the wireframe has no motion and become load-bearing again in a
-  fork that adds reveals. Needs a Chromium build (`~/.cache/ms-playwright`, or
+  fork that adds reveals. The play-once layer's parts count among the
+  reveals while armed and unplayed, which a static capture never sees: it
+  runs under reduced motion, where the layer arms nothing. Needs a Chromium build (`~/.cache/ms-playwright`, or
   `CHROME_PATH`). The comment at the top of the script has the details.
   Every page starts from a seeded storage when the site has a
   `src/config/harness.ts` (`export const harness = { storage: { consent:

@@ -13,7 +13,7 @@ in `package.json` or in a route. The flags are in
 
 ```bash
 pnpm kit lab new hero-mark --kind mark        # .parity/lab/hero-mark.svg from a template
-pnpm kit lab serve                            # http://localhost:8001 and the LAN URLs
+pnpm kit lab serve                            # http://localhost:8001, the LAN URLs, and each scene's /scene/<name>
 pnpm kit lab serve --sizes 32,160              # every scene also at the sizes it ships at
 pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a page ships
 ```
@@ -31,14 +31,15 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   `currentColor` and carry no colour, font or easing of any site.
 - **`lab serve`** shows every scene on the site's own tokens — read from the
   `@theme` block of `src/app/globals.css`, so no build is needed and a
-  fork's palette follows — **inline in a light and a dark box** (each box
-  sets its own `color-scheme`, and `light-dark()`, `currentColor` and
-  `var(--color-*)` resolve inside it), at the natural size and at
+  fork's palette follows — **inline in a box per scheme the site has**
+  (the profile's `schemes` in `src/config/harness.ts`, light and dark
+  without one; each box sets its own `color-scheme`, and `light-dark()`,
+  `currentColor` and `var(--color-*)` resolve inside it), at the natural size and at
   `--sizes` — the sizes it ships at, for a scene of any width; without the
   flag an icon-sized scene (up to 96 px wide) is shown at 24, 40 and 64 and
   a bigger one at its own size — and **enlarged**, one pair that fits the
   screen up to 640 px wide (none for a scene already that wide); then
-  **the same file as an `<img>`** on both grounds, which is what a page
+  **the same file as an `<img>`** on each ground, which is what a page
   embedding the file really gets: `currentColor` is black, a `var()`
   without a fallback is the initial paint, and the scheme is the
   browser's, not the box's. A saved file reloads the page.
@@ -55,11 +56,15 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
   writes beside a loop, the `<picture>`'s fallback, what a reduced-motion
   reader gets), inline and as the `<img>`; the switch is in the URL, so a
   reload on save keeps it.
-- Each scene has its own page (`/scene/<name>`, the URL to hand over) and
-  a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
-  `&still=1` for its still).
+- Each scene has its own page (`/scene/<name>`: the URL to hand over, one
+  per scene, rather than the index; `lab serve` prints each one on every
+  address it listens on) and a bare one at any width (`/scene/<name>?bare=1&scheme=dark&width=512`,
+  `&still=1` for its still). `pnpm kit serve` starts the lab beside the
+  dev server whenever `.parity/lab` has a scene, and lists the same pages
+  ([dev-server.md](dev-server.md#both-servers-and-every-url-pnpm-kit-serve)).
 - The server listens on `0.0.0.0:8001` by default and prints every LAN
-  address, so the owner opens the same page on a phone; it serves only the
+  address (the machine's real interfaces, as `pnpm urls` lists them: no
+  container bridge), so the owner opens the same page on a phone; it serves only the
   scenes it listed and generated HTML — nothing else of the tree.
   `--host 127.0.0.1` keeps it on this machine.
 - The second window is the route (below): the same scenes on the site's
@@ -67,16 +72,22 @@ pnpm kit lab serve --scenes public/images/home --sizes 20,32   # reopen what a p
 
 ## The route — the lab on the site's theme
 
-The lab's page shows a scene on the site's tokens, in a light and a dark
-box. To judge it on the site's real theme — its background, its type, its
+The lab's page shows a scene on the site's tokens, in a box per scheme the
+site has. To judge it on the site's real theme — its background, its type, its
 surfaces, next to the real chrome — there is a second window: a throwaway
 route inside the site.
 
 ```bash
-pnpm kit lab route          # src/app/lab-demo/page.tsx from the kit's template
-pnpm dev                    # then /lab-demo (on the LAN address too)
+pnpm kit serve              # the dev server and the lab, and every URL to hand over (dev-server.md)
+pnpm kit lab route          # src/app/lab-demo/page.tsx from the kit's template; waits until /lab-demo answers, prints its URLs
 pnpm kit lab clean          # removes the route with the lab
 ```
+
+With the dev server running, `lab route` asks for `/lab-demo` until it
+answers (which compiles it), then prints its URLs on localhost, the LAN
+and the public address, and warns about a host `ALLOWED_DEV_ORIGINS`
+lacks; with none running it says `pnpm kit serve`, and `--no-wait` asks
+nothing.
 
 The route renders `LabScenes` from `agentic-cms/lab`: every scene under
 `.parity/lab` (and the `folders` given, like `--scenes`) inline on the
@@ -159,9 +170,28 @@ round's demo route — has the same controls for it, the one timeline of
   are independent: their own controls, their own cycle. The frame
   callback stops on pause, on a cycle of 0 (the controls are disabled) and
   when the component unmounts.
+- **Play-once motion stays on the range.** An entrance that runs once and
+  ends is still there to scrub after it ends: the timeline keeps every
+  animation it has driven (a finished CSS animation whose fill is `none`
+  or `backwards` leaves `getAnimations()`, and the range used to move over
+  a frozen end pose) and pins its fill to `both` when it first sees it, so
+  past its end it holds its last frame. Under the timeline only: a page
+  without one keeps its `backwards` fill, for the reason the intro's rule
+  in `src/styles/motion.css` gives. An animation that is cancelled, or
+  whose element leaves the timeline, drops out. `lab render`'s clock
+  (`window.lab` on the bare page) keeps them the same way.
+- **Motion that starts after the timeline mounts** — an
+  `IntersectionObserver` sets the attribute that plays it, a class
+  arrives — is found on the next frame: a change under the timeline
+  (outside its controls) or an `animationstart` makes it look again. What
+  it finds joins the timeline's time; with no cycle declared the cycle is
+  measured again, and only grows; a timeline that had nothing to drive
+  turns its controls on and plays, unless the reader prefers reduced
+  motion.
 - **The cycle is read, not restated**: `data-duration` on the root, else
   the longest SMIL `begin` + `dur` and CSS delay + duration in the file
-  (`sceneDuration()`); a timeline given none measures what it holds.
+  (`sceneDuration()`); a timeline given none measures what it holds, and
+  again when motion starts late.
 - **Reduced motion**: a reader who prefers it gets every timeline paused
   on its first frame until they press Play, and a scene's own
   `prefers-reduced-motion` rule still applies inside it.
@@ -176,8 +206,37 @@ round's demo route — has the same controls for it, the one timeline of
   script, event handler or `javascript:` URL (`readTrustedSvg()` refuses
   anything else).
 
+**Motion of your own plays at once under a timeline.** What plays once
+when it is seen — a reveal armed by an observer — skips the wait under
+`[data-lab-timeline]`, so the cycle is whole when the timeline measures it
+and the range starts where the motion starts. The play-once layer of
+`agentic-cms/ix` does it already (`useMotionRoot`, behind `Reveal`,
+`RevealGroup` and `Sequence`: a `Sequence` drawn as an inline `<svg>` is
+driven, an HTML root takes `data-lab-drive`). Motion of your own checks in
+the ref callback that arms it: a child's ref callback runs before the
+timeline's, so the animations exist when the timeline mounts.
+
+```ts
+const arm = useCallback((el: HTMLElement | null) => {
+  if (!el) return;
+  if (el.closest("[data-lab-timeline]")) { el.dataset.play = ""; return; } // the timeline's clock
+  observer.observe(el); // plays it on entry
+  return () => observer.unobserve(el);
+}, []);
+```
+
+Motion that waits anyway is still found when it starts (above), a moment
+late. A loop that runs its own clock leaves it to the timeline the same
+way: `InlineAnimation` (§ Inline) neither waits for the viewport nor
+pauses off screen under `[data-lab-timeline]`, and the timeline plays,
+pauses and seeks it.
+
 On a **demo route** (`pnpm kit demo new`, the `design-options` round), an
-animated candidate gets the same inspection. A file — a mark, a loop — is
+animated candidate gets the same inspection. `demo new … --timeline`
+writes the route with every block — each candidate and the current
+version, or each piece of a `--showcase` — wrapped in `<LabTimeline
+label><div data-lab-drive>`, so motion made of HTML and CSS is driven with
+no hand edit. A file — a mark, a loop — is
 a `LabStudy`: the file inline at the sizes it ships at, on the grounds
 the route passes, under one timeline, with the still a render wrote
 beside it and a link that downloads the original:
@@ -206,6 +265,9 @@ candidate.
 
 - `viewBox` always, and the natural `width`/`height` on the root — the
   size a page will render it at; an icon on the 24 grid, a mark on 64.
+  Without them the file has no natural size, and in a box that shrinks to
+  its content it falls back to 300 × 150 at every width
+  ([gotchas.md § CSS, SVG and performance](gotchas.md#css-svg-and-performance)).
 - Colour: `currentColor` and `var(--color-ink|paper|fill|muted)` when the
   drawing ships inline (it then follows the theme toggle); a hex, or
   mid-tones that read on both grounds like the placeholder's grey, when it
@@ -218,7 +280,24 @@ candidate.
   (`<animate>`) for a loop that ships as an `<img>`, where a page's CSS and
   JavaScript cannot reach.
 - No text that needs a font the reader may not have; no raster inside an
-  SVG that a design tool exported (`optimize-svg-rasters` says why).
+  SVG that a design tool exported (`optimize-svg-rasters` says why). A
+  file shipped as an `<img>` cannot use the page's web fonts at all, so
+  its text falls back to system fonts: measure each line in Chromium and
+  WebKit (`getBBox()`; [browsers.md](browsers.md#the-same-check-in-both-engines)
+  runs one script in both) and leave about 10% spare
+  ([gotchas.md § CSS, SVG and performance](gotchas.md#css-svg-and-performance)).
+- A chart, or any drawing with text, needs a phone drawing: a landscape
+  chart shrunk into a phone's column leaves its labels at about 5 px. Draw
+  a portrait version and ship the two as one `<picture>`, the phone's
+  `<source>` written with `not all and (min-width: …)`, which Safari
+  before 16.4 reads where it ignores the range syntax:
+
+  ```html
+  <picture>
+    <source media="not all and (min-width: 768px)" srcset="/images/home/chart-phone.svg" width="360" height="468">
+    <img src="/images/home/chart.svg" width="760" height="410" alt="…" loading="lazy">
+  </picture>
+  ```
 - A mark that moves starts from its master file — its path data, colours
   and proportions as they came — and shows that master at rest, in the
   hold and in every still; the moving pieces exist for the move, and where
@@ -329,7 +408,8 @@ import { InlineAnimation } from "agentic-cms/ix";
   in, in percent), pauses off screen, and shows the frame at `data-rest`
   to a reader who prefers reduced motion — the frame the screenshot
   harness holds too. A scene carries `data-duration` and `data-rest` on its
-  root (the `loop` template has both; `lab render` keeps them).
+  root (the `loop` template has both; `lab render` keeps them). Under a lab
+  timeline it leaves the clock to the timeline (§ Inspecting motion).
 - The file is the scene rendered for one scheme (`--out x.svg`), or the
   scene itself when it should paint in the page's ink and tokens — inline,
   `currentColor` and `var(--color-*)` follow the page, which an `<img>`

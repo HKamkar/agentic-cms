@@ -1,23 +1,37 @@
 // The routes the kit writes, rendered by the example site's own dev server:
 // the lab's (lab route → /lab-demo), the design round's (demo new →
-// /hero-demo), a route that ships an inline loop the way a section does
+// /hero-demo, and demo new waiting on a server that already runs), serve
+// started and stopped on free ports, urls telling this checkout's next dev
+// from another server on its port, a route that ships an inline loop the way a section does
 // (readInlineSvg + InlineAnimation), the harness's own preparation of a
 // page that is still hydrating, the seed reaching the design routes, and
 // consent (agentic-cms/consent) on the example with a Google tag id set. One file, so the servers never run on the
 // checkout at once; each test writes only what it removes again.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
+import { freePort, freePorts, processAlive, readDevLock } from "../lib/dev-server.mjs";
+import { isUp } from "../lib/hosts.mjs";
 import { devServer } from "./dev-server.mjs";
+import { until } from "./until.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const BIN = path.join(ROOT, "bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
 const lab = (...args) => spawnSync(process.execPath, [BIN, "lab", ...args], { cwd: ROOT, encoding: "utf8" });
 const demo = (...args) => spawnSync(process.execPath, [BIN, "demo", ...args], { cwd: ROOT, encoding: "utf8" });
+/** A command that must not block this process's event loop while it runs (the dev server's output is read here). */
+const runAsync = (args) => new Promise((resolve) => {
+  const child = spawn(process.execPath, [BIN, ...args], { cwd: ROOT });
+  let stdout = "", stderr = "";
+  child.stdout.on("data", (chunk) => { stdout += chunk; });
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  child.on("exit", (status) => resolve({ status, stdout, stderr }));
+});
 
 // The dev server's HMR socket fails its handshake under this harness; every other console error counts (a hydration mismatch is one).
 const notHmr = (line) => !/WebSocket|_next\/hmr/.test(line);
@@ -30,7 +44,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
   fs.mkdirSync(labDir, { recursive: true });
   const scene = path.join(labDir, "route-test-spin.svg");
   assert.equal(lab("new", "route-test-spin", "--kind", "loop").status, 0);
-  assert.equal(lab("route").status, 0);
+  assert.equal(lab("route", "--no-wait", "--no-public").status, 0);
   let server, browser;
   try {
     server = await devServer();
@@ -64,8 +78,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
     assert.deepEqual([seen.timeline, seen.max], ["route-test-spin: timeline", "2"]);
     assert.equal(new Set(seen.ids).size, seen.ids.length, "every id on the page is unique");
     await page.fill(`${scene} [data-lab-time]`, "0.5");
-    await page.waitForTimeout(200);
-    const cx = await page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value));
+    const cx = await until(() => page.$$eval('[data-scene="route-test-spin"] svg.lab-scene circle', (dots) => dots.map((d) => d.cx.animVal.value)), (list) => list.every((x) => x === 32));
     assert.deepEqual(cx, [32, 32, 32, 32, 32, 32], "every copy paused at 0.5 s");
     assert.equal(await page.textContent(`${scene} [data-lab-play]`), "Play", "a seek pauses, and the button says so");
     assert.deepEqual(errors, []);
@@ -85,7 +98,7 @@ test("lab route: the example site renders /lab-demo with every scene on the grou
 test("demo new: /hero-demo on the example site — A, B and the current hero with the home page's copy, in the site's chrome", { skip, timeout: 180000 }, async () => {
   const routeDir = path.join(ROOT, "src/app/hero-demo");
   assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "no hero demo in the checkout before the test");
-  const made = demo("new", "hero", "--section", "home-hero", "--json");
+  const made = demo("new", "hero", "--section", "home-hero", "--no-wait", "--no-public", "--json");
   assert.equal(made.status, 0, made.stderr);
   let server, browser;
   try {
@@ -120,18 +133,110 @@ test("demo new: /hero-demo on the example site — A, B and the current hero wit
   }
 });
 
+test("demo new against the running dev server: it waits until its route answers, then prints its URLs — the route answers 200 before the command exits", { skip, timeout: 240000 }, async () => {
+  const routeDir = path.join(ROOT, "src/app/wait-demo");
+  assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "no wait demo in the checkout before the test");
+  let server;
+  try {
+    server = await devServer();
+    const made = await runAsync(["demo", "new", "wait", "--section", "home-hero", "--url", server.url, "--no-public", "--json"]);
+    assert.equal(made.status, 0, made.stderr);
+    const report = JSON.parse(made.stdout);
+    assert.deepEqual([report.ready, report.status], [true, 200], "the route answered before the command exited");
+    assert.deepEqual(report.urls[0], { where: "localhost", url: `http://localhost:${server.port}/wait-demo` });
+    const again = await fetch(`${server.url}/wait-demo`, { signal: AbortSignal.timeout(15000) });
+    assert.equal(again.status, 200, "compiled already: the owner's first look is no cold compile");
+    assert.match(await again.text(), /data-candidate="now"/);
+  } finally {
+    await server?.stop();
+    const cleaned = demo("clean", "wait", "--json");
+    assert.equal(cleaned.status, 0, cleaned.stderr);
+    assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(path.join(ROOT, "src/components/home/HeroA.tsx")), "nothing of the round left in the checkout");
+  }
+});
+
+test("serve on free ports: next dev and the lab started, the table printed once the root answers, and a Ctrl-C stops both — the ports are free again", { skip, timeout: 240000 }, async (t) => {
+  const lock = readDevLock(ROOT, fs);
+  if (lock && processAlive(lock.pid)) { t.skip(`this checkout's next dev runs (pid ${lock.pid}): serve would reuse it`); return; }
+  const [port, labPort] = await freePorts(2);   // distinct, and outside the range other tests' port-0 binds draw from
+  const child = spawn(process.execPath, [BIN, "serve", "--port", String(port), "--lab-port", String(labPort), "--lab", "--no-public"], { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", err = "";
+  child.stdout.on("data", (chunk) => { out += chunk; });
+  child.stderr.on("data", (chunk) => { err += chunk; });
+  const exited = new Promise((resolve) => child.on("exit", (code, signal) => resolve({ code, signal })));
+  try {
+    const started = Date.now();
+    while (!/^hand over the page itself/m.test(out)) {
+      assert.equal(child.exitCode, null, `serve exited early:\n${out}\n${err}`);
+      assert.ok(Date.now() - started < 180000, `no table in 180 s:\n${out}\n${err}`);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    assert.match(out, new RegExp(`^serve: next dev on port ${port}; the lab on port ${labPort}$`, "m"));
+    assert.match(out, new RegExp(`^ {2}/ +200 +http://localhost:${port}/`, "m"), "the root answered");
+    assert.match(out, new RegExp(`^ {2}/ +http://localhost:${labPort}/`, "m"), "the lab's index");
+    assert.ok(await isUp(port) && await isUp(labPort));
+  } finally {
+    child.kill("SIGINT");
+    const ended = await exited;
+    assert.deepEqual(ended, { code: 0, signal: null }, err);
+  }
+  const up = await until(async () => [await isUp(port), await isUp(labPort)], (list) => !list.some(Boolean), 10000);
+  assert.deepEqual(up, [false, false], "next dev's whole process group and the lab stopped");
+});
+
+test("urls on the example: a port another server holds answers, but not as this clone's next dev, with no restart named; this checkout's own next dev, found by its lock, is running", { skip, timeout: 240000 }, async (t) => {
+  const lock = readDevLock(ROOT, fs);
+  if (lock && processAlive(lock.pid)) { t.skip(`this checkout's next dev runs (pid ${lock.pid}): the test's own would not start`); return; }
+  const labPort = await freePort();
+  const urls = async (port, ...flags) => {
+    const ran = await runAsync(["urls", "--port", String(port), "--lab-port", String(labPort), "--no-public", ...flags]);
+    assert.ok([0, 1].includes(ran.status), ran.stderr);
+    return ran.stdout;
+  };
+  // Another checkout's server, as far as this checkout can tell: something answers on the port, and no lock here names it.
+  const other = http.createServer((req, res) => res.end("another checkout"));
+  await new Promise((resolve) => other.listen(0, resolve));
+  const otherPort = other.address().port;
+  let server;
+  try {
+    const held = JSON.parse(await urls(otherPort, "--json"));
+    assert.deepEqual([held.dev.up, held.dev.own, held.dev.ownPort], [true, false, null]);
+    const text = await urls(otherPort);
+    assert.match(text, new RegExp(`^dev server, port ${otherPort}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\)`, "m"));
+    assert.doesNotMatch(text, /restart/);
+
+    server = await devServer();
+    const started = Date.now();
+    while (readDevLock(ROOT, fs)?.port !== server.port) {
+      assert.ok(Date.now() - started < 15000, "next dev wrote no lock naming its port in 15 s");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    const own = JSON.parse(await urls(server.port, "--json"));
+    assert.deepEqual([own.dev.up, own.dev.own, own.dev.ownPort], [true, true, server.port]);
+    assert.match(await urls(server.port), new RegExp(`^dev server, port ${server.port}: running$`, "m"));
+    assert.match(await urls(otherPort), new RegExp(`^dev server, port ${otherPort}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\); this clone's next dev runs on port ${server.port} \\(pnpm urls --port ${server.port}\\)$`, "m"));
+  } finally {
+    await server?.stop();
+    await new Promise((resolve) => other.close(resolve));
+  }
+});
+
 // A section's inline loop, the way a site ships one: the SVG read at build (readInlineSvg, agentic-cms/content) and
-// played by InlineAnimation (agentic-cms/ix), below the fold. Removed by demo clean (the route, the round's pictures).
+// played by InlineAnimation (agentic-cms/ix), below the fold; and a copy under a lab timeline at the top, as a design
+// round's route wraps one. Removed by demo clean (the route, the round's pictures).
 const LOOP = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" data-duration="2" data-rest="1.5"><defs><clipPath id="frame"><rect width="200" height="100"/></clipPath></defs><g clip-path="url(#frame)"><circle cx="20" cy="50" r="15"><animate attributeName="cx" values="20;180;20" dur="2s" repeatCount="indefinite"/></circle></g></svg>`;
 const INLINE_ROUTE = `import { readInlineSvg } from "agentic-cms/content";
 import { InlineAnimation } from "agentic-cms/ix";
+import { LabTimeline } from "agentic-cms/lab";
 
 export const metadata = { robots: { index: false } };
 
 export default function InlineTestDemo() {
   const markup = readInlineSvg("public/images/inline-test-demo/loop.svg", { prefix: "inline-test" });
+  const timed = readInlineSvg("public/images/inline-test-demo/loop.svg", { prefix: "inline-timed" });
   return (
     <>
+      <LabTimeline label="inline" autoplay={false}><InlineAnimation markup={timed} className="inline-test-timed" /></LabTimeline>
       <div style={{ height: "2400px" }} />
       <InlineAnimation markup={markup} className="inline-test-box" />
       <div style={{ height: "2400px" }} />
@@ -140,7 +245,7 @@ export default function InlineTestDemo() {
 }
 `;
 
-test("InlineAnimation on the example site: waits on its first frame until in view, plays in view, pauses off screen, rests under reduced motion", { skip, timeout: 180000 }, async () => {
+test("InlineAnimation on the example site: waits on its first frame until in view, plays in view, pauses off screen, rests under reduced motion; under a lab timeline the clock is the timeline's", { skip, timeout: 180000 }, async () => {
   const routeDir = path.join(ROOT, "src/app/inline-test-demo");
   const assets = path.join(ROOT, "public/images/inline-test-demo");
   assert.ok(!fs.existsSync(routeDir) && !fs.existsSync(assets), "no inline-test demo in the checkout before the test");
@@ -165,14 +270,20 @@ test("InlineAnimation on the example site: waits on its first frame until in vie
     assert.ok(waiting.fills, "the svg fills its box from its own style");
     assert.equal(waiting.clip, "inline-test-frame", "its ids are its own");
     await page.locator(".inline-test-box").scrollIntoViewIfNeeded();
-    await page.waitForTimeout(700);
-    const playing = await clock(page);
+    const playing = await until(() => clock(page), (c) => !c.paused && c.time > 0.2);
     assert.equal(playing.paused, false, "in view: it plays");
     assert.ok(playing.time > 0.2 && playing.time < 1.5, `from the start of the cycle: ${playing.time}`);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(500);
-    const away = await clock(page);
+    const away = await until(() => clock(page), (c) => c.paused);
     assert.equal(away.paused, true, "off screen: paused");
+    // Under the timeline (autoplay off) the copy at the top stays where the timeline holds it, in view, after a seek and a scroll.
+    const timed = () => page.evaluate(() => { const svg = document.querySelector(".inline-test-timed svg"); return { paused: svg.animationsPaused(), time: Math.round(svg.getCurrentTime() * 1000) / 1000 }; });
+    assert.deepEqual(await timed(), { paused: true, time: 0 }, "in view, held on the timeline's first frame");
+    await page.evaluate(() => { const range = document.querySelector('[aria-label="inline: timeline"] [data-lab-time]'); range.value = "0.8"; range.dispatchEvent(new Event("input", { bubbles: true })); });
+    await page.locator(".inline-test-box").scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(500);
+    assert.deepEqual(await timed(), { paused: true, time: 0.8 }, "seeked by the timeline, and a scroll away and back does not move it");
     const reduced = await browser.newPage({ viewport: { width: 1100, height: 900 }, reducedMotion: "reduce" });
     await reduced.goto(`${server.url}/inline-test-demo`, { waitUntil: "load", timeout: 120000 });
     await reduced.waitForFunction(() => Math.abs((document.querySelector(".inline-test-box svg")?.getCurrentTime() ?? 0) - 1.5) < 1e-3, null, { timeout: 60000 });
@@ -221,8 +332,8 @@ test("a seed reaches the design routes on the dev server: /hero-demo (demo new) 
   fs.mkdirSync(labDir, { recursive: true });
   const scene = path.join(labDir, "seed-test-mark.svg");
   assert.equal(lab("new", "seed-test-mark", "--kind", "mark").status, 0);
-  assert.equal(lab("route").status, 0);
-  assert.equal(demo("new", "hero", "--section", "home-hero").status, 0);
+  assert.equal(lab("route", "--no-wait", "--no-public").status, 0);
+  assert.equal(demo("new", "hero", "--section", "home-hero", "--no-wait", "--no-public").status, 0);
   let server;
   try {
     server = await devServer();
@@ -258,6 +369,8 @@ test("a seed reaches the design routes on the dev server: /hero-demo (demo new) 
 const TAG = "G-TEST000000";
 const GOOGLE = /^https:\/\/([a-z0-9-]+\.)*(googletagmanager|google-analytics|doubleclick|google)\.(com|net)\//;
 const GTAG_JS = /googletagmanager\.com\/gtag\/js\?id=G-TEST000000$/;
+/** The requests for gtag.js recorded so far. */
+const tags = (google) => google.filter((url) => GTAG_JS.test(url)).length;
 
 /** A browser context whose requests to Google are recorded and answered here. */
 async function consentContext(browser) {
@@ -273,6 +386,7 @@ const sent = (page) => page.evaluate(() => (window.dataLayer ?? []).map((entry) 
   return command === "consent" ? `consent ${what}${what === "update" ? ` ${value.analytics_storage}` : ""}` : command === "set" ? `set ${what}` : String(command);
 }));
 const before = (list, a, b) => list.indexOf(a) !== -1 && list.indexOf(a) < list.indexOf(b);
+/** Time for what must not happen (a request to Google, a second tag) to happen. */
 const settle = (page) => page.waitForTimeout(800);
 
 test("consent on the example: nothing reaches Google before a choice or after a refusal; a grant, here or in another tab, sends the choice before the tag's config", { skip, timeout: 300000 }, async (t) => {
@@ -303,8 +417,9 @@ test("consent on the example: nothing reaches Google before a choice or after a 
       await page.goto(`${server.url}/`, { waitUntil: "load" });
       await page.getByRole("button", { name: "Allow" }).click();
       await page.waitForFunction(() => document.querySelectorAll("script[data-gtag]").length > 0);
+      await until(() => tags(google), (n) => n > 0);
       await settle(page);
-      assert.equal(google.filter((url) => GTAG_JS.test(url)).length, 1, "one tag, however often React mounted it");
+      assert.equal(tags(google), 1, "one tag, however often React mounted it");
       const granted = await sent(page);
       assert.ok(before(granted, "consent update granted", "config"), granted.join(", "));
       assert.equal(await page.getByRole("dialog").count(), 0);
@@ -340,11 +455,12 @@ test("consent on the example: nothing reaches Google before a choice or after a 
       const page = await context.newPage();
       await page.goto(`${server.url}/`, { waitUntil: "load" });
       await page.waitForFunction(() => document.querySelectorAll("script[data-gtag]").length > 0);
+      await until(() => tags(google), (n) => n > 0);
       await settle(page);
       const replayed = await sent(page);
       assert.deepEqual(replayed.slice(0, 3), ["consent default", "set ads_data_redaction", "consent update granted"], "the inline script's replay, before anything else");
       assert.ok(before(replayed, "consent update granted", "config"));
-      assert.equal(google.filter((url) => GTAG_JS.test(url)).length, 1);
+      assert.equal(tags(google), 1);
       assert.equal(await page.getByRole("dialog").count(), 0);
       await context.close();
     });

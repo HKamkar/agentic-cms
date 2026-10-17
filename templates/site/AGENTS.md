@@ -30,11 +30,33 @@ a patch under `node_modules`.
   `retire-content`), enabled by `.claude/settings.json` from the kit's
   marketplace. Never read `content/` at request time: every page is
   prerendered.
+- **Every page is a content file.** It is `content/pages/<slug>.yaml`,
+  rendered by the catch-all route through the section registry; a new page
+  is `/editorial:new-page` (or the page template), a new section type a
+  schema, a component and a registry entry, together. A page's copy
+  (headings, body, labels, alt text, the SEO fields) never lives in a
+  component, a `page.tsx` or `src/config/` (the chrome is configured in
+  `site.ts`, a form in `forms.ts`). A route outside the content engine
+  (the API, the feed, a design round's `*-demo`, `lab-demo`) is a named
+  exception with its reason, in `src/config/components.json` where the
+  site runs the guard. The pages rule has the rest.
 - The engines' contracts are `node_modules/agentic-cms/src/lib/*/README.md`
   (`content`, `blog`, `seo`, `forms`); the command line is
   `node_modules/agentic-cms/docs/commands.md`, the screenshot harness
   `docs/visual-parity.md`, the one-shot page commands
   `docs/shot-probe-sheet.md`, the design loop `docs/design.md`.
+- The kit's know-how is under `node_modules/agentic-cms/docs/`, read
+  there, not copied: `setup.md` on a fresh clone or a new machine
+  (`bash scripts/setup.sh`; the `setup` skill runs it);
+  `dev-server.md` before starting a server or handing over a URL;
+  `browsers.md` for what Chromium, WebKit and the owner's Safari each
+  check; `primitives.md` for what a new site builds first; `gotchas.md`,
+  the traps by topic, before touching an area it lists.
+- A machine's address never goes into the repo: it is found when needed,
+  per developer, and lives in the gitignored `.env.local`
+  (`ALLOWED_DEV_ORIGINS`; `pnpm kit serve` starts the dev server and
+  prints the URLs to hand over, `pnpm urls` prints them alone and
+  `--write` adds the missing hosts; `dev-server.md`).
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
   not change without redirects.
@@ -50,7 +72,9 @@ a patch under `node_modules`.
 - Verify = `pnpm lint` + `pnpm test` + `pnpm content:lint` + `pnpm build`
   (the content lint first, the SEO audit last), 0 failures, before calling
   a change done; `pnpm kit visual-parity` before a merge that touches
-  `src/`, styles or images.
+  `src/`, styles or images. CI (`.github/workflows/verify.yml`) runs the
+  same, and `agentic-cms init . --agent-files --check`, on every pull
+  request.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex
@@ -66,9 +90,11 @@ paths. The table is written from the rules' frontmatter by
 | Paths | Read and follow |
 | --- | --- |
 | `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog](.claude/rules/blog-engine.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/kit.ts`, `src/kit.test.ts`, `src/components/sections/schemas.ts`, `src/components/sections/render.tsx` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Forms](.claude/rules/form-engine.md) |
+| `src/app/**`, `src/components/**`, `content/pages/**` | [Pages](.claude/rules/pages.md) |
 | `src/app/**`, `src/config/site.ts`, `src/kit.ts`, `content/blog/**`, `content/pages/**` | [SEO](.claude/rules/seo.md) |
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->
@@ -86,11 +112,17 @@ paths. The table is written from the rules' frontmatter by
   site's. One colour utility per property per element.
 - Preflight zeroes margins, paddings, borders and list markers: never
   `m-0`, `p-0`, `list-none`.
-- Animation targets are `data-ix` attributes through `ix(name)`, never a
-  styling class; start states live in `src/styles/motion.css`; no
-  `translate-*` / `rotate-*` / `scale-*` utility on an element the reveal
-  library moves; every animated component checks `useReducedMotionPref()`;
-  a sequence longer than two seconds declares `data-settle` on its section.
+- Motion is `agentic-cms/ix`, in two layers (`STANDARD.md` §7 says which).
+  The play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) plays
+  a root once, never on a hover or a second scroll, runs loops only on
+  screen, hides nothing unless `motionScript()` armed the page, and takes
+  its timings from the `--ease-*` / `--motion-*` tokens. The reveals that
+  replay (`Fx`, `OnView`) target `data-ix` attributes through `ix(name)`,
+  never a styling class, and every animated component checks
+  `useReducedMotionPref()`. Start states and keyframes live in
+  `src/styles/motion.css`; no `translate-*` / `rotate-*` / `scale-*` utility
+  on an element either layer moves; a sequence longer than two seconds
+  declares `data-settle` on its section (`settle` on a `Sequence`).
 - Decorative elements are real `aria-hidden` elements, not pseudo-elements.
   No emoji and no symbol characters platforms render as emoji in the UI: an
   icon is an SVG. Interactive things are real `<button>`s and links; no
@@ -132,7 +164,12 @@ paths. The table is written from the rules' frontmatter by
 
 ## Parity harness and long runs
 
-The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The rules:
+The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The
+site's profile in `src/config/harness.ts` says once what every capture
+takes without a flag: its `widths`, its `schemes` (a proof runs a pass in
+each, the dark one's captures ending in `-dark`) and `proof: { pages, ref }`,
+what a bare `pnpm kit visual-parity proof` covers and proves against — so
+that command, with no flag, is the site's proof. The rules:
 a baseline is `capture <label> --ref <commit>`, never a checkout that moved
 on (`pnpm kit visual-parity proof [--motion] [--states]` runs baseline,
 after and compare in one); a capture photographs a copy of the build, so after its `snapshot:`
@@ -144,9 +181,12 @@ a `reflow` verdict or a diff on every text line below one section is, per
 its `cause:` line, a section a fraction of a pixel taller, else a stacking
 context that flipped the compositor (`pnpm kit probe` prints the chain);
 a capture copies every page-width whose build files are unchanged from
-`.parity/shot-cache/` and runs several browsers (`--jobs`), so capture the
-full set rather than a `--pages` subset to save time (`--pages` is for
-looking at one page; `--sample <n>` for a site with many posts); only a
+`.parity/shot-cache/` and runs several browsers (`--jobs`); keep a proof
+as short as the change allows — the profile's widths and schemes (a flag
+only for a run that needs others; never a scheme the site does not have),
+the pages the change touches (`--pages`), one page per template
+(`--sample 1`) only when the change is site-wide, `--states` / `--motion`
+only when hover or animation changed; only a
 first capture of a large site needs the background, and it is finished
 when `.parity/visual/<label>/capture.json` exists; commit each proven state
 before the next change; `.parity/` is gitignored and grows fast
@@ -179,6 +219,11 @@ and `--no-storage` shows it again.
 - Reading a screenshot: measure, don't guess (`design-measure`). "It looks
   broken" is resolved with `pnpm kit probe` and `pnpm kit shot`, not by
   eyeballing.
+- The site is designed, looked at and measured at its widths — the
+  profile's, `widths` in `src/config/harness.ts`; for a new site four:
+  390, 768, 1440 and 1920.
+- Rejected and unapproved candidates are deleted, never archived or kept
+  "for later" (`pnpm kit demo clean`, `pnpm kit lab clean`).
 - A pick from a sheet is not the owner's look at the built thing: build it,
   show it on the dev server, ask, then merge.
 

@@ -9,8 +9,10 @@
 // prefers reduced motion. Decorative, so aria-hidden. The markup is a file of
 // the site's, read when the page is built (readInlineSvg, agentic-cms/content),
 // never user input. The svg fills the box from its own style attribute, so
-// the first paint needs no stylesheet of the site's. No JSX: createElement,
-// so it renders under node:test too.
+// the first paint needs no stylesheet of the site's. Under a lab timeline
+// ([data-lab-timeline], docs/lab.md § Inspecting motion) the clock is the
+// timeline's, and the component leaves it alone. No JSX: createElement, so
+// it renders under node:test too.
 import { createElement as h, useEffect, useMemo, useState } from "react";
 import { useInView } from "motion/react";
 import { useReducedMotionPref } from "./useMainBreakpoint.ts";
@@ -26,6 +28,8 @@ export type InlineAnimationProps = {
 };
 
 const FILL = "display:block;width:100%;height:100%";
+/** The svg whose clock the component runs: none under a lab timeline, which runs it instead. */
+const clockOf = (box: HTMLElement | null) => (box?.closest("[data-lab-timeline]") ? null : box?.querySelector("svg") ?? null);
 /** The markup with its root svg filling the box: the fill put first in its style attribute, or given one. */
 export const fillBox = (markup: string): string => markup.replace(/<svg\b([^>]*)>/, (tag, attrs: string) => (/\sstyle="/.test(attrs) ? tag.replace(/\sstyle="/, ` style="${FILL};`) : `<svg style="${FILL}"${attrs}>`));
 
@@ -39,7 +43,7 @@ export function InlineAnimation({ markup, className, offset = 0 }: InlineAnimati
   const visible = useInView(box);
   // Each play starts the clock from 0; under reduced motion it stands on the rest frame.
   useEffect(() => {
-    const svg = el?.querySelector("svg");
+    const svg = clockOf(el);
     if (!svg) return;
     if (reduce || !plays) svg.pauseAnimations();
     else svg.unpauseAnimations();
@@ -47,7 +51,7 @@ export function InlineAnimation({ markup, className, offset = 0 }: InlineAnimati
   }, [el, reduce, plays]);
   // Off screen the clock stops, so the loop resumes where the reader left it.
   useEffect(() => {
-    const svg = el?.querySelector("svg");
+    const svg = clockOf(el);
     if (!svg || reduce || !plays) return;
     if (visible) svg.unpauseAnimations();
     else svg.pauseAnimations();

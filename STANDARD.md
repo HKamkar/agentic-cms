@@ -16,7 +16,8 @@ a stack of labelled boxes whose tags name the section type that drew them.
 
 All tokens live in the `@theme static` block of `src/app/globals.css` and
 nowhere else. A token name becomes utilities (`--color-paper` → `bg-paper`,
-`--container-page` → `max-w-page`, `--spacing-section` → `py-section`);
+`--color-line` → `border-line`, `--container-page` → `max-w-page`,
+`--spacing-section` → `py-section`);
 `src/styles/base.css` redefines two of them per breakpoint on `:root`, so the
 utilities and the element rules read one source at every width.
 
@@ -47,23 +48,46 @@ capture never waits on a network font and a fork picks its own.
 | `font-heading` | `= --font-sans` | what `base.css` sets on `h1`–`h6` (weight 600) |
 | `font-mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | — |
 | `font-label` | `= --font-mono` | every boxed label: eyebrows, tags, chips, a section's own type |
+| `tracking-label` | `normal` | a label's letter-spacing, by role |
 
 ### Colours
 
-Four, each a `light-dark()` pair. Tailwind's palette is removed
-(`--color-*: initial`), so a page cannot quietly acquire a colour: `bg-white`,
-`text-black` and `border-gray-300` are not utilities here.
+Four values<!-- dark-mode:start -->, each a `light-dark()` pair,<!-- dark-mode:end --> and three roles that alias them.
+Tailwind's palette is removed (`--color-*: initial`), so a page cannot quietly
+acquire a colour: `bg-white`, `text-black` and `border-gray-300` are not
+utilities here.
 
-| Token | Light | Dark | What it is |
+<!-- dark-mode:start -->
+| Value | Light | Dark | What it is |
 |---|---|---|---|
-| `paper` | `#ffffff` | `#121212` | the page ground; a form control's ground; the solid button's label |
-| `ink` | `#000000` | `#f2f2f2` | text, every border and hairline, the solid button's fill |
+| `paper` | `#ffffff` | `#121212` | the page ground, and what `panel` and `on-ink` alias |
+| `ink` | `#000000` | `#f2f2f2` | text, the solid button's fill, and what `line` aliases |
 | `fill` | `#e5e5e5` | `#2a2a2a` | a filled block: a label's ground, a placeholder's field, a form's success box |
 | `muted` | `#666666` | `#9a9a9a` | secondary text: a date, a role, a placeholder's caption, a variant note |
 
-A fifth colour is a token first — never a literal in a component, never an alpha
-modifier on one of these.
+<!-- dark-mode:end -->
+<!-- light-only: | Value | Colour | What it is |
+|---|---|---|
+| `paper` | `#ffffff` | the page ground, and what `panel` and `on-ink` alias |
+| `ink` | `#000000` | text, the solid button's fill, and what `line` aliases |
+| `fill` | `#e5e5e5` | a filled block: a label's ground, a placeholder's field, a form's success box |
+| `muted` | `#666666` | secondary text: a date, a role, a placeholder's caption, a variant note |
+ -->
 
+| Role | Aliases | What asks for it |
+|---|---|---|
+| `panel` | `paper` | a panel's face, a box with a ground of its own: a form control, the outline button, the consent banner, the skip link (a `ui/Panel` has none in the wireframe; a design that gives panels one adds it to `solid`) |
+| `line` | `ink` | every hairline: a box's border, a rule, the placeholder's cross |
+| `on-ink` | `paper` | text on an ink ground: the solid button's label |
+
+A component uses the role where one exists and a value only where no role
+does: `border-line`, never `border-ink`. The page ground, text, a filled block,
+muted text and the solid button's fill have no role, so they name their value.
+A fork restyles by changing a value, or by pointing a role at another value or
+giving it one of its own. A new value or role is a token first — never a
+literal in a component, never an alpha modifier on one of these.
+
+<!-- dark-mode:start -->
 ### The theme
 
 `:root { color-scheme: light dark; }` in `base.css` is the whole mechanism:
@@ -75,22 +99,30 @@ before the first paint, so a reader who chose dark never sees a white flash.
 `viewport.colorScheme` declares that both are supported. A component never reads
 the theme, never branches on it and never carries a `dark:` variant: it uses the
 semantic colours and both modes follow.
+<!-- dark-mode:end -->
+<!-- light-only: ### The scheme
+
+One scheme, light: `:root { color-scheme: light; }` in `base.css`, every colour
+a single value, `viewport.colorScheme` `"light"`, and `schemes: ["light"]` in
+the profile (`src/config/harness.ts`), so no proof and no lab ground is in a
+scheme the site does not have. A component never carries a `dark:` variant.
+ -->
 
 ### Type scale
 
-The tokens carry size and line-height, so `text-h2` sets both; `h1`–`h6` get
-theirs from `base.css` and need no type utility at all. The two steps of the
-scale are `:root` overrides in `base.css`.
+The tokens carry size, line-height and, for the headings, letter-spacing, so
+`text-h2` sets all three; `h1`–`h6` get theirs from `base.css` and need no type
+utility at all. The two steps of the scale are `:root` overrides in `base.css`.
 
-| Token | ≥ 768 | < 768 | line-height |
-|---|---|---|---|
-| `text-h1` | 2.5rem | 2rem | 1.15 |
-| `text-h2` | 1.875rem | 1.5rem | 1.25 |
-| `text-h3` | 1.375rem | 1.25rem | 1.3 |
-| `text-h4` | 1.125rem | — | 1.35 |
-| `text-h5` | 1rem | — | 1.4 |
-| `text-h6` | 0.875rem | — | 1.4 |
-| `text-body` | 1rem | — | 1.6 |
+| Token | ≥ 768 | < 768 | line-height | letter-spacing |
+|---|---|---|---|---|
+| `text-h1` | 2.5rem | 2rem | 1.15 | normal |
+| `text-h2` | 1.875rem | 1.5rem | 1.25 | normal |
+| `text-h3` | 1.375rem | 1.25rem | 1.3 | normal |
+| `text-h4` | 1.125rem | — | 1.35 | normal |
+| `text-h5` | 1rem | — | 1.4 | normal |
+| `text-h6` | 0.875rem | — | 1.4 | normal |
+| `text-body` | 1rem | — | 1.6 | — |
 
 Never `text-base`, `text-sm` or `text-lg`: they set Tailwind's line-heights, not
 this scale. A `<p>` that has to look like a heading takes the token
@@ -106,8 +138,13 @@ or a side gutter. Everything in between is the 4 px spacing scale (`gap-2` 8 px,
 `gap-4` 16 px, `p-4` 16 px, `p-6` 24 px, `mb-6` 24 px), and that is the whole
 vocabulary: a wireframe has no arbitrary values to transcribe. `--radius-*`,
 `--shadow-*`, `--blur-*`, `--animate-*` and `--ease-*` are reset to `initial`,
-so `rounded-*`, `shadow-*`, `blur-*`, `animate-*` and `ease-*` do not exist —
-and neither does a gradient or a transition.
+so `blur-*`, `animate-*` and `ease-*` do not exist — and neither does a
+gradient or a transition. Radius and shadow come back only as roles, held at
+the wireframe's values: `rounded-panel` and `rounded-control` (`--radius-panel`,
+`--radius-control`, `0`), `shadow-panel` and `shadow-glow` (`--shadow-panel`,
+`--shadow-glow`, `0 0 #0000`). A surface asks for its radius and shadow by
+role, and a fork gives the roles their values; no other radius or shadow
+utility exists.
 
 ## 2. Layers and files
 
@@ -115,9 +152,9 @@ and neither does a gradient or a transition.
 |---|---|---|
 | `theme` — `globals.css` `@theme static` | the tokens | a value is needed a second time |
 | `base` — Tailwind preflight | margins, paddings, borders and list markers zeroed; `[hidden]` hidden; buttons inherit font and colour | never |
-| `base` — `src/styles/base.css` | `color-scheme` and the two `data-theme` overrides, the two breakpoint steps, `body`, `h1`–`h6`, the underlined `a`, `strong`, `img, video { height: revert-layer }` | a default every page needs |
+| `base` — `src/styles/base.css` | `color-scheme`<!-- dark-mode:start --> and the two `data-theme` overrides<!-- dark-mode:end -->, the two breakpoint steps, `body`, `h1`–`h6`, the underlined `a`, `strong`, `img, video { height: revert-layer }` | a default every page needs |
 | `utilities` — Tailwind | everything else | always |
-| unlayered — `src/styles/motion.css` | the start states of the `ix/` reveal library, outside the layers so they beat any utility | a fork adds a reveal preset (§7) |
+| unlayered — `src/styles/motion.css` | the start states and keyframes of the `ix/` motion library — the reveals' classes and the play-once layer's block with its tokens — outside the layers so they beat any utility | a fork adds a reveal preset or a part (§7) |
 | unlayered — `<Name>.module.css` | what utilities cannot say | see below |
 
 There is exactly one CSS module in the tree,
@@ -129,7 +166,7 @@ kind; it is plain CSS (no `@apply`, no preprocessor nesting), spells its
 breakpoints out, and joins the utilities with `cx()` from `src/lib/cx.ts`:
 
 ```tsx
-faq: cx(styles.faq, "mb-8 border border-ink"),
+faq: cx(styles.faq, panel(), "mb-8"),
 ```
 
 Because preflight already zeroes them, nothing writes `m-0`, `p-0` or
@@ -179,10 +216,13 @@ Two kinds of picture, and they are not interchangeable.
   missing one; empty is fine for decoration), plus explicit size utilities.
   `base.css` sets `img { height: revert-layer }`, so an image sized by `w-full`
   carries `h-auto` with it — the content-image string is
-  `block h-auto w-full border border-ink`.
+  `block h-auto w-full border border-line`. A section never writes the
+  `<img>` itself (the lint fails one): `ui/Media` writes it from `src`,
+  `width`, `height` and `alt`, in the box its `size` names — `fill`, that
+  string; `icon`, a card's `size-16`; `portrait`, a review's `size-20`.
 
 Above the fold in a **server** component, use `EagerImage` (from
-`agentic-cms/components`): a plain eager
+`agentic-cms/components`, or `<Media eager>`): a plain eager
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
@@ -237,19 +277,22 @@ shared component goes into it in the same commit. In short:
 
 | Kind | Components | Rule |
 |---|---|---|
-| Layout | `ui/Container`, `ui/Section` | every section renders inside `Section`; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, `ui/ThemeToggle`, `ui/Footer`, `ui/Button` (+ `buttonClass`), `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
-| Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` | `Section` renders both from its props; `eyebrowText` is the same label as a class string |
-| Stand-in | `ui/Placeholder` | every illustration the design has not drawn |
+| Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`), `ui/TypeTag` | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; the tag in the corner of each names what drew it; nothing else sets a page width |
+| Chrome | `ui/Navbar`, `ui/NavLink`, <!-- dark-mode:start -->`ui/ThemeToggle`, <!-- dark-mode:end -->`ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
+| Actions | `ui/Button` (+ `button`, `buttonClass`), `ui/OutlineButton`, `ui/IconButton` (+ `iconButton`) | a call to action is `Button`, a link; a choice on the page is `OutlineButton`, a `<button>` with `aria-pressed` when it toggles; an icon alone is `IconButton`, 44 px, its label required |
+| Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` (+ `heading`) | `Section` renders both from its props; `eyebrowText` is the same label as a class string; a heading's level is apart from its size, and its `entrance` is the play-once `Reveal`, unused here |
+| Text | `ui/TextLink`, `ui/MetaLine` (+ `metaLabel`), `keepWords` (`ui/text.ts`) | a link in copy (`next/link` for a path, a new tab for `http(s)`); small uppercase metadata; a hyphenated word kept on one line |
+| Pictures | `ui/Placeholder`, `ui/Media` (+ `media`) | every illustration the design has not drawn; a picture the copy describes, lazy, or `EagerImage` above the fold, at the column's width or in an icon's or a portrait's box |
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
-| Motion | `Fx`, `OnView`, `InlineAnimation`, `ease()`, `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, used by nothing — §7 |
+| Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
-Cards are **not** a shared component: every section's cards are its own design,
-so a section renders them from a data array at the top of its file or from the
-collection the registry resolves for it. Do not build a generic `Card`.
+A card's frame is `ui/Panel`, and what goes inside it is each section's own
+design: a section renders its cards from a data array at the top of its file or
+from the collection the registry resolves for it, each a `<Panel as="li">`. Do
+not build a generic `Card`.
 
 Brand data, links and the chrome's text come from `src/config/site.ts`; a
 section's copy arrives as props from its page file. Neither is ever hard-coded
@@ -265,8 +308,8 @@ keyed by position. Every one of them renders inside `ui/Section`, the frame:
 ```tsx
 <section id={type} data-section={type} className="py-section">
   <Container>
-    <div className="border border-ink p-6 max-md:p-4">
-      <span aria-hidden="true" className="mb-4 inline-block border border-ink bg-fill px-2 font-label text-h6">{type}</span>
+    <Panel className="p-6 max-md:p-4">
+      <TypeTag label={type} className="mb-4" />
       …the eyebrow, the heading, the children…
 ```
 
@@ -279,22 +322,26 @@ The shared strings, as they appear in the code:
 
 | What | String |
 |---|---|
-| a card | `flex flex-col gap-2 border border-ink p-4` |
+| a card | `<Panel as="li" className="flex flex-col gap-2 p-4">` |
 | a card grid | `grid gap-4 lg:grid-cols-3` (or `-2`, `-4`) |
-| a split | `grid gap-4 lg:grid-cols-2` |
+| a split | `grid gap-4 lg:grid-cols-2` (uneven: the tokens `lg:grid-cols-2-1`, `lg:grid-cols-1-2-1`) |
 | a lead paragraph | `mb-6 max-w-prose` |
-| a content image | `block h-auto w-full border border-ink` |
-| an icon | `size-16 border border-ink` |
+| a card's title | `<Heading as="h3">` |
+| a content image | `<Media src width height alt />` (`block h-auto w-full border border-line`) |
+| an icon | `<Media … size="icon" />` (`size-16 border border-line`) |
 | a statistic | `text-h1 font-semibold` |
 | secondary text | `text-muted` |
 
 `src/components/about/Benefits.tsx`, whole:
 
 ```tsx
+import { Heading } from "@/components/ui/Heading";
+import { Media } from "@/components/ui/Media";
+import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 p-4";
 
 /** "What you get": three benefit cards, each an icon, a title and a line. */
 export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefits">) {
@@ -302,11 +349,11 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
     <Section type="about-benefits" eyebrow={eyebrow} heading={heading}>
       <ul className="grid gap-4 lg:grid-cols-3">
         {cards.map((benefit) => (
-          <li key={benefit.title} className={card}>
-            <img src={benefit.icon} width={64} height={64} alt="" loading="lazy" className="size-16 border border-ink" />
-            <h3>{benefit.title}</h3>
+          <Panel as="li" key={benefit.title} className={card}>
+            <Media src={benefit.icon} width={64} height={64} alt="" size="icon" />
+            <Heading as="h3">{benefit.title}</Heading>
             <p>{benefit.text}</p>
-          </li>
+          </Panel>
         ))}
       </ul>
     </Section>
@@ -315,29 +362,48 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
 ```
 
 A server component (nothing here needs the browser); the frame and title block
-from `Section`; cards as list items from the section's own array; `<h3>` after
-the section's `<h2>`; body copy as a bare `<p>`; the icon carrying its size both
-on the element and in the attributes. A call to action would be
-`<Button href={site.links.contact} label={cta} />`.
+from `Section`; cards as `Panel` list items from the section's own array, the
+layout inside them the section's own; the card's `<h3>` a `Heading`, after the
+section's `<h2>`; body copy as a bare `<p>`; the icon a `Media` in its `icon`
+box, the file's own size in the attributes. A call to action would be
+`<Button href={site.links.contact} label={cta} />`. No raw element and no box
+of its own: `pnpm lint` fails a section that writes either (the component
+rules, `agentic-cms/eslint`), and a section file the registry does not
+import (the placement guard, `agentic-cms check-components`;
+`src/components/README.md` § Library first).
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.
 
 ## 7. Motion
 
-**The wireframe animates nothing.** No `Fx`, no `OnView`, no `data-ix`, no
-transition or transform utility, no keyframes. Nothing on a page is hidden until
+**The wireframe animates nothing.** No `Fx`, no `OnView`, no `Reveal`, no
+`Sequence`, no `data-ix` or `data-part`, no transition or transform utility, no
+keyframes. Nothing on a page is hidden until
 JavaScript runs: the HTML a crawler receives is the page a reader sees. The only
 state changes are the ones a control owns — the FAQ's `hidden` answer, the
-navbar's mounted menu, the theme attribute — and each is instant.
+navbar's mounted menu<!-- dark-mode:start -->, the theme attribute<!-- dark-mode:end --> — and each is instant.
 
-The reveal library survives for a fork that wants reveals, whole and unused, in
-`agentic-cms/ix` (`src/lib/ix/`) with its start states in `src/styles/motion.css`:
+The motion library survives for a fork that wants motion, whole and unused, in
+`agentic-cms/ix` (`src/lib/ix/`) with its start states and keyframes in
+`src/styles/motion.css`. It has two layers, and the first question is which:
+
+- **Play once: `Reveal`, `RevealGroup`, `Sequence`** (below). A root plays the
+  first time it is seen and never again — not on a second scroll, not on a
+  hover — and its loops run only while it is on screen. This is the default
+  for new work.
+- **Replay on re-entry: `Fx`, `OnView`.** An element plays each time it enters
+  the viewport after having left it entirely. Choose them only when that
+  replay is wanted. One element never takes both.
+
+The reveals that replay:
 
 | Export | What it is |
 |---|---|
 | `Fx` | the scroll-into-view reveal, 1000 ms, ease-out-quart, 100 px travel, replayed on each entry after the element has left the viewport entirely (never while it is still partly on screen): `<Fx preset="slideInBottom" delay={200} offset={12} mq="main" as="li">`. Presets `slideInBottom/Top/Left/Right`, the four corners, `growIn` (from scale 0.75) and `fadeIn`; `as="link"` renders `next/link`; `duration` (ms) and `distance` (px) change the numbers. `intro` is for the first screen: the first entrance is played by CSS from the first frame (`ix-intro` in `motion.css`, the numbers passed as custom properties), so a hero's copy is never a blank start pose while the scripts load; the replays are Motion's, and it plays at every width. |
 | `OnView` | a sequence over several elements when the section enters: `build={(root) => [[ix("card-2"), { y: "0%" }, { duration: 0.5, ease: ease("ease") }], …]}`, Motion's `animate()` format, resolved inside the element. |
-| `ease(name)` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`. |
+| `InlineAnimation`, `fillBox(markup)` | one of the site's own SMIL loops, inline: on its first frame until in view, played from the start on each entry, paused off screen, at its `data-rest` under reduced motion (`docs/lab.md` § Inline); `fillBox` is its markup step, the root `<svg>` given `display:block;width:100%;height:100%` first in its `style`, so the box sizes the drawing before any stylesheet loads. |
+| `ease(name)`, `EASE` | `linear`, `ease`, `easeIn`, `easeOut`, `easeInOut`, `outQuad`, `outQuart`, `inOutCirc`, `inOutQuad`, `outCubic`; `EASE` is the table itself (name → cubic-bezier tuple, read-only), `ease()` a copy of one tuple for Motion. |
+| `useReveal(ref, offset, once?)` | when a scroll-into-view effect plays: once the element is `offset` % into the viewport, and again only after it has left the viewport entirely (`once` never re-arms); returns the number of plays, the key of an effect of one's own. `Fx`, `OnView` and `InlineAnimation` play on it. |
 | `ix(name)`, `useMainBreakpoint()`, `useReducedMotionPref()` | the selector for a `data-ix` target; the ≥ 992 px query (`null` until mounted); `prefers-reduced-motion`. |
 
 Adding a reveal is five lines: import `Fx`, wrap the element, pick the preset
@@ -356,6 +422,46 @@ properties compose with Motion's inline `transform` (a static transform on such
 an element goes in a module). Once any of it is in use, `capture <label>
 --motion` plays the animations instead of freezing them and records an inventory
 of every animation with its timing and target, compared exactly.
+
+The play-once layer — CSS keyframes started by one attribute, no animation
+code in the reader's browser beyond two shared observers:
+
+| Export | What it is |
+|---|---|
+| `Reveal` | one element that enters once: `<Reveal effect="rise" delay={120} as="h2">`, effects `rise` (default), `fade`, `scale`. `intro` is for the first screen's copy: the entrance is played by CSS from the first frame, never a blank start pose while the scripts load. |
+| `RevealGroup` | its direct children enter one after another: `<RevealGroup as="ul" effect="pop" step={60}>`, effects `rise`, `fade`, `scale`, `pop`; `step` in ms, or the site's `--motion-stagger`. Each child takes `style` and a data attribute. |
+| `Sequence` | a choreography: every element inside it marked with `part()` plays once, after its own delay, and its loops run only on screen. `as="svg"` for a drawing; `settle={2600}` writes `data-settle` for the harness. |
+| `part(kind, delayMs?, { dim, style }?)`, `PART_KINDS`, `LOOP_KINDS` | the props that make an element a part, `<path {...part("draw", 400)} d="…" />`: `data-part` and `--d`. The kinds: `fade`, `rise`, `scale`, `pop`, `draw` (a stroke draws itself), `grow` (from its left edge), `dim` (fades back to `--dim`), and the loops `flow`, `pulse`, `breathe`. |
+| `staggerDelay(index, delayMs?, stepMs?)` | the delay of a stagger's i-th item: `340ms`, or a `calc()` over `--motion-stagger`. |
+| `useMotionRoot()` | the ref callback behind the three: plays a root once when it is 12 % into the viewport (one shared observer; a root in the last 12 % of the page as soon as it shows), keeps `data-visible` on a root with loops while it is on screen, measures a `draw`'s stroke (`--len`), and plays at once under a lab timeline (`[data-lab-timeline]`). |
+| `motionScript()` | the inline script that arms the page: `data-motion="on"` on `<html>` before the first paint, unless the reader prefers reduced motion. |
+
+Adding the layer: render `motionScript()` as an inline script near the top of
+`<body>` (with `suppressHydrationWarning` on `<html>`), and keep the layer's block
+at the end of `motion.css` — the armed start states, the keyframes played with
+fill `backwards`, the loops under `[data-play][data-visible]`, the guard that
+puts everything at rest under `prefers-reduced-motion`, and the tokens. The
+tokens are plain `:root` custom properties there — the curves `--ease-enter`,
+`--ease-move`, `--ease-pop`, the durations `--motion-fast`, `--motion-base`,
+`--motion-slow`, the distance `--motion-travel` and the step
+`--motion-stagger` — not `@theme` tokens, which would bring back the `ease-*`
+utilities the wireframe removes; the package carries no timing of its own. The
+rules that come with it:
+
+- a root plays once, when it first enters the viewport — never on a hover or a
+  second scroll; loops run only on screen;
+- nothing is hidden unless armed: without scripts, under reduced motion and in
+  the harness's static captures every part is at rest;
+- the first screen's copy is a `Reveal` with `intro`;
+- curves and durations are the tokens, never a number in a component;
+- no transition or animation class in a section, and no `translate-*`,
+  `rotate-*` or `scale-*` utility on an element a part moves (the keyframes
+  set `transform`);
+- a sequence longer than two seconds says so with `settle`.
+
+`capture --motion` sees the parts play and records them in the inventory, and
+`probe` lists an armed part whose root has not played among the pending
+reveals.
 
 ## 8. Decisions that look odd — do not "fix" these
 
@@ -378,11 +484,11 @@ of every animation with its timing and target, compared exactly.
   accent and it is the underline; buttons and cards that are links opt out with
   `no-underline`.
 - **The same placeholder picture appears everywhere.** One grey crossed field is
-  the point: it says "a picture goes here", not "this picture".
+  the point: it says "a picture goes here", not "this picture".<!-- dark-mode:start -->
 - **The theme button reads `Theme: system`.** Three states — the reader's system
   setting (no attribute at all), then light, then dark, then back. The attribute
   *is* the state, so the server renders `system`, the first client render agrees
-  with it, and the label is never wrong for a frame.
+  with it, and the label is never wrong for a frame.<!-- dark-mode:end -->
 - **`/sections/*` are in the footer, not the nav.** They are agentic-cms showing its
   section types to whoever forks it, not pages a visitor is being sent to.
 
@@ -431,16 +537,15 @@ last) and `pnpm preview`.
 **Changing an existing page.** A refactor moves no pixels and proves it:
 
 ```bash
-pnpm kit visual-parity capture before
-pnpm kit visual-parity capture before-dark --scheme dark
 # …make the change, pnpm build…
-pnpm kit visual-parity capture after && pnpm kit visual-parity compare before after
+pnpm kit visual-parity proof          # the baseline of develop, the tree, the compare
 ```
 
-A capture renders every prerendered page of the current build at eight widths
-(1920, 1440, 1280, 1100, 992, 800, 767, 390) plus the open menu at 767 and 390.
-`--scheme dark` renders the dark mode (a fresh browser context has no stored
-choice, so the default capture is the light one); `--motion` is for when the
+A capture renders every prerendered page of the current build at the site's
+widths — the profile's, `widths` in `src/config/harness.ts` (390, 768, 1440
+and 1920 for a new site) — with the home page's menu open at each of them
+where its button shows. `proof` runs a pass in each scheme the profile names
+(`schemes`; a dark one's captures end in `-dark`); `--motion` is for when the
 `ix/` library is in use (§7); `--states` for when hover, focus, checked or open
 change; `--pages /,/blog` limits a capture and its compare to the pages a step
 touches. Every `compare` must come back clean, and each proven state is
@@ -467,7 +572,10 @@ hand-write head tags.
 
 - **Brand data, URLs, navigation, footer**: `src/config/site.ts` — the name, the
   tagline, the address, the e-mail, the logo, `links`, `nav`, `signIn`, `cta`,
-  `footer`. Every page is served by this app, so entries stay relative.
+  `footer`. Every page is served by this app, so entries stay relative. The
+  chrome's own words sit beside them: `chrome` (the skip link, the header's,
+  the footer's column titles,<!-- dark-mode:start --> the theme switch's,<!-- dark-mode:end -->
+  the 404, the post template's) and `consentBanner`.
 - **Pages, with their metadata, structured data and copy**:
   `content/pages/<slug>.yaml` (the SEO contract, `src/lib/seo/README.md`; the
   section types and their fields, `src/lib/content/README.md`).

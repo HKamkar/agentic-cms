@@ -12,12 +12,20 @@ kit — the modes, the file names, the waits, the traps — and
 the compare's report says what moved, where, and whether the rest of the
 page survived.
 
+A site says once what it is — the widths it is designed at, its schemes,
+the pages a bare proof covers, the ref it proves against — in its profile,
+`src/config/harness.ts` (`docs/visual-parity.md` § The site's profile), so
+`pnpm kit visual-parity proof` with no flag is the site's short proof. A
+site without one gets the built-in eight widths in light: write the profile
+before the first proof.
+
 ## Read first
 
 `docs/visual-parity.md` § Reading a compare; the change's diff (`git diff
-develop --stat`) to know which pages and sections it can touch; whether
-anything animates (`grep -rl "agentic-cms/ix" src/components`), which
-decides whether `--motion` is part of the proof.
+develop --stat`) to know which pages and sections it can touch, and
+whether it touches anything that animates (`grep -rl "agentic-cms/ix"
+src/components`) or a hover, focus, checked or open state, which decides
+whether `--motion` or `--states` is part of the proof.
 
 ## Steps
 
@@ -29,11 +37,14 @@ decides whether `--motion` is part of the proof.
    ```
 
    (A served build standing in for a commit — `--url` — has its `git log
-   -1` printed first.) With reveals in use, also `--motion`; with hover,
-   focus, checked or open states touched, also `--states`; with a dark
-   theme, `--scheme dark`. Only a first capture of a large site needs the
-   background (every later one copies the unchanged pages); a capture is
-   finished when `.parity/visual/<label>/capture.json` exists.
+   -1` printed first.) With animation changed, also `--motion`; with
+   hover, focus, checked or open states touched, also `--states`. The
+   widths and the scheme are the site's profile (`src/config/harness.ts`),
+   so no flag names them; a site with two schemes captures the second
+   with `--scheme` as well, or lets `proof` run both. Only a first capture
+   of a large site needs the background (every later one copies the
+   unchanged pages); a capture is finished when
+   `.parity/visual/<label>/capture.json` exists.
 2. **The change**, built exactly as it will be committed (`pnpm build`;
    nothing edited after it), then:
 
@@ -44,17 +55,30 @@ decides whether `--motion` is part of the proof.
 
    Or steps 1 and 2 in one, once the change is built:
    `pnpm kit visual-parity proof [--motion] [--states] [--ref <base>]` —
-   each pass's baseline, after capture and compare, one summary, exit 1 on
-   any difference; its captures are `proof-before` / `proof-after`
-   (`-motion`, `-states`), read like any compare in step 3.
+   each pass's baseline, after capture and compare in each scheme the
+   profile names, one summary, exit 1 on any difference; its captures are
+   `proof-before` / `proof-after` (`-motion`, `-states`, and `-dark` for
+   the dark scheme of a site with two), read like any compare in step 3.
 
-   Capture the full set, not a `--pages` subset to save time: a page whose
-   build files did not change is copied from `.parity/shot-cache/` rather
-   than taken again, and several browsers work at once (`--jobs`), so the
-   second capture of a proof takes the changed pages alone. `--pages /a,/b`
-   is for looking at one page while iterating; a site with many pages of
-   one template (posts) can pass `--sample <n>` to both captures to
-   photograph n of them.
+   Keep the proof as short as the change allows:
+   - the site's widths and schemes, which the profile says once
+     (`widths`, `schemes` in `src/config/harness.ts`) and every capture
+     takes without a flag — `--widths w,w` or `--scheme` only for a run
+     that needs another;
+   - the pages the change touches (`--pages /a,/b`, the same on both
+     captures and the compare; `proof --pages` passes it to every step,
+     and the profile's `proof.pages` is what a bare `proof` covers),
+     and one page per template (`--sample 1`) only when the change is
+     site-wide: a token, the chrome, a shared component;
+   - `--states` only when hover, focus, checked or open states changed,
+     `--motion` only when animation did;
+   - each scheme the profile names, never one the site does not have.
+
+   A page is left out because the change cannot reach it, never to save
+   time: a page whose build files did not change is copied from
+   `.parity/shot-cache/` rather than taken again, and several browsers
+   work at once (`--jobs`), so a wider capture stays cheap when the change
+   needs it.
 3. **Read the report** (`report.json`, or the lines):
    - `ok` everywhere: a refactor proved. Say so with the counts.
    - `CHANGED` on the pages the change touches, `rows` inside the changed
@@ -66,8 +90,9 @@ decides whether `--motion` is part of the proof.
    - `SIZE … reflow`, or `CHANGED` rows on every text line below one
      section: first read the `cause:` line under it — a section whose
      height changed by a fraction of a pixel moves everything below by that
-     fraction and repaints it; fix or accept that height. Without a cause,
-     something changed how the compositor paints the whole page —
+     fraction and repaints it; fix or accept that height. When it says no
+     section moved and the rows run through every text line below that
+     section, something changed how the compositor paints the whole page —
      usually a new stacking context (`position: relative`, a `z-index`, a
      `transform`) on a section whose animated elements overflow it.
      `pnpm kit probe / --select "<the section>"` prints the stacking chain;
@@ -81,9 +106,13 @@ decides whether `--motion` is part of the proof.
      as an `<img>`, which no capture can hold).
    - A settled motion frame that keeps differing where a sequence runs long:
      the section declares `data-settle="<ms>"` (`STANDARD.md` §7).
-   - `MISSING`: a page appeared or disappeared, or the compare lacks the
-     `--pages` the capture had (with it, only the named pages are judged,
-     on both sides).
+   - `FLAKY`: one side took that shot with an image still loading, even
+     after a reload; its `cause:` names the image. It proves nothing either
+     way: retake the page with `--pages <route> --fresh` on that side.
+   - `MISSING`: its `cause:` says why — a page appeared or disappeared, a
+     width one side did not take, a state one side skipped for want of its
+     target — or the compare lacks the `--pages` the capture had (with it,
+     only the named pages are judged, on both sides).
 4. **Say what the proof says**, in numbers: how many files, which
    differed, the verdicts, and why each difference is the change. A design
    change is its own commit and says so.

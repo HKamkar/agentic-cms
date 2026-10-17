@@ -6,16 +6,20 @@
 // contexts above it with the property that creates each, and — with --motion
 // and --timeline — how its opacity, transform and position move after it
 // enters the viewport. Always with it: the reveals still pending on the page
-// and the console's errors. JSON only; docs/shot-probe-sheet.md has the
-// recipes.
+// (an Fx start state below opacity 1, an armed part of the play-once layer
+// whose root has not played) and the console's errors. JSON only;
+// docs/shot-probe-sheet.md has the recipes.
 import { parseOrExit } from "./lib/args.mjs";
-import { FX_START_STATE, STACKING } from "./lib/browser.mjs";
+import { FX_START_STATE, REVEALS, STACKING } from "./lib/browser.mjs";
 import { openTarget, requireMatch, targetOf } from "./lib/page-command.mjs";
+import { schemeOrExit } from "./lib/profile.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const DEFAULT_PROPS = ["opacity", "transform", "position", "z-index", "display", "visibility", "overflow", "color", "background-color", "font-size", "line-height", "width", "height", "margin", "padding"];
 
 const { positionals: [target], flags } = parseOrExit(SPECS.probe, process.argv.slice(2));
+// --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+flags.scheme = await schemeOrExit(flags, "probe");
 if (!flags.select && !flags.heading) { console.error("probe: name the element with --select <css> or --heading <regex>; run agentic-cms probe --help"); process.exit(2); }
 if (flags.timeline && !flags.motion) { console.error("probe: --timeline samples a playing animation; add --motion"); process.exit(2); }
 const props = [...DEFAULT_PROPS, ...(flags.props ?? "").split(",").map((p) => p.trim()).filter(Boolean)];
@@ -46,11 +50,7 @@ try {
     }
     elements.push(entry);
   }
-  const reveals = await page.evaluate((pattern) => {
-    const all = [...document.querySelectorAll('[class*="ix-init--"], [class*="ix-main-init--"]')].filter((el) => new RegExp(pattern).test(el.getAttribute("class") ?? ""));
-    const pending = all.filter((el) => getComputedStyle(el).opacity !== "1").map((el) => ({ tag: el.tagName.toLowerCase(), id: el.id || null, classes: [...el.classList], pageTop: Math.round(el.getBoundingClientRect().top + window.scrollY), opacity: getComputedStyle(el).opacity }));
-    return { total: all.length, pending };
-  }, FX_START_STATE.source);
+  const reveals = await page.evaluate(REVEALS, FX_START_STATE.source);
   const [scrollY, scrollHeight] = await page.evaluate(() => [window.scrollY, document.documentElement.scrollHeight]);
   console.log(JSON.stringify({ url, route, width: flags.width, height: flags.height, scheme: flags.scheme, motion: Boolean(flags.motion), seed, scrollY, scrollHeight, elements, reveals, console: consoleLines() }, null, 1));
 } finally { await close(); }

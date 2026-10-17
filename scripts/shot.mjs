@@ -12,9 +12,12 @@ import sharp from "sharp";
 import { parseOrExit } from "./lib/args.mjs";
 import { ISOLATE } from "./lib/browser.mjs";
 import { openTarget, relative, requireMatch, routeName, slug, targetOf } from "./lib/page-command.mjs";
+import { schemeOrExit } from "./lib/profile.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { positionals: [target], flags } = parseOrExit(SPECS.shot, process.argv.slice(2));
+// --scheme, else the first of the site's profile's schemes (src/config/harness.ts), else light
+flags.scheme = await schemeOrExit(flags, "shot");
 if (flags.out && !/\.(png|webp)$/i.test(flags.out)) { console.error(`shot: --out takes a .png or .webp file, not ${flags.out}`); process.exit(2); }
 const say = (line) => (flags.json ? console.error(line) : console.log(line));
 

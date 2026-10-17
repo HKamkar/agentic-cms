@@ -1,7 +1,8 @@
 // The browser the harness and the one-shot commands share: Chromium through
-// playwright-core (the package's one optional peer), a static server for the
-// site's production build, and the waits that make a page deterministic
-// before it is photographed or measured. Everything here was the harness's
+// playwright-core (the package's one optional peer), WebKit beside it for the
+// Safari-engine checks (docs/browsers.md), a static server for the site's
+// production build, and the waits that make a page deterministic before it
+// is photographed or measured. Everything here was the harness's
 // (scripts/visual-parity.mjs) and keeps its behaviour; the header of that
 // script and docs/visual-parity.md say why each wait exists.
 import fs from "node:fs";
@@ -12,19 +13,26 @@ import zlib from "node:zlib";
 import { SEED_STORAGE } from "./storage-seed.mjs";
 
 let playwright;
-/** playwright-core, or exit 2 naming what to install. */
-export async function requireBrowser() {
-  playwright ??= await import("playwright-core").catch(() => {
-    console.error("agentic-cms: install playwright-core (an optional peer of agentic-cms: pnpm add -D playwright-core) and a Chromium build (`pnpm exec playwright-core install chromium` puts one under ~/.cache/ms-playwright; or CHROME_PATH)");
-    process.exit(2);
-  });
+/** playwright-core, or null when the site does not install it. */
+export async function loadBrowser() {
+  playwright ??= await import("playwright-core").catch(() => null);
   return playwright;
 }
 
+/** playwright-core, or exit 2 naming what to install. */
+export async function requireBrowser() {
+  if (await loadBrowser()) return playwright;
+  console.error("agentic-cms: install playwright-core (an optional peer of agentic-cms: pnpm add -D playwright-core) and a Chromium build (`bash scripts/setup.sh` does both on a site from init; `pnpm exec playwright-core install chromium` puts one under ~/.cache/ms-playwright; or CHROME_PATH)");
+  process.exit(2);
+}
+
 // Where Playwright keeps its browsers on each platform, and the executable
-// inside a Chromium build there.
-const CACHE_DIRS = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), ".cache/ms-playwright"), path.join(os.homedir(), "Library/Caches/ms-playwright"), process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "ms-playwright")].filter(Boolean);
+// inside a Chromium or a WebKit build there.
+export const CACHE_DIRS = [process.env.PLAYWRIGHT_BROWSERS_PATH, path.join(os.homedir(), ".cache/ms-playwright"), path.join(os.homedir(), "Library/Caches/ms-playwright"), process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, "ms-playwright")].filter(Boolean);
 const EXECUTABLES = ["chrome-linux64/chrome", "chrome-linux/chrome", "chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium", "chrome-mac/Chromium.app/Contents/MacOS/Chromium", "chrome-win/chrome.exe", "chrome-win64/chrome.exe"];
+const WEBKIT_EXECUTABLES = ["pw_run.sh", "Playwright.exe"];
+/** The engines the kit launches: Chromium for every command, WebKit for the checks that stand in for Safari. */
+export const ENGINES = ["chromium", "webkit"];
 
 /** CHROME_PATH, else the newest Chromium build in Playwright's cache, else playwright-core's own path; null when none exists. */
 export function chromePath() {
@@ -39,6 +47,35 @@ export function chromePath() {
   }
   try { const exe = playwright?.chromium.executablePath(); return exe && fs.existsSync(exe) ? exe : null; } catch { return null; }
 }
+
+/**
+ * playwright-core's own WebKit build when it is installed, else the newest
+ * webkit-<n> build in Playwright's cache; null when none exists. The other way
+ * round from chromePath on purpose: Chromium speaks a stable protocol to any
+ * build, while WebKit's is Playwright's own patch, so the build this
+ * playwright-core names is the one sure to talk to it.
+ */
+export function webkitPath({ caches = CACHE_DIRS, pw = playwright } = {}) {
+  try { const exe = pw?.webkit.executablePath(); if (exe && fs.existsSync(exe)) return exe; } catch { /* no build of its own: the cache */ }
+  for (const cache of caches) {
+    if (!cache || !fs.existsSync(cache)) continue;
+    const builds = fs.readdirSync(cache).filter((d) => /^webkit-\d+$/.test(d)).sort((a, b) => Number(b.slice(7)) - Number(a.slice(7)));
+    for (const build of builds) {
+      const exe = WEBKIT_EXECUTABLES.map((e) => path.join(cache, build, e)).find((e) => fs.existsSync(e));
+      if (exe) return exe;
+    }
+  }
+  return null;
+}
+
+/** The executable of an engine (chromePath or webkitPath); null when none is installed. */
+export const browserPath = (engine) => (engine === "webkit" ? webkitPath() : chromePath());
+
+/** What to run when an engine has no build: the setup script, or the one install line. */
+export const NO_BUILD = {
+  chromium: "agentic-cms: no Chromium build found — run `bash scripts/setup.sh` (or `pnpm exec playwright-core install chromium`, which puts one under ~/.cache/ms-playwright), or set CHROME_PATH",
+  webkit: "agentic-cms: no WebKit build found — run `bash scripts/setup.sh` (or `pnpm exec playwright-core install webkit`; on Linux it also needs its system libraries, docs/browsers.md § Install)",
+};
 
 // Playwright's browser cache also holds an ffmpeg build (for its video
 // recording): a small one — JPEG in, VP8 WebM out — that stands in for a
@@ -63,15 +100,16 @@ export function ffmpegPath({ env = process.env, caches = CACHE_DIRS } = {}) {
   return null;
 }
 
-/** A browser and a context prepared for a capture: no sandbox, no font hinting, the scheme and the motion preference as asked, and a seed (lib/storage-seed.mjs) in every page's storage before its scripts run. */
-export async function launch({ scheme = "light", motion = false, width = 1440, height = 900, scale = 1, seed = null } = {}) {
-  const { chromium } = await requireBrowser();
-  const executablePath = chromePath();
+/** A browser and a context prepared for a capture: Chromium (no sandbox, no font hinting) or, with `engine: "webkit"`, WebKit; the scheme and the motion preference as asked, and a seed (lib/storage-seed.mjs) in every page's storage before its scripts run. */
+export async function launch({ engine = "chromium", scheme = "light", motion = false, width = 1440, height = 900, scale = 1, seed = null } = {}) {
+  if (!ENGINES.includes(engine)) throw new Error(`no engine ${engine}: ${ENGINES.join(" or ")}`);
+  const pw = await requireBrowser();
+  const executablePath = browserPath(engine);
   if (!executablePath) {
-    console.error("agentic-cms: no Chromium build found — set CHROME_PATH, or run `pnpm exec playwright-core install chromium` (it lands under ~/.cache/ms-playwright)");
+    console.error(NO_BUILD[engine]);
     process.exit(2);
   }
-  const browser = await chromium.launch({ executablePath, args: ["--no-sandbox", "--font-render-hinting=none"] });
+  const browser = engine === "webkit" ? await pw.webkit.launch({ executablePath }) : await pw.chromium.launch({ executablePath, args: ["--no-sandbox", "--font-render-hinting=none"] });
   const context = await browser.newContext({ reducedMotion: motion ? "no-preference" : "reduce", colorScheme: scheme, deviceScaleFactor: scale, viewport: { width, height } });
   if (seed) await context.addInitScript(SEED_STORAGE, seed.values);
   return { browser, context, close: () => browser.close() };
@@ -215,8 +253,27 @@ export const fontsReady = (page) => inPage(page, "fonts", 8000, () => Promise.ra
 // that, rather than a fixed pause, is what makes the scroll-through below
 // mean something; a page that never gets there fails the capture instead of
 // yielding a shot of its unhydrated markup.
+//
+// The play-once layer (ix/Reveal, RevealGroup, Sequence) holds a part back
+// only while it is armed — <html data-motion="on">, which motionScript() sets
+// for a reader with no reduced-motion preference, the condition the layer's
+// CSS block hides anything under — and its root has neither played
+// (data-play) nor plays from the first frame (data-intro). A static capture
+// runs under reduced motion, where nothing is armed: the parts are at rest
+// from the first paint and there is nothing to wait for. Under --motion a
+// part below the fold is pending until its root is scrolled to.
 export const FX_START_STATE = /\bix-(main-)?init--(slideIn\w+|growIn|fadeIn)\b/;
-export const revealed = (page) => page.waitForFunction((pattern) => [...document.querySelectorAll('[class*="ix-init--"], [class*="ix-main-init--"]')].filter((el) => new RegExp(pattern).test(el.getAttribute("class") ?? "")).every((el) => getComputedStyle(el).opacity === "1"), FX_START_STATE.source, { timeout: 15000 });
+/** In the page: every reveal on it (an Fx start state, a part of the play-once layer) and those still held back, each with what identifies it. */
+export const REVEALS = (pattern) => {
+  const fx = [...document.querySelectorAll('[class*="ix-init--"], [class*="ix-main-init--"]')].filter((el) => new RegExp(pattern).test(el.getAttribute("class") ?? ""));
+  const parts = [...document.querySelectorAll("[data-motion-root] [data-part], [data-motion-root][data-part]")];
+  const armed = document.documentElement.getAttribute("data-motion") === "on" && matchMedia("(prefers-reduced-motion: no-preference)").matches;
+  const unplayed = (el) => { const root = el.closest("[data-motion-root]"); return !root.hasAttribute("data-play") && !root.hasAttribute("data-intro"); };
+  const entry = (el) => ({ tag: el.tagName.toLowerCase(), id: el.id || null, classes: [...el.classList], pageTop: Math.round(el.getBoundingClientRect().top + window.scrollY), opacity: getComputedStyle(el).opacity, ...(el.hasAttribute("data-part") ? { part: el.getAttribute("data-part") } : {}) });
+  const pending = [...fx.filter((el) => getComputedStyle(el).opacity !== "1"), ...(armed ? parts.filter(unplayed) : [])];
+  return { total: fx.length + parts.length, pending: pending.map(entry) };
+};
+export const revealed = (page) => page.waitForFunction(`(${REVEALS})(${JSON.stringify(FX_START_STATE.source)}).pending.length === 0`, null, { timeout: 15000 });
 
 // A scroll-into-view sequence (ix/OnView) reaches its end state through a
 // chain that runs on the renderer's main thread: the IntersectionObserver
@@ -313,15 +370,40 @@ export const hydrated = (page) => inPage(page, "hydration", 15000, () => new Pro
 // markup gave the image, not on anything a visitor can see. Lazy images are
 // switched to eager so they load without scrolling (a scroll would fire the
 // reveals the motion capture is there to photograph) — once the page has
-// hydrated (above), so the switch is never React's to report.
+// hydrated (above), so the switch is never React's to report. Arrived is not
+// painted: the renderer may decode a large image off the main thread and draw
+// its box blank until it has, so each image that shows is decoded too
+// (img.decode()). The wait listens beside the page's own handlers, never in
+// place of them, and gives up after 10 s: what is still loading then is
+// UNLOADED_IMAGES's to report.
+export const IMAGES_MS = 10000;
 export async function imagesReady(page) {
   await hydrated(page);
-  return inPage(page, "images", 8000, () => { for (const i of document.images) i.loading = "eager"; return Promise.race([Promise.all([...document.images].map((i) => i.complete || new Promise((r) => { i.onload = i.onerror = r; }))), new Promise((r) => setTimeout(r, 5000))]); });
+  return inPage(page, "images", IMAGES_MS + 5000, (ms) => {
+    const images = [...document.images];
+    for (const i of images) i.loading = "eager";
+    const arrived = (i) => (i.complete ? Promise.resolve() : new Promise((r) => { i.addEventListener("load", r, { once: true }); i.addEventListener("error", r, { once: true }); }));
+    const painted = (i) => (i.naturalWidth && i.getClientRects().length ? i.decode().catch(() => {}) : undefined);
+    return Promise.race([Promise.all(images.map((i) => arrived(i).then(() => painted(i)))), new Promise((r) => setTimeout(r, ms))]);
+  }, IMAGES_MS);
 }
+
+// In the page: every image that shows (it has a box and a source) and has not
+// arrived — what a shot would photograph as an empty box. A broken image
+// (complete, no pixels) is the build's and is photographed as it is; one
+// still loading is a capture that went too fast, and the capture loads the
+// page again rather than photograph it (visual-parity.mjs: a second time, the
+// shot is recorded as flaky beside it).
+export const UNLOADED_IMAGES = () => [...document.images].filter((img) => (img.currentSrc || img.getAttribute("src")) && !img.complete && img.getClientRects().length).map((img) => { const r = img.getBoundingClientRect(); return { src: img.currentSrc || img.src, top: Math.round(r.top + scrollY), left: Math.round(r.left + scrollX), width: Math.round(r.width), height: Math.round(r.height) }; });
 
 // Infinite CSS/WAAPI loops would be photographed at a phase that depends on
 // load timing; hold them at their first frame. Finite animations keep playing.
 export const PAUSE_LOOPS = () => { for (const a of document.getAnimations()) { if (a.effect?.getTiming().iterations === Infinity && a.playState !== "paused") { a.pause(); a.currentTime = 0; } } };
+
+// The same test on the DevTools protocol's report of an animation, which
+// cannot say Infinity: JSON has no such number, and Chromium sends an infinite
+// effect with no `iterations` at all. Anything but a finite count is a loop.
+export const isLoop = (iterations) => typeof iterations !== "number" || !Number.isFinite(iterations);
 
 // SMIL is not in document.getAnimations(): neither FREEZE_CSS nor PAUSE_LOOPS
 // reaches an inline <svg>'s <animate>, whose clock would be photographed at a

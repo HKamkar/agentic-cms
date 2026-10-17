@@ -132,7 +132,7 @@ agentic-cms docs --check                  # exit 1 when they are stale (pnpm bui
 
 ## build gates
 
-`seo` · `guard-email` · `critical-css` · `assemble` — `seo`, `guard-email` read the site's registry and run in its root
+`seo` · `guard-email` · `critical-css` · `assemble` · `check-components` — `seo`, `guard-email` read the site's registry and run in its root
 
 ### `seo`
 
@@ -221,6 +221,27 @@ Exit: `0` the package holds every file of public/ and .next/static; `1` a file m
 ```bash
 agentic-cms assemble                      # after next build: the last step of a standalone site's build
 agentic-cms assemble --check --json
+```
+
+### `check-components`
+
+The component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json.
+
+```bash
+agentic-cms check-components [--json]
+```
+
+| flag | what |
+|---|---|
+| `--json` | print the report as one JSON document |
+
+Exit: `0` every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass); `1` a finding (each with its file, the check, and the fix); `2` no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage.
+
+`--json` prints `{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited, file, problem, fix }] }`.
+
+```bash
+agentic-cms check-components             # what pnpm lint runs after eslint
+agentic-cms check-components --json | jq '.findings[] | .file'
 ```
 
 ## images
@@ -333,26 +354,26 @@ agentic-cms visual-parity capture <label> [--motion | --states] [--scheme light|
 | flag | what |
 |---|---|
 | `--motion` | play the animations: viewport frames 150, 500 and 2000 ms after each scroll step, plus an inventory of every animation |
-| `--states` | hover, focus, checked and open states, located by role and text |
-| `--scheme light|dark` | prefers-color-scheme for the capture (one of `light`, `dark`) (default `light`) |
+| `--states` | hover, focus, checked and open states, located by role and text; a state whose target the page lacks is skipped and listed in capture.json |
+| `--scheme light|dark` | prefers-color-scheme for the capture; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--url <base>` | capture a served site instead of serving .next (print its git log -1 first) |
 | `--build` | run the site's `pnpm build` first (log: .parity/<label>.build.log) |
-| `--ref <git ref>` | capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, installed, built (reused for the same sha once a build finished), served and captured |
-| `--widths w,w` | viewport widths; default 1920,1440,1280,1100,992,800,767,390 (1440,390 with --motion) |
+| `--ref <git ref>` | capture a baseline: that commit checked out in a sibling directory (../<site>-ref-<sha>), its demo routes removed, the tree's .env.local copied in, installed, built (reused for the same sha and .env.local once a build finished), served and captured |
+| `--widths w,w` | viewport widths; default the profile's widths (src/config/harness.ts), else 1920,1440,1280,1100,992,800,767,390; --motion takes 1440,390 and --states 1440 without it; the home page's menu is opened at each of the profile's widths where its button shows (767 and 390 without a profile) |
 | `--pages /a,/b` | only these routes (a partial capture; pass the same to compare); a demo route (/<name>-demo) is captured only when named here |
 | `--settle <n>` | with --motion: the ms after a scroll step at which the settled frame is taken; an element's data-settle="<ms>" raises it while that element is in view (default `2000`) |
 | `--sample <n>` | a static capture of the first n pages of each template (a dynamic route such as /blog-post/[slug], as the build's prerender manifest names it; never a catch-all), in route order; the rest are listed in meta.json and left out of a compare |
 | `--third-party hold|allow` | other origins' scripts and connections (analytics, beacons, widgets) on a build the harness serves: held back by the page's Content-Security-Policy, or allowed; their images, fonts and stylesheets load either way; a --url site is captured as it serves itself (one of `hold`, `allow`) (default `hold`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--jobs <n>` | browsers at work at once, each on its own page-widths (or states): default the cores less one, at most 4, for a static or --states capture, and 2 for --motion, whose frames are timed |
 | `--fresh` | take every shot again: reuse none from .parity/shot-cache, where a page-width whose build files are all unchanged is otherwise copied (the cache is refreshed all the same) |
 | `--json` | print the capture's summary as JSON (also written last as capture.json — its presence means the capture finished) |
 
-Exit: `0` captured; `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
+Exit: `0` captured (a static shot taken with an image still loading after a reload is recorded beside it as <page>@<width>.unloaded.json, and a compare calls it FLAKY); `1` a page failed twice (no shot is taken of a stalled page), or the build failed; `2` usage, no build, no browser (playwright-core and a Chromium), or a seed that does not read (the flag or src/config/harness.ts is named).
 
-`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
+`--json` prints `{ label, dir, pages, widths, files, seconds, jobs, reused: { shots, of } | null, timings: { taken, seconds, mean, slowest: [{ name, seconds }] }, skipped: [{ state, page, file, reason }] (--states), meta: { scheme, motion, states, settle, ref, sha, tree: { head, dirty } | null, sample: { n, skipped }, seed: { storage, sessionStorage, at } } }`.
 
 ```bash
 agentic-cms visual-parity capture before --ref develop
@@ -380,9 +401,9 @@ agentic-cms visual-parity compare <before> <after> [--threshold 0.02] [--thresho
 | `--mixed-seed` | compare two captures seeded differently — what a seed itself changes; without it they are refused, like two schemes |
 | `--json` | print the report as JSON (also written as report.json in the diff directory) |
 
-Exit: `0` identical within the thresholds; `1` a difference, a size change or a missing file; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
+Exit: `0` identical within the thresholds; `1` a difference, a size change, a missing file or a flaky shot (one taken with an image still loading); each line that is not ok has its cause: line under it; `2` usage, a missing capture, captures of two schemes, or captures seeded differently (without --mixed-seed).
 
-`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause: { section, id, moved, top, height, delta, fractional } | null }] }`.
+`--json` prints `{ before, after, scheme, threshold, thresholdMid, pages, baseline, seed: { before, after }, geometry: { before, after }, summary: { ok, changed, size, missing, flaky, exit }, files: [{ name, kind, status, line, … changedPct, bands | verdict, head, tail, delta, band, crops | onlyBefore, onlyAfter | in, cause (every status but ok): { section, id, moved, top, height, delta, fractional } | { kind: unloaded | in-place | geometry | frame | missing | inventory | settle, … } }] }`.
 
 ```bash
 agentic-cms visual-parity compare before after --json
@@ -395,32 +416,33 @@ agentic-cms visual-parity compare unseeded seeded --mixed-seed   # what the seed
 A whole proof in one command: for the static pass, and for --motion and --states when asked, the baseline of a commit (--ref), the tree as it stands and the compare; one summary, exit 1 on any difference.
 
 ```bash
-agentic-cms visual-parity proof [label] [--ref develop] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
+agentic-cms visual-parity proof [label] [--ref <git ref>] [--motion] [--states] [--all] [--build] [--scheme light|dark] [--widths w,w] [--pages /a,/b | --sample <n>] [--jobs <n>] [--fresh] [--third-party hold|allow] [--storage <key>=<value>]… [--session-storage <key>=<value>]… [--no-storage]
 ```
 
 - `<label>` — the proof's name: its captures are <label>-before and <label>-after (-motion, -states for those passes); default proof
 
 | flag | what |
 |---|---|
-| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha) (default `develop`) |
+| `--ref <git ref>` | the commit the baseline is built from (capture --ref: a sibling worktree, reused for the same sha); default the profile's proof.ref (src/config/harness.ts), else develop |
 | `--motion` | add the --motion pass |
 | `--states` | add the --states pass |
 | `--all` | all three passes: static, --motion and --states |
 | `--build` | run the site's `pnpm build` before the first after capture |
-| `--scheme light|dark` | prefers-color-scheme for every capture (one of `light`, `dark`) (default `light`) |
-| `--pages /a,/b` | only these routes, on every capture and compare |
-| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample) |
+| `--scheme light|dark` | prefers-color-scheme for every capture; default a pass in each of the profile's schemes (src/config/harness.ts; with two, the dark one's captures end in -dark), else light (one of `light`, `dark`) |
+| `--widths w,w` | the static pass's viewport widths (capture --widths); default the profile's widths, else the built-in eight; --motion and --states keep their own |
+| `--pages /a,/b` | only these routes, on every capture and compare; default the profile's proof.pages (src/config/harness.ts) unless --sample is given, else every page |
+| `--sample <n>` | the static pass photographs the first n pages of each template (capture --sample); default the profile's proof.sample (src/config/harness.ts) unless --pages is given |
 | `--jobs <n>` | browsers at once, for every capture (capture --jobs) |
 | `--fresh` | take every shot again, reusing none (capture --fresh) |
 | `--third-party hold|allow` | other origins' scripts and connections on every capture (capture --third-party) (one of `hold`, `allow`) |
 | `--storage <key>=<value>` | a localStorage key on both sides of every pass (capture --storage); the site's src/config/harness.ts is read by both without it (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (capture --session-storage) (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts on both sides (capture --no-storage) |
+| `--no-storage` | leave out the site's seed on both sides (capture --no-storage) |
 | `--json` | print the proof as JSON: each pass's captures and compare report |
 
 Exit: `0` every pass identical within the thresholds; `1` a difference in any pass, or a capture that failed (a page stalled twice, the build failed); `2` usage, no build, no browser, a seed that does not read, or captures of two schemes.
 
-`--json` prints `{ label, ref, passes: [{ pass, before, after, report, seconds }], exit, failed? }`.
+`--json` prints `{ label, ref, schemes, passes: [{ pass, scheme, before, after, report, seconds }], exit, failed? }`.
 
 ```bash
 agentic-cms visual-parity proof
@@ -472,7 +494,7 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--url <base>` | a served site (a dev server) instead of the build under .next |
 | `--width <n>` | viewport width in px (default `1440`) |
 | `--height <n>` | viewport height in px (default `900`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
@@ -487,7 +509,7 @@ agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--sca
 | `--out <file>` | .png or .webp; default .parity/shots/<route>@<width>[--<target>].png |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout (progress goes to stderr) |
 
 Exit: `0` written; `1` the target was not found on the page; `2` usage, no build, no browser, or a seed that does not read.
@@ -516,7 +538,7 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--url <base>` | a served site (a dev server) instead of the build under .next |
 | `--width <n>` | viewport width in px (default `1440`) |
 | `--height <n>` | viewport height in px (default `900`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--motion` | play the animations (reveals at their start state, sequences running) instead of freezing them at the end state |
 | `--wait <n>` | extra milliseconds to wait before measuring or photographing (default `0`) |
 | `--scroll <y|into-view>` | scroll the page to y px, or the target into view (the default with a target under --motion) |
@@ -529,11 +551,11 @@ agentic-cms probe <route|url> --select <css> | --heading <regex> [--all] [--prop
 | `--every <n>` | the timeline's sampling interval in ms (default `100`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 
 Exit: `0` printed; `1` no element matched; `2` usage, no build, no browser, or a seed that does not read.
 
-`--json` prints `{ url, route, width, height, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity }] }, console }`.
+`--json` prints `{ url, route, width, height, scheme, motion, seed: { storage, sessionStorage, at } | null, scrollY, scrollHeight, elements: [{ selector, index, tag, id, classes, box, pageBox, computed, stacking: [{ tag, id, classes, reason }], timeline? }], reveals: { total, pending: [{ tag, id, classes, pageTop, opacity, part? }] }, console }`.
 
 ```bash
 agentic-cms probe / --select ".card" --all
@@ -555,11 +577,11 @@ agentic-cms sheet <spec.yaml|json> [--url <base>] [--out <png>] [--scale 2] [--s
 | `--url <base>` | serve img: cells and the site's stylesheets from a served site instead of the build |
 | `--out <png>` | default .parity/sheets/<name>.png |
 | `--scale <n>` | device scale factor (default `2`) |
-| `--scheme light|dark` | prefers-color-scheme (tokens follow it) (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme (tokens follow it); default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--width <n>` | the sheet's width in px (default `1200`) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print one JSON document on stdout |
 
 Exit: `0` written; `2` usage, a spec error (the field is named), a missing file, no browser, or a seed that does not read.
@@ -668,13 +690,13 @@ agentic-cms icons audit [--url <base>] [--pages /a,/b] [--max 96] [--out .parity
 | `--pages /a,/b` | only these routes (default: every page of the build but the 404 and the demo routes, /<name>-demo, which are measured only when named here) |
 | `--max <n>` | the largest rendered size counted as an icon, in px (default `96`) |
 | `--width <n>` | viewport width the pages are measured at (default `1440`) |
-| `--scheme light|dark` | prefers-color-scheme (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | prefers-color-scheme; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--background <colour>` | the sheet's background (default the page's) |
 | `--color <colour>` | the sheet's ink |
 | `--out <png>` | the sheet; the JSON goes beside it (default .parity/icons/audit.png) |
 | `--storage <key>=<value>` | a localStorage key on the page's origin, written before any of the page's scripts runs, over the site's src/config/harness.ts key by key; {now} in the value is the run's ISO time, {now:ms} its epoch milliseconds (repeatable) |
 | `--session-storage <key>=<value>` | the same for sessionStorage (repeatable) |
-| `--no-storage` | ignore the site's src/config/harness.ts: only the --storage and --session-storage given are seeded (a first visit) |
+| `--no-storage` | leave out the site's seed (the storage areas of src/config/harness.ts; its profile still applies): only the --storage and --session-storage given are seeded (a first visit) |
 | `--json` | print the report |
 
 Exit: `0` written; `2` no build, no browser, or a seed that does not read.
@@ -736,7 +758,7 @@ agentic-cms icons round publish <round> --pick <role=letter,…> [--to public/im
 |---|---|
 | `--pick <role=letter,…>` | the owner's pick per role: retrieval=B,graph=A |
 | `--to <dir>` | where a mark's file and its source go (default `public/images/icons`) |
-| `--scheme light|dark` | the scheme a mark's file resolves the tokens for (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | the scheme a mark's file resolves the tokens for; default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--json` | print { round, published: [{ role, letter, files }] } |
 
 Exit: `0` published; `2` no such round, a role or letter it does not have, an icon that is not flat shapes, or usage.
@@ -778,7 +800,7 @@ agentic-cms icons round retire modules --dry-run
 
 ### `lab`
 
-The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, light and dark side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done.
+The design canvas for the site's own graphics: SVG scenes under .parity/lab served on the site's tokens, in each of its schemes side by side, on the LAN, and as a throwaway route on the site's own theme; rendered to the files a page ships; removed when done.
 
 ```bash
 agentic-cms lab <new | serve | route | render | clean> …
@@ -810,7 +832,7 @@ agentic-cms lab new spin --kind loop
 
 #### `lab serve`
 
-Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a light and a dark box at its sizes and enlarged, as an <img> on both grounds, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs and runs until Ctrl-C.
+Serves the lab: every scene under .parity/lab (and --scenes files or folders) on the tokens of src/app/globals.css — inline in a box per scheme the profile names (src/config/harness.ts; light and dark without one) at its sizes and enlarged, as an <img> on each ground, with a scrubber and a replay over its animations and a switch to its still (/scene/<name>?still=1) — reloading on every save; prints the loopback and the LAN URLs, and each scene's own page (/scene/<name>, the URL to hand over), and runs until Ctrl-C.
 
 ```bash
 agentic-cms lab serve [--host 0.0.0.0] [--port 8001] [--scenes <file|dir>]… [--sizes 24,40,64]
@@ -833,23 +855,28 @@ agentic-cms lab serve --scenes public/images/home --scenes public/images/ui --si
 
 #### `lab route`
 
-Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it).
+Writes the throwaway route src/app/lab-demo/page.tsx from the kit's template: every scene under .parity/lab inline on the site's own grounds (the page and a white card to start; the site adds its surfaces) through the LabScenes component of agentic-cms/lab, with the procedure for the person looking at it; the second window beside `lab serve`, removed by `lab clean` and never merged (the SEO audit fails it); with this clone's next dev running, waits until /lab-demo answers and prints its URLs to hand over.
 
 ```bash
-agentic-cms lab route [--force] [--json]
+agentic-cms lab route [--force] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
 ```
 
 | flag | what |
 |---|---|
 | `--force` | overwrite a route that is already there |
-| `--json` | print { file, path } |
+| `--no-wait` | write it and ask no server (by default, with this clone's next dev running — the one .next/dev/lock names, on whichever port — /lab-demo is asked until it stops answering 404, which compiles it too, and then its URLs are printed; another server on the port of package.json's scripts.dev is named at once and asked nothing) |
+| `--timeout <s>` | how long /lab-demo may take to answer, in seconds (default `120`) |
+| `--url <base>` | the dev server to ask, http://host:port, whatever it is: no lock is read (default: this clone's next dev, on the port its .next/dev/lock names, else localhost on the port of package.json's scripts.dev) |
+| `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
+| `--json` | print { file, path, urls, ready, status } |
 
-Exit: `0` written; `2` the route exists (pass --force), or usage.
+Exit: `0` written (and /lab-demo answered, or no dev server runs, or --no-wait); `1` written, and /lab-demo answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once); `2` the route exists (pass --force), or usage.
 
-`--json` prints `{ file, path }`.
+`--json` prints `{ file, path, urls: [{ where, url }], ready: true|false|null, status }`.
 
 ```bash
-agentic-cms lab route                      # then pnpm dev and /lab-demo
+agentic-cms lab route                      # with the dev server running: waits for /lab-demo, prints its URLs
+agentic-cms lab route --no-wait            # write it, ask nothing
 ```
 
 #### `lab render`
@@ -872,7 +899,7 @@ agentic-cms lab render <scene> --out <file> [--at 0] [--animate] [--frames <n>] 
 | `--duration <n>` | one cycle in seconds (default: the scene's data-duration, else what its animations declare) (default `0`) |
 | `--scale <n>` | device pixels per CSS pixel of a raster (2 for a retina asset) (default `1`) |
 | `--width <n>` | the CSS width to render at (default: the scene's own) (default `0`) |
-| `--scheme light|dark` | the scheme the tokens resolve in (a raster is one scheme; render twice for both) (one of `light`, `dark`) (default `light`) |
+| `--scheme light|dark` | the scheme the tokens resolve in (a raster is one scheme; render once per scheme); default the first of the profile's schemes (src/config/harness.ts), else light (one of `light`, `dark`) |
 | `--reduced` | render under prefers-reduced-motion: reduce — what such a reader gets |
 | `--background transparent|paper` | the ground of a raster (.jpg is always on the paper) (one of `transparent`, `paper`) (default `transparent`) |
 | `--lossy` | lossy WebP (quality 82) instead of lossless |
@@ -895,7 +922,7 @@ agentic-cms lab render hero --out public/images/home/hero.webm --animate --backg
 
 #### `lab clean`
 
-Removes .parity/lab and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays.
+Removes .parity/lab (all but an icon round in progress, .parity/lab/rounds/<round>, which icons round retire removes) and the route src/app/lab-demo (when it is the kit's — one that imports agentic-cms/lab), and next dev's generated route types when they still name the route (the production build's type check reads them); what a render wrote under public/ (and src/config/icons/) is what stays.
 
 ```bash
 agentic-cms lab clean [--json]
@@ -927,10 +954,10 @@ agentic-cms demo <new | clean> …
 
 #### `demo new`
 
-Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last.
+Writes src/app/<name>-demo/page.tsx and one candidate per letter — a copy of the component beside it (<Name>A.tsx, <Name>B.tsx…) to edit into an idea; with --section the route reads the page's copy from its file on every render and shows every candidate in the section's real frame, with --component alone it renders each candidate with no props (a piece of the chrome, whose copy is the site's config); lettered with one line, inside the site's own layout, the current version last — or with --showcase a review page of pieces that are not one section's candidates; then, with this clone's next dev running, waits until the route answers and prints the URLs to hand over.
 
 ```bash
-agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slug>] [--candidates 2] [--json]
+agentic-cms demo new <name> <--section <type> | --component <file> | --showcase [--component <file>]…> [--page <slug>] [--candidates <n>] [--timeline] [--no-wait] [--timeout <s>] [--url <base>] [--no-public] [--json]
 ```
 
 - `<name>` — the route is src/app/<name>-demo; lowercase letters, digits and hyphens
@@ -939,18 +966,25 @@ agentic-cms demo new <name> <--section <type> | --component <file>> [--page <slu
 |---|---|
 | `--section <type>` | the section type (a key of the registry, src/components/sections/render.tsx); the route then reads the page's copy and passes it to every candidate |
 | `--page <slug>` | the page file whose copy the route reads (default: the first under content/pages carrying the section); only with --section |
-| `--candidates <n>` | how many candidates, A onward (1 to 8) (default `2`) |
-| `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props |
+| `--candidates <n>` | how many candidates, A onward (1 to 8; default 2); not with --showcase |
+| `--component <file>` | the component to copy: with --section, one outside the registry; alone, a piece of the chrome (a footer, a navbar, a button) whose candidates take no props; with --showcase, each piece the page shows (repeat it), never removed by demo clean (repeatable) |
+| `--showcase` | a review page that is not a section's candidates — the library's primitives, a motion layer, a set of states — a block per --component (or one to fill), inside the site's own layout; demo clean removes it and every file only it uses |
+| `--timeline` | wrap each block (the candidates, the current version, a showcase's pieces) in <LabTimeline label><div data-lab-drive>, so its motion can be paused, stepped and replayed (docs/lab.md § Inspecting motion) |
+| `--no-wait` | write it and ask no server (by default, with this clone's next dev running — the one .next/dev/lock names, on whichever port — /<name>-demo is asked until it stops answering 404, which compiles it too, and then its URLs are printed; another server on the port of package.json's scripts.dev is named at once and asked nothing) |
+| `--timeout <s>` | how long /<name>-demo may take to answer, in seconds (default `120`) |
+| `--url <base>` | the dev server to ask, http://host:port, whatever it is: no lock is read (default: this clone's next dev, on the port its .next/dev/lock names, else localhost on the port of package.json's scripts.dev) |
+| `--no-public` | do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside) |
 | `--json` | print the report |
 
-Exit: `0` written; `2` neither --section nor --component, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, or usage.
+Exit: `0` written (and the route answered, or no dev server runs, or --no-wait); `1` written, and the route answered 5xx (its error's tail printed) or did not answer within --timeout, or the port of scripts.dev answers but not as this clone's next dev (said at once); `2` neither --section, --component nor --showcase, a bad name, a route or a candidate file that exists, a section the registry or no page carries, --page without --section, --showcase with --section or --candidates, or usage.
 
-`--json` prints `{ route, path, section, page, component, candidates: [{ letter, file }], data }`.
+`--json` prints `{ route, path, kind: candidates|showcase, section, page, component, components (a showcase's), candidates: [{ letter, file }], data, urls: [{ where, url }], ready: true|false|null, status }`.
 
 ```bash
-agentic-cms demo new services --section home-service
-agentic-cms demo new band --section about-story --page sections-about --candidates 3
+agentic-cms demo new services --section home-service        # with the dev server running: waits for /services-demo, prints its URLs
+agentic-cms demo new band --section about-story --page sections-about --candidates 3 --timeline
 agentic-cms demo new footer --component src/components/ui/Footer.tsx    # a piece of the chrome: no page copy, the candidates take no props
+agentic-cms demo new library --showcase --component src/components/ui/Button.tsx --component src/components/ui/Panel.tsx --timeline
 ```
 
 #### `demo clean`
@@ -980,33 +1014,126 @@ agentic-cms demo clean                     # every *-demo route
 
 ## site
 
-`init`
+`init` · `setup` · `urls` · `serve`
 
 ### `init`
 
-A site from the package: the wireframe example, the agent files (rules and design skills), the config and a manifest; or a refresh of an existing site's agent files.
+A site from the package: the wireframe example, the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
-agentic-cms init [dir] [--force] | agentic-cms init [dir] --agent-files [--check] [--force]
+agentic-cms init [dir] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check | --diff <file> | --accept <file>] [--force]
 ```
 
 - `<dir>` — where the site goes (default: the current directory)
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept |
-| `--check` | with --agent-files: report each file — ok, modified (the site edited it), stale (the kit has a newer one, or a rule's scope changed since the table), missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any; write nothing |
-| `--force` | overwrite files that exist (package.json is always merged, never overwritten) |
+| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites); a file the site edited is kept ("kept, kit changed" when the kit's text changed since the site took it), and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
+| `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, kit changed (the site edited it and the kit's text changed since the base the manifest records, or the manifest records none: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any but ok and modified; write nothing |
+| `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/ or the site's git history; for a file with no base, the site's text against the kit's; repeat for more files; write nothing (repeatable) |
+| `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
+| `--force` | overwrite files that exist (package.json and pnpm-workspace.yaml are always merged, never overwritten) |
+| `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, or every agent file as the kit ships it; `1` --check found drift; `2` usage.
+Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept } | { version, files: [{ file, status, bytes? }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly } | { version, files: [{ file, status, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff }] }`.
 
 ```bash
 agentic-cms init .
+agentic-cms init my-site --light-only      # a site with one scheme, light
 agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
 agentic-cms init . --agent-files --check  # what drifted, for CI
+agentic-cms init . --agent-files --diff .claude/rules/styling.md    # the kit's change since the site took it
+agentic-cms init . --agent-files --accept .claude/rules/styling.md  # merged by hand: the kit's text is its base
+```
+
+### `setup`
+
+A clone made ready to work on, the steps after scripts/setup.sh got Node checked, pnpm and the dependencies: the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests, then the URLs; each step keeps what is there, so a re-run takes seconds.
+
+```bash
+agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit] [--deps] [--no-public] [--port <n>] [--lab-port <n>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--check` | report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap |
+| `--build` | verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute) |
+| `--no-browsers` | skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium) |
+| `--engines <a,b>` | the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md) (default `chromium,webkit`) |
+| `--deps` | on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed) |
+| `--no-public` | do not look up the public address (offline, or a machine no viewer reaches from outside) |
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev) |
+| `--lab-port <n>` | the lab server's port (lab serve's) (default `8001`) |
+| `--json` | print the report as JSON (the steps' progress and the commands' output go to stderr) |
+
+Exit: `0` ready (a step left for the owner, sudo for WebKit's libraries, is printed, not failed); `1` a verify step failed, or --check found a gap; `2` the environment — Node older than 22.18, no package.json here, no pnpm or playwright-core, a browser install that failed — or usage.
+
+`--json` prints `{ ready, check, steps: [{ step, status: ok|done|skipped|gap|todo|failed, detail, command? }], todo: [command], urls: <urls --json> | null }`.
+
+```bash
+agentic-cms setup                          # what bash scripts/setup.sh runs last
+agentic-cms setup --check                  # what is missing; writes nothing
+agentic-cms setup --deps                   # with WebKit's Linux libraries (asks for sudo)
+agentic-cms setup --no-browsers --build    # a machine that only edits content, through the full gate
+```
+
+### `urls`
+
+This machine's URLs for the dev server and the lab — localhost, the LAN, the public address — whether each server answers (the dev server said running only when it is this clone's own next dev, by its .next/dev/lock as serve reads it; another checkout's server on the port is named as such), and whether ALLOWED_DEV_ORIGINS in .env.local covers every address, without which a page opened there never hydrates; --write adds the missing ones.
+
+```bash
+agentic-cms urls [--write] [--no-public] [--port <n>] [--lab-port <n>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--write` | add the missing addresses to ALLOWED_DEV_ORIGINS in .env.local (made from .env.example when absent), as hostnames, keeping the file's other lines; then restart this clone's dev server |
+| `--no-public` | do not look up the public address (api.ipify.org, then ifconfig.me; 4 s each) |
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000) |
+| `--lab-port <n>` | the lab server's port (lab serve's) (default `8001`) |
+| `--json` | print the report as JSON |
+
+Exit: `0` every address is in ALLOWED_DEV_ORIGINS (or was written); `1` an address is missing from it, or .env.local is, and --write was not given; `2` no dev port (no package.json's scripts.dev to read it from, and no --port), or usage.
+
+`--json` prints `{ addresses: { lan, public, publicLookedUp }, dev: { port, up, own, ownPort, urls: [{ where, url }] }, lab: { port, up, urls }, origins: { file, exists, listed, missing, written } }`.
+
+```bash
+agentic-cms urls                           # the URLs to hand over, and a missing origin named
+agentic-cms urls --write                   # the missing origins into .env.local
+agentic-cms urls --no-public --json
+```
+
+### `serve`
+
+The dev server and the lab for the owner's devices, started or found running, and every URL to hand over once each route answers: the origins checked first, next dev on the site's port on every interface, the lab when .parity/lab has scenes, every *-demo route and the root waited for, then one table — localhost, LAN and public × the routes, the lab's index and each /scene/<name> — until Ctrl-C stops both.
+
+```bash
+agentic-cms serve [--port <n>] [--lab] [--lab-port <n>] [--write-origins] [--fix-cache] [--no-public] [--timeout <s>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--port <n>` | the dev server's port (default: the -p of package.json's scripts.dev, else next dev's 3000); this site's next dev already running there, or on the port its lock (.next/dev/lock) names, is reused and left running, and anything else on the port is refused |
+| `--lab` | start the lab server even when .parity/lab has no scene (it starts by itself when it has one) |
+| `--lab-port <n>` | the lab server's port (lab serve's); when it is taken, serve goes on without the lab and says so (default `8001`) |
+| `--write-origins` | add the addresses ALLOWED_DEV_ORIGINS lacks to .env.local before next dev starts, so they apply (urls --write's edit) |
+| `--fix-cache` | when the dev log shows Turbopack's stale cache (Can't resolve '@vercel/turbopack-next/internal/…', after a production build), stop the server serve started, clear .next/dev and .next/cache/turbopack and start it again, once |
+| `--no-public` | do not look up the public address (offline, or a machine no viewer reaches from outside) |
+| `--timeout <s>` | how long next dev may take to be ready, and each route to answer, in seconds (default `120`) |
+| `--json` | print each table as one JSON document per line instead (the progress goes to stderr) |
+
+Exit: `0` stopped with Ctrl-C; `1` next dev exited on its own, or was not ready within --timeout (its log's tail is printed); `2` no dev port, the port held by something that is not this site's next dev, next not installed, or usage.
+
+`--json` prints `{ dev: { port, pid, started, reused }, lab: { port, started, taken, urls, scenes: [{ name, urls }] } | null, hosts: [{ where, host }], routes: [{ path, ready, status, tail, urls: [{ where, url }] }], origins: { file, exists, listed, missing, written }, restarted }`.
+
+```bash
+agentic-cms serve                          # then hand over the URLs it printed; Ctrl-C stops it
+agentic-cms serve --write-origins          # a new address of this machine, added before next dev starts
+agentic-cms serve --fix-cache              # after a production build broke the dev server's compile
+agentic-cms serve --lab --no-public --port 8002
 ```
 
 <!-- commands-doc:end -->

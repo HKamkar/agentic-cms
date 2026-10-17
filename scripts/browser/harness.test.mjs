@@ -1,15 +1,17 @@
 // The screenshot harness on the fixture site, through the bin: a static
-// capture and its capture.json, a motion capture with the settled frame and
+// capture and its capture.json, the site's profile as a capture's defaults,
+// a motion capture with the settled frame and
 // a section's data-settle, a capture that photographs its snapshot of the
 // build while the tree changes, and a compare of two builds of different
 // heights.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { test } from "node:test";
 import { chromePath } from "../lib/browser.mjs";
-import { LOOP_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
+import { LAZY_PAGE, LOOP_PAGE, SPIN_PAGE, addPage, fixtureSite } from "../fixtures/site.mjs";
 
 const BIN = path.resolve(import.meta.dirname, "../../bin/agentic-cms.mjs");
 const skip = chromePath() ? false : "no Chromium: set CHROME_PATH or run `pnpm exec playwright-core install chromium`";
@@ -32,6 +34,31 @@ test("a static capture writes the shots, the menu, meta.json and capture.json la
     assert.ok(summary.timings.seconds > 0 && summary.timings.slowest.length === 4 && summary.timings.slowest[0].name.includes("@"), "the slowest page-widths, named");
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/a/home@800.sections.json"), "utf8")).map((s) => s.section), ["hero", "second", "third"]);
     assert.match(r.stderr, /a: 5 screenshots/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the site's profile names a capture's widths and scheme, a flag still wins, the menu is shot at each profile width where its button shows, and the widths a flag named keep the shot cache", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    // the menu button hides from 700 px up, as a site's does above its menu breakpoint
+    const home = path.join(root, ".next/server/app/index.html");
+    fs.writeFileSync(home, fs.readFileSync(home, "utf8").replace("</head>", "<style>@media (min-width: 700px) { header button { display: none; } }</style></head>"));
+    assert.equal(run(root, ["capture", "w", "--widths", "800,390", "--scheme", "dark"]).status, 0, "before the profile: its widths as a flag");
+    fs.mkdirSync(path.join(root, "src/config"), { recursive: true });
+    fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [800, 390], schemes: [\"dark\", \"light\"] };\n");
+    const profiled = run(root, ["capture", "p", "--json"]);
+    assert.equal(profiled.status, 0, profiled.stderr);
+    const summary = JSON.parse(profiled.stdout);
+    assert.deepEqual(summary.widths, [800, 390], "the profile's widths");
+    assert.equal(summary.meta.scheme, "dark", "the profile's first scheme");
+    assert.deepEqual(files(root, "p").filter((f) => f.includes("--menu")), ["home@390--menu.png"], "no menu where its button does not show");
+    assert.deepEqual(summary.reused, { shots: 3, of: 4 }, "the same widths reuse the cache: only the home page at 800, where the menu is now tried, is taken again");
+    const flagged = JSON.parse(run(root, ["capture", "f", "--widths", "390", "--scheme", "light", "--json"]).stdout);
+    assert.deepEqual([flagged.widths, flagged.meta.scheme], [[390], "light"], "the flags win");
+    fs.writeFileSync(path.join(root, "src/config/harness.ts"), "export const harness = { widths: [390.5] };\n");
+    const broken = run(root, ["capture", "x"]);
+    assert.equal(broken.status, 2);
+    assert.match(broken.stderr, /visual-parity capture: src\/config\/harness\.ts: harness\.widths is a list of whole viewport widths/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -180,6 +207,68 @@ test("an inline SMIL loop is held: two static captures agree, two motion capture
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("an infinite CSS loop never enters the animation inventory, however often its observer restarts it: three motion captures list the same finite animations", { skip }, () => {
+  const root = fixtureSite();
+  try {
+    addPage(root, "/spin", SPIN_PAGE);
+    const inventories = ["l1", "l2", "l3"].map((label) => {
+      assert.equal(run(root, ["capture", label, "--motion", "--widths", "800", "--pages", "/spin", "--fresh"]).status, 0);
+      return JSON.parse(fs.readFileSync(path.join(root, ".parity/visual", label, "spin@800.animations.json"), "utf8"));
+    });
+    assert.deepEqual(inventories[0].filter((a) => a.name === "spin"), [], "no loop, whatever CDP sends for its iterations");
+    assert.ok(inventories[0].length > 0 && inventories[0].every((a) => a.name === "fade" && a.iterations === 1), "the fades are still recorded, with their count");
+    assert.deepEqual(inventories[1], inventories[0], "the same inventory on a second capture");
+    assert.deepEqual(inventories[2], inventories[0], "and a third");
+    const r = run(root, ["compare", "l1", "l2", "--pages", "/spin", "--json"]);
+    assert.equal(JSON.parse(r.stdout).files.find((f) => f.name === "spin@800.animations.json")?.status, "ok", r.stderr);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+// The fixture's /lazy page served by the test, which holds /images/late.svg back: `hold(n)` says whether the nth
+// request for it (from 1) gets no answer. A capture of it runs as a child, so this process stays free to answer.
+async function lazyServer(root, hold) {
+  let asked = 0;
+  const server = http.createServer((req, res) => {
+    if (req.url === "/lazy") { res.writeHead(200, { "content-type": "text/html" }); return res.end(fs.readFileSync(path.join(root, ".next/server/app/lazy.html"))); }
+    if (req.url === "/images/late.svg" && hold(++asked)) return; // never answered: the page closes the request
+    const publicDir = path.join(root, "public");
+    const file = path.resolve(publicDir, `.${new URL(req.url, "http://fixture").pathname}`);
+    if (!file.startsWith(publicDir + path.sep) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "content-type": "image/svg+xml" });
+    res.end(fs.readFileSync(file));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return { url: `http://127.0.0.1:${server.address().port}`, asked: () => asked, close: () => { server.closeAllConnections(); server.close(); } };
+}
+const runAsync = (root, args) => new Promise((resolve) => { let stderr = ""; const child = spawn(process.execPath, [BIN, "visual-parity", ...args], { cwd: root }); child.stderr.on("data", (d) => { stderr += d; }); child.on("exit", (status) => resolve({ status, stderr })); });
+
+test("a lazy image that has not arrived is never photographed silently: the page is loaded again once, and a shot still without it is FLAKY with its cause", { skip, timeout: 120000 }, async () => {
+  const root = fixtureSite();
+  try {
+    addPage(root, "/lazy", LAZY_PAGE);
+    fs.copyFileSync(path.join(root, "public/images/mark.svg"), path.join(root, "public/images/late.svg"));
+    const args = ["--widths", "800", "--pages", "/lazy"];
+    assert.equal(run(root, ["capture", "ref", ...args]).status, 0, "the image served at once");
+    const once = await lazyServer(root, (n) => n === 1);
+    const retried = await runAsync(root, ["capture", "retried", "--url", once.url, ...args]);
+    once.close();
+    assert.equal(retried.status, 0, retried.stderr);
+    assert.match(retried.stderr, /1 image\(s\) not loaded on .*\/lazy, the first .*\/images\/late\.svg at y=\d+; reloading lazy@800 once/);
+    assert.equal(once.asked(), 2, "asked again after the reload, and answered");
+    assert.ok(!fs.existsSync(path.join(root, ".parity/visual/retried/lazy@800.unloaded.json")));
+    assert.equal(run(root, ["compare", "ref", "retried"]).status, 0, "the reload photographed the image");
+    const never = await lazyServer(root, () => true);
+    const flaky = await runAsync(root, ["capture", "flaky", "--url", never.url, ...args]);
+    never.close();
+    assert.equal(flaky.status, 0, "a second miss is recorded, not a failed run");
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".parity/visual/flaky/lazy@800.unloaded.json"), "utf8")).map((i) => [i.src.replace(/^http:\/\/[^/]+/, ""), i.width, i.height]), [["/images/late.svg", 400, 400]]);
+    const r = run(root, ["compare", "ref", "flaky"]);
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /^FLAKY {4}lazy@800\.png/m);
+    assert.match(r.stdout, /^ {9}cause: image not loaded on after at y=\d+ \(.*\/images\/late\.svg, 400x400\): the shot is not evidence; retake the page with --fresh$/m);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("compare names the section behind a sub-pixel shift: a hero half a pixel taller, every row below re-antialiased", { skip }, () => {
   const root = fixtureSite();
   try {
@@ -219,7 +308,7 @@ test("compare: a page whose section changed and grew is a SIZE line with the row
     assert.match(r.stderr, /\n {9}cause: hero height [\d.]+ → [\d.]+ \(\+40\.000 px\)\n/);
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.before)) && fs.existsSync(path.join(root, ".parity/visual/before-vs-after", home.crops.after)));
     assert.equal(report.files.find((f) => f.name === "about@800.png").status, "ok");
-    assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, exit: 1 });
+    assert.deepEqual(report.summary, { ok: 1, changed: 0, size: 1, missing: 0, flaky: 0, exit: 1 });
     assert.ok(fs.existsSync(path.join(root, ".parity/visual/before-vs-after/report.json")));
     assert.match(r.stderr, /1 file\(s\) differ/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

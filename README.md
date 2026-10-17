@@ -194,7 +194,7 @@ proof, never a tool in the reader's browser.
 |---|---|
 | `design` | a site from the wireframe to a look of its own: tokens first, then the chrome, then the sections |
 | `design-options` | a design round: three to five ideas, the picked ones built as real components on a throwaway route in the section's own frame with the page's copy (`pnpm kit demo new`), the owner picks by letter; `demo clean` then removes everything the round created that the winner does not use, and says what it keeps and why |
-| `design-graphics` | the site's own drawings as SVG in the lab (`pnpm kit lab`): scenes on the site's tokens in both schemes, at the sizes they ship and on a phone, a timeline to step through a loop, rendered to the file a page ships; a loop that should play when it is seen goes inline (`InlineAnimation`, `readInlineSvg`) |
+| `design-graphics` | the site's own drawings as SVG in the lab (`pnpm kit lab`): scenes on the site's tokens in each of its schemes, at the sizes they ship and on a phone, a timeline to step through a loop, rendered to the file a page ships; a loop that should play when it is seen goes inline (`InlineAnimation`, `readInlineSvg`) |
 | `design-icons` | icons as families: the inventory of every icon beside its copy (`icons audit`), Lucide and Simple Icons maps (`icons add`), marks from primitives (`icons family`), and a round for a set of the site's own (`icons round new / publish / retire`) |
 | `design-measure` | a screenshot claim turned into numbers before an edit: an element's box, styles and stacking chain (`probe`), a crop (`shot`), candidates at their real size on their real grounds (`sheet`) |
 | `design-proof` | the change proven on the pixels (below) |
@@ -207,8 +207,8 @@ the lab, [docs/icons.md](docs/icons.md) the icons,
 
 A refactor must not move a pixel, and a design change must move only the
 pixels it meant to. `agentic-cms visual-parity` photographs every page of
-the production build at eight widths, in either colour scheme, and diffs two
-captures pixel by pixel:
+the production build at the site's widths, in each of its colour schemes,
+and diffs two captures pixel by pixel:
 
 ```bash
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling worktree and captured
@@ -229,7 +229,11 @@ naming the section and its height change, down to a fraction of a pixel.
 What a site shows until a visitor's choice is stored — a consent banner
 over the page — is closed by a seed in `src/config/harness.ts`, written
 into every page's storage before its scripts run, on both sides of a
-proof.
+proof. The same file is the site's profile: the widths it is designed at,
+the schemes it has and what a bare `proof` covers, which every capture
+takes unless a flag says otherwise — so a site without dark mode is never
+proved in one, and `init --light-only` lays out such a site
+([docs/visual-parity.md](docs/visual-parity.md#the-sites-profile)).
 
 A proof costs what the change touched. Every page-width whose build files
 are the same bytes as when it was last photographed is copied from the
@@ -250,11 +254,18 @@ the system until a reader picks. Every section renders in a box that prints
 its own YAML type, so the page and the page file read side by side.
 Illustrations are crossed placeholder boxes; content images come from
 `pnpm kit placeholder <out> <width> <height>` until real ones exist.
-`STANDARD.md` is the design system; `src/components/README.md` the catalogue.
-The `agentic-cms/ix` library stays in the package for a fork that wants
-motion: scroll-into-view reveals and sequences, and `InlineAnimation`, a
-site's own SVG loop that plays in view and rests for a reader who prefers
-reduced motion.
+`STANDARD.md` is the design system; `src/components/README.md` the catalogue,
+and the only place UI is made: `pnpm lint` runs the component rules
+(`agentic-cms/eslint`), which fail a section that writes a raw element or
+draws a box of its own, or an import that goes the wrong way between the
+layers, then the placement guard (`agentic-cms check-components`), which
+fails a component outside the library, an export the catalogue does not
+name, or a section file the registry does not render. The `agentic-cms/ix` library stays in the package for a fork that wants
+motion: a play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`)
+whose roots play the first time they are seen and never again, the
+scroll-into-view reveals and sequences that replay on each entry, and
+`InlineAnimation`, a site's own SVG loop that plays in view and rests for a
+reader who prefers reduced motion.
 
 ## Built on agentic-cms
 
@@ -265,7 +276,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.7.6`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.8.0`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -279,20 +290,14 @@ and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-mkdir my-site && cd my-site && pnpm init
-pnpm add agentic-cms@github:HKamkar/agentic-cms#v0.7.6      # allowBuilds below, first
-pnpm exec agentic-cms init .                                # the site: the example, the agent files, the config
-pnpm install && pnpm dev
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.0 init my-site
+cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
-A git dependency builds its `dist/` on install (`prepare`), which pnpm runs
-only when `pnpm-workspace.yaml` allows it:
-
-```yaml
-allowBuilds:
-  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true
-  sharp: true
-```
+The kit is a git dependency that builds its `dist/` as it installs, which
+pnpm runs only when allowed by that exact key; `init` writes it into the
+site's `pnpm-workspace.yaml` with the others the site's install needs, and
+the site's CI workflow with it.
 
 Either way the site carries, from the first session and with nothing
 installed, what an agent needs to design it: the rules (`AGENTS.md`, and
@@ -327,7 +332,8 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 2. `src/config/site.ts`: the brand, the URL, the e-mail and address, the nav,
    the footer, the calls to action (data only, `satisfies SiteConfig`).
 3. `src/app/globals.css`: the tokens — or start the `design` skill, which
-   begins there. Both themes follow from the `light-dark()` pairs.
+   begins there. Each colour is a `light-dark()` pair, so both themes
+   follow; a site without dark mode starts from `init --light-only`.
 4. Copy `content/_templates/VOICE.md` to `content/VOICE.md` and write your
    rules; the prose and the fenced block say the same thing.
 5. Replace the content: the registries, the reviews, the FAQ sets, the use
@@ -369,6 +375,7 @@ pnpm dev             # next dev on :8000
 pnpm build           # content lint → docs check → next build → SEO audit; every page prerendered
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
+pnpm lint            # ESLint with the component rules, then the placement guard (agentic-cms check-components)
 pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
@@ -378,8 +385,11 @@ pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md
 pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
-pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last
+pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last; waits for it on the dev server and prints its URLs
 pnpm kit init <dir>  # a site from the package: the example, the agent files, the config
+pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
+pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
+pnpm kit serve       # next dev and the lab for a look: every demo route waited for, every URL (localhost, LAN, public) in one table; Ctrl-C stops both
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
 pnpm kit critical-css   # each prerendered page paints from its own inlined rules, its stylesheets no longer block
 pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked
@@ -405,8 +415,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
   `wrangler dev` straight after `next build` returns 500s. The ~40 "Failed to
   copy node_modules/…" lines during the OpenNext build are an OpenNext bug and
   harmless.
-- `agentic-cms visual-parity` screenshots every page at eight widths, in
-  either colour scheme, and diffs two captures pixel by pixel: the proof for
+- `agentic-cms visual-parity` screenshots every page at the site's widths,
+  in each of its colour schemes, and diffs two captures pixel by pixel: the proof for
   a refactor that must not move anything. Unchanged pages come from its
   cache and several browsers work at once, so a proof takes minutes.
 
@@ -420,7 +430,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
 2. If the site replaces an existing one, recreate its redirects before the
    DNS change (on the Worker, or in `next.config`'s `redirects()` on a Node
    server). A public URL never changes without one.
-3. `pnpm build`, `pnpm preview`, click through every page in both themes.
+3. `pnpm build`, `pnpm preview`, click through every page in each scheme
+   the site has.
 4. On the example's Cloudflare Worker: `pnpm run deploy`. On a Node server:
    the build runs `agentic-cms critical-css` after `next build` and ends
    with `agentic-cms assemble`, and `.next/standalone` is the package
@@ -438,7 +449,7 @@ content/VOICE.md             the voice and claim rules; _templates/VOICE.md is t
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
 .claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
-templates/site/              what init writes into a site: AGENTS.md, the rules, the config; templates/lab-demo/ the lab's route
+templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow, scripts/setup.sh; templates/lab-demo/ the lab's route
 src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
@@ -447,10 +458,10 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
 src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy; harness.ts, the screenshot harness's seed
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
-bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init
+bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, check-components, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init; the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, upgrading.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
+docs/                        the guides: commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, setup.md, dev-server.md, browsers.md, primitives.md, gotchas.md, upgrading.md, migrating-to-0.8.0.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
 ```
 
 MIT licensed.

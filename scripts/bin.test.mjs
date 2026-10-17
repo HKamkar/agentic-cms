@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -17,6 +18,7 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
   assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
+  assert.match(r.stdout, /\n {2}site\s+init · setup · urls · serve\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -61,6 +63,36 @@ test("assemble runs in any folder and, without a standalone build, says how to m
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("check-components: the kit's example passes; a stray section file is a finding with its fix, in text and JSON; no config is exit 2", () => {
+  const ok = run(["check-components"]);
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited\)\n$/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guard-cli-"));
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
+  try {
+    const none = run(["check-components"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^check-components: no src\/config\/components\.json here — the guard is not set up in this site/);
+    write("src/config/components.json", JSON.stringify({ motion: null, patterns: null }));
+    write("src/components/README.md", "## `Button`\n");
+    write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
+    write("src/components/sections/render.tsx", 'import { Hero } from "@/components/sections/Hero";\n');
+    write("src/components/sections/Hero.tsx", "export function Hero() { return null; }\n");
+    write("src/app/layout.tsx", "export default function Layout() { return null; }\n");
+    assert.equal(run(["check-components"], dir).status, 0);
+    write("src/components/sections/Promo.tsx", "export function Promo() { return null; }\n");
+    const found = run(["check-components"], dir);
+    assert.equal(found.status, 1);
+    assert.match(found.stderr, /^check-components: 1 problem\n\n {2}✗ src\/components\/sections\/Promo\.tsx {2}\[registry\]\n {4}a component in a section folder that the registry does not import\n {4}→ a section folder holds the components the registry renders: register it in src\/components\/sections\/render\.tsx/);
+    const json = run(["check-components", "--json"], dir);
+    assert.equal(json.status, 1);
+    assert.deepEqual(JSON.parse(json.stdout).findings.map((f) => [f.check, f.file]), [["registry", "src/components/sections/Promo.tsx"]]);
+    write("src/config/components.json", JSON.stringify({ sectons: ["sections"] }));
+    assert.match(run(["check-components"], dir).stderr, /no option sectons — did you mean sections\?/);
+    assert.match(run(["check-components", "--jsn"], dir).stderr, /did you mean --json\?/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a --json report larger than a pipe's buffer reaches the reader whole, though the command exits right after printing it", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "big-report-"));
   try {
@@ -71,7 +103,8 @@ test("a --json report larger than a pipe's buffer reaches the reader whole, thou
       fs.writeFileSync(path.join(capture, "meta.json"), '{"scheme":"light"}');
       for (let i = 0; i < 1500; i++) fs.writeFileSync(path.join(capture, `page-${i}@390.animations.json`), inventory);
     }
-    const r = run(["visual-parity", "compare", "a", "b", "--json"], dir);
+    // the reader's own buffer past the 1 MB default: every line on stderr carries its cause line under it
+    const r = spawnSync(process.execPath, [BIN, "visual-parity", "compare", "a", "b", "--json"], { cwd: dir, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
     assert.equal(r.status, 1, r.stderr);
     assert.ok(r.stdout.length > 65536, `the report is larger than a pipe's 64 KB (${r.stdout.length} bytes)`);
     const report = JSON.parse(r.stdout);
@@ -108,6 +141,45 @@ test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("init --agent-files: --check fails a site's edit with no base, --diff prints the kit's text against it (exit 1), --accept makes it the site's edit of the kit's text and --check passes; the modes go with --agent-files, one at a time", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--json"]).status, 0);
+    const nothing = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
+    assert.equal(nothing.status, 0, nothing.stderr);
+    assert.equal(nothing.stdout, "");
+    assert.match(nothing.stderr, /^init: \.claude\/rules\/seo\.md — nothing to merge: it is the kit's text$/m);
+    // the site's own seo rule, from before the manifest: no base
+    const manifest = JSON.parse(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"));
+    delete manifest.files[".claude/rules/seo.md"];
+    fs.writeFileSync(path.join(site, ".agentic-cms.json"), JSON.stringify(manifest));
+    fs.appendFileSync(path.join(site, ".claude/rules/seo.md"), "\n- The site's own line.\n");
+    const gap = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(gap.status, 1);
+    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md$/m);
+    assert.match(gap.stdout, /modified, kit changed: the site edited it and the kit's text changed since the site took it \(agentic-cms init --agent-files --diff <file>, merge the change by hand, then --accept <file>\)/);
+    const diff = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
+    assert.equal(diff.status, 1);
+    assert.match(diff.stdout, /^--- a\/\.claude\/rules\/seo\.md\n\+\+\+ b\/\.claude\/rules\/seo\.md\n@@ /);
+    assert.match(diff.stdout, /^-- The site's own line\.$/m);
+    assert.match(diff.stderr, /has no base \(the site wrote it before the manifest\)/);
+    const accepted = run(["init", site, "--agent-files", "--accept", ".claude/rules/seo.md"]);
+    assert.equal(accepted.status, 0, accepted.stderr);
+    assert.match(accepted.stdout, /^accepted \.claude\/rules\/seo\.md — its base is the kit's current text; --check: modified$/m);
+    const clean = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, /^init: \d+ agent files in line with the kit — \d+ as it ships them, 1 the site's own edits of its current text \(modified\)$/m);
+    const wrong = run(["init", site, "--agent-files", "--diff", "STANDARD.md"]);
+    assert.equal(wrong.status, 2);
+    assert.match(wrong.stderr, /^init: STANDARD\.md is not one of this site's agent files/);
+    assert.match(run(["init", site, "--accept", ".claude/rules/seo.md"]).stderr, /^init: --accept goes with --agent-files$/m);
+    const both = run(["init", site, "--agent-files", "--check", "--accept", ".claude/rules/seo.md"]);
+    assert.equal(both.status, 2);
+    assert.match(both.stderr, /^init: --check and --accept are separate runs: one at a time$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("visual-parity clean keeps the newest captures, takes the compares of the ones it removes, leaves a running capture, and --dry-run removes nothing", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "parity-clean-cli-"));
   const put = (file, hoursAgo) => { const full = path.join(dir, ".parity/visual", file); fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, "{}"); const t = new Date(Date.now() - hoursAgo * 3600e3); fs.utimesSync(full, t, t); };
@@ -138,4 +210,96 @@ test("visual-parity proof: its help names the passes and the ref; a wrong choice
   const wrong = run(["visual-parity", "proof", "--motoin"]);
   assert.equal(wrong.status, 2);
   assert.match(wrong.stderr, /did you mean --motion\?/);
+});
+
+test("visual-parity proof --build runs its baseline step (no three-sources refusal), and --pages with --sample is refused before any capture", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proof-build-"));
+  try {
+    const r = run(["visual-parity", "proof", "--build", "--ref", "nope"], dir);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /nope: not a commit, branch or tag/, "the baseline capture ran and stopped at the ref");
+    assert.doesNotMatch(r.stderr, /three sources/);
+    const both = run(["visual-parity", "proof", "--pages", "/", "--sample", "1"], dir);
+    assert.equal(both.status, 2);
+    assert.match(both.stderr, /^visual-parity proof: --pages and --sample both choose the pages of a capture; pass one\n$/, "nothing else ran");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+/** Two servers listening on the loopback for a command to find up: a spawned command connects while the test waits on it, so the kernel accepts. */
+const listening = () => Promise.all([0, 1].map(() => new Promise((resolve) => { const server = net.createServer((socket) => socket.end()); server.listen(0, "127.0.0.1", () => resolve(server)); })));
+
+test("urls: this machine's URLs and its origins, --write fills .env.local once, a server with no lock here is not this clone's, no dev port is a usage error", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "urls-cli-"));
+  const servers = await listening();
+  const [dev, lab] = servers.map((s) => String(s.address().port));
+  try {
+    assert.equal(run(["urls"], dir).status, 2);
+    assert.match(run(["urls"], dir).stderr, /^urls: no dev port — package\.json's scripts\.dev runs no next dev here; pass --port\n$/);
+    assert.match(run(["urls", "--no-publc"], dir).stderr, /did you mean --no-public\?/);
+    fs.writeFileSync(path.join(dir, ".env.example"), "# kept\nALLOWED_DEV_ORIGINS=\n");
+    const written = run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--write"], dir);
+    assert.equal(written.status, 0, written.stderr);
+    assert.match(written.stdout, new RegExp(`^dev server, port ${dev}: answers, but not as this clone's next dev \\(\\.next/dev/lock names none on it\\)`), "another checkout's server, as far as this one can tell");
+    assert.doesNotMatch(written.stdout, /restart/, "and nobody is asked to restart it");
+    assert.match(written.stdout, new RegExp(`\nlab, port ${lab}: running, each scene at /scene/<name>\n`));
+    assert.match(written.stdout, /public {5}not looked up \(--no-public\)/);
+    const report = JSON.parse(run(["urls", "--no-public", "--port", dev, "--lab-port", lab, "--json"], dir).stdout);
+    assert.deepEqual([report.dev.up, report.dev.own, report.dev.ownPort], [true, false, null]);
+    assert.equal(report.addresses.publicLookedUp, false);
+    assert.deepEqual(report.origins.missing, [], "written once: covered on the next run");
+    if (report.addresses.lan.length) assert.equal(fs.readFileSync(path.join(dir, ".env.local"), "utf8"), `# kept\nALLOWED_DEV_ORIGINS=${report.addresses.lan.join(",")}\n`);
+    else assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no LAN address: nothing to write");
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${dev}` } }));
+    fs.mkdirSync(path.join(dir, ".next/dev"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".next/dev/lock"), JSON.stringify({ pid: process.pid, port: Number(dev) }));
+    assert.match(run(["urls", "--no-public", "--lab-port", lab], dir).stdout, new RegExp(`^dev server, port ${dev}: running\n {2}localhost {2}http://localhost:${dev}\n`), "the port from scripts.dev, this clone's next dev by its lock (a live pid, the port)");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("serve: no dev port and a port something else holds are usage errors, named with the fix; nothing is started or stopped", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "serve-cli-"));
+  const servers = await listening();
+  const [held, lab] = servers.map((s) => String(s.address().port));
+  try {
+    const bare = run(["serve", "--no-public"], dir);
+    assert.equal(bare.status, 2);
+    assert.match(bare.stderr, /^serve: no dev port: package\.json's scripts\.dev runs no next dev here; pass --port\n$/);
+    assert.match(run(["serve", "--fix-cach"], dir).stderr, /unknown flag --fix-cach — did you mean --fix-cache\?/);
+    assert.match(run(["serve", "--help"]).stdout, /--write-origins {10}add the addresses ALLOWED_DEV_ORIGINS lacks to \.env\.local before next dev starts/);
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { dev: `next dev -p ${held}` } }));
+    const refused = run(["serve", "--no-public", "--lab-port", lab], dir);
+    assert.equal(refused.status, 2, refused.stderr);
+    assert.match(refused.stderr, new RegExp(`serve: port ${held} answers, but not as this site's next dev \\(\\.next/dev/lock names none running\\): stop what holds it \\(docs/dev-server\\.md § Stopping a server\\), or pass --port <another>\n$`));
+    assert.ok(!fs.existsSync(path.join(dir, ".env.local")), "no --write-origins: .env.local untouched");
+    await new Promise((resolve) => servers[0].close(resolve));
+    const bare2 = run(["serve", "--no-public", "--lab-port", lab], dir);
+    assert.equal(bare2.status, 2, bare2.stderr);
+    assert.match(bare2.stderr, /serve: next is not installed here: pnpm install \(or bash scripts\/setup\.sh\) first\n$/, "the port free, no next to start: the fix");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("setup: --engines takes the kit's engines only; --check writes nothing and prints its report as JSON", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "setup-cli-"));
+  const servers = await listening();
+  const [dev, lab] = servers.map((s) => String(s.address().port));
+  try {
+    const wrong = run(["setup", "--engines", "chromium,firefox"], dir);
+    assert.equal(wrong.status, 2);
+    assert.match(wrong.stderr, /^setup: --engines is a list of chromium, webkit, not chromium,firefox; run agentic-cms setup --help\n$/);
+    assert.match(run(["setup", "--help"]).stdout, /--deps {19}on Linux, install WebKit's system libraries/);
+    const bare = run(["setup", "--check", "--no-browsers", "--no-public", "--json", "--lab-port", lab], dir);
+    assert.equal(bare.status, 2, "no package.json here");
+    assert.equal(JSON.parse(bare.stdout).steps.at(-1).detail, "no package.json here: run setup in the site's root");
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "site", scripts: { dev: `next dev -p ${dev}` } }));
+    fs.writeFileSync(path.join(dir, ".env.example"), "ALLOWED_DEV_ORIGINS=\n");
+    const r = run(["setup", "--check", "--no-browsers", "--no-public", "--json", "--lab-port", lab], dir);
+    assert.ok([0, 1].includes(r.status), r.stderr);
+    const report = JSON.parse(r.stdout);
+    assert.equal(report.check, true);
+    assert.deepEqual(report.steps.map((s) => s.step), ["node", "pnpm", "browsers", "env", "origins", "dev port", "verify"]);
+    assert.match(report.steps.find((s) => s.step === "dev port").detail, new RegExp(`^${dev} answers, but not as this clone's next dev: pnpm dev needs the port`), "a server with no lock here is another's");
+    assert.deepEqual([report.urls.dev.up, report.urls.dev.own], [true, false]);
+    assert.match(r.stderr, /setup --check: what this clone has, changing nothing/, "the progress on stderr, the report alone on stdout");
+    assert.deepEqual(fs.readdirSync(dir).sort(), [".env.example", "package.json"], "--check wrote nothing");
+  } finally { for (const s of servers) s.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 });

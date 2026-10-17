@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
 import { Placeholder } from "@/components/ui/Placeholder";
+import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
 import { site } from "@/config/site";
 import type { SectionProps } from "@/components/sections/schemas";
 
-const card = "flex flex-col gap-2 border border-ink p-4";
+const card = "flex flex-col gap-2 p-4";
 
 /** "What you keep": two cards and the button, beside the stack of analytics cards the design draws. */
 export function Strategy({ eyebrow, heading, cards, cta }: SectionProps<"use-cases-strategy">) {
@@ -14,10 +16,10 @@ export function Strategy({ eyebrow, heading, cards, cta }: SectionProps<"use-cas
         <div className="flex flex-col gap-4">
           <ul className="grid gap-4">
             {cards.map((point) => (
-              <li key={point.title} className={card}>
-                <h3>{point.title}</h3>
+              <Panel as="li" key={point.title} className={card}>
+                <Heading as="h3">{point.title}</Heading>
                 <p>{point.text}</p>
-              </li>
+              </Panel>
             ))}
           </ul>
           <div>

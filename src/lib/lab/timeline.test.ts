@@ -4,8 +4,11 @@ import { mountTimeline, timelineControlsHtml, timelineScript } from "./timeline.
 
 // A stub page: the controls, one SVG root with its own clock, one CSS
 // animation inside it, a hand-cranked requestAnimationFrame over a fake
-// now, and an IntersectionObserver the test reports to. Every write to an
-// animation's time is counted: playing, the frames must not make any.
+// now, and an IntersectionObserver and a MutationObserver the test reports
+// to. What the root's getAnimations() returns is read on every call, so a
+// test can take a finished animation out of it, as the browser does, or add
+// one that starts late. Every write to an animation's time is counted:
+// playing, the frames must not make any.
 type Listener = () => void;
 function control() {
   const listeners: Record<string, Listener[]> = {};
@@ -21,13 +24,14 @@ function control() {
 }
 // An element of the stub page: `closest` answers from the selectors it (or an ancestor) matches; `own` are the animations on it.
 const element = (matches: Record<string, unknown>, own: unknown[] = [], parentElement: unknown = null) => ({ closest: (s: string) => matches[s] ?? null, getAnimations: () => own, parentElement });
-function animation(target: unknown, iterations = Infinity, duration = 1000) {
+function animation(target: unknown, iterations = Infinity, duration = 1000, fill = "none") {
   let time: number | null = 0;
+  const timing = { fill };
   return {
-    paused: false, writes: 0,
+    paused: false, writes: 0, playState: "running",
     get currentTime() { return time; },
     set currentTime(t: number | null) { time = t; this.writes += 1; },
-    effect: { target, getComputedTiming: () => ({ delay: 0, duration, iterations, endTime: duration * iterations }) },
+    effect: { target, getTiming: () => ({ ...timing }), updateTiming: (t: Partial<typeof timing>) => void Object.assign(timing, t), getComputedTiming: () => ({ delay: 0, duration, iterations, endTime: duration * iterations }) },
     pause() { this.paused = true; },
     play() { this.paused = false; },
   };
@@ -47,15 +51,19 @@ function page({ duration = "2", extra = [] as ReturnType<typeof animation>[] } =
   inner.add(shape);
   const css = animation(shape);
   const byRole: Record<string, unknown> = { "[data-lab-play]": button, "[data-lab-replay]": again, "[data-lab-time]": slider, "[data-lab-readout]": readout };
-  const controls = { querySelector: (selector: string) => byRole[selector] };
+  const controls = { querySelector: (selector: string) => byRole[selector], contains: (el: unknown) => Object.values(byRole).includes(el) };
+  // In the root: an element added to `inside`, what is under one of them by its data-lab-drive, what is inside the SVG.
   const inside = new Set<unknown>();
-  const root = { querySelector: (s: string) => (s === "[data-lab-controls]" ? controls : null), querySelectorAll: (s: string) => (s === "svg" ? [svg] : []), getAnimations: () => [css, ...extra], contains: (el: unknown) => inside.has(el) };
-  return { root: root as unknown as HTMLElement, button, again, slider, readout, svg, css, inside };
+  const closest = (el: unknown, s: string) => (el as { closest?: (s: string) => unknown } | null)?.closest?.(s);
+  const root = Object.assign(control(), { querySelector: (s: string) => (s === "[data-lab-controls]" ? controls : null), querySelectorAll: (s: string) => (s === "svg" ? [svg] : []), getAnimations: () => [css, ...extra], contains: (el: unknown) => inside.has(el) || inside.has(closest(el, "[data-lab-drive]")) || closest(el, "svg") === svg });
+  return { root: root as unknown as HTMLElement, fire: (type: string) => root.fire(type), button, again, slider, readout, svg, css, inside };
 }
 
 let now = 0, frames: (((t: number) => void) | null)[] = [], reduce = false;
 type Watcher = { report: (entries: { target: unknown; isIntersecting: boolean }[]) => void; seen: Set<unknown>; disconnected: boolean };
 let watchers: Watcher[] = [];
+type Changes = { change: (target: unknown) => void; options: unknown; disconnected: boolean };
+let changes: Changes[] = [];
 const saved = { performance: Object.getOwnPropertyDescriptor(globalThis, "performance") };
 /** Advances the fake clock to `t` ms and runs the frame callbacks that were pending. */
 const at = (t: number) => { now = t; const due = frames; frames = []; for (const fn of due) fn?.(t); };
@@ -64,7 +72,7 @@ const pending = () => frames.filter(Boolean).length;
 const sight = (target: unknown, isIntersecting: boolean) => { for (const w of watchers) if (w.seen.has(target)) w.report([{ target, isIntersecting }]); };
 const near = (a: number | null, b: number) => a !== null && Math.abs(a - b) < 1e-9;
 beforeEach(() => {
-  now = 0; frames = []; reduce = false; watchers = [];
+  now = 0; frames = []; reduce = false; watchers = []; changes = [];
   Object.defineProperty(globalThis, "performance", { value: { now: () => now }, configurable: true });
   Object.assign(globalThis, {
     requestAnimationFrame: (fn: (t: number) => void) => frames.push(fn),
@@ -78,11 +86,21 @@ beforeEach(() => {
       observe(el: unknown) { this.seen.add(el); }
       disconnect() { this.disconnected = true; this.seen.clear(); }
     },
+    MutationObserver: class {
+      options: unknown = null;
+      disconnected = false;
+      report: (records: { target: unknown }[]) => void;
+      constructor(report: (records: { target: unknown }[]) => void) { this.report = report; changes.push(this); }
+      observe(_root: unknown, options: unknown) { this.options = options; }
+      disconnect() { this.disconnected = true; }
+      /** An attribute or a child of `target` changed, as the browser reports it after a microtask. */
+      change(target: unknown) { if (!this.disconnected) this.report([{ target }]); }
+    },
   });
 });
 afterEach(() => {
   if (saved.performance) Object.defineProperty(globalThis, "performance", saved.performance);
-  for (const name of ["requestAnimationFrame", "cancelAnimationFrame", "matchMedia", "IntersectionObserver"]) delete (globalThis as Record<string, unknown>)[name];
+  for (const name of ["requestAnimationFrame", "cancelAnimationFrame", "matchMedia", "IntersectionObserver", "MutationObserver"]) delete (globalThis as Record<string, unknown>)[name];
 });
 
 test("the timeline drives what it wraps — the SVG's animations and a [data-lab-drive] subtree inside it — and leaves the page's reveals alone, in the clock and in the cycle", () => {
@@ -99,7 +117,7 @@ test("the timeline drives what it wraps — the SVG's animations and a [data-lab
   t.play();
   at(300);
   t.pause();
-  assert.deepEqual([reveal.writes, reveal.paused], [0, false], "a reveal of the page: its own clock, never set");
+  assert.deepEqual([reveal.writes, reveal.paused, reveal.effect.getTiming().fill], [0, false, "none"], "a reveal of the page: its own clock, never set, its fill its own");
   assert.deepEqual([outer.writes, outer.paused], [0, false], "a data-lab-drive above the root is not this timeline's");
   t.destroy();
 });
@@ -189,6 +207,65 @@ test("a finite animation past its end holds its last frame when the timeline pla
   t.destroy();
 });
 
+test("play-once motion stays on the timeline: an animation seen once keeps being driven after it finishes and leaves getAnimations(), its fill pinned to both; one that starts after mount is found on the next frame, held on the timeline's time and measured into a cycle that only grows; a cancelled one, or one whose element left, drops out", () => {
+  const drive = element({});
+  const part = (duration: number) => animation(element({ "[data-lab-drive]": drive }), 1, duration, "backwards");
+  const once = part(600);
+  const extra = [once];
+  const p = page({ duration: "0", extra });
+  p.inside.add(drive);
+  const t = mountTimeline(p.root, { autoplay: false });
+  assert.deepEqual([t.duration(), once.effect.getTiming().fill, p.css.effect.getTiming().fill], [1, "both", "both"], "pinned at first sight, under the timeline");
+  assert.deepEqual(changes[0].options, { attributes: true, childList: true, subtree: true });
+  extra.length = 0;
+  t.seek(0.3);
+  assert.equal(once.currentTime, 300, "finished, out of getAnimations(), and still on the range");
+
+  const late = part(2500);
+  extra.push(late);
+  changes[0].change(p.readout);
+  assert.equal(pending(), 0, "the timeline's own writes to its controls look for nothing");
+  changes[0].change(drive);
+  p.fire("animationstart");
+  assert.equal(pending(), 1, "a change and an animationstart: one look, on the next frame");
+  at(16);
+  assert.deepEqual([late.effect.getTiming().fill, late.currentTime, late.paused, t.duration(), p.slider.max], ["both", 300, true, 2.5, "2.5"], "found, held where the timeline stands, and the cycle measured again");
+
+  late.playState = "idle";
+  extra.length = 0;
+  const short = part(300);
+  extra.push(short);
+  p.fire("animationstart");
+  at(32);
+  assert.equal(t.duration(), 2.5, "the cycle never shrinks");
+  const writes = late.writes;
+  p.inside.delete(drive);
+  t.seek(0.1);
+  assert.deepEqual([late.writes, once.currentTime, p.css.currentTime], [writes, 300, 100], "cancelled, or its element gone from the root: no longer set");
+  t.destroy();
+});
+
+test("motion that starts after mount, on a timeline that had nothing to drive: the controls come on, autoplay plays it from the start, destroy() stops looking", () => {
+  const p = page({ duration: "0" });
+  const live: unknown[] = [];
+  (p.root as unknown as { getAnimations: () => unknown[] }).getAnimations = () => live;
+  const t = mountTimeline(p.root);
+  assert.deepEqual([p.button.disabled, p.slider.disabled, t.duration(), p.button.textContent], [true, true, 0, "Play"], "nothing yet: the controls are off");
+  const drive = element({});
+  p.inside.add(drive);
+  const late = animation(element({ "[data-lab-drive]": drive }), 1, 1600, "backwards");
+  live.push(late);
+  changes[0].change(drive);
+  at(16);
+  assert.deepEqual([p.button.disabled, p.slider.disabled, p.slider.max, t.duration(), p.button.textContent, late.paused, late.currentTime], [false, false, "1.6", 1.6, "Pause", false, 0], "the controls on, playing from 0");
+  at(516);
+  assert.equal(t.time(), 0.5);
+  t.destroy();
+  p.fire("animationstart");
+  changes[0].change(drive);
+  assert.deepEqual([pending(), changes[0].disconnected], [0, true]);
+});
+
 test("reduced motion: the timeline waits on its first frame until Play; a cycle of 0 disables the controls", () => {
   reduce = true;
   const p = page();
@@ -215,7 +292,7 @@ test("two timelines are independent, a declared cycle wins over the file's, and 
   ta.destroy();
   tb.destroy();
   assert.equal(pending(), 0);
-  assert.ok(watchers.every((w) => w.disconnected));
+  assert.ok(watchers.every((w) => w.disconnected) && changes.every((c) => c.disconnected));
   b.button.fire("click");
   a.slider.value = "0.5";
   a.slider.fire("input");

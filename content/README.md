@@ -53,7 +53,7 @@ isolation.
 | `write-post` | write a post from a brief in four stages (outline, body, the two agents' critique, SEO fields), or rewrite one | a lint-clean `draft: true` file, handed to `new-post` |
 | `new-post` | add a post as a draft, from a brief, a draft file or the workshop's drafts, with its images and frontmatter | the lint clean on the new file, the build, `pnpm preview`, a commit; the user flips `draft` |
 | `update-post` | change a post's copy, fields or images, `updatedAt` set, the two dates and the URL intact | the lint, the build, the route's audit lines, a commit |
-| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image | the lint, the build, a capture of the page at eight widths, a commit |
+| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image | the lint, the build, a capture of the page at the site's widths, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge | a HIGH / MEDIUM / LOW report with a verdict, then the approved fixes |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |
 | `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |

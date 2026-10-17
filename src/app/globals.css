@@ -18,12 +18,14 @@
  * directly. There is no brand here on purpose: a fork replaces these values
  * and every page follows, because nothing below is repeated in a component.
  *
- * The palette is four semantic colours, each a light and a dark value through
- * `light-dark()`; `color-scheme` on :root (base.css) picks the side, so the
- * theme toggle changes one attribute and never a class on an element.
+ * The palette is four colour values, and role tokens alias them: a
+ * component asks for the role where one exists (`border-line`, not
+ * `border-ink`) and for a value only where no role does, so a fork restyles
+ * every panel face or every hairline in one line.
  *
  * A token name becomes utilities (`--color-paper` → `bg-paper`,
- * `--container-page` → `max-w-page`, `--spacing-section` → `py-section`).
+ * `--color-line` → `border-line`, `--container-page` → `max-w-page`,
+ * `--spacing-section` → `py-section`).
  */
 @theme static {
   --breakpoint-*: initial;
@@ -41,41 +43,73 @@
   --font-heading: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-label: var(--font-mono);
+  /* A boxed label's letter-spacing, by role (`tracking-label`). */
+  --tracking-label: normal;
 
-  /* Tailwind's palette is removed: only these four exist, so a wireframe
-     page cannot quietly acquire a colour. paper = page ground, ink = text
-     and every hairline, fill = a filled block, muted = secondary text. */
+  /* Tailwind's palette is removed: only these four values exist, so a
+     wireframe page cannot quietly acquire a colour. paper = page ground,
+     ink = text, fill = a filled block, muted = secondary text. */
   --color-*: initial;
+  /* Each value a light and a dark side through `light-dark()`: `color-scheme`
+     on :root (base.css) picks the side, so the theme toggle changes one
+     attribute and never a class on an element. */
   --color-paper: light-dark(#ffffff, #121212);
   --color-ink: light-dark(#000000, #f2f2f2);
   --color-fill: light-dark(#e5e5e5, #2a2a2a);
   --color-muted: light-dark(#666666, #9a9a9a);
+  /* The roles a component asks for, aliases of the values above: point one
+     elsewhere, or give it a value of its own, and everything that asks for
+     it follows. */
+  --color-panel: var(--color-paper);   /* a panel's face: a box with a ground of its own */
+  --color-line: var(--color-ink);      /* every hairline: a border, a rule, a cross */
+  --color-on-ink: var(--color-paper);  /* text on an ink ground */
 
-  /* Type scale: h1–h3 shrink below 768 through :root in base.css. */
+  /* Type scale: each step a size, a line-height and a letter-spacing, which
+     `text-hN` and base.css's hN both read; h1–h3 shrink below 768 through
+     :root in base.css. */
   --text-body: 1rem;
   --text-body--line-height: 1.6;
   --text-h1: 2.5rem;
   --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: normal;
   --text-h2: 1.875rem;
   --text-h2--line-height: 1.25;
+  --text-h2--letter-spacing: normal;
   --text-h3: 1.375rem;
   --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: normal;
   --text-h4: 1.125rem;
   --text-h4--line-height: 1.35;
+  --text-h4--letter-spacing: normal;
   --text-h5: 1rem;
   --text-h5--line-height: 1.4;
+  --text-h5--letter-spacing: normal;
   --text-h6: 0.875rem;
   --text-h6--line-height: 1.4;
+  --text-h6--letter-spacing: normal;
 
   /* The vertical rhythm of a section (halved below 992 in base.css) and the
      one page column width. */
   --spacing-section: 4rem;
   --container-page: 72rem;
 
+  /* The uneven splits, named by their columns' shares, so no section writes
+     an arbitrary grid: cards beside a tall picture (`lg:grid-cols-2-1`), a
+     picture between two lists (`lg:grid-cols-1-2-1`). */
+  --grid-template-columns-2-1: 2fr 1fr;
+  --grid-template-columns-1-2-1: 1fr 2fr 1fr;
+
   /* A wireframe has no corner radius, no shadow, no blur and no motion
-     curve, so the utilities that would say so do not exist. */
+     curve, so the utilities that would say so do not exist — apart from the
+     roles below, held square and flat: a surface asks for its radius and
+     shadow by role (`rounded-panel`, `rounded-control`, `shadow-panel`,
+     `shadow-glow`), and a fork gives the roles their values. */
   --radius-*: initial;
+  --radius-panel: 0;
+  --radius-control: 0;
   --shadow-*: initial;
+  --shadow-panel: 0 0 #0000;
+  --shadow-glow: 0 0 #0000;
   --blur-*: initial;
   --animate-*: initial;
   --ease-*: initial;
