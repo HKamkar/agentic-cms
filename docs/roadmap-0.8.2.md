@@ -2,8 +2,8 @@
 
 > Plan, not started: it begins after the `v0.8.1` tag, and 0.9.0
 > (`docs/roadmap-0.9.0.md`) follows it. Written 2026-10-17 from a survey of
-> `develop` c9ac3ed. The decisions marked *(decide in the PR)* take the
-> recommendation unless the review says otherwise.
+> `develop` c9ac3ed. The owner took every decision's recommendation on
+> 2026-10-17.
 
 The kit has these parts:
 
@@ -73,15 +73,15 @@ From a survey of every part, as `init` sets a site up:
 
 ## Decisions
 
-| # | Question *(decide in the PR)* | Options | Recommendation |
+| # | Question | Options | Decided (owner, 2026-10-17) |
 |---|---|---|---|
-| D1 | Where the lint rules reach | (a) sections and patterns, as today; (b) every file under `src/`, where an element or import is allowed only in the component that owns it, named in `components.json` (`owners`: `<img>` in `Media` and `EagerImage`, `<form>` in the form components, `<svg>` in `Icon`, `next/script` in the consent adapter) | **(b).** One place is allowed to do a thing, and every other file is refused. |
-| D2 | Inline disables | (a) allowed, as today; (b) `noInlineConfig` in the preset, so exceptions live only in `components.json`; (c) allowed with a required description | **(b).** A disable comment is the cheapest bypass an agent has. |
-| D3 | Exceptions | (a) free, as today; (b) each needs a reason, every added one is printed by the guard, and `inherited` and the baseline only shrink, checked against the merge base | **(b).** |
-| D4 | The gates in `pnpm build` | (a) the build stays content lint, `next build` and the audit, as today; (b) the build runs `pnpm lint` first | **(b).** Agents run the build more often than the lint, and it costs seconds. |
-| D5 | `guard-email` | (a) a site turns it on, as today; (b) on in the build whenever `site.ts` has an address | **(b).** |
-| D6 | Where the site-wide checks live | (a) `check-components` grows to check the whole site; (b) a new command, `check-site`, runs the components pass and the new ones, and `check-components` stays as its components pass | **(b).** The old name no longer says what it checks, and nothing breaks. |
-| D7 | Edited agent files | (a) `modified` passes, as today; (b) lines the kit marks required must stay, and the check fails when one is gone | **(b).** |
+| D1 | Where the lint rules reach | (a) sections and patterns, as today; (b) every file under `src/`, where an element or import is allowed only in the component that owns it, named in `components.json` (`owners`: `<img>` in `Media` and `EagerImage`, `<form>` in the form components, `<svg>` in `Icon`, `next/script` in the consent adapter) | **Decided: (b).** One place is allowed to do a thing, and every other file is refused. |
+| D2 | Inline disables | (a) allowed, as today; (b) `noInlineConfig` in the preset, so exceptions live only in `components.json`; (c) allowed with a required description | **Decided: (b).** A disable comment is the cheapest bypass an agent has. |
+| D3 | Exceptions | (a) free, as today; (b) each needs a reason, every added one is printed by the guard, and `inherited` and the baseline only shrink, checked against the merge base | **Decided: (b).** |
+| D4 | The gates in `pnpm build` | (a) the build stays content lint, `next build` and the audit, as today; (b) the build runs `pnpm lint` first | **Decided: (b).** Agents run the build more often than the lint, and it costs seconds. |
+| D5 | `guard-email` | (a) a site turns it on, as today; (b) on in the build whenever `site.ts` has an address | **Decided: (b).** |
+| D6 | Where the site-wide checks live | (a) `check-components` grows to check the whole site; (b) a new command, `check-site`, runs the components pass and the new ones, and `check-components` stays as its components pass | **Decided: (b).** The old name no longer says what it checks, and nothing breaks. |
+| D7 | Edited agent files | (a) `modified` passes, as today; (b) lines the kit marks required must stay, and the check fails when one is gone | **Decided: (b).** |
 
 ## The jobs
 
