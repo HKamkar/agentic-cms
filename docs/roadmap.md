@@ -1,6 +1,6 @@
 # Roadmap — 0.8.0: a new site in minutes
 
-> Plan, not started. Written 2026-10-15 from a read of the kit at 0.7.6
+> Landed in 0.8.0 (2026-10-17). Written 2026-10-15 from a read of the kit at 0.7.6
 > (`main` 14c6f95, `develop` 28be17f) and from the first days of a site
 > built on it.
 

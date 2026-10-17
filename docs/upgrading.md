@@ -24,11 +24,14 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.7.6 → next (unreleased)
+## 0.7.6 → 0.8.0
 
-Nothing released yet. 0.8.0's steps are drafted in
-[migrating-to-0.8.0.md](migrating-to-0.8.0.md), filled in as each job of
-the [roadmap](roadmap.md) lands.
+The steps are in [migrating-to-0.8.0.md](migrating-to-0.8.0.md). § 1 moves
+the tag and refreshes the agent files; every site takes it, and builds,
+lints and proves identical after it. Everything after § 1 is a choice, step
+by step, with what to delete if the site wrote its own version. A `--motion`
+capture of a page with a loop writes fewer entries: **recapture baselines**
+of `--motion` captures (§ 2).
 
 ## 0.7.5 → 0.7.6
 

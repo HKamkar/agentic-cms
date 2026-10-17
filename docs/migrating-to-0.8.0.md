@@ -1,10 +1,5 @@
 # Migrating a site from 0.7.6 to 0.8.0
 
-> **Draft.** Written with the 0.8.0 roadmap (`docs/roadmap.md`). Each job
-> of the roadmap fills in its section here as it lands, and the release is
-> cut only after this guide has been run on two sites on 0.7.6. Lines marked
-> *(job N)* are the plan; the final text replaces them.
-
 This is for a site on agentic-cms 0.7.6. Upgrading changes nothing a reader
 sees: a site that does only § 1 builds, lints and proves identical.
 Everything after § 1 is a choice. Each step says why you might take it,
@@ -49,11 +44,10 @@ pnpm exec agentic-cms init . --agent-files --check   # what will change, writes 
 pnpm exec agentic-cms init . --agent-files           # skills, rules, the rules table
 ```
 
-**Before the release** there is no tag: a site that runs this guide as the
-release's gate pins the candidate, `github:HKamkar/agentic-cms#<develop sha>`,
-and moves to `#v0.8.0` once the tag exists. The candidate's `package.json`
-still reads 0.7.6, so `.agentic-cms.json` records `"version": "0.7.6"`, with
-the candidate's `"commit"` from the lockfile beside it.
+**Before the tag** exists, a site that runs this guide as the release's
+gate pins the release commit, `github:HKamkar/agentic-cms#<develop sha>`,
+and moves to `#v0.8.0` once the tag exists. `.agentic-cms.json` records
+`"version": "0.8.0"`, with that commit from the lockfile beside it.
 
 **What `--agent-files` updates:** the skills, the scoped rules and the rules
 table in `AGENTS.md`.
@@ -289,12 +283,14 @@ the migration is merged, remove it with
 
 ## 2. Breaking changes
 
-None planned. If a job has to break something, it is listed here with the
-step that fixes it.
+None: a site that does only § 1 builds, lints and proves identical.
 
 Watch:
-- The screenshot harness learns the new motion layer's markers *(job 8)*. If
-  that changes a captured frame, the CHANGELOG says **recapture baselines**.
+- The motion layer's markers move no captured frame: a static capture runs
+  under reduced motion, where nothing is armed.
+- A `--motion` capture of a page with an infinite loop writes fewer entries
+  to its animation inventory: **recapture baselines** of `--motion` captures
+  taken on 0.7.6.
 - A site with no profile keeps the built-in widths: only the kit's own
   example moved to four, so nothing to recapture until the site writes a
   profile (§ 3.1).
@@ -510,7 +506,7 @@ motion asks of any motion. The layer's markup is `data-motion="on"` on
 written for those names keeps working, any other takes the kit's block
 (step 2).
 
-### 3.6 `variants()`, tokens by role, the example's primitives *(job 9)*
+### 3.6 `variants()`, tokens by role, the example's primitives
 
 **Why:** one typed map of looks per primitive, so a new look is a line and
 never a copy. Components name roles (`panel`, `line`, `on-ink`) wherever one
