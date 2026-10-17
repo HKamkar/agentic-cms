@@ -1027,7 +1027,7 @@ The recommended order: **0.9.0 packages, 1.0.0 freezes.**
 
 ### 0.9.0 — the package
 
-The full plan, with its jobs and decisions, is the draft
+The full plan, with its jobs and decisions, is
 [roadmap-0.9.0.md](roadmap-0.9.0.md); this sketch is what it grew from.
 
 - **npm.** Publish with the built `dist/` inside. Today every site install

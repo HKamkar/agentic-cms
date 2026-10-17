@@ -64,7 +64,7 @@ rules for an agent working on the code.
   Google Cloud Run and Azure App Service.
 - [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
   1.0.0.
-- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the draft for 0.9.0: agentic-cms
+- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: agentic-cms
   as a standard npm package, published from CI with provenance, with
   `pnpm create agentic-cms` and `upgrade`.
 

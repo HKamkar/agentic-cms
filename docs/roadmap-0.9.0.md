@@ -1,10 +1,9 @@
 # Roadmap — 0.9.0: a standard npm package
 
-> Draft plan, not started: it begins after the `v0.8.0` tag. Written
+> Plan, not started: it begins after the `v0.8.0` tag. Written
 > 2026-10-16 from a read of the kit at `develop` e615341. When 0.8.0 lands,
-> this file becomes `docs/roadmap.md` (job 0). The decisions marked
-> *(decide in the PR)* take the recommendation unless the review says
-> otherwise.
+> this file becomes `docs/roadmap.md` (job 0). The owner took every
+> decision's recommendation on 2026-10-17.
 
 A site installs agentic-cms from GitHub by tag
 (`github:HKamkar/agentic-cms#v0.8.0`). That works, but it is not how a
@@ -77,17 +76,17 @@ These ten points are the definition of done for 0.9.0.
 
 ## Decisions
 
-| # | Question *(decide in the PR)* | Options | Recommendation |
+| # | Question | Options | Decided (owner, 2026-10-17) |
 |---|---|---|---|
-| D1 | Who owns the packages on npm | (a) the owner's npm account; (b) an npm organisation, which is free for public packages | **(b).** The organisation owns both packages, so a second maintainer, or a move to a GitHub organisation later, changes nothing a site sees. The repository stays where it is until 1.0.0 settles "Name and home". Moving it then means one step: delete and re-create the trusted publisher. |
-| D2 | The first publish. npm sets up a trusted publisher only for a package that already exists, so the first version of each package goes up by hand | (a) the owner publishes 0.8.0 by hand right after its tag, from the tarball `test:pack` built; (b) the first publish is `0.9.0-rc.0`, by hand, after job 2 | **(a).** It claims the name now, with a real release rather than a placeholder. `create-agentic-cms` gets its own first hand publish when job 4 lands. A hand publish carries no provenance; every publish after it does. |
-| D3 | Who presses publish | (a) pushing a `v*` tag publishes; (b) the publish job waits in a GitHub environment `npm` for the owner's approval | **(b).** A publish is permanent: npm limits unpublishing, and a version number, once used, can never be published again. The trusted publisher names the environment, so no other workflow or job can publish. |
-| D4 | The name of the create package | (a) `create-agentic-cms`, run as `pnpm create agentic-cms` or `npm create agentic-cms@latest`; (b) `@<org>/create`, run as `pnpm create @<org>` | **(a).** It is the form every framework uses. |
-| D5 | Where release candidates come from | (a) npm under the `next` tag, tagged `v0.9.0-rc.N`; (b) a `develop` sha, as for 0.8.0 | **(a).** The gate then installs what will ship, by the path a site uses. A candidate tag may sit on `develop`; a release tag sits only on `main`. |
-| D6 | Peer ranges | (a) open floors, as today: `next >=16.3.6`, `eslint >=9`, `playwright-core >=1.63.0`; (b) each range bounded to the major CI runs, such as `next ^16.3.6` | **(b).** Supporting a major the kit has not run is a kit release, not a surprise for a site. CI tests the floor and the newest version of each range (job 7). |
-| D7 | Installs from git | (a) keep them working: `prepare` still builds on a git install, to test an unreleased commit (`init --kit <spec>`); (b) drop them | **(a)** through 0.x, documented only as the kit's own development path. No guide for sites mentions it. |
-| D8 | Where the starter lives | (a) in the main package, as today (the tarball is 640 KB of its 1 MB budget); (b) a starter package of its own | **(a)**, as the 0.8.0 roadmap said, until the budget says otherwise. |
-| D9 | 1.0.0's "what kind of CMS" briefs | (a) the first job of 0.9.0, blocking the rest (the 0.8.0 roadmap's wording); (b) a track of their own, decided before 1.0.0 | **(b).** Packaging changes none of the answers, and D1 settles "Name and home" as far as npm goes. |
+| D1 | Who owns the packages on npm | (a) the owner's npm account; (b) an npm organisation, which is free for public packages | **Decided: (b).** The organisation owns both packages, so a second maintainer, or a move to a GitHub organisation later, changes nothing a site sees. The repository stays where it is until 1.0.0 settles "Name and home". Moving it then means one step: delete and re-create the trusted publisher. |
+| D2 | The first publish. npm sets up a trusted publisher only for a package that already exists, so the first version of each package goes up by hand | (a) the owner publishes 0.8.0 by hand right after its tag, from the tarball `test:pack` built; (b) the first publish is `0.9.0-rc.0`, by hand, after job 2 | **Decided: (a).** It claims the name now, with a real release rather than a placeholder. `create-agentic-cms` gets its own first hand publish when job 4 lands. A hand publish carries no provenance; every publish after it does. |
+| D3 | Who presses publish | (a) pushing a `v*` tag publishes; (b) the publish job waits in a GitHub environment `npm` for the owner's approval | **Decided: (b).** A publish is permanent: npm limits unpublishing, and a version number, once used, can never be published again. The trusted publisher names the environment, so no other workflow or job can publish. |
+| D4 | The name of the create package | (a) `create-agentic-cms`, run as `pnpm create agentic-cms` or `npm create agentic-cms@latest`; (b) `@<org>/create`, run as `pnpm create @<org>` | **Decided: (a).** It is the form every framework uses. |
+| D5 | Where release candidates come from | (a) npm under the `next` tag, tagged `v0.9.0-rc.N`; (b) a `develop` sha, as for 0.8.0 | **Decided: (a).** The gate then installs what will ship, by the path a site uses. A candidate tag may sit on `develop`; a release tag sits only on `main`. |
+| D6 | Peer ranges | (a) open floors, as today: `next >=16.3.6`, `eslint >=9`, `playwright-core >=1.63.0`; (b) each range bounded to the major CI runs, such as `next ^16.3.6` | **Decided: (b).** Supporting a major the kit has not run is a kit release, not a surprise for a site. CI tests the floor and the newest version of each range (job 7). |
+| D7 | Installs from git | (a) keep them working: `prepare` still builds on a git install, to test an unreleased commit (`init --kit <spec>`); (b) drop them | **Decided: (a)** through 0.x, documented only as the kit's own development path. No guide for sites mentions it. |
+| D8 | Where the starter lives | (a) in the main package, as today (the tarball is 640 KB of its 1 MB budget); (b) a starter package of its own | **Decided: (a)**, as the 0.8.0 roadmap said, until the budget says otherwise. |
+| D9 | 1.0.0's "what kind of CMS" briefs | (a) the first job of 0.9.0, blocking the rest (the 0.8.0 roadmap's wording); (b) a track of their own, decided before 1.0.0 | **Decided: (b).** Packaging changes none of the answers, and D1 settles "Name and home" as far as npm goes. |
 
 ## The owner's steps
 
