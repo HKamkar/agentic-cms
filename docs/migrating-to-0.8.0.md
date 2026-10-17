@@ -104,8 +104,8 @@ that step: once you `--accept`, `--diff` no longer shows them.
 - **The design rule:**
   - § 1: rejected and unapproved candidates are deleted, never archived,
     moved aside or kept "for later".
-  - 3.6: a section's card content is its own, inside the site's one card
-    frame (`ui/Panel` on a site that has the example's).
+  - 3.6: a section's card content is its own, inside the site's card
+    frame where it has one (`ui/Panel` on a site that has the example's).
 - **The components rule:** 3.7. It is new, and `--agent-files` writes it
   only once the site has `src/config/components.json`.
 - **The pages rule:** § 1. It is new, written whole: a page is a content
@@ -124,8 +124,8 @@ that step: once you `--accept`, `--diff` no longer shows them.
     wanted.
   - 3.6: where the site has role tokens, the design gives the roles their
     values first.
-  - 3.6: a section's cards sit in the site's one card frame (`ui/Panel`
-    where it has the example's).
+  - 3.6: a section's cards sit in the site's card frame where it has one
+    (`ui/Panel` where it has the example's).
 - **`design-options`:**
   - § 1: step 4's hand-over. `pnpm kit serve` starts next dev and the lab
     and prints every URL in one table, and `demo new` waits until the
@@ -560,9 +560,9 @@ applies, never the hue behind it.
   own content, and `Section` draws its box with `Panel`; a site that adopts
   `Panel` moves its card frames the same way and keeps what goes inside
   them. The design rule `--agent-files` writes says "a section's card
-  content is its own, its frame the site's one card frame (`ui/Panel` on a
-  site that has the example's)"; an edited copy takes that line by hand
-  (§ 1).
+  content is its own, inside the site's card frame where it has one
+  (`ui/Panel` on a site that has the example's)"; an edited copy takes that
+  line by hand (§ 1).
 - **The guide:** `docs/primitives.md` is the checklist of what a site builds
   on day one and what waits for a second use.
 

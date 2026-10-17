@@ -45,9 +45,9 @@ dev server and its own commit; never all at once.
    shared once in `src/components/ui/`, never pasted into a page. Every
    state (hover, focus, current page, open menu) is part of it.
 3. **The sections**, one at a time, in the order a visitor meets them. Each
-   section's card content is its own, inside the site's one card frame
-   (`ui/Panel` on a site that has the example's), and a card is not a
-   generic component.
+   section's card content is its own, inside the site's card frame where
+   it has one (`ui/Panel` on a site that has the example's), and a card is
+   not a generic component.
 4. **Motion**, last, with `agentic-cms/ix`, in the layer the site has
    (its `STANDARD.md` §7). Where the layout renders `motionScript()`, the
    play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) is the
