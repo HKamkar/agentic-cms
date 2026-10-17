@@ -231,8 +231,9 @@ async function lazyServer(root, hold) {
   const server = http.createServer((req, res) => {
     if (req.url === "/lazy") { res.writeHead(200, { "content-type": "text/html" }); return res.end(fs.readFileSync(path.join(root, ".next/server/app/lazy.html"))); }
     if (req.url === "/images/late.svg" && hold(++asked)) return; // never answered: the page closes the request
-    const file = path.join(root, "public", req.url);
-    if (!fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+    const publicDir = path.join(root, "public");
+    const file = path.resolve(publicDir, `.${new URL(req.url, "http://fixture").pathname}`);
+    if (!file.startsWith(publicDir + path.sep) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": "image/svg+xml" });
     res.end(fs.readFileSync(file));
   });

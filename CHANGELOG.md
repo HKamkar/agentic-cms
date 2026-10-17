@@ -444,6 +444,10 @@ changes what a capture writes says **recapture baselines**.
 - Fixed: the `serve` browser test no longer fails on a port taken by a parallel test. Its ports come from `freePorts()`, which picks distinct ports below the ephemeral range, and next dev's EADDRINUSE exit is reported as a taken port.
 - Fixed: browser tests wait for the state they assert instead of sleeping a fixed time, so a slow runner no longer fails the timeline's mobile case (`B plays from one start: 0,0,0,0`) or the other sleep-then-assert checks in `timeline` and `dev-routes`.
 - Docs: `docs/roadmap-0.9.0.md` is the plan for 0.9.0, agentic-cms as a standard npm package. It covers publishing from CI through trusted publishing with provenance, release candidates on `next`, `pnpm create agentic-cms`, `agentic-cms upgrade`, a written public surface and peer ranges tested at both ends. The 0.8.0 roadmap's 0.9.0 sketch and the docs index link to it.
+- Fixed, from CodeQL on the release pull request:
+  - the dev-server handover's text of a 5xx page strips script and style blocks and tags until none is left, then any stray angle bracket, so a removal that joins two halves of a tag leaves no markup;
+  - the fixture server in the browser suite serves only files under `public/`;
+  - two test stubs match the public-address lookup by its hostname, not by a URL prefix.
 
 ## [0.7.6] — 2026-10-13
 

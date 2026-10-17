@@ -72,6 +72,7 @@ test("errorTail: a compile error from __NEXT_DATA__, a thrown error from the fli
   const thrown = `<html><body><script>self.__next_f.push([0])</script><script>self.__next_f.push(${JSON.stringify([1, "0:{\"P\":null}\n"])})</script><script>self.__next_f.push(${JSON.stringify([1, row])})</script></body></html>`;
   assert.equal(errorTail(thrown), "TypeError: props.items is undefined");
   assert.equal(errorTail("<html><style>p{}</style><body><h1>502</h1><p>Bad gateway</p></body></html>"), "502 Bad gateway");
+  assert.doesNotMatch(errorTail("<p>Bad gateway</p><scr<script>x</script>ipt>y</script><<b>p"), /[<>]/, "a removal that joins two halves into a tag removes that one too, and no bracket is left");
   assert.equal(errorTail(`<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ err: { message: Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n") } })}</script>`).split("\n").length, 12);
 });
 
@@ -102,7 +103,7 @@ test("handover: no server asks nothing; this clone's running one is asked until 
   const scripts = { dev: "next dev -p 8000" };
   try {
     let asked = 0;
-    const fetch = async (url) => (url.startsWith("https://api.ipify.org") ? { ok: true, status: 200, text: async () => `${PUBLIC}\n` } : (asked++, { status: asked < 3 ? 404 : 200, text: async () => "" }));
+    const fetch = async (url) => (new URL(url).hostname === "api.ipify.org" ? { ok: true, status: 200, text: async () => `${PUBLIC}\n` } : (asked++, { status: asked < 3 ? 404 : 200, text: async () => "" }));
     const sleep = async () => {};
     const down = await handover({ root, route: "/x-demo", scripts, fs, fetch, interfaces: INTERFACES, up: async () => false, kill, sleep });
     assert.deepEqual([down.server, down.ready, down.status, down.urls, asked], ["down", false, null, [], 0]);

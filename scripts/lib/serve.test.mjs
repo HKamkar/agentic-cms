@@ -44,7 +44,7 @@ const fakeLab = () => {
 /** The network: the public lookup answers PUBLIC, a route answers `status(url)`. */
 const network = (status = () => 200, body = () => "") => ({
   interfaces: INTERFACES,
-  fetch: async (url) => (url.startsWith("https://api.ipify.org") ? { ok: true, status: 200, text: async () => PUBLIC } : { status: status(url), text: async () => body(url) }),
+  fetch: async (url) => (new URL(url).hostname === "api.ipify.org" ? { ok: true, status: 200, text: async () => PUBLIC } : { status: status(url), text: async () => body(url) }),
   sleep: async () => {},
 });
 
