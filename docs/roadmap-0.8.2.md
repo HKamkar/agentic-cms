@@ -4,9 +4,8 @@
 > (`docs/roadmap-0.9.0.md`) follows it. Written 2026-10-17 from a survey of
 > `develop` c9ac3ed, and revised the same day after the owner's review: the
 > engines are enforced, everything else is guided and never blocked, and a
-> new site starts without the example's brand. The decisions marked
-> *(decide in the PR)* take the recommendation unless the review says
-> otherwise.
+> new site starts without the example's brand. The owner took every
+> decision's recommendation on 2026-10-17, with job 5 (the starter) first.
 
 Three problems came from building a site on the kit:
 
@@ -85,17 +84,17 @@ it should come with a reason someone can read.
 
 ## Decisions
 
-| # | Question *(decide in the PR)* | Options | Recommendation |
+| # | Question | Options | Decided (owner, 2026-10-17) |
 |---|---|---|---|
-| D1 | How far each tier reaches | (a) sections and patterns only, as today; (b) the required rules fail across all of `src/`, design-round and lab routes included, and the preferred rules warn across all of `src/`; (c) everything fails everywhere (the first draft) | **(b).** The engines hold everywhere, and creativity is never blocked. |
-| D2 | Inline disables | (a) allowed with no reason, as today; (b) none at all; (c) allowed with a description (`-- reason`), and the guard lists them | **(c).** A workaround is fine; a silent one is not. |
-| D3 | Exceptions | (a) free, as today; (b) each needs a reason and every added one is printed. `inherited` and the baseline, an existing site's engine bypasses, only shrink | **(b).** |
-| D4 | The lint in `pnpm build` | (a) the build runs no ESLint, as today; (b) the build runs `pnpm lint` first, where warnings never fail it | **(b).** Agents run the build more often than the lint. |
-| D5 | `guard-email` | (a) a site turns it on, as today; (b) on in the build whenever `site.ts` has an address | **(b).** |
-| D6 | Where the site-wide checks live | (a) `check-components` grows to check the whole site; (b) a new command, `check-site`, runs the components pass and the new ones, and `check-components` stays | **(b).** |
-| D7 | Edited agent files | (a) `modified` passes, as today; (b) lines the kit marks required must stay | **(b).** |
-| D8 | The starter | (a) the example as it is, as today; (b) a clean starter: `init --name` puts the site's name and domain where the example says Acme, with one home page whose copy is marked as placeholder and a neutral logo placeholder. None of the example's own content or pictures go in: no posts, reviews, use cases, FAQs, author, catalogue pages, or images under `public/images/` but the wireframe's neutral placeholders. There is no option to bring them back; the example stays readable in the kit's own repository | **(b).** A new site's design starts from the site, never from Acme. |
-| D9 | Placeholder copy and the example's brand | (a) nothing marks them, as today; (b) the starter marks its copy as placeholder, and the content lint WARNs on it in development and FAILs in a production build. The example's brand (`Acme`, `acme.example`, the Acme asset names) FAILs in a site at any time | **(b).** No placeholder ships, and a design round sees what it has to replace. |
+| D1 | How far each tier reaches | (a) sections and patterns only, as today; (b) the required rules fail across all of `src/`, design-round and lab routes included, and the preferred rules warn across all of `src/`; (c) everything fails everywhere (the first draft) | **Decided: (b).** The engines hold everywhere, and creativity is never blocked. |
+| D2 | Inline disables | (a) allowed with no reason, as today; (b) none at all; (c) allowed with a description (`-- reason`), and the guard lists them | **Decided: (c).** A workaround is fine; a silent one is not. |
+| D3 | Exceptions | (a) free, as today; (b) each needs a reason and every added one is printed. `inherited` and the baseline, an existing site's engine bypasses, only shrink | **Decided: (b).** |
+| D4 | The lint in `pnpm build` | (a) the build runs no ESLint, as today; (b) the build runs `pnpm lint` first, where warnings never fail it | **Decided: (b).** Agents run the build more often than the lint. |
+| D5 | `guard-email` | (a) a site turns it on, as today; (b) on in the build whenever `site.ts` has an address | **Decided: (b).** |
+| D6 | Where the site-wide checks live | (a) `check-components` grows to check the whole site; (b) a new command, `check-site`, runs the components pass and the new ones, and `check-components` stays | **Decided: (b).** |
+| D7 | Edited agent files | (a) `modified` passes, as today; (b) lines the kit marks required must stay | **Decided: (b).** |
+| D8 | The starter | (a) the example as it is, as today; (b) a clean starter: `init --name` puts the site's name and domain where the example says Acme, with one home page whose copy is marked as placeholder and a neutral logo placeholder. None of the example's own content or pictures go in: no posts, reviews, use cases, FAQs, author, catalogue pages, or images under `public/images/` but the wireframe's neutral placeholders. There is no option to bring them back; the example stays readable in the kit's own repository | **Decided: (b).** A new site's design starts from the site, never from Acme. |
+| D9 | Placeholder copy and the example's brand | (a) nothing marks them, as today; (b) the starter marks its copy as placeholder, and the content lint WARNs on it in development and FAILs in a production build. The example's brand (`Acme`, `acme.example`, the Acme asset names) FAILs in a site at any time | **Decided: (b).** No placeholder ships, and a design round sees what it has to replace. |
 
 ## The jobs
 
@@ -335,12 +334,15 @@ request at a time, and clears the Acme leftovers.
 ## Order
 
 ```
-after v0.8.1   [0 plan]
+after v0.8.1   [0 plan] → [5 starter] first (owner, 2026-10-17)
 Lane A         [1 map] → [6 agents] ──────────────────────────────┐
 Lane B         [2 engines] → [3 guided] → [4 check-site, gates] → [7 adopt] → [8 sweep] last
-Lane C         [5 starter]
 then           gate → R → S
 ```
+
+Job 5 goes first and alone: it changes what every new site starts from,
+and jobs 2–4 test against the fresh site it writes. Lanes A and B start when
+it has merged.
 
 The jobs overlap in these files; whichever pull request lands second
 rebases:
