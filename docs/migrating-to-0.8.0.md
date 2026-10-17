@@ -87,12 +87,13 @@ you leave a later step's lines out, take them from this list when you take
 that step: once you `--accept`, `--diff` no longer shows them.
 
 - **The styling rule:**
-  - § 1: motion is `agentic-cms/ix` in the layer the site has (its
-    `STANDARD.md` §7): the play-once layer where the layout renders
-    `motionScript()`, and for a site's first motion; `Fx` and `OnView` on
-    a site that moves with them and has not adopted it, and elsewhere only
-    where a replay on re-entry is wanted. The `Fx` / `OnView` bullet opens
-    "Where the site uses them".
+  - § 1: motion is the layer the site has (its `STANDARD.md` §7): a
+    motion folder of the site's own while it keeps one (until 3.5 on a
+    site that wrote its own), otherwise `agentic-cms/ix` — the play-once
+    layer where the layout renders `motionScript()`, and for a site's
+    first motion; `Fx` and `OnView` on a site that moves with them and has
+    not adopted it, and elsewhere only where a replay on re-entry is
+    wanted. The `Fx` / `OnView` bullet opens "Where the site uses them".
   - § 1: a change that must not move a pixel proves it with
     `pnpm kit visual-parity proof` (the baseline of develop, the tree and
     the compare, once built), in place of `capture before`,
@@ -121,9 +122,10 @@ that step: once you `--accept`, `--diff` no longer shows them.
 - **`design`:**
   - § 1: the owner's look is `pnpm kit serve`, handing over the URLs it
     printed, in place of `pnpm dev`.
-  - § 1: motion comes last, in the layer the site has: a site on `Fx` and
-    `OnView` keeps them, and a site with no motion yet starts with the
-    play-once layer.
+  - § 1: motion comes last, in the layer the site has: a site with a
+    motion folder of its own keeps it (until 3.5 on a site that wrote its
+    own), a site on `Fx` and `OnView` keeps them, and a site with no
+    motion yet starts with the play-once layer.
   - 3.1: the colours in each scheme the profile names.
   - 3.5: where the layout renders `motionScript()`, the play-once layer
     is the default, and `Fx` and `OnView` serve only where a replay is
@@ -170,8 +172,9 @@ that step: once you `--accept`, `--diff` no longer shows them.
     scheme the profile names (light and dark without one), in place of
     "light and dark" and `--scheme dark`.
 - **`setup`:** § 1. It is new, written whole. On a site that has not taken
-  3.2 it runs `pnpm install --frozen-lockfile` and
-  `pnpm exec agentic-cms setup` in place of `bash scripts/setup.sh`, and
+  3.2, where `scripts/setup.sh` is missing or is the site's own, it runs
+  `pnpm install --frozen-lockfile` and `pnpm exec agentic-cms setup` (with
+  the flags) in place of the kit's `bash scripts/setup.sh`, and
   `pnpm exec agentic-cms urls` in place of `pnpm urls`.
 
 **`AGENTS.md`:** `init` never rewrites it outside the rules table. Add
