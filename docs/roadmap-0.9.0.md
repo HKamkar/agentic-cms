@@ -1,8 +1,9 @@
 # Roadmap — 0.9.0: a standard npm package
 
-> Plan, not started: it begins after the `v0.8.0` tag. Written
-> 2026-10-16 from a read of the kit at `develop` e615341. When 0.8.0 lands,
-> this file becomes `docs/roadmap.md` (job 0). The owner took every
+> Plan, not started: it begins after the `v0.8.2` tag, once 0.8.1's fixes
+> and 0.8.2's map and checks (`docs/roadmap-0.8.2.md`) have landed. Written
+> 2026-10-16 from a read of the kit at `develop` e615341. When 0.9.0
+> starts, this file becomes `docs/roadmap.md` (job 0). The owner took every
 > decision's recommendation on 2026-10-17.
 
 A site installs agentic-cms from GitHub by tag
@@ -126,14 +127,14 @@ or approval.
 | 3 | Install from npm everywhere | `init`'s dependency spec, `allowBuilds`, every install line |
 | 4 | `pnpm create agentic-cms` | `packages/create-agentic-cms/`, a thin wrapper around `init` |
 | 5 | `agentic-cms upgrade` | the upgrade guide made executable, with migrations per version |
-| 6 | The public surface | `docs/public-surface.md`: what is stable, what is experimental, the deprecation policy |
+| 6 | The public surface | a stable/experimental column on 0.8.2's `docs/parts.md`, and the deprecation policy |
 | 7 | Peers and engines | bounded ranges, tested at the floor and at the newest version |
 | R | Release 0.9.0 | `rc.1` on `next`, the gate, `0.9.0` on `latest` |
 | S | The sites follow | `upgrade` in each site's own session |
 
 ### 0 — This plan into the repo
 
-- After `v0.8.0`, this file replaces `docs/roadmap.md`. The 0.8.0 roadmap's
+- After `v0.8.2`, this file replaces `docs/roadmap.md`. The 0.8.0 roadmap's
   open Later items move into this one's Later, and the decisions are
   recorded as **Decided:**.
 - The 0.8.0 roadmap's principles, hygiene list and per-job verification
@@ -286,8 +287,11 @@ More:
 
 ### 6 — The public surface, written down
 
-- **`docs/public-surface.md`** marks each part **stable** or
-  **experimental**:
+0.8.2's map, `docs/parts.md`, already lists every part, how to use it
+and the check that holds it. This job adds a stable or experimental column
+to that page instead of writing a page of its own.
+
+- **The map's new column** marks each part **stable** or **experimental**:
   - every export: the 15 subpaths;
   - every command: its flags, exit codes and `--json` shapes, linked from
     `docs/commands.md`;
@@ -347,7 +351,7 @@ moved, and merges.
 ## Order
 
 ```
-after v0.8.0   O1, O2, O4 (owner)
+after v0.8.0   O1, O2, O4 (owner); the jobs start after v0.8.2
 Lane A         [0] → [1 tarball] → [2 release CI] → O3 → rc.0 → [3 npm installs] → [4 create] (+ O5) → [5 upgrade]
 Lane B         [6 surface] after 0;  [7 peers] after 1
 then           rc.1 → gate → R → S
