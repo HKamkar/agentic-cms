@@ -460,7 +460,7 @@ remove it as `init --light-only` does for a new site:
 finds nothing, and a proof of the change is identical in light. The theme
 toggle is gone, and that is intended: say so in the commit.
 
-### 3.5 The play-once motion layer *(jobs 7, 8)*
+### 3.5 The play-once motion layer
 
 **Why:** `Fx` replays each time an element re-enters the viewport. The new
 layer in `agentic-cms/ix` plays once, when it first enters, never on hover
