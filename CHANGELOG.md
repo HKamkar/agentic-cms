@@ -4,6 +4,15 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- Docs: `docs/roadmap-0.8.2.md` is the plan for 0.8.2. The engines are enforced: content, SEO, forms, consent and e-mail fail the lint when bypassed, design rounds included. The kit's libraries and tools are preferred: a warning names the part, and a reason keeps a site's own. A new site starts without the example's brand or content. Every part goes on one map (`docs/parts.md`), and the README and every doc are swept. `docs/roadmap-0.9.0.md` now follows it.
+- `init --name "<Site>"`, `--url`, `--email`: a new site starts from a starter of its own name instead of the example. It gets one home page and the blog index with copy marked `(placeholder)`, empty collections, the wireframe's neutral pictures and a logo placeholder. It gets none of the example's brand, posts, reviews, use cases, FAQs, author or catalogue pages, and the package no longer ships them.
+- The content lint: `placeholder` WARNs on the starter's marker and on addresses on reserved domains, and FAILs with `--production`, which a new site's `pnpm build` passes (`AGENTIC_CMS_PLACEHOLDERS=warn` keeps them warnings in a build that deploys nothing: the site's CI, `setup --build`). `example-brand` FAILs on the kit example's brand in a site at any time.
+- `agentic-cms assemble` packages nothing while a placeholder remains.
+- `demo new` names a page's placeholder copy and any of the example's brand before it writes a round. The `design` skill gets the copy first, and `/editorial:new-page` writes a page's real copy.
+- `init --force` never overwrites a site's own `content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`. The starter's content goes only into a site with no `content/`.
+
 ## [0.8.1] — 2026-10-17
 
 - Docs: `docs/migrating-to-0.8.0.md` § 3.5's heading loses the job marker the release commit missed.
