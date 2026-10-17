@@ -271,13 +271,23 @@ motion bullet, which names the play-once layer beside `Fx` and `OnView`
   (`docker0`, `br-…`, `veth…`, `virbr…`) and no Mac tunnel. It also
   prints each scene's own page, `/scene/<name>`, on every address.
 
-**Check:** the verify block, then
-`pnpm kit visual-parity proof upgrade --ref develop --build --all --all-pages`:
-the static pass, `--states` and `--motion`, in each scheme the site has, on
-every page — an upgrade reaches every template, so `--all-pages` sets aside
-any `proof.pages` or `proof.sample` the profile names (§ 3.1). Every
-pass must be identical: each page shot, each state's box, and each
-`--motion` step's frames. Before a pass reports, the proof retakes every
+**Check:** the verify block, then the static pass, `--states` and
+`--motion` as three proofs:
+
+```bash
+pnpm kit visual-parity proof upgrade --ref develop --build --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --states --all-pages
+pnpm kit visual-parity proof upgrade --ref develop --motion --all-pages
+```
+
+Together they cover what one `--all` proof does, and the second and third
+copy the static shots of the first from the shot cache. One `--all` proof
+of a site without a profile took about 13 minutes, past the 10 minutes a
+foreground command gets; split in three, each run is only a part of that.
+Each runs in each scheme the site has, on every page: an upgrade reaches
+every template, so `--all-pages` sets aside any `proof.pages` or
+`proof.sample` the profile names (§ 3.1). Every pass must be identical:
+each page shot, each state's box, and each `--motion` step's frames. Before a pass reports, the proof retakes every
 static shot and `--motion` frame that differs, once on each side; for
 `--motion` that is a second take of the base build, the base against
 itself. A `FLAKY` line is a shot taken with an image still loading,
