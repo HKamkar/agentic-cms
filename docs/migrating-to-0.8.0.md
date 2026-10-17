@@ -520,16 +520,39 @@ kept and documented.
   below the fold under `reveals.pending`, each with its kind;
 - `pnpm kit visual-parity proof motion --motion --build`.
 
-**If you wrote your own play-once layer:** switch the imports to
-`agentic-cms/ix`, then delete your components, your hooks and any lab
-timeline patch of your own. The timeline pins the fill of what it drives
-to `both`, so a fill override under `[data-lab-timeline]` goes; the
-layer plays at once under a timeline, as `docs/lab.md` § Inspecting
-motion asks of any motion. The layer's markup is `data-motion="on"` on
-`<html>`, `data-motion-root`, `data-part`, `data-play`, `data-visible` and
-`data-intro`, with `--d`, `--len` and `--dim`: a stylesheet of your own
-written for those names keeps working, any other takes the kit's block
-(step 2).
+The browser check and `reveals.pending` need a route that renders a root.
+Until one does, check the arming instead:
+`pnpm kit probe / --select 'html[data-motion="on"]' --motion` finds
+`<html>` (exit 0), the same without `--motion`, under reduced motion,
+finds nothing (exit 1), and the proof is identical. Run the two root
+checks on the first route that renders a root, or try them first on a
+throwaway demo route (`pnpm kit demo new`, probed with `--url` on the dev
+server, removed with `pnpm kit demo clean`).
+
+**If you wrote your own play-once layer**, it moves onto the kit's in one
+of two shapes, each matching one of § 3.7's configs:
+- **Keep your motion folder as a layer over the kit's.** Its files
+  re-export `agentic-cms/ix` (`export { Reveal, RevealGroup } from
+  "agentic-cms/ix";`), or wrap it where your names or props differ, and
+  your own components and hooks behind them go. The rest of the site
+  keeps importing from the folder, so a components rule or lint that lets
+  only that folder import `agentic-cms/ix` holds as it is. This is
+  `motion: "<folder>"` at § 3.7. A re-export costs nothing: a page still
+  bundles only the kit modules it uses.
+- **Delete the folder.** Every consumer imports `agentic-cms/ix` itself.
+  This is `motion: null` at § 3.7, where `agentic-cms/ix` is the motion
+  layer. A lint of your own that lets only the folder import
+  `agentic-cms/ix` fails on that, so take this shape together with § 3.7,
+  whose lint replaces yours, or keep the folder until then.
+
+Either way, delete any lab timeline patch of your own. The timeline pins
+the fill of what it drives to `both`, so a fill override under
+`[data-lab-timeline]` goes; the layer plays at once under a timeline, as
+`docs/lab.md` § Inspecting motion asks of any motion. The layer's markup
+is `data-motion="on"` on `<html>`, `data-motion-root`, `data-part`,
+`data-play`, `data-visible` and `data-intro`, with `--d`, `--len` and
+`--dim`: a stylesheet of your own written for those names keeps working,
+any other takes the kit's block (step 2).
 
 ### 3.6 `variants()`, tokens by role, the example's primitives
 
@@ -654,11 +677,14 @@ the imports.
    folders, `sections/` and `blog/`) and pass `null` for a layer you do not
    have; with no `motion/` folder, `agentic-cms/ix` is your motion layer
    ([primitives.md § Enforced](primitives.md#enforced-agentic-cmseslint)
-   has every option). Run `pnpm lint`: each finding names the primitive to
-   use. Move the section onto it, pixel for pixel and proven with
-   `visual-parity proof`: a raw `<img>` becomes `Media`, an `<h3>`
-   `Heading`, a bordered box `Panel`, an arbitrary grid a token. A file you
-   cannot move yet goes into `ignores`, with its reason, until you can.
+   has every option). A site that moved its own play-once layer onto the
+   kit's (§ 3.5) passes its folder as `motion` where it kept it as a layer
+   over the kit's, and `null` where it deleted it. Run `pnpm lint`: each
+   finding names the primitive to use. Move the section onto it, pixel for
+   pixel and proven with `visual-parity proof`: a raw `<img>` becomes
+   `Media`, an `<h3>` `Heading`, a bordered box `Panel`, an arbitrary grid
+   a token. A file you cannot move yet goes into `ignores`, with its
+   reason, until you can.
    A restriction of your own on imports goes into the `restrictedImports`
    option (`{ paths, patterns }`, as the rule takes them), never a second
    `no-restricted-imports` block: flat config keeps the last block's
