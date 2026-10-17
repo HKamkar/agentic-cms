@@ -75,8 +75,14 @@ without your edits.
 What `--diff` shows for each file is listed here, each line with the step
 it belongs to. A line for a step your site has not taken is worded to hold
 without it ("where the layout renders `motionScript()`", "on a site that
-has the example's"), so the whole `--diff` can go into your copy: a line
-marked § 1 applies to every site, the others once you take their step. If
+has the example's"), so a `--diff` from a base can go into your copy whole:
+a line marked § 1 applies to every site, the others once you take their
+step. A file your site wrote before `.agentic-cms.json` recorded its base
+takes the kit's text at your previous version (the manifest's, 0.7.6) as
+its base, and `--check` notes it ("no base: kit unchanged since 0.7.6" is
+`modified`, nothing to take). Where no such text is known, `--diff` says
+so and prints your whole file against the kit's text: that is not the
+kit's change, so never apply it whole; take this list's lines from it. If
 you leave a later step's lines out, take them from this list when you take
 that step: once you `--accept`, `--diff` no longer shows them.
 

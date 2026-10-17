@@ -7,7 +7,8 @@ import path from "node:path";
 import { test } from "node:test";
 import { parse as parseYaml } from "yaml";
 import { checkComponents, formatReport } from "./lib/check-components.mjs";
-import { acceptAgentFiles, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, scaffold } from "./lib/init.mjs";
+import { recordOf, recordText } from "../tools/agent-file-releases.mjs";
+import { acceptAgentFiles, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, sha, siteVersion } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
 
@@ -245,7 +246,7 @@ test("a site's own rule that predates the manifest is kept on the first --agent-
   assert.ok(!(".claude/rules/styling.md" in readManifest(target).files), "and no base is made up for it");
   const check = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: true, ...quiet }).map((f) => [f.file, f.status]));
   assert.equal(check[".claude/rules/styling.md"], "modified, kit changed", "and --check keeps calling it the site's, with the kit's text to look at");
-  const diff = agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: KIT });
+  const diff = agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: KIT, version: "0.4.1" });
   assert.equal(diff.base, null);
   assert.match(diff.diff, /^--- a\/\.claude\/rules\/styling\.md\n\+\+\+ b\/\.claude\/rules\/styling\.md\n@@ -1 \+1,\d+ @@\n-the site's own styling rule\n/, "with no base, the site's text against the kit's");
   const forced = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, force: true, ...quiet }).map((f) => [f.file, f.status]));
@@ -386,4 +387,107 @@ test("the manifest records the kit commit the site's lockfile installed, when th
   const legacy = { version: "0.7.6", files: readManifest(target).files };
   fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify(legacy, null, 1));
   assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
+});
+
+/** The styling rule as an older release had it. */
+const OLDER_STYLING = read(KIT, "templates/site/rules/styling.md").replace(/\n- [^\n]*\n/, "\n- The older styling line.\n");
+const SEO = ".claude/rules/seo.md";
+const STYLING = ".claude/rules/styling.md";
+const OWN_LINE = "\n- The site's own line.\n";
+const entry = (report, file) => report.find((f) => f.file === file);
+
+/** A kit with a record of its releases: this kit's agent files, and a 0.7.6 whose texts are this kit's but for the older styling rule. */
+function releasedKit() {
+  const kit = olderKit();
+  fs.copyFileSync(path.join(KIT, "templates/site/rules/styling.md"), path.join(kit, "templates/site/rules/styling.md"));
+  const files = renderAgentFiles(kit).map((f) => (f.file === STYLING ? { file: STYLING, text: OLDER_STYLING } : f));
+  fs.mkdirSync(path.dirname(path.join(kit, RELEASES)), { recursive: true });
+  fs.writeFileSync(path.join(kit, RELEASES), recordText(recordOf([{ version: "0.7.6", files }])));
+  return kit;
+}
+
+/** A site whose seo and styling rules it wrote before the manifest recorded their bases: each the text of 0.7.6 with the site's own line, under a manifest as 0.7.6 wrote it. */
+function noBaseSite(kit, { version = "0.7.6" } = {}) {
+  const target = tmp();
+  agentFiles(target, { kitRoot: kit, version, ...quiet });
+  const { files } = readManifest(target);
+  delete files[SEO];
+  delete files[STYLING];
+  fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify({ version, files }, null, 1));
+  fs.writeFileSync(path.join(target, SEO), `${read(KIT, "templates/site/rules/seo.md")}${OWN_LINE}`);
+  fs.writeFileSync(path.join(target, STYLING), `${OLDER_STYLING}${OWN_LINE}`);
+  return target;
+}
+
+test("no base, and the kit's text unchanged since the version the site was on: the site's edit (modified, noted), nothing to --diff, and the refresh records the base", () => {
+  const kit = releasedKit();
+  const target = noBaseSite(kit);
+  const check = agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet });
+  assert.deepEqual(entry(check, SEO), { file: SEO, status: "modified", note: "no base: kit unchanged since 0.7.6" });
+  const diff = agentFileDiff(target, SEO, { kitRoot: kit, version: "0.8.1" });
+  assert.deepEqual(diff, { file: SEO, status: "modified", base: sha(read(KIT, "templates/site/rules/seo.md")), from: null, diff: "", note: "no base: kit unchanged since 0.7.6" });
+  const refreshed = agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet });
+  assert.deepEqual(entry(refreshed, SEO), { file: SEO, status: "kept", note: "no base: kit unchanged since 0.7.6" });
+  assert.equal(read(target, SEO), `${read(KIT, "templates/site/rules/seo.md")}${OWN_LINE}`, "the site's edit is kept");
+  assert.equal(readManifest(target).files[SEO], sha(read(KIT, "templates/site/rules/seo.md")), "the base is recorded");
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), SEO), { file: SEO, status: "modified" }, "and is the manifest's from then on");
+});
+
+test("no base, and the kit's text changed since the version the site was on: that release's text is its base — --diff prints the kit's change alone, and the refresh keeps the file and records the base", () => {
+  const kit = releasedKit();
+  const target = noBaseSite(kit);
+  const note = "no base: from the kit's text at 0.7.6, the version the site was on";
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), STYLING), { file: STYLING, status: "modified, kit changed", note });
+  const diff = agentFileDiff(target, STYLING, { kitRoot: kit, version: "0.8.1" });
+  assert.equal(diff.base, sha(OLDER_STYLING));
+  assert.equal(diff.from, "agentic-cms 0.7.6");
+  assert.equal(diff.note, note);
+  assert.match(diff.diff, /^-- The older styling line\.$/m, "old → new");
+  assert.doesNotMatch(diff.diff, /The site's own line/, "the site's edit is not the kit's change");
+  const refreshed = agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet });
+  assert.deepEqual(entry(refreshed, STYLING), { file: STYLING, status: "kept, kit changed", note });
+  assert.equal(read(target, STYLING), `${OLDER_STYLING}${OWN_LINE}`);
+  assert.equal(readManifest(target).files[STYLING], sha(OLDER_STYLING), "the release's text is recorded as its base");
+  assert.equal(read(target, ".agentic-cms/base/claude/rules/styling.md"), OLDER_STYLING, "with its copy");
+  assert.equal(agentFileDiff(target, STYLING, { kitRoot: kit, version: "0.8.1" }).diff, diff.diff, "the same change, from the copy");
+  fs.writeFileSync(path.join(target, STYLING), `${read(KIT, "templates/site/rules/styling.md")}${OWN_LINE}`);
+  assert.deepEqual(acceptAgentFiles(target, [STYLING], { kitRoot: kit }), [{ file: STYLING, status: "modified" }]);
+});
+
+test("no base, and no release known as its source: modified, kit changed, noted, and --diff is the site's whole file against the kit's text, from the file itself; nothing is recorded", () => {
+  const kit = releasedKit();
+  const target = noBaseSite(kit, { version: "0.6.0" });
+  const note = "no base, and no release of the kit found as its source: --diff is the site's whole file";
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), SEO), { file: SEO, status: "modified, kit changed", note }, "the record has no 0.6.0");
+  const diff = agentFileDiff(target, SEO, { kitRoot: kit, version: "0.8.1" });
+  assert.equal(diff.base, null);
+  assert.equal(diff.from, SEO, "the site's file, not a base");
+  assert.equal(diff.note, note);
+  assert.match(diff.diff, /^-- The site's own line\.$/m, "the site's own lines are in it");
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet }), SEO), { file: SEO, status: "kept, kit changed", note });
+  assert.ok(!(SEO in readManifest(target).files), "no base is made up");
+});
+
+test("the version a site was on is the manifest's, unless the running version wrote it, else the last other one its package.json named in git; a file that is a release's text untouched is stale", () => {
+  const target = tmp();
+  assert.equal(siteVersion(target, { version: "0.7.6", files: {} }, "0.8.1"), "0.7.6");
+  assert.equal(siteVersion(target, { version: "0.8.1", files: {} }, "0.8.1"), undefined, "a refresh with the running version wrote it, and no git");
+  const pin = (spec) => fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ dependencies: { "agentic-cms": spec } }));
+  git(target, "init", "-q");
+  pin("github:HKamkar/agentic-cms#v0.6.1");
+  git(target, "add", "package.json");
+  git(target, "commit", "-qm", "0.6.1");
+  pin("github:HKamkar/agentic-cms#v0.7.6");
+  git(target, "commit", "-qam", "0.7.6");
+  pin("github:HKamkar/agentic-cms#v0.8.1");
+  assert.equal(siteVersion(target, { version: null, files: {} }, "0.8.1"), "0.7.6", "the upgrade not yet committed");
+  git(target, "commit", "-qam", "0.8.1");
+  assert.equal(siteVersion(target, { version: "0.8.1", files: {} }, "0.8.1"), "0.7.6", "the upgrade committed");
+  // a site's file that is the text of a release, never edited: stale, and the refresh takes the kit's
+  const kit = releasedKit();
+  fs.mkdirSync(path.join(target, ".claude/rules"), { recursive: true });
+  fs.writeFileSync(path.join(target, STYLING), OLDER_STYLING);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), STYLING), { file: STYLING, status: "stale", note: "no base: the kit's text at 0.7.6" });
+  assert.equal(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet }), STYLING).status, "updated");
+  assert.equal(read(target, STYLING), read(KIT, "templates/site/rules/styling.md"));
 });
