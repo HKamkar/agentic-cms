@@ -279,6 +279,18 @@ differs is re-run once with `--fresh`, and identical then is accepted; a
 with the `cause:` line the compare prints under it rather than adjusting
 the site.
 
+**A mid-flight frame that differs on every take** can be the bundle, not
+the kit. The upgrade alone re-splits a site's client chunks (§ 2), and a
+`-150` or `-500` frame photographs a reveal at one instant of its flight:
+when the main thread's work around the scroll step lands differently, the
+same reveal is caught further along or further back, take after take. It
+is the bundle when the step's settled frame is identical and the same
+frame is identical build against itself: two
+`capture <label> --motion --pages <route>` of the upgraded build, the
+second with `--fresh`, then `compare`. Look at that frame with the owner
+and accept it on their look. This is for the mid-flight frames alone: a
+settled frame that differs is still a kit bug to report.
+
 The baseline is built in a sibling worktree, `../<checkout>-ref-<sha>`
 (this checkout's folder name and the first 12 characters of `develop`'s
 sha), with a full `pnpm install` and `pnpm build`: minutes the first time,
@@ -300,6 +312,13 @@ Watch:
 - A site with no profile keeps the built-in widths: only the kit's own
   example moved to four, so nothing to recapture until the site writes a
   profile (§ 3.1).
+- The client bundle re-splits. The package declares
+  `"sideEffects": ["*.css"]`, so a page bundles only the kit modules it
+  uses: an `Fx` page no longer carries `InlineAnimation`, and gets none
+  of the play-once layer. The chunk files change in number and name, the total
+  is the same or a little smaller, and nothing a page renders changes. A
+  `--motion` mid-flight frame can move with it on every take; § 1's check
+  says how to tell that from a kit change.
 
 ## 3. Adopt what you want
 
