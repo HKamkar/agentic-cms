@@ -12,6 +12,7 @@ changes what a capture writes says **recapture baselines**.
 - `agentic-cms assemble` packages nothing while a placeholder remains.
 - `demo new` names a page's placeholder copy and any of the example's brand before it writes a round. The `design` skill gets the copy first, and `/editorial:new-page` writes a page's real copy.
 - `init --force` never overwrites a site's own `content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`. The starter's content goes only into a site with no `content/`.
+- CI: the kit's workflow moves to `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and `pnpm/action-setup` v6.1.0, each still pinned to a commit (#92).
 
 ## [0.8.1] — 2026-10-17
 
