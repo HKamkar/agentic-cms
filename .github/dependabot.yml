@@ -1,5 +1,8 @@
 # Dependabot keeps the workflow's pinned actions current, as pull requests
-# to develop like any other change. Vulnerable npm packages are raised as
+# to develop like any other change. The workflow `init` writes into a site,
+# templates/site/verify.yml, lies outside .github/workflows/ where Dependabot
+# looks: tools/template-ci.test.mjs fails such a pull request until the
+# template carries the same pins. Vulnerable npm packages are raised as
 # Dependabot alerts on the repository's Security tab.
 version: 2
 updates:
