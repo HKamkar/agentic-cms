@@ -15,7 +15,12 @@
 // go only into a new site, one with no content/ yet;
 // package.json and pnpm-workspace.yaml are merged, forced or not, so what
 // `pnpm init` or an older install left there cannot stop the first install
-// or the first test. A manifest (.agentic-cms.json) records each agent file's
+// or the first test; the gates (lib/gates.mjs) go into the site's own `lint`
+// and `build` — the lint ESLint then `check-site`, the build `pnpm lint`
+// first and the SEO audit after `next build` (the e-mail guard joins them
+// once lib/gates.mjs turns it on) — or init
+// refuses, before anything is written, naming what to add: they are never
+// dropped. A manifest (.agentic-cms.json) records each agent file's
 // base — the hash of the kit's text the site last took, written or accepted
 // after a hand merge — with the kit's version and, for a pin between
 // releases, its commit; so `init --agent-files --check` can tell a site's own
@@ -47,6 +52,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
 import { requiredGone, settingsGone } from "./agent-required.mjs";
+import { buildScript, GatesError, guardsEmail, LINT, mergeBuild, mergeLint } from "./gates.mjs";
 import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
 import { isSiteOwn, KIT_ONLY, siteCode, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
@@ -55,7 +61,7 @@ import { unifiedDiff } from "./unified-diff.mjs";
 /** The example's code, copied as it is but where the starter has a file of its own (lib/starter.mjs): the content and the pictures are the starter's. */
 export const EXAMPLE = ["src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
 /** The templates under templates/site/, and where each lands. */
-export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "setup.sh": "scripts/setup.sh" };
+export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "dependabot.yml": ".github/dependabot.yml", "setup.sh": "scripts/setup.sh" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
 export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/skills": ".claude/skills", ".agents/skills": ".agents/skills" };
 /**
@@ -65,8 +71,7 @@ export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/sk
  * from 0.7.6 is neither given the components rule nor told it is missing).
  */
 export const ADOPTED_BY = { ".claude/rules/components.md": "src/config/components.json" };
-/** The lint a new site runs: ESLint, then the component guard, failing on either while both report. */
-export const LINT = "eslint; s=$?; agentic-cms check-components || s=1; exit $s";
+export { GatesError, LINT };
 export const MANIFEST = ".agentic-cms.json";
 /** The site's Claude Code settings: the site's own file, which must keep the editorial plugin its template enables. */
 export const SETTINGS = TEMPLATES["settings.json"];
@@ -146,8 +151,8 @@ const kitVersion = (kitRoot) => { try { return kitPackage(kitRoot).version; } ca
 /** What `pnpm init` (and `npm init`) write as the test script: a test run that always fails. */
 const PLACEHOLDER_TEST = 'echo "Error: no test specified" && exit 1';
 
-/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win, but for `pnpm init`'s placeholders); `notes` says which placeholder went. */
-function sitePackage(target, { kitRoot, version }) {
+/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win, but for `pnpm init`'s placeholders and the gates its lint and build take in); `notes` says what changed. Throws a GatesError for a lint or a build the gates cannot go into. */
+function sitePackage(target, { kitRoot, version, guard }) {
   const kit = kitPackage(kitRoot);
   const dev = kit.devDependencies;
   const wanted = {
@@ -156,7 +161,7 @@ function sitePackage(target, { kitRoot, version }) {
     type: "module",
     engines: kit.engines,
     packageManager: kit.packageManager,
-    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
+    scripts: { dev: "next dev -p 8000", build: buildScript({ guard }), start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
     dependencies: { "agentic-cms": `github:HKamkar/agentic-cms#v${version}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
     devDependencies: { "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], eslint: dev.eslint, "eslint-config-next": dev["eslint-config-next"], "playwright-core": dev["playwright-core"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   };
@@ -164,9 +169,21 @@ function sitePackage(target, { kitRoot, version }) {
   if (!fs.existsSync(file)) return { text: JSON.stringify(wanted, null, 2) + "\n", merged: false };
   const existing = JSON.parse(fs.readFileSync(file, "utf8"));
   const merged = { ...wanted, ...existing, scripts: { ...wanted.scripts, ...existing.scripts }, dependencies: { ...wanted.dependencies, ...existing.dependencies }, devDependencies: { ...wanted.devDependencies, ...existing.devDependencies } };
-  const notes = dropPlaceholders(merged, { target, test: wanted.scripts.test });
+  const notes = [...dropPlaceholders(merged, { target, test: wanted.scripts.test }), ...mergeGates(merged.scripts, existing.scripts ?? {}, { guard })];
   return { text: JSON.stringify(merged, null, 2) + "\n", merged: true, notes };
 }
+
+/** The gates into the site's own lint and build (lib/gates.mjs), in place; the notes say what went in. Throws a GatesError naming what to add. */
+function mergeGates(scripts, own, { guard }) {
+  const lint = mergeLint(own.lint);
+  const build = mergeBuild(own.build, { guard });
+  scripts.lint = lint.script;
+  scripts.build = build.script;
+  return [lint.note, build.note].filter(Boolean);
+}
+
+/** The text src/config/site.ts will have once the site is laid out: the site's own where it has one (never overwritten), else the starter's. */
+const siteConfigText = (target, plan) => readText(path.join(target, "src/config/site.ts")) ?? plan.get("src/config/site.ts")?.toString("utf8") ?? "";
 
 /** `pnpm init`'s two placeholders lose to the kit: its failing test script, and `main` naming an index.js that is not there. Its license, version, devEngines and packageManager stay. */
 function dropPlaceholders(merged, { target, test }) {
@@ -239,8 +256,9 @@ function putWorkspace(target, { result, log }) {
  * alone and no name asked — with lightOnly as a site without dark mode;
  * { created, updated, kept, lightOnly, site: { name, url, email, starter:
  * true } | { starter: false } }. Throws a StarterError (a new site without
- * its name, a name, a URL or an address it cannot use) or a LightOnlyError
- * before anything is written.
+ * its name, a name, a URL or an address it cannot use), a LightOnlyError or
+ * a GatesError (a site's own lint or build the gates cannot go into) before
+ * anything is written.
  */
 export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, name, url, email, now, log = console.log }) {
   const fresh = !fs.existsSync(path.join(target, "content"));
@@ -250,10 +268,10 @@ export function scaffold(target, { kitRoot, version, force = false, lightOnly = 
   const standard = fs.readFileSync(path.join(kitRoot, "STANDARD.md"), "utf8").replace(/^(# .*\n)/, `$1\n${STANDARD_NOTE}`);
   const plan = sitePlan(kitRoot, identity, { standard });
   if (lightOnly) lightOnlyPlan(plan);
+  const pkg = sitePackage(target, { kitRoot, version, guard: guardsEmail(siteConfigText(target, plan)) });
   fs.mkdirSync(target, { recursive: true });
   for (const [file, text] of plan) put(target, file, text, { ...opts, force: force && !isSiteOwn(file) });
   for (const [from, to] of Object.entries(TEMPLATES)) put(target, to, fs.readFileSync(path.join(kitRoot, "templates/site", from), "utf8"), opts);
-  const pkg = sitePackage(target, { kitRoot, version });
   if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log(`merged   package.json${pkg.notes.length ? ` (${pkg.notes.join("; ")})` : ""}`); } else put(target, "package.json", pkg.text, opts);
   put(target, "tsconfig.json", siteTsconfig(kitRoot), opts);
   putWorkspace(target, opts);

@@ -104,6 +104,42 @@ test("check-components: the kit's example passes; a stray section file is a find
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("check-site: the kit's example passes; a site without its gates is a finding with its fix, in text and JSON; no config and a --base with no history are exit 2", () => {
+  const ok = run(["check-site", "--base", "HEAD"]);
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited; 2 allowed, each with its reason\)\ncheck-site: ok \(package\.json's gates, CI on pull requests; 0 round routes; 0 exceptions added since HEAD \([0-9a-f]{7}\)\)\n$/, "the kit's own scripts are its commands, so no tools clause");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "site-cli-"));
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
+  try {
+    const none = run(["check-site"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^check-site: no src\/config\/components\.json here — the guard is not set up in this site/);
+    write("src/config/components.json", JSON.stringify({ motion: null, patterns: null, sections: [] }));
+    const url = (file) => JSON.stringify(pathToFileURL(file).href);
+    const react = createRequire(createRequire(import.meta.url).resolve("eslint-config-next")).resolve("eslint-plugin-react");
+    write("eslint.config.mjs", `import react from ${url(react)};\nimport { componentRules } from ${url(path.join(import.meta.dirname, "lib/component-lint.mjs"))};\nexport default [{ plugins: { react } }, ...componentRules({ motion: null, patterns: null, sections: [] })];\n`);
+    write("src/components/README.md", "## `Button`\n");
+    write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
+    write("src/app/layout.tsx", "export default function Layout() { return null; }\n");
+    write("package.json", JSON.stringify({ name: "ours", scripts: { lint: "eslint", build: "next build" } }));
+    write("scripts/shots.mjs", 'import { chromium } from "playwright";\n');
+    const found = run(["check-site"], dir);
+    assert.equal(found.status, 1, found.stdout);
+    assert.match(found.stderr, /^check-components: ok \(ui 1, sections 0 in 0 folders; 0 inherited\)\ncheck-site: 3 problems \(exceptions not compared: not a git checkout, so the exceptions added since the merge base are not compared\)\n\n {2}✗ package\.json {2}\[scripts\]\n {4}"lint" runs no agentic-cms check-site/);
+    assert.match(found.stderr, /✗ \.github\/workflows\/verify\.yml {2}\[ci\]\n {4}no workflow runs on pull requests/);
+    assert.match(found.stderr, /check-site: 1 warning, which fail nothing: the kit's command, or the site's own with its reason\n\n {2}⚠ scripts\/shots\.mjs {2}\[tools\]/);
+    const json = run(["check-site", "--json"], dir);
+    assert.equal(json.status, 1);
+    const report = JSON.parse(json.stdout);
+    assert.deepEqual(report.findings.map((f) => [f.check, f.file]), [["scripts", "package.json"], ["scripts", "package.json"], ["ci", ".github/workflows/verify.yml"]]);
+    assert.deepEqual([report.base, report.added, report.warnings.map((w) => w.check)], [null, [], ["tools"]]);
+    const asked = run(["check-site", "--base", "main"], dir);
+    assert.equal(asked.status, 2);
+    assert.equal(asked.stderr, "check-site: --base main: not a git checkout\n");
+    assert.match(run(["check-site", "--bse", "main"], dir).stderr, /did you mean --base\?/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a --json report larger than a pipe's buffer reaches the reader whole, though the command exits right after printing it", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "big-report-"));
   try {

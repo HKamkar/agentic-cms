@@ -1039,9 +1039,9 @@ agentic-cms serve --lab --no-public --port 8002
 
 ## default gates
 
-Layer: [the site's commands](parts.md#the-sites-commands). `seo` · `check-components` — `seo` reads the site's registry and runs in its root
+Layer: [the site's commands](parts.md#the-sites-commands). `seo` · `check-components` · `check-site` — `seo` reads the site's registry and runs in its root
 
-What every change passes: `pnpm build` runs `lint --production` and `docs --check` (content, above), `next build`, then `seo`; `pnpm lint` runs ESLint, then `check-components`; CI runs both.
+What every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`; CI runs them on every pull request.
 
 ### `seo`
 
@@ -1068,7 +1068,7 @@ agentic-cms seo --strict --json
 
 ### `check-components`
 
-The component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them, every owner and every allow entry with its reason; and the engines held: the required agentic-cms/* rules as ESLint resolves them for a sample file per layer, set as componentRules() makes them of the config, and every inline disable of one with its reason, listed; what the preferred tier guides warns and fails nothing — a transition declared in CSS outside the motion layer, an inline disable of another rule with no reason, a preferred rule set otherwise than the config makes it; the config is src/config/components.json.
+The component library's placement guard, the first pass of check-site (which pnpm lint runs after ESLint), alone: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them, every owner and every allow entry with its reason; and the engines held: the required agentic-cms/* rules as ESLint resolves them for a sample file per layer, set as componentRules() makes them of the config, and every inline disable of one with its reason, listed; what the preferred tier guides warns and fails nothing — a transition declared in CSS outside the motion layer, an inline disable of another rule with no reason, a preferred rule set otherwise than the config makes it; the config is src/config/components.json.
 
 ```bash
 agentic-cms check-components [--json]
@@ -1083,15 +1083,38 @@ Exit: `0` every file where the library keeps it (a file on the config's inherite
 `--json` prints `{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, disables: [{ file, line, rules, reason }], allowed: [{ rule, files, reason }], findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited|owners|allow|disables|preset, file, problem, fix }], warnings: [{ check: transitions|disables|preset, file, problem, fix }] }`.
 
 ```bash
-agentic-cms check-components             # what pnpm lint runs after eslint
+agentic-cms check-components             # the components pass alone, without the site's
 agentic-cms check-components --json | jq '.findings[] | .file'
+```
+
+### `check-site`
+
+The site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo) holding the gates; a workflow on pull requests running the lint, the tests, the build and the agent-file check; and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason.
+
+```bash
+agentic-cms check-site [--base <ref>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--base <ref>` | the branch or commit the exceptions are compared with, through its merge base with HEAD (default: the pull request's base branch in CI, GITHUB_BASE_REF, else origin/HEAD, origin/main or main; a checkout without that history — no git, no commit, a shallow clone — compares nothing and says so) |
+| `--json` | print the report as one JSON document |
+
+Exit: `0` every pass held (warnings, if any, printed); `1` a finding of any pass, the components pass's included (each with its file, the check, and the fix); `2` no src/config/components.json here, a config that does not read, a --base that names no commit or a checkout without the history it needs, or usage.
+
+`--json` prints `{ config, kit, components: { layers, inherited, candidates, disables, allowed }, rounds, base: { ref, commit } | null, history, added: [{ kind, name, reason, rules? }], findings: [{ check: <check-components' checks>|rounds|exceptions|scripts|ci|tools, file, problem, fix }], warnings: [{ check: transitions|disables|preset|tools, file, problem, fix }] }`.
+
+```bash
+agentic-cms check-site                   # what pnpm lint runs after eslint
+agentic-cms check-site --base origin/develop  # the exceptions this branch adds to develop
+agentic-cms check-site --json | jq '.added'
 ```
 
 ## opt-in steps
 
 Layer: [the site's commands](parts.md#the-sites-commands). `guard-email` · `critical-css` · `assemble` — `guard-email` reads the site's registry and runs in its root
 
-What a site adds to its build when it needs them: `guard-email` after `next build` once the site shows an address, `critical-css` for the first paint, `assemble` last for a Node host.
+What a site adds to its build when it needs them: `guard-email` after `next build` once the site shows an address (opt-in until 0.8.2 job 4b), `critical-css` for the first paint, `assemble` last for a Node host.
 
 ### `guard-email`
 

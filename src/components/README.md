@@ -43,8 +43,9 @@ Nothing outside the motion layer imports `motion` or `framer-motion`; a
 site that adds a `motion/` folder wraps `agentic-cms/ix` there too, and the
 lint then keeps it out of the other layers.
 
-Then `pnpm lint` runs `agentic-cms check-components`, the placement guard,
-configured in `src/config/components.json`: every file under
+Then `pnpm lint` runs `agentic-cms check-site`, whose first pass is the
+placement guard (`agentic-cms check-components`), configured in
+`src/config/components.json`: every file under
 `src/components` sits in a layer; every component `ui/` exports is named
 in this file, in backticks, in the same commit that adds it; every
 component in a section folder is a section `sections/render.tsx` imports;

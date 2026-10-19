@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { ALLOW_BUILDS, mergeWorkspace } from "../scripts/lib/init.mjs";
+import { BYPASSES, eslintEntries, unanswered } from "./bypass-fixture.mjs";
 import { documentedInstall, installWithRetry, OLD_WORKSPACE, pnpmInitPackage } from "./pack-smoke.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -52,4 +53,25 @@ test("the smoke starts from what the old docs left, which init must repair", () 
   assert.equal(pkg.scripts.test, 'echo "Error: no test specified" && exit 1');
   assert.equal(pkg.packageManager, "pnpm@12.4.1");
   assert.deepEqual(mergeWorkspace(OLD_WORKSPACE).added, ["unrs-resolver"]);
+});
+
+test("the bypass fixture covers every row of the 0.8.2 plan's survey, each with the check that must answer it", () => {
+  const plan = read("docs/roadmap-0.8.2.md");
+  const survey = plan.slice(plan.indexOf("## What gets around the kit today"), plan.indexOf("## Decisions"));
+  const rows = [...survey.matchAll(/^\| ([^|]+?) \| (required|preferred|—) \|/gm)].map(([, part]) => part);
+  const covered = new Set(BYPASSES.map((bypass) => bypass.part.split(":")[0]));
+  assert.deepEqual(rows.filter((part) => !covered.has(part)), [], "a survey row with no bypass in the fixture");
+  for (const bypass of BYPASSES) assert.ok([bypass.eslint, bypass.report, bypass.content, bypass.agentFiles].some((answers) => answers?.length), `${bypass.part}: nothing must answer it`);
+  for (const bypass of BYPASSES.filter((b) => b.tier === "preferred")) assert.ok((bypass.eslint ?? []).every((want) => want.severity === "warning") && (bypass.report ?? []).every((re) => re.source.includes("⚠")), `${bypass.part}: a preferred bypass warns`);
+  for (const bypass of BYPASSES.filter((b) => b.tier === "required")) assert.ok((bypass.eslint ?? []).every((want) => want.severity === "error") && (bypass.report ?? []).every((re) => !re.source.includes("⚠")), `${bypass.part}: a required bypass fails`);
+});
+
+test("the lint's ESLint report is read by file, and a bypass its check did not answer is named", () => {
+  const output = "/s/src/components/ui/Promo.tsx\n  2:13  error  No copy in a primitive: …  agentic-cms/copy\n\n/s/src/components/ui/Chart.tsx\n  2:10  warning  A <canvas> draws: the lab  agentic-cms/graphics\n\n✖ 2 problems\n";
+  const entries = eslintEntries(output, "/s");
+  assert.deepEqual(entries.get("src/components/ui/Chart.tsx"), [{ line: 2, severity: "warning", message: "A <canvas> draws: the lab", rule: "agentic-cms/graphics" }]);
+  const missing = unanswered({ lint: output, content: "", agentFiles: "", entries });
+  assert.ok(missing.some((line) => line.startsWith("Forms (required): no error of agentic-cms/forms in src/components/ui/Signup.tsx")), missing.join("\n"));
+  assert.ok(!missing.some((line) => line.includes("agentic-cms/graphics")), "the canvas warned");
+  assert.ok(missing.some((line) => line.startsWith("The starter (required): the content lint printed nothing matching")));
 });

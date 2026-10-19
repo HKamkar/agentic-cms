@@ -74,8 +74,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   hand-write head tags.
 - Verify with `pnpm test` (the content engine, the post pipeline and the
   lint), `pnpm content:lint` (the content rules, in a second), `pnpm build`
-  (prerenders everything) and `pnpm preview` (the real Worker) before calling
-  a change done.
+  (the lint first, then prerenders everything) and `pnpm preview` (the real
+  Worker) before calling a change done.
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
@@ -93,7 +93,7 @@ paths. The table is written from the rules' frontmatter by
 | Paths | Read and follow |
 | --- | --- |
 | `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [The post pipeline](.claude/rules/blog-engine.md) |
-| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/engine-rules.mjs`, `scripts/lib/preferred-rules.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/engine-rules.mjs`, `scripts/lib/preferred-rules.mjs`, `scripts/lib/check-components.mjs`, `scripts/lib/check-site.mjs`, `scripts/lib/gates.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
@@ -235,8 +235,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `footer.quickLinks` in `src/config/site.ts` together if it belongs there
   (they are separate lists). A new section type is a schema + a component +
   a registry entry.
-- Verify = `pnpm lint` (ESLint, then the component guard) + `pnpm build`
-  (which starts with the content lint and ends with the SEO audit) +
+- Verify = `pnpm lint` (ESLint, then `check-site`: the component guard,
+  the rounds, the exceptions added since the merge base, the gates in
+  `package.json` and CI) + `pnpm build` (`pnpm lint` first, then the
+  content lint; the SEO audit last) +
   `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second

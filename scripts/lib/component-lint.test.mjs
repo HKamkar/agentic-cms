@@ -521,12 +521,20 @@ test("allow: an entry keeps a preferred rule's warning quiet in its files, and n
   assert.match(warned("src/components/ui/Placeholder.tsx", 'export function P() { return <div className="w-[3px]" />; }', options)[0], /agentic-cms\/styling/, "only its rule");
   const throws = {
     "agentic-cms/copy": /allow\[0\] \(agentic-cms\/copy\): a required rule is never allowed — a file that owns its part is named in owners, and a line that needs its own says why in an inline disable \(\/\/ eslint-disable-next-line agentic-cms\/copy -- <the reason>\)/,
-    "agentic-cms/icon": /allow\[0\] \(agentic-cms\/icon\): allow is a list of \{ rule: "agentic-cms\/<rule>", files: \["<glob>", …\], reason: "<why the site keeps its own>" \}, the rule one of agentic-cms\/motion, agentic-cms\/graphics, agentic-cms\/images, agentic-cms\/icons, agentic-cms\/styling/,
+    "agentic-cms/icon": /allow\[0\] \(agentic-cms\/icon\): allow is a list of \{ rule: "agentic-cms\/<rule>", files: \["<glob>", …\], reason: "<why the site keeps its own>" \}, the rule one of agentic-cms\/motion, agentic-cms\/graphics, agentic-cms\/images, agentic-cms\/icons, agentic-cms\/styling, agentic-cms\/site-tools/,
   };
   for (const [rule, message] of Object.entries(throws)) assert.throws(() => componentRules({ allow: [{ rule, files: ["x.tsx"], reason: "r" }] }), message, rule);
   assert.throws(() => componentRules({ allow: [{ rule: "agentic-cms/icons", files: [], reason: "r" }] }), /allow\[0\] \(agentic-cms\/icons\): its files are a list of globs/);
   for (const reason of [undefined, "", "  "]) assert.throws(() => componentRules({ allow: [{ rule: "agentic-cms/icons", files: ["x.tsx"], reason }] }), /allow\[0\] \(agentic-cms\/icons\): no reason — a site keeps its own choice with one line of why, which the review reads/, JSON.stringify(reason));
   assert.throws(() => componentRules({ allow: { rule: "agentic-cms/icons" } }), /^TypeError: componentRules\(\): allow is a list of/);
+});
+
+test("an allow entry of agentic-cms/site-tools is check-site's: componentRules() takes it with its reason and sets it in no ESLint block", () => {
+  const allow = [{ rule: "agentic-cms/site-tools", files: ["scripts/shots.mjs"], reason: "the OG cards, rendered from the posts" }];
+  const configs = componentRules({ ...EVERY_LAYER, allow });
+  assert.ok(configs.every((config) => !("agentic-cms/site-tools" in (config.rules ?? {}))), "ESLint has no such rule to set");
+  assert.deepEqual(new Linter({ cwd: "/site" }).verify("export const a = 1;", [BASE, ...configs], { filename: "/site/scripts/shots.mjs" }), []);
+  assert.throws(() => componentRules({ allow: [{ ...allow[0], reason: "" }] }), /allow\[0\] \(agentic-cms\/site-tools\): no reason/);
 });
 
 test("an inline disable with its reason quiets a preferred rule for its line; the warnings never fail the lint", () => {

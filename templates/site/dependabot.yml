@@ -1,0 +1,17 @@
+# Dependabot keeps the actions .github/workflows/verify.yml pins current:
+# one pull request a month for all of them, to the default branch, which
+# CI checks like any other change. Only the actions: the site's npm
+# packages follow the kit's releases (node_modules/agentic-cms/docs/upgrading.md),
+# and vulnerable ones are raised as Dependabot alerts on the repository's
+# Security tab. `agentic-cms init` wrote this once; it is the site's own.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

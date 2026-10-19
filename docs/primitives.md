@@ -360,11 +360,13 @@ so in its title.
 
 ESLint judges what a file contains; the placement guard judges where files
 are and what declares them, so a one-off component cannot hide in a page
-folder or a route. `pnpm lint` runs both and fails on either, while both
-report:
+folder or a route. It is the first pass of `agentic-cms check-site`
+([§ The whole site](#the-whole-site-agentic-cms-check-site)), which `pnpm
+lint` runs after ESLint, failing on either while both report;
+`agentic-cms check-components` runs it alone:
 
 ```json
-"lint": "eslint; s=$?; agentic-cms check-components || s=1; exit $s"
+"lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s"
 ```
 
 It checks that:
@@ -390,7 +392,9 @@ It checks that:
 - **CSS modules only in `ui/` and the motion layer, `@keyframes` only in
   the motion layer and `src/styles/motion.css`**;
 - **every owner and every `allow` entry has its reason** and names files
-  that are there; an `allow` entry names a preferred rule.
+  that are there; an `allow` entry names a preferred rule (one of
+  `agentic-cms/site-tools` names the site's own tools outside `src/`, whose
+  files the site check looks for).
 
 What the preferred tier guides is a warning, printed after the report: it
 fails nothing, and stays until it has its reason. The guard warns about a
@@ -431,3 +435,63 @@ glob loosens the guard: its own pull request, said so in its title. A config
 from before the exceptions, its route folders all under `routes`, still
 reads: the kit's reasons cover the example's three, and a folder of the
 site's own is a finding until it moves to `exceptions` with its reason.
+
+## The whole site: `agentic-cms check-site`
+
+The placement guard holds `src/`; the site check holds the rest of what
+makes a site the kit's: its design rounds, its exceptions, its gates and
+its tools. `pnpm lint` runs it after ESLint (above), so `pnpm build`, which
+runs `pnpm lint` first, and CI run it too. It runs every pass of
+`check-components` first, from the same `src/config/components.json`, then
+its own:
+
+- **`rounds`**: a `*-demo` route is one `demo new` wrote, its `demo.json`
+  beside it, or the lab's own `lab-demo` (`lab route`'s). A route made by
+  hand fails: nothing knows its candidates, and its copy is its own. A
+  round's pictures, `public/images/<name>-demo/`, are there only while its
+  route is; `demo clean` takes both.
+- **`exceptions`**: every exception added since the merge base is listed
+  with its reason — a route exception, an owner, an `allow` entry, an
+  `ignores` glob and an inline disable (matched by its rules and its reason,
+  so a moved one is not new). An `ignores` glob takes its reason from the
+  `$ignores` comment beside it, and an added one without it fails. The
+  frozen `inherited` list only shrinks: a file added since the base fails.
+  The base is git's merge base of HEAD with `--base`, else the pull
+  request's base branch (`GITHUB_BASE_REF` in CI), else `origin/HEAD`,
+  `origin/main` or `main`. A checkout without that history (no git, no
+  commit yet, a shallow clone) compares nothing and says so in its report;
+  `--base` there is exit 2. The site's `verify.yml` checks out with
+  `fetch-depth: 0` for it.
+- **`scripts`**: `package.json`'s `lint` runs ESLint, then `check-site`; its
+  `build` runs `pnpm lint`, `agentic-cms lint --production` and
+  `agentic-cms docs --check` before `next build`, `agentic-cms seo` after
+  it. Each gate is a step of the build's `&&` chain, so a failing
+  one stops it; one joined by `;`, a failure turned into a pass (`|| true`,
+  `exit 0`) or a gate on the wrong side of `next build` fails. `init`
+  writes these scripts and merges the gates into a site's own
+  ([init.md § The gates](init.md#the-gates)).
+- **`ci`**: a workflow that runs on pull requests runs the lint (or a build
+  that runs it), the tests, the build and `agentic-cms init . --agent-files
+  --check`, as `init`'s `.github/workflows/verify.yml` does.
+- **`tools`**, the preferred tier's, so warnings that fail nothing: a script
+  of the site's own under `scripts/` that drives Playwright (or another
+  headless browser), runs `sharp` over `public/` or starts `next dev`, and a
+  machine's address in `next.config.*`. Each names the kit's command —
+  `shot`, `probe`, `sheet` and `visual-parity`; `placeholder` and the
+  optimisers; `serve`; `urls --write`, which keeps the addresses in
+  `.env.local` — and an `allow` entry quiets it, with its reason:
+
+  ```json
+  "allow": [
+    { "rule": "agentic-cms/site-tools", "files": ["scripts/og-cards.mjs"], "reason": "renders the OG cards from the posts' titles, which no kit command composes" }
+  ]
+  ```
+
+  An `agentic-cms/site-tools` entry that names no file the pass reads is a
+  finding. In the kit's own repository, whose `scripts/` are the commands
+  themselves, the pass reads nothing.
+
+Each finding names its file, the pass and the fix; exit 1 on any, the
+components pass's included, and 2 when the config is missing or does not
+read or `--base` finds no history; `--json` prints the report, the
+exceptions added under `added` ([commands.md](commands.md#check-site)).

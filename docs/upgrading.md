@@ -65,6 +65,40 @@ check out a fork's pull request under `pull_request_target` or
 `workflow_run` unless `allow-unsafe-pr-checkout: true`, triggers the
 template does not use.
 
+**The gates are on by default** ([init.md § The gates](init.md#the-gates)).
+A new site's `pnpm lint` runs ESLint, then `agentic-cms check-site`, which
+runs the component guard's passes and then holds the site as a whole: a
+`*-demo` route `demo new` did not write, a round's pictures left after
+`demo clean`, every exception added since the merge base (listed with its
+reason; a file added to `inherited` fails), the gates in `package.json` and
+in CI, and, as warnings, the site's own Playwright, `sharp` or `next dev`
+script and a machine's address in `next.config.*`
+([primitives.md § The whole site](primitives.md#the-whole-site-agentic-cms-check-site)).
+Its `pnpm build` runs `pnpm lint` first (`guard-email` stays a step a site
+adds: opt-in until 0.8.2 job 4b). An existing site's `package.json` is its
+own, so it moves to them by hand:
+
+```json
+"lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s",
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"
+```
+
+with its own steps kept where they are (`agentic-cms init .` merges them the
+same way, or refuses naming what to add, and also writes any file of the
+example the site removed). Then `pnpm lint` and read what `check-site`
+reports: a warning fails nothing and goes quiet with an `allow` entry of
+`agentic-cms/site-tools` and its reason in `src/config/components.json`.
+In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
+`with:` gives the check the history it compares the exceptions against;
+without it CI says it compared nothing.
+
+**Dependabot for the CI's actions.** `init` now writes
+`.github/dependabot.yml`: the GitHub Actions alone, one grouped pull
+request a month to the default branch, so the pins in `verify.yml` stay
+current without a kit release. An existing site may copy
+`node_modules/agentic-cms/templates/site/dependabot.yml` there as it is;
+`init` never rewrites the site's copy.
+
 ## 0.8.0 → 0.8.1
 
 The fixes from running the migration guide on two sites. Move the pin to

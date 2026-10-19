@@ -108,8 +108,8 @@ by `pnpm test:browser`.
   (`docs/primitives.md` § Enforced).
 - `check-components` — `pnpm kit check-components [--json]`
   (`check-components.mjs`; the work in `lib/check-components.mjs`, the file
-  system passed in) is the component library's placement guard, the second
-  half of `pnpm lint` (`eslint; s=$?; … check-components || s=1; exit $s`):
+  system passed in) is the component library's placement guard, the first
+  pass of `check-site` (below), alone:
   the layers there and every file under `src/components` in one, every
   component the library exports named in its catalogue, every component in
   a section folder imported by the registry, route files only in
@@ -119,6 +119,17 @@ by `pnpm test:browser`.
   the config's frozen `inherited` list and a running round's candidates
   pass. Exit 1 on a finding, each with its fix (`docs/primitives.md`
   § Placed).
+- `check-site` — `pnpm kit check-site [--base <ref>] [--json]`
+  (`check-site.mjs`; the work in `lib/check-site.mjs`, the file system, git
+  and the components pass passed in) is the second half of `pnpm lint`
+  (`eslint; s=$?; … check-site || s=1; exit $s`): the placement guard's
+  passes, then a `*-demo` route only `demo new`'s or the lab's, a round's
+  pictures only with its route, every exception added since the merge base
+  listed with its reason and `inherited` only shrinking, the gates of
+  `lib/gates.mjs` in `package.json`'s `lint` and `build` (which `init`
+  writes and merges too), CI running them, and, as warnings, the site's
+  own Playwright, `sharp` or `next dev` script and a machine's address in
+  `next.config.*` (`docs/primitives.md` § The whole site).
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
 - `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
   --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one

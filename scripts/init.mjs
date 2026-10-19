@@ -21,7 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
-import { acceptAgentFiles, agentFileDiff, AgentFileError, agentFiles, kitPath, scaffold } from "./lib/init.mjs";
+import { acceptAgentFiles, agentFileDiff, AgentFileError, agentFiles, GatesError, kitPath, scaffold } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
 import { onReservedDomain } from "./lib/placeholders.mjs";
 import { CODEX_LIMIT } from "./lib/rules-table.mjs";
@@ -117,7 +117,7 @@ function refresh() {
 function scaffoldSite() {
   let result;
   try { result = scaffold(target, { kitRoot, version, force: flags.force, lightOnly: flags["light-only"], name: flags.name, url: flags.url, email: flags.email, log }); } catch (error) {
-    if (error instanceof StarterError) usage(`${error.message}; nothing was written`);
+    if (error instanceof StarterError || error instanceof GatesError) usage(`${error.message}; nothing was written`);
     if (!(error instanceof LightOnlyError)) throw error;
     console.error(`init --light-only: ${error.message}; nothing was written`);
     process.exit(2);
