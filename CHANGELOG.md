@@ -19,6 +19,22 @@ changes what a capture writes says **recapture baselines**.
 - `docs/parts.md`: every part of the kit on one map in four layers (the content engine, the browser libraries, the design tools, the site's commands). Each row gives the need, the part and how to use it, its tier (required for the engines, preferred for the rest), the check that holds it and its exception key, and the page ends with every check the kit runs. `tools/parts-doc.mjs` keeps it complete in `pnpm hygiene` and the tests: every export, command and rule must be on it.
 - The command families follow the layers. `agentic-cms --help` and `docs/commands.md` group them under the content engine, the design tools and the site's commands, from one list in `scripts/lib/specs.mjs`. "build gates" splits into `default gates` (`seo`, `check-components`) and `opt-in steps` (`guard-email`, `critical-css`, `assemble`).
 - One content engine with its layers: the blog engine is now the post pipeline in its README, its rule and the docs. `docs/primitives.md`, `docs/gotchas.md` and `docs/design.md` point to the map, and `docs/README.md`'s index is grouped by the layers.
+- `agentic-cms/eslint`: the engines are required across `src/`, design-round (`*-demo`) and `lab-demo` routes included. `componentRules()` sets five rules of its own ESLint plugin, each message naming the engine and its doc:
+  - `agentic-cms/copy`: JSX text, the copy props (now also `heading`, `eyebrow`, `text`, `body`, `description`, `caption` and the reader-facing `aria-*`) and data fields or defaults of those names, and any other prop of a component whose string reads as words, except the props the rule skips (`docs/primitives.md` § Enforced lists them). Before, only sections and patterns were checked, and only six props.
+  - `agentic-cms/head`: no `<head>`, `<title>`, `<meta>`, canonical `<link>`, JSON-LD `<script>` or `next/head` of a site's own; `metadata` and `generateMetadata` return a `kit.seo` helper.
+  - `agentic-cms/forms`: a `<form>` only in the files `owners.forms` names, no server action, no `fetch()` of another origin in a component.
+  - `agentic-cms/tags`: `next/script` and a `<script src>` of another origin only in the consent adapter `owners.tags` names.
+  - `agentic-cms/email`: no `mailto:` link built in code; `EmailLink` instead.
+  The copy rule is required: `copy: false` throws, and it gains `copy.skip` and `copy.tools` (the design tools' modules, `agentic-cms/lab` by default, whose components' props are no copy).
+- `src/config/components.json` and `componentRules()` take `owners: { forms, tags }`, the files that own a `<form>` or a tag, each with its reason.
+- `agentic-cms check-components` holds the preset:
+  - its new `preset` pass reads ESLint's resolved config for a sample file per layer, and fails a required rule that a later block replaced, or that is off, a warning, unset, ignored, or set with other options than what `componentRules()` makes of `components.json`;
+  - `disables` fails an inline disable of a required rule, or of every rule, with no reason after `--`, and the report lists each reason (`--json`: `disables`);
+  - `owners` fails an owner with no reason or no file.
+- `kit.seo.rootMetadata()`, the root layout's head, and `kit.seo.unlistedMetadata()`, noindex for a design round's or the lab's route (also exported from `agentic-cms/seo`); `SiteConfig.ogLocale` is optional and gives `og:locale`. The example's layout, `demo new`'s routes and the lab route's template use them.
+- The example's footer and contact details render their addresses through `EmailLink`. Pixels are unchanged, and the address leaves the served HTML.
+- `demo new`: a block's chip is `aria-hidden`, and a showcase's copy comes from a content file. `agentic-cms/lab`: `LabScenes`' `grounds` is optional and defaults to `LAB_GROUNDS` (the page, a white card), and the lab route's template passes none.
+- `init` leaves the kit's ignore of `src/lib` out of a site's `eslint.config.mjs` and `components.json`: a site's `src/lib` is its own, and linted.
 
 ## [0.8.1] — 2026-10-17
 
