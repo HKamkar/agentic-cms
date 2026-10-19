@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The component library's placement guard: every component lives in the
 // library or is a registered section, so nobody adds a one-off component to
-// a page, and the engines' rules hold in ESLint's resolved config. A site's
+// a page, and the engines' rules hold in ESLint's resolved config; what the
+// preferred tier guides is a warning, which fails nothing. A site's
 // `pnpm lint` runs it after ESLint (`eslint; s=$?; agentic-cms
 // check-components || s=1; exit $s`), so both report and CI fails on either.
 // lib/check-components.mjs does the work; the config is
@@ -17,7 +18,9 @@ let report;
 try {
   const config = readConfig(root, fs);
   report = checkComponents({ root, fs, config });
-  report.findings.push(...(await checkPreset({ root, config })));
+  const preset = await checkPreset({ root, config });
+  report.findings.push(...preset.findings);
+  report.warnings.push(...preset.warnings);
 } catch (error) {
   if (!(error instanceof GuardConfigError)) throw error;
   console.error(`check-components: ${error.message}`);

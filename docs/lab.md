@@ -8,6 +8,9 @@ reader's browser. The lab is a tool an agent opens when a drawing is needed
 and removes when its files are rendered: nothing of it lives under `src/`,
 in `package.json` or in a route. The flags are in
 [commands.md](commands.md); the procedure is the `design-graphics` skill.
+A rendering library or a `<canvas>` under `src/` warns in `pnpm lint`
+(`agentic-cms/graphics`), and a site that keeps its own says why in `allow`
+([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
 
 ## Open, draw, look
 

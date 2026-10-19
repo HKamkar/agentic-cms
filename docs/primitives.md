@@ -192,8 +192,96 @@ preset turns that part's rule off in those files alone:
 meet yet is `// eslint-disable-next-line agentic-cms/copy -- <the reason>`
 (or a block comment, or `eslint-disable` for a file): `check-components`
 fails a disable of a required rule, or of every rule, with no description
-after `--`, and lists every other one with its reason. A workaround is
-fine; a silent one is not.
+after `--`, and lists every other one with its reason. A disable of any
+other rule with no description is a warning, which fails nothing and stays
+in the report until it says why. A workaround is fine; a silent one is not.
+
+### The rest, guided across `src/`
+
+Everything that is not an engine is the kit's preferred way, never the
+only one: a site may animate with a library of its own, draw on a canvas,
+ship a picture through `next/image` or paste an `<svg>`. Five more rules
+of the same plugin warn about each across `src/` (and the app folder; test
+files and `ignores` left out), naming the kit's part and its doc, and the
+lint and the build pass. A site keeps its own choice with one line of
+reason, and the warning goes quiet; a warning without one stays in the
+lint's output, where the review sees it.
+
+- **`agentic-cms/motion`,** outside the motion layer (a motion folder owns
+  its library; `owners.motion` names a file of the site's that owns
+  motion):
+  - an animation library other than `agentic-cms/ix`: `gsap`,
+    `react-spring` and `@react-spring/*`, `animejs`, `lottie-web`,
+    `lottie-react`, `@lottiefiles/*`, `popmotion`, `velocity-animate`,
+    `@formkit/auto-animate`, `react-transition-group`, `@motionone/*`,
+    `@theatre/*`, `@mojs/core`, `aos`, `scrollreveal` (the preset's
+    `ANIMATION_ALTERNATIVES`; `motion` and `framer-motion` fail outside
+    the motion layer already);
+  - a `requestAnimationFrame` call, an `IntersectionObserver`,
+    `el.animate()`;
+  - a transition or animation class (`transition…`, `animate-…`,
+    `duration-…`, `delay-…`, `ease-…`; `transition-none` and `animate-none`
+    rest) in a `className`, a `cx()` or a `variants()` call, and a
+    transition or animation in a `style` (`none` rests).
+
+  The guard's `transitions` pass warns about one declared in CSS outside
+  the motion layer and `src/styles/motion.css`.
+- **`agentic-cms/graphics`:** a library that draws in the reader's browser
+  — `three`, `@react-three/*`, `d3` and `d3-*`, `pixi.js`, `@pixi/*`, `p5`,
+  `react-p5`, `babylonjs`, `@babylonjs/*`, `konva`, `react-konva`,
+  `fabric`, `paper`, `two.js`, `ogl`, `regl`, `chart.js`, `echarts`,
+  `plotly.js`, `@antv/*` (the preset's `RENDERING_LIBRARIES`) — a
+  `<canvas>`, or a canvas made in code. Graphics ship pre-rendered from
+  the lab ([lab.md](lab.md)).
+- **`agentic-cms/images`:** `next/image` (a static host has no image
+  service), and an eager `<img>` in a server component — no `loading`, or
+  one that can be other than `"lazy"` — which becomes a preload hint every
+  page that prefetches a link to it downloads: `EagerImage` above the
+  fold, `Media` (lazy) below it. A client component's `<img>`, a `loading`
+  the lint cannot read and a spread that may carry one pass;
+  `owners.images` names the picture primitive.
+- **`agentic-cms/icons`:** an `<svg>` of the site's own, outside `Icon`
+  ([icons.md](icons.md)); `owners.icons` names a site's own icon
+  component.
+- **`agentic-cms/styling`,** outside the sections and the patterns, which
+  fail these already: an arbitrary value or property in a class
+  (`bg-[#…]`, `rounded-[…]`, `shadow-[…]`, `w-(--…)`, `[mask-type:…]`), an
+  arbitrary breakpoint (`min-[…]:`, `max-[…]:`, `@[…]:`), and a colour
+  outside the tokens in a `style` (a hex, a colour function, a named
+  colour on a colour property; `var(--…)` is a token). A state variant
+  (`has-[…]:`, `data-[…]:`, `[&_p]:`) selects rather than sets a value, and
+  passes.
+
+In a section or a pattern, whose composition already fails a raw
+`<svg>`, a raw `<img>` and a motion class, the warning stands beside the
+error; the error is the one to fix.
+
+**A site keeps its own with its reason.** `allow` in
+`src/config/components.json` keeps a preferred rule's warning quiet in the
+files it names (globs), and nowhere else:
+
+```json
+"allow": [
+  { "rule": "agentic-cms/icons", "files": ["src/components/ui/Placeholder.tsx"], "reason": "the wireframe's crossed box: two lines stretched to any ratio, which no icon draws" }
+]
+```
+
+`componentRules()` takes the same list; the example's `eslint.config.mjs`
+reads it from the config, so each reason is written once. An entry names a
+preferred rule, files that are there and its reason: the guard's `allow`
+pass fails one that does not, and `componentRules()` refuses one with no
+reason. A required rule is never allowed (its owner, or an inline disable
+with its reason). For one line, an inline disable with its description:
+`// eslint-disable-next-line agentic-cms/icons -- <the reason>`. A file
+that owns a part (the picture primitive its `<img>`, a site's own `Icon`
+its `<svg>`, a file of its motion) is named in `owners.images`,
+`owners.icons` or `owners.motion` with its reason, like an engine's owner.
+
+The example keeps two choices of its own, both in `allow`: `Placeholder`'s
+crossed box, an `<svg>` (`agentic-cms/icons`), and the form's honeypot,
+placed far off-screen by an arbitrary offset (`agentic-cms/styling`); and
+`Media` owns its `<img>`. A new site starts with the same, so its lint
+prints no warning.
 
 ### The library's shape
 
@@ -219,7 +307,8 @@ fine; a silent one is not.
 | `app` | `"src/app"` | the routes' folder: a round's routes are its `*-demo` folders |
 | `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
 | `copy` | `{ props: [the copy props above], skip: [], decorations: ["Placeholder", "TypeTag"], tools: ["agentic-cms/lab"] }` | the props whose strings are copy (replacing the list); the site's own props whose strings never are (added to the rule's); the primitives that draw their props and children `aria-hidden`; the design tools' modules. Required: `false` throws |
-| `owners` | `{}` | `{ forms, tags }`: the files that own a `<form>` or a tag, as `{ "<file>": "<reason>" }` or a list of globs |
+| `owners` | `{}` | `{ forms, tags, images, icons, motion }`: the files that own a `<form>`, a tag, an eager `<img>`, an `<svg>` or motion, as `{ "<file>": "<reason>" }` or a list of globs |
+| `allow` | `[]` | a list of `{ rule, files, reason }`: a preferred rule a site keeps its own choice of, in those files, with its reason; a required rule, an unknown one or an entry with no reason throws |
 | `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
 | `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban and the engines cover, and the tsconfig alias for it |
@@ -236,8 +325,10 @@ option to extend it yet), and for every `agentic-cms/*` rule — which
 sample file per layer (each section folder, a route, a round's route,
 `src/lib`, each owner's file) and fails a required rule that is off, a
 warning, unset, ignored, or set with other options than `componentRules()`
-makes of `src/config/components.json`. So `eslint.config.mjs` passes the
-config's layers, `copy`, `owners` and `ignores` alike. A restriction of
+makes of `src/config/components.json`; a preferred rule set otherwise (a
+block that turns its warning off, an `allow` the config does not name) is
+a warning. So `eslint.config.mjs` passes the config's layers, `copy`,
+`owners`, `allow` and `ignores` alike. A restriction of
 the site's own on imports goes into `restrictedImports`, a forbidden
 element into `elements`:
 
@@ -257,7 +348,8 @@ alone (outside `src`, or in `ignores`).
 
 The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`,
 its six section folders (the page folders with `sections/` and `blog/`),
-the form engine's renderer as the owner of `forms`, and `ignores:
+the form engine's renderer as the owner of `forms` and the picture
+primitive as the owner of `images`, the config's `allow`, and `ignores:
 ["src/lib/**"]`, the package's own source — a line `init` leaves out of a
 site, whose `src/lib` is its own and linted. A rule a site cannot meet yet
 is a new primitive or option, or an inline disable with its reason, never
@@ -296,7 +388,17 @@ It checks that:
   exception by its name: the SEO audit already keeps it out of a build;
 - **no component (`.tsx`, `.jsx`) outside `src/components` and `src/app`**;
 - **CSS modules only in `ui/` and the motion layer, `@keyframes` only in
-  the motion layer and `src/styles/motion.css`**.
+  the motion layer and `src/styles/motion.css`**;
+- **every owner and every `allow` entry has its reason** and names files
+  that are there; an `allow` entry names a preferred rule.
+
+What the preferred tier guides is a warning, printed after the report: it
+fails nothing, and stays until it has its reason. The guard warns about a
+transition or animation declared in CSS outside the motion layer and
+`src/styles/motion.css` (`transitions`; an `allow` entry of
+`agentic-cms/motion` keeps a file's), an inline disable of any other rule
+with no description (`disables`), and a preferred rule ESLint resolves
+otherwise than the config makes it (`preset`).
 
 A running design round's candidates pass: the files its `demo.json` lists
 under `created`, with their `module.css`, until `demo clean` takes them.
@@ -317,6 +419,7 @@ comment.
 | `app` | `"src/app"` | the app folder |
 | `motionCss` | `"src/styles/motion.css"` | the stylesheet that holds the motion layer's start states and keyframes |
 | `inherited` | `[]` | files the guard leaves alone, frozen |
+| `owners`, `allow` | `{}`, `[]` | as in `componentRules()`: the files that own a part, and the preferred rules a file keeps its own choice of, each with its reason |
 
 `inherited` is how a site adopts the guard without rewriting anything: it
 lists every file that does not fit yet, and the list only shrinks. Nothing

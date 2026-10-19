@@ -11,7 +11,8 @@
 // and the SEO audit — then a production build, which fails on them, then,
 // with the copy replaced as a site writes its own, the production build
 // clean; its lint (ESLint, then the component guard, which a planted stray
-// section file fails) and its tests through the installed command line;
+// section file fails), with no warning, and its tests through the installed
+// command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
@@ -118,7 +119,7 @@ async function build(site) {
   }
   noExample(site);
   starterBuilds(site);
-  run("pnpm", ["lint"], site);
+  lintsClean(site);
   guardFails(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
@@ -152,6 +153,15 @@ function starterBuilds(site) {
   run("pnpm", ["build"], site);
 }
 
+/** The site's lint passes with no warning: what the starter keeps of its own that the preferred tier guides (the placeholder's crossed box, the honeypot's offset) carries its reason in "allow". */
+function lintsClean(site) {
+  const result = spawnSync("pnpm", ["lint"], { cwd: site, encoding: "utf8", env: ENV });
+  const output = `${result.stdout}${result.stderr}`;
+  process.stdout.write(output);
+  if (result.status !== 0) fail(`pnpm lint failed in ${site}`);
+  if (/\bwarnings?\b|⚠/.test(output)) fail(`pnpm lint warns in the fresh site, which keeps nothing the preferred tier guides without its reason: ${output.trim().slice(-800)}`);
+}
+
 /** The site's lint runs the installed guard after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
 function guardFails(site) {
   const { lint } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
@@ -176,7 +186,7 @@ async function lightOnly(site, tarball) {
   fs.writeFileSync(path.join(light, "package.json"), JSON.stringify(pkg, null, 2));
   await install(["--prefer-offline", "--no-frozen-lockfile"], light);
   run("pnpm", ["build"], light, CI_BUILD);
-  run("pnpm", ["lint"], light);
+  lintsClean(light);
   run("pnpm", ["test"], light);
   const home = fs.readFileSync(path.join(light, ".next/server/app/index.html"), "utf8");
   if (/data-theme|localStorage\.getItem\(['"]theme/.test(home)) fail("the light-only site's home page still carries the theme script");

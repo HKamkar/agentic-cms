@@ -6,7 +6,10 @@ companies' marks** for a stack or a social network, and **the site's own
 marks** beside copy. The kit ships no icon data — a licence question a
 kit should not answer for a site — but it ships the mechanism for each,
 the `Icon` component that renders the first two, and the inventory that
-starts the job. The `design-icons` skill is the procedure.
+starts the job. The `design-icons` skill is the procedure. An `<svg>` a
+site writes outside `Icon` warns in `pnpm lint` (`agentic-cms/icons`), and
+a file that keeps its own drawing says why in `allow`
+([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
 
 ## The map: Lucide and Simple Icons
 

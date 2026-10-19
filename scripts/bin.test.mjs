@@ -68,7 +68,7 @@ test("assemble runs in any folder and, without a standalone build, says how to m
 test("check-components: the kit's example passes; a stray section file is a finding with its fix, in text and JSON; no config is exit 2", () => {
   const ok = run(["check-components"]);
   assert.equal(ok.status, 0, ok.stderr);
-  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited\)\n$/);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited; 2 allowed, each with its reason\)\n$/);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guard-cli-"));
   const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
   try {

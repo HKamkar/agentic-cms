@@ -52,7 +52,7 @@ export function elementName(name) {
 }
 const attrName = (attr) => (attr.name.type === "JSXNamespacedName" ? `${attr.name.namespace.name}:${attr.name.name.name}` : attr.name.name);
 const intrinsic = (name) => /^[a-z]/.test(name) && !name.includes(".");
-const attribute = (opening, name) => opening.attributes.find((attr) => attr.type === "JSXAttribute" && attrName(attr) === name);
+export const attribute = (opening, name) => opening.attributes.find((attr) => attr.type === "JSXAttribute" && attrName(attr) === name);
 
 /** The strings an expression can evaluate to as written: a literal, a template's pieces, both sides of a condition or a fallback. */
 export function strings(node) {
@@ -69,7 +69,7 @@ export function strings(node) {
 }
 
 /** A string attribute's value as written (a literal, or a literal in braces); undefined otherwise. */
-function staticValue(attr) {
+export function staticValue(attr) {
   const value = attr?.value;
   if (value?.type === "Literal") return value.value;
   if (value?.type === "JSXExpressionContainer" && value.expression.type === "Literal") return value.expression.value;
@@ -312,5 +312,5 @@ const email = {
   },
 };
 
-/** The plugin: register it as `plugins: { "agentic-cms": plugin }` (componentRules() does). */
-export const plugin = { meta: { name: PLUGIN }, rules: { copy, head, forms, tags, email } };
+/** The required rules, by their short names: the `agentic-cms` plugin componentRules() registers holds them beside the preferred ones (./preferred-rules.mjs). */
+export const ENGINE_RULES = { copy, head, forms, tags, email };

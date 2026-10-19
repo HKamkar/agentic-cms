@@ -29,7 +29,7 @@ export function Footer() {
   return (
     <footer className="py-section">
       <Container>
-        <Panel className="grid gap-6 p-6 lg:grid-cols-[2fr_1fr_1fr]">
+        <Panel className="grid gap-6 p-6 lg:grid-cols-2-1-1">
           <div className="flex flex-col gap-2">
             <NavLink href="/" label={site.shortName} className="self-start font-semibold no-underline" />
             <p>{site.tagline}</p>

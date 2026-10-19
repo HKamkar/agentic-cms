@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { Linter } from "eslint";
-import { componentRules, COPY_PROPS, copyPlaces, defaultElements, REQUIRED, requiredConfigs, resolveOptions } from "./component-lint.mjs";
+import { ANIMATION_ALTERNATIVES, componentRules, COPY_PROPS, copyPlaces, defaultElements, PREFERRED, preferredConfigs, REQUIRED, RENDERING_LIBRARIES, requiredConfigs, resolveOptions } from "./component-lint.mjs";
+import { parseClasses } from "./preferred-rules.mjs";
 
 // The rules run as a site runs them: the `react` plugin is the one
 // eslint-config-next registers, the planted files are linted by their path.
@@ -12,11 +13,15 @@ const BASE = { files: ["**/*.{js,jsx,mjs,ts,tsx}"], plugins: { react }, language
 const EVERY_LAYER = { sections: ["home", "sections"] };
 const EXAMPLE = { motion: null, patterns: null, sections: ["home", "sections"] };
 
-/** The messages linting `code` as the site file `file` gives, under componentRules(options). */
-function lint(file, code, options = EVERY_LAYER) {
+/** The messages linting `code` as the site file `file` gives under componentRules(options), at one severity: 2 the errors, 1 the warnings. */
+function messages(file, code, options = EVERY_LAYER, severity = 2) {
   const linter = new Linter({ cwd: "/site" });
-  return linter.verify(code, [BASE, ...componentRules(options)], { filename: `/site/${file}` }).map((m) => `${m.ruleId}: ${m.message}`);
+  return linter.verify(code, [BASE, ...componentRules(options)], { filename: `/site/${file}` }).filter((m) => m.severity === severity || m.fatal).map((m) => `${m.ruleId}: ${m.message}`);
 }
+/** The errors: the engines and the library's shape. */
+const lint = (file, code, options) => messages(file, code, options, 2);
+/** The warnings: the preferred tier. */
+const warned = (file, code, options) => messages(file, code, options, 1);
 const one = (file, code, options) => {
   const messages = lint(file, code, options);
   assert.equal(messages.length, 1, messages.join("\n"));
@@ -372,8 +377,161 @@ test("the required rules are the agentic-cms plugin's, set over src (and an app 
   assert.deepEqual(configs.at(-1), { files: ["src/components/ui/form/Form.tsx"], ignores: [], plugins: configs[0].plugins, rules: { "agentic-cms/forms": "off" } });
   assert.ok(configs.every((config) => config.plugins["agentic-cms"] === configs[0].plugins["agentic-cms"]), "one plugin object, so flat config never sees it redefined");
   assert.deepEqual(requiredConfigs(resolveOptions({ src: "src", app: "app" }))[0].files, ["src/**/*.{js,jsx,mjs,ts,tsx,mts}", "app/**/*.{js,jsx,mjs,ts,tsx,mts}"]);
-  for (const owners of [{ form: ["x"] }, ["x"], null]) assert.throws(() => componentRules({ owners }), /owners is \{ forms: \{ "<file>": "<reason>" \}, tags: \{ "<file>": "<reason>" \} \}/, JSON.stringify(owners));
+  for (const owners of [{ form: ["x"] }, ["x"], null]) assert.throws(() => componentRules({ owners }), /owners is \{ forms: \{ "<file>": "<reason>" \}, tags: \{ "<file>": "<reason>" \}, images: \{ "<file>": "<reason>" \}, icons: \{ "<file>": "<reason>" \}, motion: \{ "<file>": "<reason>" \} \}/, JSON.stringify(owners));
   // The trap the guard closes: a later block that sets one of the required rules replaces it for its files.
   const block = { files: ["src/components/**"], rules: { "agentic-cms/copy": "off" } };
   assert.deepEqual(new Linter({ cwd: "/site" }).verify("export function Card() { return <p>Get started</p>; }", [BASE, ...componentRules(EVERY_LAYER), block], { filename: "/site/src/components/ui/Card.tsx" }), [], "a site's own block drops the rule; check-components fails it");
+});
+
+// The preferred tier: warnings that name the kit's part, which a reason quiets and the build never fails on.
+const KEEP = / A site keeps its own with its reason: an "allow" entry in src\/config\/components\.json, or an inline disable with -- <why> \(agentic-cms's docs\/primitives\.md § Enforced\)\.$/;
+/** The one warning linting `code` as `file` gives, and no error. */
+const oneWarning = (file, code, options) => {
+  assert.deepEqual(lint(file, code, options), [], "no error");
+  const found = warned(file, code, options);
+  assert.equal(found.length, 1, found.join("\n"));
+  assert.match(found[0], KEEP);
+  return found[0];
+};
+
+test("the preferred rules are the same plugin's, set to warn across src: graphics, images, icons and motion everywhere, styling outside the sections and the patterns, tests left out", () => {
+  assert.deepEqual(PREFERRED, ["agentic-cms/motion", "agentic-cms/graphics", "agentic-cms/images", "agentic-cms/icons", "agentic-cms/styling"]);
+  const configs = preferredConfigs(resolveOptions(EVERY_LAYER));
+  assert.ok(configs.every((config) => Object.values(config.rules).every((setting) => setting === "warn" || setting === "off")), "a warning, never an error");
+  assert.ok(configs.every((config) => config.plugins["agentic-cms"] === requiredConfigs(resolveOptions(EVERY_LAYER))[0].plugins["agentic-cms"]), "one plugin object for both tiers");
+  assert.deepEqual(configs.find((config) => config.rules["agentic-cms/motion"]).ignores, ["**/*.test.{js,jsx,mjs,ts,tsx,mts}", "src/components/motion/**"], "the motion layer owns motion");
+  assert.deepEqual(configs.find((config) => config.rules["agentic-cms/styling"]).ignores, ["**/*.test.{js,jsx,mjs,ts,tsx,mts}", "src/components/patterns/**", "src/components/home/**", "src/components/sections/**"], "the composition holds the sections and the patterns");
+  assert.deepEqual(warned("src/components/ui/Mark.test.tsx", "export function T() { return <svg />; }"), [], "a test's fixtures");
+});
+
+test("motion: another animation library, a requestAnimationFrame loop, an IntersectionObserver, el.animate(), a transition class or style, each naming agentic-cms/ix; the motion layer owns motion", () => {
+  const ix = /: the kit's motion is agentic-cms\/ix — the play-once layer \(Reveal, RevealGroup, Sequence, part\(\)\) or the reveals that replay \(Fx, OnView\) — timed by the --ease-\* \/ --motion-\* tokens with its start states in src\/styles\/motion\.css, or a motion folder of the site's own that owns its library \(STANDARD\.md §7\)\./;
+  const cases = {
+    'import { gsap } from "gsap";': /^agentic-cms\/motion: An animation library of the site's own, gsap/,
+    'import { ScrollTrigger } from "gsap/ScrollTrigger";': /, gsap\/ScrollTrigger/,
+    'import { useSpring } from "@react-spring/web";': /, @react-spring\/web/,
+    'const lottie = require("lottie-web");': /, lottie-web/,
+    'const load = () => import("animejs");': /, animejs/,
+    "export function tick() { requestAnimationFrame(tick); }": /A requestAnimationFrame loop of the site's own/,
+    "export function tick() { window.requestAnimationFrame(tick); }": /A requestAnimationFrame loop/,
+    "export const watch = () => new IntersectionObserver(() => {});": /A reveal of the site's own, an IntersectionObserver/,
+    "export const fade = (el) => el.animate([{ opacity: 0 }, { opacity: 1 }], 300);": /An animation of the site's own, el\.animate\(\)/,
+    'export function Card() { return <div className="p-4 transition-opacity" />; }': /A transition or animation class, "transition-opacity"/,
+    'export function Card() { return <div className={cx("p-4", open && "hover:duration-300")} />; }': /, "hover:duration-300"/,
+    'export const card = variants({ base: "p-4 animate-spin" });': /, "animate-spin"/,
+    'export function Card() { return <div style={{ transition: "opacity 200ms" }} />; }': /A transition or animation in a style \(transition\)/,
+    "export function Card({ ms }) { return <div style={{ animationDuration: ms }} />; }": /\(animationDuration\)/,
+  };
+  for (const [code, message] of Object.entries(cases)) {
+    const found = oneWarning("src/components/ui/Card.tsx", code);
+    assert.match(found, message, code);
+    assert.match(found, ix, code);
+  }
+  const ts = { files: ["**/*.tsx"], languageOptions: { parser: createRequire(require.resolve("eslint-config-next"))("@typescript-eslint/parser") } };
+  const typed = new Linter({ cwd: "/site" }).verify('import type { Tween } from "gsap";\nexport type T = Tween;', [BASE, ts, ...componentRules(EVERY_LAYER)], { filename: "/site/src/components/ui/Card.tsx" });
+  assert.deepEqual(typed, [], "a type-only import brings no code");
+  for (const code of ['export function Card() { return <div className="transition-none animate-none" style={{ transition: "none" }} />; }', "export const keys = (el) => el.animate();", 'import { Reveal } from "agentic-cms/ix";']) {
+    assert.deepEqual(warned("src/components/ui/Card.tsx", code, EXAMPLE), [], code);
+  }
+  assert.deepEqual(warned("src/components/motion/Rise.tsx", 'import { gsap } from "gsap";\nexport function Rise() { requestAnimationFrame(() => {}); return <div className="transition-transform" />; }'), [], "the motion layer");
+  assert.match(lint("src/components/ui/Card.tsx", 'import { animate } from "motion";').join("\n"), /no-restricted-imports/, "motion and framer-motion still fail outside the motion layer, with no second warning");
+  assert.deepEqual(warned("src/components/ui/Card.tsx", 'import { animate } from "motion";'), []);
+  assert.ok(["gsap", "@react-spring/", "animejs", "lottie-web", "popmotion"].every((name) => ANIMATION_ALTERNATIVES.includes(name)), "the libraries the preset keeps and documents");
+});
+
+test("graphics: a rendering library, a <canvas> or a canvas made in code, each naming the lab", () => {
+  const lab = /draws in the reader's browser: graphics ship pre-rendered from the lab — agentic-cms lab new, lab serve, lab render — as a file a page embeds, inline Icon data or an InlineAnimation loop \(agentic-cms's docs\/lab\.md\)\./;
+  for (const code of ['import * as THREE from "three";', 'import { Canvas } from "@react-three/fiber";', 'import { scaleLinear } from "d3-scale";', 'import * as d3 from "d3";', 'import { Application } from "pixi.js";', "export function Chart() { return <canvas />; }", 'export const make = () => document.createElement("canvas");', "export const off = () => new OffscreenCanvas(1, 1);"]) {
+    const found = oneWarning("src/app/page.tsx", code);
+    assert.match(found, /^agentic-cms\/graphics: /, code);
+    assert.match(found, lab, code);
+  }
+  assert.deepEqual(warned("src/app/page.tsx", 'import { scale } from "d3fancy";\nexport const make = () => document.createElement("div");'), []);
+  assert.ok(["three", "d3", "pixi.js", "p5"].every((name) => RENDERING_LIBRARIES.includes(name)));
+});
+
+test("images: next/image, and an eager <img> in a server component, each naming Media and EagerImage; a lazy one, a client component's, an unknown loading and the owner pass", () => {
+  const media = /: a picture is a plain <img> with its width and height: Media, lazy below the fold, and above it in a server component EagerImage \(agentic-cms\/components\), which keeps it out of other pages' prefetches; the static host has no image service \(STANDARD\.md §4\)\./;
+  const cases = { 'import Image from "next/image";': /The image service's next\/image/, 'export function Logo() { return <img src="/logo.svg" alt="" width={1} height={1} />; }': /An eager <img> in a server component/, 'export function Logo({ above }) { return <img src="/a.png" alt="" loading={above ? "eager" : "lazy"} />; }': /An eager <img>/, 'export function Logo() { return <img src="/a.png" alt="" loading="eager" />; }': /An eager <img>/ };
+  for (const [code, message] of Object.entries(cases)) {
+    const found = oneWarning("src/components/ui/Logo.tsx", code);
+    assert.match(found, message, code);
+    assert.match(found, media, code);
+  }
+  for (const code of ['export function Logo() { return <img src="/a.png" alt="" loading="lazy" />; }', '"use client";\nexport function Logo() { return <img src="/a.png" alt="" />; }', "export function Logo({ loading }) { return <img src=\"/a.png\" alt=\"\" loading={loading} />; }", 'export function Logo(props) { return <img alt="" {...props} />; }', 'import { EagerImage } from "agentic-cms/components";\nexport function Logo() { return <EagerImage src="/a.png" alt="" width={1} height={1} />; }']) {
+    assert.deepEqual(warned("src/components/ui/Logo.tsx", code), [], code);
+  }
+  const owned = { ...EVERY_LAYER, owners: { images: { "src/components/ui/Media.tsx": "the picture primitive" } } };
+  assert.deepEqual(warned("src/components/ui/Media.tsx", 'export function Media({ eager }) { return <img src="/a.png" alt="" loading={eager ? "eager" : "lazy"} />; }', owned), [], "the owner");
+});
+
+test("icons: an <svg> outside Icon, in a primitive, a route or a pattern, names Icon and the lab; its owner passes, and a section's fails as before", () => {
+  const icon = /^agentic-cms\/icons: An <svg> of the site's own: an icon is Icon from agentic-cms\/components, its paths in src\/config\/icons\.ts \(agentic-cms icons add lucide:<name>, si:<slug>, file:<name>\); a mark or an illustration is drawn in the lab and ships as a file \(agentic-cms's docs\/icons\.md, docs\/lab\.md\)\./;
+  for (const file of ["src/components/ui/Logo.tsx", "src/app/layout.tsx", "src/components/patterns/Mark.tsx"]) {
+    assert.match(oneWarning(file, 'export default function L() { return <svg viewBox="0 0 24 24"><path d="M0 0h24" /></svg>; }'), icon, file);
+  }
+  assert.deepEqual(warned("src/components/ui/Icon.tsx", "export function Icon() { return <svg />; }", { ...EVERY_LAYER, owners: { icons: ["src/components/ui/Icon.tsx"] } }), [], "the owner");
+  assert.match(section("<svg />")[0], /react\/forbid-elements: <svg> is forbidden, Graphics are library pieces/, "a section still fails it");
+});
+
+test("styling: an arbitrary value or property, an arbitrary breakpoint and a style colour outside the tokens warn in ui/ and src/app; a state variant and a token pass; a section fails them as before", () => {
+  const tokens = /: a value the scale lacks is a token first, in the @theme static block of src\/app\/globals\.css, used as its utility \(the uneven grid lg:grid-cols-2-1 is --grid-template-columns-2-1\) \(STANDARD\.md §1\)\./;
+  const cases = {
+    '<div className="grid lg:grid-cols-[2fr_1fr_1fr]" />': /An arbitrary value, "lg:grid-cols-\[2fr_1fr_1fr\]"/,
+    '<div className={cx("p-4", "bg-[#fafafa]")} />': /, "bg-\[#fafafa\]"/,
+    '<div className="rounded-[6px]" />': /, "rounded-\[6px\]"/,
+    '<div className="shadow-[0_1px_2px_black]" />': /, "shadow-\[0_1px_2px_black\]"/,
+    '<div className="w-(--sidebar)" />': /, "w-\(--sidebar\)"/,
+    '<div className="[mask-type:luminance]" />': /, "\[mask-type:luminance\]"/,
+    '<div className="min-[900px]:flex" />': /A breakpoint outside the scale \(max-sm … 3xl\), "min-\[900px\]:flex"/,
+    '<div style={{ color: "#ff0000" }} />': /A colour outside the tokens in a style \(color: "#ff0000"\)/,
+    '<div style={{ background: "rgb(0 0 0 / 50%)" }} />': /\(background: "rgb\(0 0 0 \/ 50%\)"\)/,
+    '<div style={{ borderColor: "rebeccapurple" }} />': /\(borderColor: "rebeccapurple"\)/,
+  };
+  for (const [jsx, message] of Object.entries(cases)) {
+    for (const file of ["src/components/ui/Card.tsx", "src/app/page.tsx"]) {
+      const found = oneWarning(file, `export default function C({ open }) { return ${jsx}; }`);
+      assert.match(found, /^agentic-cms\/styling: /, jsx);
+      assert.match(found, message, jsx);
+      assert.match(found, tokens, jsx);
+    }
+  }
+  assert.match(oneWarning("src/components/ui/card.ts", 'export const card = variants({ base: "p-4", variants: { tone: { loud: "text-[#f00]" } } });'), /"text-\[#f00\]"/, "a variants() map");
+  const clean = ['<select className="pr-10 has-[option[value=\'\']:checked]:text-muted data-[open]:block group-hover:underline [&_p]:mt-2" />', '<div className="grid lg:grid-cols-2-1 text-h1 bg-fill" />', '<div style={{ color: "var(--color-ink)", background: "transparent", fill: "currentColor", "--d": "120ms" }} />'];
+  for (const jsx of clean) assert.deepEqual(warned("src/components/ui/Card.tsx", `export function C() { return ${jsx}; }`), [], jsx);
+  const sectionFile = lint("src/components/home/Hero.tsx", 'export function Hero() { return <div className="lg:grid-cols-[2fr_1fr]" />; }');
+  assert.match(sectionFile.join("\n"), /no-restricted-syntax: No arbitrary values/, "a section fails it");
+  assert.deepEqual(warned("src/components/home/Hero.tsx", 'export function Hero() { return <div className="lg:grid-cols-[2fr_1fr]" />; }'), [], "with no second warning");
+});
+
+test("a class list reads as its classes: variants split at the colons outside brackets, the utility without its ! and its leading -", () => {
+  assert.deepEqual(parseClasses(" lg:hover:-mt-2  has-[option[value='']:checked]:text-muted !p-4 [&_p]:mt-2"), [
+    { text: "lg:hover:-mt-2", variants: ["lg", "hover"], utility: "mt-2" },
+    { text: "has-[option[value='']:checked]:text-muted", variants: ["has-[option[value='']:checked]"], utility: "text-muted" },
+    { text: "!p-4", variants: [], utility: "p-4" },
+    { text: "[&_p]:mt-2", variants: ["[&_p]"], utility: "mt-2" },
+  ]);
+});
+
+test("allow: an entry keeps a preferred rule's warning quiet in its files, and nowhere else; an entry with a required rule, no rule, no files or no reason throws", () => {
+  const options = { ...EVERY_LAYER, allow: [{ rule: "agentic-cms/icons", files: ["src/components/ui/Placeholder.tsx"], reason: "the wireframe's crossed box" }] };
+  const svg = "export function P() { return <svg />; }";
+  assert.deepEqual(warned("src/components/ui/Placeholder.tsx", svg, options), []);
+  assert.equal(warned("src/components/ui/Logo.tsx", svg, options).length, 1, "only its files");
+  assert.match(warned("src/components/ui/Placeholder.tsx", 'export function P() { return <div className="w-[3px]" />; }', options)[0], /agentic-cms\/styling/, "only its rule");
+  const throws = {
+    "agentic-cms/copy": /allow\[0\] \(agentic-cms\/copy\): a required rule is never allowed — a file that owns its part is named in owners, and a line that needs its own says why in an inline disable \(\/\/ eslint-disable-next-line agentic-cms\/copy -- <the reason>\)/,
+    "agentic-cms/icon": /allow\[0\] \(agentic-cms\/icon\): allow is a list of \{ rule: "agentic-cms\/<rule>", files: \["<glob>", …\], reason: "<why the site keeps its own>" \}, the rule one of agentic-cms\/motion, agentic-cms\/graphics, agentic-cms\/images, agentic-cms\/icons, agentic-cms\/styling/,
+  };
+  for (const [rule, message] of Object.entries(throws)) assert.throws(() => componentRules({ allow: [{ rule, files: ["x.tsx"], reason: "r" }] }), message, rule);
+  assert.throws(() => componentRules({ allow: [{ rule: "agentic-cms/icons", files: [], reason: "r" }] }), /allow\[0\] \(agentic-cms\/icons\): its files are a list of globs/);
+  for (const reason of [undefined, "", "  "]) assert.throws(() => componentRules({ allow: [{ rule: "agentic-cms/icons", files: ["x.tsx"], reason }] }), /allow\[0\] \(agentic-cms\/icons\): no reason — a site keeps its own choice with one line of why, which the review reads/, JSON.stringify(reason));
+  assert.throws(() => componentRules({ allow: { rule: "agentic-cms/icons" } }), /^TypeError: componentRules\(\): allow is a list of/);
+});
+
+test("an inline disable with its reason quiets a preferred rule for its line; the warnings never fail the lint", () => {
+  assert.deepEqual(warned("src/components/ui/Logo.tsx", "// eslint-disable-next-line agentic-cms/icons -- the registered mark, drawn by its owner\nexport function Logo() { return <svg />; }"), []);
+  const linter = new Linter({ cwd: "/site" });
+  const all = linter.verify('import { gsap } from "gsap";\nexport function C() { return <canvas className="w-[3px]" />; }', [BASE, ...componentRules(EVERY_LAYER)], { filename: "/site/src/components/ui/C.tsx" });
+  assert.deepEqual(all.map((m) => [m.ruleId, m.severity]), [["agentic-cms/motion", 1], ["agentic-cms/graphics", 1], ["agentic-cms/styling", 1]]);
 });

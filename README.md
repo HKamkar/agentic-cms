@@ -260,7 +260,11 @@ and the only place UI is made: `pnpm lint` runs the component rules
 draws a box of its own, or an import that goes the wrong way between the
 layers, then the placement guard (`agentic-cms check-components`), which
 fails a component outside the library, an export the catalogue does not
-name, or a section file the registry does not render. The `agentic-cms/ix` library stays in the package for a fork that wants
+name, or a section file the registry does not render. The rest it guides
+and never blocks: another animation library, a canvas, `next/image`, an
+`<svg>` outside `Icon` or a value outside the tokens warns, naming the
+kit's part, and a site keeps its own choice with one line of reason
+(`allow` in `src/config/components.json`). The `agentic-cms/ix` library stays in the package for a fork that wants
 motion: a play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`)
 whose roots play the first time they are seen and never again, the
 scroll-into-view reveals and sequences that replay on each entry, and

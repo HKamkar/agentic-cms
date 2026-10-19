@@ -221,7 +221,10 @@ test("the config: absent, unreadable, an unknown key named with the nearest one,
   assert.throws(() => read('{ "sections": "home" }'), /sections is a list of paths/);
   assert.deepEqual(read('{ "$comment": "ok", "elements": {}, "motion": null }'), { $comment: "ok", elements: {}, motion: null }, "$ keys are comments; componentRules()'s own keys are accepted");
   for (const owners of ['{ "forms": ["src/components/ui/form/Form.tsx"] }', '{ "form": {} }', "[]"]) {
-    assert.throws(() => read(`{ "owners": ${owners} }`), /owners is \{ "forms": \{ "<file>": "<reason>" \}, "tags": \{ "<file>": "<reason>" \} \} — the files that own a part of an engine, each with the reason it does/, owners);
+    assert.throws(() => read(`{ "owners": ${owners} }`), /owners is \{ "forms": \{ "<file>": "<reason>" \}, "tags": \{ "<file>": "<reason>" \}, "images": \{ "<file>": "<reason>" \}, "icons": \{ "<file>": "<reason>" \}, "motion": \{ "<file>": "<reason>" \} \} — the files that own a part, each with the reason it does/, owners);
+  }
+  for (const allow of ['{ "rule": "agentic-cms/icons" }', '["agentic-cms/icons"]']) {
+    assert.throws(() => read(`{ "allow": ${allow} }`), /allow is a list of \{ "rule": "agentic-cms\/<rule>", "files": \["<glob>", …\], "reason": "<why the site keeps its own>" \} — the preferred rules a file keeps its own choice of/, allow);
   }
 });
 
@@ -235,7 +238,7 @@ test("owners: each file that owns a part has its reason and is there", () => {
   assert.deepEqual(owned("the renderer", {}).map((f) => f.problem), ["an owner of forms that names no file here"]);
 });
 
-test("disables: an inline disable of a required rule, or of every rule, says why after --; the report lists each reason; another rule's disable is not the guard's", () => {
+test("disables: an inline disable of a required rule, or of every rule, says why after --; the report lists each reason; another rule's with no reason is a warning", () => {
   const files = {
     "src/components/sections/Hero.tsx": "// eslint-disable-next-line agentic-cms/copy -- the legal name, as registered\nexport function Hero() { return null; }\n",
     "src/components/sections/Faq.tsx": "export function Faq() {\n  return null; // eslint-disable-line no-console\n}\n/* eslint-disable agentic-cms/head, no-console */\n",
@@ -252,6 +255,8 @@ test("disables: an inline disable of a required rule, or of every rule, says why
     { file: "src/components/sections/Hero.tsx", line: 1, rules: ["agentic-cms/copy"], reason: "the legal name, as registered" },
     { file: "src/components/ui/Button.tsx", line: 4, rules: ["agentic-cms/email", "agentic-cms/copy"], reason: "the address is the registrar's, printed by law" },
   ]);
+  assert.deepEqual(report.warnings.map((f) => [f.check, f.file, f.problem]), [["disables", "src/components/sections/Faq.tsx:2", "turns off no-console with no reason"]]);
+  assert.equal(report.warnings[0].fix, "say why after --: // eslint-disable-next-line no-console -- <the reason>");
   const lines = formatReport(report);
   assert.ok(lines.includes("The inline disables of a required rule, each with its reason:") && lines.includes("  disabled agentic-cms/copy at src/components/sections/Hero.tsx:1 — the legal name, as registered"), lines.join("\n"));
   const clean = guard({ ...CLEAN, "src/components/sections/Hero.tsx": files["src/components/sections/Hero.tsx"] });
@@ -264,15 +269,17 @@ const REACT_URL = pathToFileURL(createRequire(createRequire(import.meta.url).res
 const PRESET_CONFIG = { motion: null, patterns: null, owners: { forms: { "src/components/ui/form/Form.tsx": "the form engine's renderer" } } };
 const PRESET_OPTIONS = '{ motion: null, patterns: null, owners: { forms: ["src/components/ui/form/Form.tsx"] } }';
 
-/** checkPreset over a scratch site whose eslint.config.mjs spreads the preset with `options`, then `after` (more config objects), or holds `text` alone. */
-async function preset({ options = PRESET_OPTIONS, after = "", text } = {}) {
+/** checkPreset over a scratch site whose eslint.config.mjs spreads the preset with `options`, then `after` (more config objects), or holds `text` alone: its { findings, warnings }. */
+async function presetReport({ options = PRESET_OPTIONS, after = "", text, config = PRESET_CONFIG } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guard-preset-"));
   try {
     fs.writeFileSync(path.join(dir, "package.json"), '{ "type": "module" }\n');
     if (text !== null) fs.writeFileSync(path.join(dir, "eslint.config.mjs"), text ?? `import react from ${JSON.stringify(REACT_URL)};\nimport { componentRules } from ${JSON.stringify(LINT_URL)};\nexport default [{ plugins: { react } }, ...componentRules(${options}), ${after}];\n`);
-    return await checkPreset({ root: dir, config: PRESET_CONFIG });
+    return await checkPreset({ root: dir, config });
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
+/** The preset check's findings, the required rules'. */
+const preset = async (opts) => (await presetReport(opts)).findings;
 
 test("preset: one sample file per layer, a route, a round's route, src/lib, and each owner's file", () => {
   assert.deepEqual(presetSamples(resolveGuard({ ...PRESET_CONFIG, sections: ["home", "sections"] })).map(([what, file]) => `${what}: ${file}`), [
@@ -307,6 +314,53 @@ test("preset: the required rules' settings ESLint resolves are the ones componen
   assert.match(missing[0].problem, /^ESLint cannot read the site's config, so the required rules are not set: /);
 });
 
+test("preset: a preferred rule turned off by a later block, or an allow eslint.config.mjs does not pass, is a warning that fails nothing; the same allow in both is quiet", async () => {
+  assert.deepEqual(await presetReport(), { findings: [], warnings: [] });
+  const silenced = await presetReport({ after: '{ files: ["src/components/ui/**"], rules: { "agentic-cms/icons": "off" } }' });
+  assert.deepEqual(silenced.findings, []);
+  assert.deepEqual(silenced.warnings.map((f) => [f.check, f.file, f.problem]), [["preset", "src/components/ui/Sample.tsx", "agentic-cms/icons is off here (the ui layer), where componentRules() makes of src/config/components.json that it is a warning"], ["preset", "src/components/ui/form/Form.tsx", "agentic-cms/icons is off here (an owner of forms), where componentRules() makes of src/config/components.json that it is a warning"]]);
+  assert.match(silenced.warnings[0].fix, /^a preferred rule a site keeps its own choice of is an "allow" entry in src\/config\/components\.json, with its reason, which eslint\.config\.mjs passes to componentRules\(\)/);
+  const allow = [{ rule: "agentic-cms/styling", files: ["src/app/**"], reason: "the routes' own grids" }];
+  const config = { ...PRESET_CONFIG, allow };
+  assert.equal((await presetReport({ config })).warnings.length, 2, "the config's allow, which eslint.config.mjs does not pass: the routes and a round's route");
+  assert.deepEqual(await presetReport({ config, options: `{ motion: null, patterns: null, owners: { forms: ["src/components/ui/form/Form.tsx"] }, allow: ${JSON.stringify(allow)} }` }), { findings: [], warnings: [] });
+});
+
+test("allow: each entry names a preferred rule and files that are there, with its reason; a bad one is a finding, the good ones are counted", () => {
+  const placeholder = { "src/components/ui/Placeholder.tsx": "export function Placeholder() { return null; }\n", "src/components/README.md": `${CLEAN["src/components/README.md"]}\n\`Placeholder\`\n` };
+  const entry = (fields) => ({ rule: "agentic-cms/icons", files: ["src/components/ui/Placeholder.tsx"], reason: "the wireframe's crossed box", ...fields });
+  const allowed = (...entries) => guard({ ...CLEAN, ...placeholder }, { routes: ROUTES, allow: entries });
+  const good = allowed(entry());
+  assert.deepEqual(good.findings, []);
+  assert.deepEqual(good.allowed, [entry()]);
+  assert.match(formatReport(good)[0], /; 1 allowed, each with its reason\)$/);
+  const bad = allowed(entry({ rule: "agentic-cms/copy" }), entry({ rule: "agentic-cms/icon" }), entry({ reason: " " }), entry({ files: [] }), entry({ files: ["src/components/ui/Gone.tsx"] }));
+  assert.deepEqual(bad.findings.map((f) => [f.check, f.file, f.problem]), [
+    ["allow", "agentic-cms/copy", "a required rule is never allowed"],
+    ["allow", "agentic-cms/icon", 'no preferred rule "agentic-cms/icon" — did you mean agentic-cms/icons?'],
+    ["allow", "agentic-cms/icons", "an allow entry with no reason"],
+    ["allow", "agentic-cms/icons", "an allow entry that names no files"],
+    ["allow", "src/components/ui/Gone.tsx", "an allow entry of agentic-cms/icons that names no file here"],
+  ]);
+  assert.match(bad.findings[0].fix, /a file that owns its part is named in "owners", a line that needs its own says why in an inline disable \(\/\/ eslint-disable-next-line agentic-cms\/copy -- <the reason>\)/);
+  assert.deepEqual(bad.allowed, [entry({ files: ["src/components/ui/Gone.tsx"] })], "the entries componentRules() takes");
+});
+
+test("transitions: a transition or animation declared in CSS outside the motion layer and src/styles/motion.css warns, naming the line; none rests, and an allow of agentic-cms/motion quiets it", () => {
+  const drawer = { "src/components/ui/Button.module.css": "/* transition: opacity — a note */\n.button {\n  color: red;\n  transition: transform 200ms;\n  animation-name: none;\n  animation: pop 1s;\n}\n" };
+  const report = guard({ ...CLEAN, ...drawer });
+  assert.deepEqual(report.findings, []);
+  assert.deepEqual(report.warnings.map((f) => [f.check, f.file, f.problem]), [["transitions", "src/components/ui/Button.module.css:4", "declares transition, animation outside the motion layer"]]);
+  assert.match(report.warnings[0].fix, /^motion is the motion layer, src\/components\/motion\/ \(STANDARD\.md §7\); a site that keeps its own says why: "allow": \[\{ "rule": "agentic-cms\/motion", "files": \["src\/components\/ui\/Button\.module\.css"\], "reason": "<why>" \}\]/);
+  const lines = formatReport(report);
+  assert.equal(lines[2], "check-components: 1 warning, which fail nothing: the kit's part, or the site's own choice with its reason");
+  assert.ok(lines.includes("  ⚠ src/components/ui/Button.module.css:4  [transitions]"), lines.join("\n"));
+  const still = { "src/app/globals.css": ":root { --transition-x: 1s; }\n.a { transition: none; animation-duration: 0.01ms !important; }\n.transition:hover { color: red; }\n" };
+  assert.deepEqual(guard({ ...CLEAN, ...still }).warnings, [], "a custom property, none, a zero duration, a selector");
+  assert.deepEqual(guard({ ...CLEAN, "src/components/motion/Pop.module.css": ".pop { transition: scale 1s; }\n", "src/styles/motion.css": ".rise { transition: opacity 1s; }\n" }).warnings.map((f) => f.file), [], "the motion layer and motion.css");
+  assert.deepEqual(guard({ ...CLEAN, ...drawer }, { routes: ROUTES, allow: [{ rule: "agentic-cms/motion", files: ["src/components/ui/*.module.css"], reason: "the drawer slides, as the brand book draws it" }] }).warnings, []);
+});
+
 test("the report names each finding's file, check, problem and fix, then where the library is", () => {
   const lines = formatReport(guard({ ...CLEAN, "src/components/sections/Promo.tsx": "x", "src/widgets/Thing.tsx": "x" }));
   assert.equal(lines[0], "check-components: 2 problems");
@@ -333,9 +387,11 @@ test("each planted violation is caught by the tool meant for it: a raw element b
   assert.deepEqual(planted({ "src/app/pricing/page.tsx": "x" }, { routes: ROUTES }).map((f) => f.check), ["routes"], "a hand-written page route, by the guard");
 });
 
-test("the kit's example passes the guard with its own config", () => {
+test("the kit's example passes the guard with its own config, with no warning", () => {
   const report = checkComponents({ root: KIT, fs });
   assert.deepEqual(report.findings, [], formatReport(report).join("\n"));
+  assert.deepEqual(report.warnings, [], formatReport(report).join("\n"));
+  assert.ok(report.allowed.every((entry) => entry.reason.length > 20), "each of the example's own choices says why");
   assert.equal(report.layers.motion, null);
   assert.equal(report.layers.sectionFolders, 6);
   assert.ok(report.inherited <= 5, "the example's inherited list stays minimal: the blog's post template");
