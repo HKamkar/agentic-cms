@@ -13,6 +13,12 @@ changes what a capture writes says **recapture baselines**.
 - `demo new` names a page's placeholder copy and any of the example's brand before it writes a round. The `design` skill gets the copy first, and `/editorial:new-page` writes a page's real copy.
 - `init --force` never overwrites a site's own `content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`. The starter's content goes only into a site with no `content/`.
 - CI: the kit's workflow moves to `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and `pnpm/action-setup` v6.1.0, each still pinned to a commit (#92).
+- `agentic-cms init` requires `--name "<Site>"` for a new site: without it, or with an empty one, `init` exits 2 and writes nothing. The folder's name is no longer used as the site's. Nothing changes for an existing site: `init` on a site that has `content/` asks for no name and writes none of the site's own files.
+- CI: the workflow `init` writes into a site moves to the kit's pins, `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and `pnpm/action-setup` v6.1.0 (the first to state pnpm 12 support). An existing site copies the three `uses:` lines from `node_modules/agentic-cms/templates/site/verify.yml` (`docs/upgrading.md`).
+- Tests: `tools/template-ci.test.mjs` fails when the site template pins an action to another commit than the kit's own workflow does, so a Dependabot bump of the kit's pins fails CI until the template follows.
+- `docs/parts.md`: every part of the kit on one map in four layers (the content engine, the browser libraries, the design tools, the site's commands). Each row gives the need, the part and how to use it, its tier (required for the engines, preferred for the rest), the check that holds it and its exception key, and the page ends with every check the kit runs. `tools/parts-doc.mjs` keeps it complete in `pnpm hygiene` and the tests: every export, command and rule must be on it.
+- The command families follow the layers. `agentic-cms --help` and `docs/commands.md` group them under the content engine, the design tools and the site's commands, from one list in `scripts/lib/specs.mjs`. "build gates" splits into `default gates` (`seo`, `check-components`) and `opt-in steps` (`guard-email`, `critical-css`, `assemble`).
+- One content engine with its layers: the blog engine is now the post pipeline in its README, its rule and the docs. `docs/primitives.md`, `docs/gotchas.md` and `docs/design.md` point to the map, and `docs/README.md`'s index is grouped by the layers.
 
 ## [0.8.1] — 2026-10-17
 
