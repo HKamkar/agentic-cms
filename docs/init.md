@@ -66,14 +66,13 @@ the same.
   holds enabled), and `.agentic-cms.json`, the
   manifest of the agent files: the kit's text each one was written from
   ([§ After a kit upgrade](#after-a-kit-upgrade)).
-- **The config**: `package.json` (the scripts a build needs — `lint` runs
-  ESLint, then the component guard, and fails on either:
-  `eslint; s=$?; agentic-cms check-components || s=1; exit $s` — and the
-  dependencies at the kit's versions; merged into an existing one, whose
-  name, scripts and dependencies win, but for `pnpm init`'s placeholders:
-  its failing `test` gives way to the kit's and its `main: "index.js"` is
-  dropped, while its `license`, `version`, `devEngines` and
-  `packageManager` stay), `tsconfig.json`, `pnpm-workspace.yaml` (merged
+- **The config**: `package.json` (the scripts a build needs, the gates in
+  its `lint` and `build` ([§ The gates](#the-gates)), and the dependencies
+  at the kit's versions; merged into an existing one, whose name, scripts
+  and dependencies win, but for `pnpm init`'s placeholders — its failing
+  `test` gives way to the kit's and its `main: "index.js"` is dropped,
+  while its `license`, `version`, `devEngines` and `packageManager` stay —
+  and for the gates, which go into its own `lint` and `build`), `tsconfig.json`, `pnpm-workspace.yaml` (merged
   into an existing one: the `allowBuilds` keys it lacks are added, the
   names of a legacy `onlyBuiltDependencies` list, which pnpm no longer
   reads, are carried into it, and every other key, value and comment stays
@@ -88,11 +87,19 @@ the same.
   green before its copy is written) and
   `agentic-cms init . --agent-files --check`,
   with pnpm from `packageManager` (Node 25 and later ship no corepack), Node
-  from `.nvmrc`, and every action pinned to a commit: the commits the kit's
-  own CI runs at that release. `init` keeps the file as the site has it, so
-  a later release's pins reach a site by hand, from
+  from `.nvmrc`, the checkout's whole history (`fetch-depth: 0`: the site
+  check lists the exceptions a pull request adds against its base branch),
+  and every action pinned to a commit: the commits the kit's own CI runs at
+  that release. `.github/dependabot.yml` keeps those pins current: the
+  GitHub Actions alone, one grouped pull request a month to the default
+  branch (no `target-branch`: a site may have no `develop`); the site's npm
+  packages follow the kit's releases instead ([upgrading.md](upgrading.md)).
+  `init` writes both files once and keeps them as the site has them, so a
+  later release's pins reach a site through Dependabot or by hand, from
   `node_modules/agentic-cms/templates/site/verify.yml`
-  ([upgrading.md](upgrading.md) says when they moved).
+  ([upgrading.md](upgrading.md) says when they moved), and a site from
+  before 0.8.2 copies `node_modules/agentic-cms/templates/site/dependabot.yml`
+  to `.github/dependabot.yml` to have its pins proposed too.
 - **The setup script**: `scripts/setup.sh`, which a clone runs first on any
   machine: Node checked, pnpm at the `packageManager` version, the install,
   then `agentic-cms setup` (the browsers, `.env.local` and this machine's
@@ -111,6 +118,50 @@ needs its name: `init` on an existing site, `--agent-files` or not, asks
 none, writes none of the site's own files and never deletes or rewrites its
 content. `package.json` and `pnpm-workspace.yaml` are merged, with `--force`
 too, and print `merged` with what changed.
+
+## The gates
+
+What every change passes is in the site's own `package.json`, so an agent
+that runs the build runs the lint too:
+
+```json
+"lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s",
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"
+```
+
+- **The lint** runs ESLint with the component rules, then the site check
+  (`check-site`: the component guard's passes, the design rounds, the
+  exceptions added since the merge base, these gates and CI, and the site's
+  own tools as warnings — [primitives.md § The whole site](primitives.md#the-whole-site-agentic-cms-check-site)),
+  failing on either while both report. A warning never fails it.
+- **The build** runs the lint first, then the content lint for production
+  (a placeholder fails it), the field tables' check, `next build` and the
+  SEO audit. Each is a step of the `&&` chain, so the first that fails
+  stops the build. `agentic-cms guard-email` is a step a site adds after
+  the audit ([email.md § The guard](email.md#the-guard--agentic-cms-guard-email)):
+  guard-email: opt-in until 0.8.2 job 4b, which takes the starter's
+  address out of its structured data, its forms and its client bundles and
+  then makes it a gate of every site with an address.
+
+Into an existing `package.json`, `init` merges the gates and keeps the
+site's own steps where they are, printing what went in (a site from 0.8.1:
+`merged package.json (lint: check-site in place of check-components;
+build: pnpm lint added)`):
+
+- a site with no `lint` or `build` takes the kit's;
+- a `lint` that runs `agentic-cms check-components` (the kit's before
+  0.8.2) runs `check-site` in its place; one that runs ESLint alone keeps
+  its command, the check after it;
+- a `build` with a `next build` step takes each gate it lacks in its place:
+  the lint first of all, the content lint and the docs check right ahead
+  of `next build`, the audit and the guard after it.
+
+A script the gates cannot go into is refused: a `lint` that runs no ESLint
+or ends in its own `exit`, a `build` with no `next build` step in its `&&`
+chain or a gate on the wrong side of it, or either turning a failure into
+a pass (`|| true`, `exit 0`). `init` then exits 2 before writing anything,
+naming the script and what to make it; the gates are never dropped
+silently. `check-site`'s `scripts` pass holds them from then on.
 
 ## The starter
 
@@ -158,10 +209,10 @@ carrying the marker in a content file or in `src/config/` (by line there),
 and an address on a reserved domain (`.example`, `.test`, `.invalid`,
 `localhost`, example.com) — as a `placeholder` WARN while the site is
 written. A production build fails on them: the site's `pnpm build` runs
-`agentic-cms lint --production`, so every build that deploys (`pnpm run
-deploy` and `pnpm upload` build through `pnpm build`, and `agentic-cms
-assemble` refuses to package while one remains) stops at the first step,
-naming each. The one exception is the site's own CI, which deploys
+`agentic-cms lint --production` before `next build`, so every build that
+deploys (`pnpm run deploy` and `pnpm upload` build through `pnpm build`,
+and `agentic-cms assemble` refuses to package while one remains) stops
+there, naming each. The one exception is the site's own CI, which deploys
 nothing: its build step sets `AGENTIC_CMS_PLACEHOLDERS=warn`, so a new site
 is green before its copy is written. Replace them with the site's own:
 `/editorial:new-page` writes a page's copy, or edit by hand; the marker

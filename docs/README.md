@@ -32,8 +32,10 @@ a site draws around. The design system of the example is `STANDARD.md`.
   tokens, what the kit provides, the day-one primitives against what the
   example has, what waits for a second use, the rules every one follows,
   the lint that keeps every section built from them
-  (`agentic-cms/eslint`) and the guard that keeps every component in the
-  library (`agentic-cms check-components`).
+  (`agentic-cms/eslint`), the guard that keeps every component in the
+  library (`agentic-cms check-components`) and the site check that runs it
+  first, then holds the rounds, the exceptions, the gates and the site's own
+  tools (`agentic-cms check-site`).
 - [consent.md](consent.md) — the visitor's consent choice and the Google tag
   behind it: the record and its policy, the hooks a banner is built on,
   consent mode v2 (basic and advanced), GA4's own settings, what the
@@ -70,7 +72,9 @@ The build, its gates and the setup.
 - [commands.md](commands.md) — the command line: every command, its flags,
   its exit codes, the JSON it prints (generated from the specs).
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
-  writes, what comes next, what to do after a kit upgrade.
+  writes (the gates in its `lint` and `build`, merged into an existing
+  `package.json`; the CI workflow and Dependabot for its actions), what
+  comes next, what to do after a kit upgrade.
 - [setup.md](setup.md) — a fresh clone on a new machine, for a person or an
   agent: `bash scripts/setup.sh` and `agentic-cms setup` (Node, pnpm, the
   install, the browsers, `.env.local` and its origins, the checks), the

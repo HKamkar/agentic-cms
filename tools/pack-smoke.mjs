@@ -10,9 +10,13 @@
 // placeholders warnings — the content lint, the field-table check, next build
 // and the SEO audit — then a production build, which fails on them, then,
 // with the copy replaced as a site writes its own, the production build
-// clean; its lint (ESLint, then the component guard, which a planted stray
-// section file fails), with no warning, and its tests through the installed
-// command line;
+// clean; its lint (ESLint, then the site check, whose component guard a
+// planted stray section file fails), with no warning, and its Dependabot
+// config; then, the site committed to git, the bypass fixture
+// (tools/bypass-fixture.mjs: one example of each way around the kit the
+// 0.8.2 plan found) laid over it for one run of its checks — each required
+// bypass failing with its message, each preferred one warning — and taken
+// back; its tests through the installed command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
@@ -28,6 +32,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
 
 const ROOT = process.cwd();
 const MAX_TARBALL = 1024 * 1024;
@@ -121,6 +126,8 @@ async function build(site) {
   starterBuilds(site);
   lintsClean(site);
   guardFails(site);
+  dependabot(site);
+  bypasses(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
 }
@@ -162,10 +169,12 @@ function lintsClean(site) {
   if (/\bwarnings?\b|⚠/.test(output)) fail(`pnpm lint warns in the fresh site, which keeps nothing the preferred tier guides without its reason: ${output.trim().slice(-800)}`);
 }
 
-/** The site's lint runs the installed guard after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
+/** The site's lint runs the installed site check after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
 function guardFails(site) {
-  const { lint } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
-  if (!/; agentic-cms check-components \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the guard after ESLint: ${lint}`);
+  const { lint, build } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
+  if (!/; agentic-cms check-site \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the site check after ESLint: ${lint}`);
+  // The builds above ran the lint first: the gates init writes (the e-mail guard joins them with 0.8.2 job 4b).
+  if (!/^pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo$/.test(build)) fail(`the site's build does not hold the gates in their order: ${build}`);
   if (!fs.existsSync(path.join(site, "src/config/components.json")) || !fs.existsSync(path.join(site, ".claude/rules/components.md"))) fail("init wrote the guard's config without the components rule, or neither");
   const stray = path.join(site, "src/components/sections/Stray.tsx");
   fs.writeFileSync(stray, "export function Stray() {\n  return null;\n}\n");
@@ -173,6 +182,60 @@ function guardFails(site) {
   fs.rmSync(stray);
   const output = `${result.stdout}${result.stderr}`;
   if (result.status !== 1 || !/✗ src\/components\/sections\/Stray\.tsx {2}\[registry\]/.test(output)) fail(`pnpm lint with a stray section file answered ${result.status}: ${output.trim().slice(-600)}`);
+}
+
+/** The fresh site keeps its CI's actions current: init wrote the kit's Dependabot config for them. */
+function dependabot(site) {
+  const file = path.join(site, ".github/dependabot.yml");
+  if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== fs.readFileSync(path.join(ROOT, "templates/site/dependabot.yml"), "utf8")) fail("init did not write .github/dependabot.yml from the kit's template");
+}
+
+/** git in the site, as a person who commits nothing anywhere else: no signing, the identity the commit needs and no more. */
+const git = (site, ...args) => run("git", ["-c", "user.name=pack-smoke", "-c", "user.email=pack-smoke@localhost", "-c", "commit.gpgsign=false", ...args], site);
+
+/** The fixture's writes, applied — each edit on the file as the edits before it left it: the files it adds and the text each file it edits had, to take them back. */
+function layBypasses(site) {
+  const added = [];
+  const before = new Map();
+  const current = (file) => { const text = fs.readFileSync(path.join(site, file), "utf8"); if (!before.has(file)) before.set(file, text); return text; };
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
+  for (const bypass of BYPASSES) {
+    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(file, text); }
+    for (const [file, text] of Object.entries(bypass.append ?? {})) write(file, `${current(file)}${text}`);
+    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(file, change(current(file)));
+    for (const [file, change] of Object.entries(bypass.json ?? {})) write(file, `${JSON.stringify(change(JSON.parse(current(file))), null, 2)}\n`);
+  }
+  write("src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
+  return { added, before };
+}
+
+/**
+ * The bypass fixture over the fresh site, committed to git first so the site
+ * check compares the exceptions with it: one run each of the lint, the
+ * content lint and the agent-file check, every bypass answered as its tier
+ * says (tools/bypass-fixture.mjs), then everything taken back, which git
+ * confirms.
+ */
+function bypasses(site) {
+  git(site, "init", "-q", "-b", "main");
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the fresh site");
+  const { added, before } = layBypasses(site);
+  // The site's own history is the base: a pull request's base branch in the kit's CI names none here.
+  const env = Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== "GITHUB_BASE_REF"));
+  const answer = (...args) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
+  const lint = answer("lint");
+  const content = answer("content:lint");
+  const agentFiles = answer("exec", "agentic-cms", "init", ".", "--agent-files", "--check");
+  for (const file of added) fs.rmSync(path.join(site, file));
+  fs.rmSync(path.join(site, "src/app/promo-demo"), { recursive: true, force: true });
+  for (const [file, text] of before) fs.writeFileSync(path.join(site, file), text);
+  const missing = unanswered({ lint: lint.output, content: content.output, agentFiles: agentFiles.output, entries: eslintEntries(lint.output, fs.realpathSync(site)) });
+  for (const [name, { status }] of Object.entries({ "pnpm lint": lint, "pnpm content:lint": content, "init --agent-files --check": agentFiles })) if (status !== 1) missing.push(`${name} answered ${status}, and should fail on the fixture`);
+  if (missing.length) fail(`the bypass fixture was not answered as its tiers say:\n  ${missing.join("\n  ")}\n${lint.output.trim().slice(-3000)}`);
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`the bypass fixture was not taken back: ${left}`);
+  console.log(`pack-smoke: the bypass fixture answered — ${BYPASSES.filter((b) => b.tier === "required").length} required bypasses fail their checks with their messages, ${BYPASSES.filter((b) => b.tier === "preferred").length} preferred ones warn`);
 }
 
 /** 5. A site without dark mode, laid out by the installed init --light-only with a name of its own: it builds as its CI runs it, lints and tests, and its pages carry no theme script. */

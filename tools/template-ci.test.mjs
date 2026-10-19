@@ -1,11 +1,14 @@
 // The CI workflow `init` writes into a site (templates/site/verify.yml) runs
 // the actions the kit's own workflow runs, pinned to the same commits.
 // Dependabot reads .github/workflows/ alone, so its bump of the kit's pins
-// fails here until the template follows. Run with `pnpm test`.
+// fails here until the template follows. The Dependabot config `init` writes
+// (templates/site/dependabot.yml) is the kit's own but for its target branch.
+// Run with `pnpm test`.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { parse as parseYaml } from "yaml";
 
 const REPO = path.resolve(import.meta.dirname, "..");
 const KIT = ".github/workflows/verify.yml";
@@ -38,4 +41,14 @@ test("the site's workflow pins every action to the commit the kit's own workflow
   assert.ok(template.size > 0, `${TEMPLATE}: no uses: line found`);
   const found = drift(pins(KIT), template);
   assert.deepEqual(found, [], `${found.join("\n")}\nCopy the kit's pins (each sha with its version comment) into the template, read each new version's changelog for an input the template relies on, and add a line for the sites under Unreleased in docs/upgrading.md.`);
+});
+
+test("the site's Dependabot config is the kit's own — the actions alone, monthly, one grouped pull request — without a target branch, which a site may not have", () => {
+  const read = (file) => parseYaml(fs.readFileSync(path.join(REPO, file), "utf8"));
+  const kit = read(".github/dependabot.yml");
+  const site = read("templates/site/dependabot.yml");
+  const { "target-branch": branch, ...shared } = kit.updates[0];
+  assert.equal(branch, "develop", "the kit's own pull requests go to develop");
+  assert.deepEqual(site, { ...kit, updates: [shared] });
+  assert.deepEqual(site.updates.map((update) => update["package-ecosystem"]), ["github-actions"]);
 });

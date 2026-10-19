@@ -4,7 +4,8 @@
 // imports), each command of the specs (scripts/lib/specs.mjs) and each rule
 // the kit's checks define must appear on it — the ESLint preset's rules
 // (componentRules()), the placement guard's passes
-// (scripts/lib/check-components.mjs) and the content lint's rules
+// (scripts/lib/check-components.mjs), the site check's
+// (scripts/lib/check-site.mjs) and the content lint's rules
 // (scripts/lib/content-lint.mjs), the rules in its "The checks" section. A
 // new export, command or rule lands with its row. Exit 1 naming each one
 // missing (tools/hygiene.mjs and the tests run it).
@@ -30,7 +31,7 @@ export function exportNames(pkg) {
 /** The rules the preset sets, with every layer present so none is left out. */
 export const presetRules = () => [...new Set(componentRules().flatMap((config) => Object.keys(config.rules ?? {})))];
 
-/** The guard's passes: the check each finding is filed under. */
+/** The guard's passes, and the site check's: the check each finding is filed under. */
 export const guardPasses = (source) => ids(source, [/\bfinding\(\s*"([a-z-]+)"/g]);
 
 /** The content lint's rules, in each form a finding is written: `rule: "…"`, and add() with the level first. */
@@ -46,6 +47,7 @@ export function requiredNames(root = ROOT) {
     ...Object.keys(SPECS).map((command) => ({ kind: "command", name: `${pkg.name} ${command}`, where: "page", needle: new RegExp(`\`${escape(pkg.name)} ${escape(command)}[\` ]`) })),
     ...presetRules().map((name) => ({ kind: "ESLint preset rule", name, where: "checks", needle: exact(name) })),
     ...guardPasses(read("scripts/lib/check-components.mjs")).map((name) => ({ kind: "guard pass", name, where: "checks", needle: exact(name) })),
+    ...guardPasses(read("scripts/lib/check-site.mjs")).map((name) => ({ kind: "site check pass", name, where: "checks", needle: exact(name) })),
     ...contentLintRules(read("scripts/lib/content-lint.mjs")).map((name) => ({ kind: "content lint rule", name, where: "checks", needle: exact(name) })),
   ];
 }

@@ -19,7 +19,9 @@
 //   - each file an `owners` entry names (the files that own a <form>, a tag,
 //     an eager <img>, an <svg> or motion) is there, with its reason;
 //   - each `allow` entry (a preferred rule a site keeps its own choice of)
-//     names a preferred rule and files that are there, with its reason;
+//     names a preferred rule and files that are there, with its reason (an
+//     entry of agentic-cms/site-tools names the site's own tools outside
+//     src/, whose files `check-site` looks for);
 //   - an inline disable of a required rule (the engines' agentic-cms/*, or
 //     every rule) says why after `--`; the report lists each reason;
 //   - and, through ESLint (checkPreset), the required rules hold: their
@@ -38,9 +40,12 @@
 // finding. The config is src/config/components.json; its layer keys are
 // componentRules()'s options, with the same defaults. The file system comes
 // in as `fs` (existsSync, readFileSync, readdirSync with withFileTypes).
+// `agentic-cms check-site` runs every pass of this guard (componentsReport())
+// and adds the site's own (./check-site.mjs); `check-components` stays, the
+// components pass alone.
 import path from "node:path";
 import { suggest } from "./args.mjs";
-import { checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, preferredConfigs, REQUIRED, requiredConfigs, resolveOptions } from "./component-lint.mjs";
+import { ALLOWABLE, checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, preferredConfigs, REQUIRED, requiredConfigs, resolveOptions, SITE_TOOLS } from "./component-lint.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
 export const CONFIG_FILE = "src/config/components.json";
@@ -248,17 +253,18 @@ function checkOwners(g, tree) {
   }));
 }
 
-/** Each `allow` entry names a preferred rule and files that are there, with its reason. */
+/** Each `allow` entry names a preferred rule and files that are there, with its reason; an entry of the site's own tools names files outside src/, which check-site looks for. */
 function checkAllowed(g, tree) {
   return g.allow.flatMap(({ rule, files, reason }, at) => {
     const name = typeof rule === "string" ? rule : `allow[${at}]`;
-    const fix = `"allow": [{ "rule": "<one of ${PREFERRED.join(", ")}>", "files": ["<glob>"], "reason": "<why the site keeps its own>" }] in ${CONFIG_FILE}`;
+    const fix = `"allow": [{ "rule": "<one of ${ALLOWABLE.join(", ")}>", "files": ["<glob>"], "reason": "<why the site keeps its own>" }] in ${CONFIG_FILE}`;
     const out = [];
     if (REQUIRED.includes(rule)) out.push(finding("allow", name, "a required rule is never allowed", `an engine is the site's to use, never to keep its own of: a file that owns its part is named in "owners", a line that needs its own says why in an inline disable (// eslint-disable-next-line ${rule} -- <the reason>)`));
-    else if (!PREFERRED.includes(rule)) out.push(finding("allow", name, `no preferred rule ${JSON.stringify(rule ?? null)}${typeof rule === "string" ? suggest(rule, PREFERRED) : ""}`, fix));
+    else if (!ALLOWABLE.includes(rule)) out.push(finding("allow", name, `no preferred rule ${JSON.stringify(rule ?? null)}${typeof rule === "string" ? suggest(rule, ALLOWABLE) : ""}`, fix));
     if (typeof reason !== "string" || !reason.trim()) out.push(finding("allow", name, "an allow entry with no reason", fix));
     const globs = Array.isArray(files) ? files : [];
     if (!globs.length || !globs.every((glob) => typeof glob === "string")) out.push(finding("allow", name, "an allow entry that names no files", fix));
+    if (rule === SITE_TOOLS) return out;
     for (const glob of globs.filter((glob) => typeof glob === "string" && !tree.files.some((file) => globRegex(glob).test(file)))) out.push(finding("allow", glob, `an allow entry of ${name} that names no file here`, `take it out of "allow" in ${CONFIG_FILE}, or point it at the file that keeps its own`));
     return out;
   });
@@ -284,17 +290,20 @@ function checkTransitions(g, tree, exempt) {
 const LINE_DIRECTIVE = /\/\/\s*(eslint-disable(?:-next-line|-line)?)(?![\w-])(.*)$/gm;
 const BLOCK_DIRECTIVE = /\/\*\s*(eslint-disable(?:-next-line|-line)?)(?![\w-])([\s\S]*?)\*\//g;
 
-/** Every inline disable in the site's source: [{ file, line, rules, reason }], `rules` empty for every rule and the reason "" when there is none. */
+/** The inline disables in one file's text: [{ line, rules, reason }], `rules` empty for every rule and the reason "" when there is none. */
+export function disablesIn(text = "") {
+  return [...text.matchAll(LINE_DIRECTIVE), ...text.matchAll(BLOCK_DIRECTIVE)].map((match) => {
+    const [list, ...description] = match[2].split(/\s-{2,}\s/);
+    return { line: text.slice(0, match.index).split("\n").length, rules: list.split(/[\s,]+/).filter(Boolean), reason: description.join(" -- ").trim() };
+  }).sort((a, b) => a.line - b.line);
+}
+
+/** A file the disables are read from: the site's scripts. */
+export const isSource = (file) => SOURCE.test(file);
+
+/** Every inline disable in the site's source: [{ file, line, rules, reason }], as disablesIn() reads each file. */
 function allDisables(tree) {
-  const out = [];
-  for (const file of tree.files.filter((f) => SOURCE.test(f))) {
-    const text = tree.read(file) ?? "";
-    for (const match of [...text.matchAll(LINE_DIRECTIVE), ...text.matchAll(BLOCK_DIRECTIVE)]) {
-      const [list, ...description] = match[2].split(/\s-{2,}\s/);
-      out.push({ file, line: text.slice(0, match.index).split("\n").length, rules: list.split(/[\s,]+/).filter(Boolean), reason: description.join(" -- ").trim() });
-    }
-  }
-  return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+  return tree.files.filter(isSource).flatMap((file) => disablesIn(tree.read(file) ?? "").map((entry) => ({ file, ...entry })));
 }
 const disablesRequired = ({ rules }) => !rules.length || rules.some((rule) => REQUIRED.includes(rule));
 
@@ -387,12 +396,23 @@ export async function checkPreset({ root, config, ESLint }) {
   return { findings, warnings };
 }
 
+/**
+ * The components pass as `check-components` runs it, and `check-site` first:
+ * the guard over the files, then the preset's required rules as ESLint
+ * resolves them, their findings and warnings joined. Async (ESLint).
+ */
+export async function componentsReport({ root, fs, config = readConfig(root, fs), ESLint }) {
+  const report = checkComponents({ root, fs, config });
+  const preset = await checkPreset({ root, config, ESLint });
+  return { ...report, findings: [...report.findings, ...preset.findings], warnings: [...report.warnings, ...preset.warnings] };
+}
+
 /** The inline disables of a required rule, each with its reason, as lines. */
 const disableLines = (disables = []) => disables.map(({ file, line, rules, reason }) => `  disabled ${rules.join(", ")} at ${file}:${line} — ${reason}`);
 
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+export const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** Each entry, ✗ for a finding and ⚠ for a warning, with its file, the check, what is wrong and the fix. */
-const entryLines = (entries, mark) => entries.flatMap(({ check, file, problem, fix }) => [`  ${mark} ${file}  [${check}]`, `    ${problem}`, `    → ${fix}`, ""]);
+export const entryLines = (entries, mark) => entries.flatMap(({ check, file, problem, fix }) => [`  ${mark} ${file}  [${check}]`, `    ${problem}`, `    → ${fix}`, ""]);
 /** The warnings, after a line that says they fail nothing. */
 const warningLines = (warnings = []) => (warnings.length ? [`check-components: ${plural(warnings.length, "warning")}, which fail nothing: the kit's part, or the site's own choice with its reason`, "", ...entryLines(warnings, "⚠")] : []);
 

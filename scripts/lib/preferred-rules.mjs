@@ -26,6 +26,17 @@ import { attribute, elementName, PLUGIN, staticValue, strings } from "./engine-r
 export const PREFERRED = ["motion", "graphics", "images", "icons", "styling"].map((rule) => `${PLUGIN}/${rule}`);
 
 /**
+ * The preferred rule `agentic-cms check-site` holds outside ESLint, over the
+ * site's own tools where the kit has a command: a script that drives
+ * Playwright, runs sharp over public/ or starts next dev, and a machine
+ * address in next.config.*. An `allow` entry takes it like the others, with
+ * its reason; no ESLint block sets it.
+ */
+export const SITE_TOOLS = `${PLUGIN}/site-tools`;
+/** Every rule an `allow` entry may name: the preferred rules and the site check's. */
+export const ALLOWABLE = [...PREFERRED, SITE_TOOLS];
+
+/**
  * The animation libraries the motion rule names, beside agentic-cms/ix (motion
  * and framer-motion are the motion layer's, and fail outside it): a name, or
  * a prefix ending in `/` (a scope) or `-`.

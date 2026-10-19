@@ -344,6 +344,8 @@ test("allow: each entry names a preferred rule and files that are there, with it
   ]);
   assert.match(bad.findings[0].fix, /a file that owns its part is named in "owners", a line that needs its own says why in an inline disable \(\/\/ eslint-disable-next-line agentic-cms\/copy -- <the reason>\)/);
   assert.deepEqual(bad.allowed, [entry({ files: ["src/components/ui/Gone.tsx"] })], "the entries componentRules() takes");
+  const tools = allowed(entry({ rule: "agentic-cms/site-tools", files: ["scripts/shots.mjs"] }), entry({ rule: "agentic-cms/site-tools", files: ["scripts/og.mjs"], reason: "" }));
+  assert.deepEqual(tools.findings.map((f) => [f.check, f.file, f.problem]), [["allow", "agentic-cms/site-tools", "an allow entry with no reason"]], "the site's own tools are outside src/: check-site looks for their files, and the reason is needed here as anywhere");
 });
 
 test("transitions: a transition or animation declared in CSS outside the motion layer and src/styles/motion.css warns, naming the line; none rests, and an allow of agentic-cms/motion quiets it", () => {

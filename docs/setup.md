@@ -68,8 +68,9 @@ the kit) is the doctor: Node, pnpm, the browsers, WebKit's libraries,
    ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)).
    They are found now, on this machine, and never go into a tracked file.
 7. **Verify** (`agentic-cms setup`): `pnpm lint` and `pnpm test`; with
-   `--build`, `pnpm build` (the content lint first, the prerender, the SEO
-   audit last), with `AGENTIC_CMS_PLACEHOLDERS=warn`: it proves the clone
+   `--build`, `pnpm build` (the lint again, the content lint, the
+   prerender, the SEO audit; [init.md § The gates](init.md#the-gates)),
+   with `AGENTIC_CMS_PLACEHOLDERS=warn`: it proves the clone
    builds and deploys nothing, so a new site's placeholder copy
    ([init.md § The starter](init.md#the-starter)) warns here as in its CI.
 8. **The URLs** (`agentic-cms setup`, and `pnpm urls` any time after):

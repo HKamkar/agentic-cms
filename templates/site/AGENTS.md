@@ -77,13 +77,14 @@ a patch under `node_modules`.
   the head, its `jsonld` block the structured data; `pnpm build` audits every
   prerendered page (`agentic-cms seo`) and fails on a missing field. Never
   hand-write head tags.
-- Verify = `pnpm lint` + `pnpm test` + `pnpm content:lint` + `pnpm build`
-  (the content lint first, the SEO audit last), 0 failures, before calling
-  a change done; `pnpm kit visual-parity` before a merge that touches
-  `src/`, styles or images. CI (`.github/workflows/verify.yml`) runs the
-  same, and `agentic-cms init . --agent-files --check` (which fails an
-  edit of a rule or a skill that dropped a line marked
-  `<!-- required -->`), on every pull request.
+- Verify = `pnpm lint` (ESLint, then `agentic-cms check-site`) +
+  `pnpm test` + `pnpm content:lint` + `pnpm build` (the lint first, the
+  SEO audit last), 0 failures, before calling a change done; `pnpm kit
+  visual-parity` before a merge that touches `src/`, styles or images. CI
+  (`.github/workflows/verify.yml`) runs the same, and `agentic-cms init .
+  --agent-files --check` (which fails an edit of a rule or a skill that
+  dropped a line marked `<!-- required -->`), on every pull request. Never
+  drop a gate from `lint` or `build`.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex

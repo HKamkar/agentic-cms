@@ -39,9 +39,9 @@
 // components rule, .claude/rules/components.md).
 
 import { COPY_PROPS, ENGINE_RULES, PLUGIN, REQUIRED, TOOLS } from "./engine-rules.mjs";
-import { ANIMATION_ALTERNATIVES, PREFERRED, PREFERRED_RULES, RENDERING_LIBRARIES } from "./preferred-rules.mjs";
+import { ALLOWABLE, ANIMATION_ALTERNATIVES, PREFERRED, PREFERRED_RULES, RENDERING_LIBRARIES, SITE_TOOLS } from "./preferred-rules.mjs";
 
-export { ANIMATION_ALTERNATIVES, COPY_PROPS, PREFERRED, REQUIRED, RENDERING_LIBRARIES, TOOLS };
+export { ALLOWABLE, ANIMATION_ALTERNATIVES, COPY_PROPS, PREFERRED, REQUIRED, RENDERING_LIBRARIES, SITE_TOOLS, TOOLS };
 /** The plugin, one object for every block that registers it: `plugins: { "agentic-cms": plugin }`, the required rules and the preferred ones. */
 export const plugin = { meta: { name: PLUGIN }, rules: { ...ENGINE_RULES, ...PREFERRED_RULES } };
 
@@ -136,10 +136,10 @@ export function resolveOptions(options = {}) {
 
 /**
  * `allow`, the preferred rules a site keeps its own choice of: a list of
- * { rule, files, reason }, each a preferred rule (PREFERRED), the files it is
- * kept in (globs) and the reason, which is never empty. A required rule is
- * never allowed: its owner, or an inline disable with its reason. Throws
- * naming the entry.
+ * { rule, files, reason }, each a preferred rule (PREFERRED, or SITE_TOOLS,
+ * which check-site holds outside ESLint), the files it is kept in (globs)
+ * and the reason, which is never empty. A required rule is never allowed:
+ * its owner, or an inline disable with its reason. Throws naming the entry.
  */
 export function checkAllow(allow) {
   const shape = 'allow is a list of { rule: "agentic-cms/<rule>", files: ["<glob>", …], reason: "<why the site keeps its own>" }';
@@ -148,7 +148,7 @@ export function checkAllow(allow) {
     const { rule, files, reason } = entry ?? {};
     const which = `allow[${at}]${typeof rule === "string" ? ` (${rule})` : ""}`;
     if (REQUIRED.includes(rule)) throw new TypeError(`componentRules(): ${which}: a required rule is never allowed — a file that owns its part is named in owners, and a line that needs its own says why in an inline disable (// eslint-disable-next-line ${rule} -- <the reason>).`);
-    if (!PREFERRED.includes(rule)) throw new TypeError(`componentRules(): ${which}: ${shape}, the rule one of ${PREFERRED.join(", ")}.`);
+    if (!ALLOWABLE.includes(rule)) throw new TypeError(`componentRules(): ${which}: ${shape}, the rule one of ${ALLOWABLE.join(", ")}.`);
     if (!Array.isArray(files) || !files.length || !files.every((file) => typeof file === "string" && file)) throw new TypeError(`componentRules(): ${which}: its files are a list of globs, the files that keep their own.`);
     if (typeof reason !== "string" || !reason.trim()) throw new TypeError(`componentRules(): ${which}: no reason — a site keeps its own choice with one line of why, which the review reads.`);
   });
@@ -264,7 +264,8 @@ export function requiredConfigs(opts) {
  * in the motion layer, styling there but in the sections and the patterns
  * (whose composition fails an arbitrary value already) — test files left
  * out; then each part turned off in the files its `owners` name, and each
- * `allow` entry's rule in its files.
+ * `allow` entry's rule in its files (an entry of SITE_TOOLS is check-site's,
+ * which no ESLint block sets).
  */
 export function preferredConfigs(opts) {
   const plugins = { [PLUGIN]: plugin };
@@ -278,7 +279,7 @@ export function preferredConfigs(opts) {
     block(scripts, warn("motion"), [TEST_SCRIPTS, opts.motion && `${opts.motion}/**`].filter(Boolean)),
     block(scripts, warn("styling"), [TEST_SCRIPTS, ...composed]),
     ...OWNED.filter((part) => tierOf(part) === "preferred").map((part) => block(ownerFiles(opts.owners, part), { [`${PLUGIN}/${part}`]: "off" })),
-    ...opts.allow.map(({ rule, files }) => block(files, { [rule]: "off" })),
+    ...opts.allow.filter(({ rule }) => rule !== SITE_TOOLS).map(({ rule, files }) => block(files, { [rule]: "off" })),
   ];
   return configs.filter((config) => config.files.length);
 }
