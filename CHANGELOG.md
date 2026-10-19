@@ -35,6 +35,10 @@ changes what a capture writes says **recapture baselines**.
 - The example's footer and contact details render their addresses through `EmailLink`. Pixels are unchanged, and the address leaves the served HTML.
 - `demo new`: a block's chip is `aria-hidden`, and a showcase's copy comes from a content file. `agentic-cms/lab`: `LabScenes`' `grounds` is optional and defaults to `LAB_GROUNDS` (the page, a white card), and the lab route's template passes none.
 - `init` leaves the kit's ignore of `src/lib` out of a site's `eslint.config.mjs` and `components.json`: a site's `src/lib` is its own, and linted.
+- The engines rule in both `AGENTS.md`, always loaded: the engines are required; for everything else, find the kit's part in `docs/parts.md` and prefer it, with one line of reason for a site's own; never weaken a check to pass it.
+- Each scoped rule, the kit's and a site's, ends with its tier line: its part, its tier and the check that holds it, with the rule ids.
+- The design skills and `setup` end their procedures with `pnpm lint`. The design skills start a round from the page's content file and never write copy into a candidate. The editorial skills that change a file end with the same verify line.
+- `init --agent-files --check` fails a site's edit of a rule or a skill that dropped a block the kit marks `<!-- required -->` (`modified, required gone`, naming the block, its line and the kit's file), and a `.claude/settings.json` that no longer names the kit's marketplace or enables the editorial plugin. A refresh writes the settings only when they are missing.
 
 ## [0.8.1] — 2026-10-17
 
