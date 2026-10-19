@@ -87,7 +87,11 @@ the same.
   green before its copy is written) and
   `agentic-cms init . --agent-files --check`,
   with pnpm from `packageManager` (Node 25 and later ship no corepack), Node
-  from `.nvmrc`, and every action pinned to a commit.
+  from `.nvmrc`, and every action pinned to a commit: the commits the kit's
+  own CI runs at that release. `init` keeps the file as the site has it, so
+  a later release's pins reach a site by hand, from
+  `node_modules/agentic-cms/templates/site/verify.yml`
+  ([upgrading.md](upgrading.md) says when they moved).
 - **The setup script**: `scripts/setup.sh`, which a clone runs first on any
   machine: Node checked, pnpm at the `packageManager` version, the install,
   then `agentic-cms setup` (the browsers, `.env.local` and this machine's

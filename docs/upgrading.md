@@ -53,6 +53,18 @@ sees on its first build after the upgrade:
   `env: { AGENTIC_CMS_PLACEHOLDERS: warn }` if that run deploys nothing.
   `agentic-cms assemble` packages nothing while one remains.
 
+The CI workflow `init` writes pins newer actions, the commits the kit's own
+CI runs: `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and
+`pnpm/action-setup` v6.1.0, the first to state support for pnpm 12, the
+version a site's `packageManager` names. `init` never rewrites a site's
+`.github/workflows/verify.yml`, so an existing site copies the three
+`uses:` lines from `node_modules/agentic-cms/templates/site/verify.yml`;
+its steps and their inputs stay as they are. The actions now run on Node 24
+(a self-hosted runner needs v2.327.1 or later), and checkout v7 refuses to
+check out a fork's pull request under `pull_request_target` or
+`workflow_run` unless `allow-unsafe-pr-checkout: true`, triggers the
+template does not use.
+
 ## 0.8.0 → 0.8.1
 
 The fixes from running the migration guide on two sites. Move the pin to
