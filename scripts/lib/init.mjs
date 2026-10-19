@@ -29,7 +29,11 @@
 // the manifest records no base for (the site wrote it first) takes its base
 // from the kit's releases (RELEASES, every release's text of every agent
 // file): the release whose text it is, else the kit's text at the version
-// the site was on. A rule for a
+// the site was on. A block the kit marks required in a rule or a skill
+// (lib/agent-required.mjs) stays in a site's edit of it, and the site's
+// .claude/settings.json keeps the editorial plugin enabled: `--check` fails
+// either, naming what is gone, and a refresh writes the settings when they
+// are missing but never rewrites a site's own. A rule for a
 // tool a site adopts (the components rule, for the component guard) is
 // written and checked only where the site has that tool's config. The site's
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
@@ -42,6 +46,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
+import { requiredGone, settingsGone } from "./agent-required.mjs";
 import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
 import { isSiteOwn, KIT_ONLY, siteCode, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
@@ -63,6 +68,8 @@ export const ADOPTED_BY = { ".claude/rules/components.md": "src/config/component
 /** The lint a new site runs: ESLint, then the component guard, failing on either while both report. */
 export const LINT = "eslint; s=$?; agentic-cms check-components || s=1; exit $s";
 export const MANIFEST = ".agentic-cms.json";
+/** The site's Claude Code settings: the site's own file, which must keep the editorial plugin its template enables. */
+export const SETTINGS = TEMPLATES["settings.json"];
 /** The base copies: for each agent file the site edited, the kit's text it was last taken from, kept beside the manifest for `--diff`. */
 export const BASES = ".agentic-cms/base";
 /** A file's base copy: its path under BASES without the leading dot, so no agent takes the copies for the site's own rules and skills. */
@@ -284,13 +291,14 @@ export function agentFiles(target, { kitRoot, version, check = false, force = fa
   const bases = {};
   for (const [file, text] of siteAgentFiles(target, kitRoot)) {
     const onDisk = readText(path.join(target, file));
-    const { status, base, note } = measure(onDisk, sha(text), baseFor(file, onDisk));
-    const entry = (shown) => ({ file, status: shown, ...(note && { note }) });
+    const { status, base, note, required } = withRequired(measure(onDisk, sha(text), baseFor(file, onDisk)), onDisk, text);
+    const entry = (shown) => ({ file, status: shown, ...(note && { note }), ...(required && { required }) });
     if (check) { report.push(entry(status)); continue; }
     if (status.startsWith("modified") && !force) { report.push(entry(status.replace("modified", "kept"))); result.kept.push(file); if (base) bases[file] = base; continue; }
     bases[file] = sha(text);
     report.push(entry(status === "ok" ? "ok" : put(target, file, text, { force: true, result, log })));
   }
+  report.push(...settingsFile(target, kitRoot, { check, log, result }));
   report.push(...agentsMd(target, { check, log, result }));
   if (!check) { writeManifest(target, { version, commit: kitCommit(target, kitRoot), files: bases }); keepBaseCopies(target, bases, releases); }
   return report;
@@ -329,6 +337,36 @@ function measure(onDisk, current, { base, release, exact, recorded }) {
   if (!base) return { status, base, note: "no base, and no release of the kit found as its source: --diff is the site's whole file" };
   if (exact) return { status, base, note: `no base: the kit's text at ${release}` };
   return { status, base, note: status === "modified" ? `no base: kit unchanged since ${release}` : `no base: from the kit's text at ${release}, the version the site was on` };
+}
+
+/**
+ * A site's edit of the kit's current text (modified) that lost a block the
+ * kit marks required: "modified, required gone", with the blocks. A file the
+ * kit changed since its base is left as it is: the merge brings the kit's
+ * text, and the check reads the blocks once the site accepts it.
+ */
+function withRequired(measured, onDisk, kitText) {
+  if (measured.status !== "modified") return measured;
+  const required = requiredGone(onDisk, kitText);
+  return required.length ? { ...measured, status: "modified, required gone", required } : measured;
+}
+
+/**
+ * The site's .claude/settings.json against the kit's template: missing (a
+ * refresh writes the template), unreadable, "modified, required gone" (a
+ * refresh keeps it: "kept, required gone"), else ok; none for a kit without
+ * the template. A site's own settings are never rewritten.
+ */
+function settingsFile(target, kitRoot, { check, log, result }) {
+  const kitText = readText(path.join(kitRoot, "templates/site/settings.json"));
+  if (kitText === null) return [];
+  const onDisk = readText(path.join(target, SETTINGS));
+  if (onDisk === null) return [{ file: SETTINGS, status: check ? "missing" : put(target, SETTINGS, kitText, { force: false, result, log }) }];
+  let settings;
+  try { settings = JSON.parse(onDisk); } catch { return [{ file: SETTINGS, status: "unreadable" }]; }
+  const required = settingsGone(settings, JSON.parse(kitText));
+  if (!required.length) return [{ file: SETTINGS, status: "ok" }];
+  return [{ file: SETTINGS, status: check ? "modified, required gone" : "kept, required gone", required }];
 }
 
 /**
@@ -423,8 +461,13 @@ function agentFileName(target, given, kit) {
   return file;
 }
 
-/** Where the kit keeps an agent file, for the person merging by hand. */
-const kitPath = (file) => { const [from, to] = Object.entries(AGENT_DIRS).find(([, dir]) => file.startsWith(`${dir}/`)); return `node_modules/agentic-cms/${from}${file.slice(to.length)}`; };
+/** Where the kit keeps an agent file (or the template of the site's settings), for the person merging by hand. */
+export const kitPath = (file) => {
+  const template = Object.keys(TEMPLATES).find((from) => TEMPLATES[from] === file);
+  if (template) return `node_modules/agentic-cms/templates/site/${template}`;
+  const [from, to] = Object.entries(AGENT_DIRS).find(([, dir]) => file.startsWith(`${dir}/`));
+  return `node_modules/agentic-cms/${from}${file.slice(to.length)}`;
+};
 
 /**
  * Records the kit's current text as the base of each file the site merged by
@@ -445,7 +488,8 @@ export function acceptAgentFiles(target, files, { kitRoot }) {
     manifest.files[file] = base;
     if (keepsCopy(onDisk, base, releases)) writeBaseCopy(target, file, kit.get(file));
     else fs.rmSync(path.join(target, basePath(file)), { force: true });
-    return { file, status: statusOf(onDisk, base, base) };
+    const { status, required } = withRequired({ status: statusOf(onDisk, base, base) }, onDisk, kit.get(file));
+    return { file, status, ...(required && { required }) };
   });
   writeManifest(target, manifest);
   removeEmptyDirs(path.join(target, path.dirname(BASES)));

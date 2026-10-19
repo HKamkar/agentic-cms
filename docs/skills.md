@@ -31,7 +31,16 @@ and `init --agent-files --check` reports it stale, and `AGENTS.md` too big.
 | `setup` | a fresh clone or a new machine; "set up this project"; pnpm, the dev server or a browser command failing for a missing tool | `bash scripts/setup.sh` and `agentic-cms setup --check` ([setup.md](setup.md)), `pnpm kit serve` for the dev server and the URL to hand over, `pnpm urls` for the URLs alone ([dev-server.md](dev-server.md)); stops for sudo and the firewall |
 
 Each skill says what to read first, the steps, the verify block and where
-it stops for the owner. A skill may link reference files in its own
+it stops for the owner. Every procedure ends with `pnpm lint`, 0 failures,
+after the last edit — the engines and the library's placement, fixed at
+the source and never by loosening a rule — and the design skills start a
+round from the page's content file, never writing copy into a candidate:
+both are lines the kit marks required (`<!-- required -->`), which a
+site's edited copy keeps ([init.md § What an edit
+keeps](init.md#what-an-edit-keeps)). The editorial plugin's skills that
+change a file end with the same lint, in their verify line (`pnpm lint &&
+pnpm test && pnpm content:lint && pnpm build`); `content-status` changes
+nothing and runs nothing but its reports. A skill may link reference files in its own
 directory (`design-graphics/references/`), loaded when the step needs
 them; `pnpm skills:sync` copies the whole tree, so both agents and every
 site `init` lays out get them too. They are brand-neutral by rule: every fact about the
@@ -44,6 +53,9 @@ them.
 `agentic-cms init` copies the skills and the rules and records their hashes
 in `.agentic-cms.json`; after a kit upgrade, `agentic-cms init --agent-files`
 brings the new ones in and keeps any file the site edited, and
-`--agent-files --check` reports what drifted (`ok`, `modified` — the site's
-edit, kept; `stale` — the kit has a newer one; `missing`) and exits 1, so
-CI can run it.
+`--agent-files --check` reports what drifted (`ok`; `modified` — the site's
+edit, kept; `modified, required gone` — an edit that dropped a line the kit
+marks required, or `.claude/settings.json` without the editorial plugin;
+`modified, kit changed`; `stale` — the kit has a newer one; `missing`) and
+exits 1 on all but `ok` and `modified`, so CI can run it
+([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).

@@ -382,7 +382,8 @@ then; the banner is the site's own design, and the example's is off until
 
 A site pins the package by tag. An upgrade is the new tag, `pnpm install`,
 `pnpm exec agentic-cms init . --agent-files` (the new rules and skills in,
-the site's own edits kept), the steps of that release in
+the site's own edits kept; `--agent-files --check`, in the site's CI, fails
+an edit that dropped a line the kit marks required), the steps of that release in
 [docs/upgrading.md](docs/upgrading.md), then `pnpm build` and a new
 baseline for the screenshot harness. `CHANGELOG.md` says what changed and
 marks every change to what a capture writes.

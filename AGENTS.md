@@ -10,6 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # agentic-cms: project rules
 
+- **The engines are required:** every word a reader sees comes from
+  `content/` or `site.ts`, in pages, sections, components and design rounds
+  alike; heads come from `kit.seo`, forms from the form engine, tags
+  through consent. For everything else, find the kit's part in
+  `docs/parts.md` and prefer it; if you use your own, write its reason in
+  one line. Never weaken a check to pass it.
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
   the page recipe. Read it before writing any markup or CSS; the component
@@ -279,7 +285,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   the example's content or brand reaches a site. The
   kit's own `AGENTS.md` and
   `.claude/rules/` describe this repo and are not what a site gets. A
-  change to a rule of the kit that a site shares goes to both.
+  change to a rule of the kit that a site shares goes to both. What a
+  site's edited copy must keep ends with `<!-- required -->` in the site's
+  rules and the skills (each rule's tier line, the engines, each skill's
+  closing `pnpm lint`), and `init --agent-files --check` holds it there,
+  with `.claude/settings.json`'s editorial plugin.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own

@@ -17,3 +17,4 @@ paths:
 - Pages stay prerendered: `src/app/api/forms/[id]/route.ts` is the one route that runs at request time. `agentic-cms/forms/server` uses Web APIs only (Node and Workers) and imports nothing from the client barrel.
 - The destination and its secrets come from the environment, read per request in `src/config/form-delivery.ts`; `forms.ts` (it reaches the browser, and `createKit` loads it in plain Node) never imports it.
 - The kit names no provider: a provider's API is a `FormSink` in the site.
+- **Tier:** the form engine (`agentic-cms/forms`, `agentic-cms/forms/server`) — required: `agentic-cms/forms` fails `pnpm lint` on a `<form>` outside the form component, a server action or a `fetch()` of another origin in a component, `react/forbid-elements` on a form field in a section, and the guard's `owners` and `routes` passes on the form component or the endpoint without its reason.

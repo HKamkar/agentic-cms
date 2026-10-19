@@ -122,8 +122,13 @@ If the file cannot be read, one failure line and stop.
 
 Only with the user's approval, apply the chosen cuts and rewrites in the
 file; a FALSE or UNVERIFIED claim is rewritten or removed, never kept on
-trust. Then `pnpm content:lint`, and `update-post` step 2 for the date
-of a post that has `publishedAt`. On Claude Code the `critic` agent runs
-this same procedure in isolation and stops at the report; on a client
-without subagents, a fresh session running this skill is the isolated
-pass.
+trust. Then `update-post` step 2 for the date of a post that has
+`publishedAt`, and the procedure ends with its verify line, 0 failures:
+
+```bash
+pnpm lint && pnpm test && pnpm content:lint && pnpm build
+```
+
+On Claude Code the `critic` agent runs this same procedure in isolation
+and stops at the report; on a client without subagents, a fresh session
+running this skill is the isolated pass.

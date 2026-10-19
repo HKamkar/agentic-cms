@@ -8,7 +8,8 @@ import { test } from "node:test";
 import { parse as parseYaml } from "yaml";
 import { checkComponents, formatReport } from "./lib/check-components.mjs";
 import { recordOf, recordText } from "../tools/agent-file-releases.mjs";
-import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, sha, siteVersion } from "./lib/init.mjs";
+import { REQUIRED, requiredBlocks, requiredGone, settingsGone } from "./lib/agent-required.mjs";
+import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, SETTINGS, sha, siteVersion } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
 import { KIT_ONLY, SHARED_CONTENT, siteCode, STARTER, StarterError } from "./lib/starter.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
@@ -325,6 +326,97 @@ test("agentFiles --check tells a site's edit from a kit update and a missing fil
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/skills/design/SKILL.md"], "kept", "a site's edit is never clobbered");
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/design.md"], "created");
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/styling.md"], "updated");
+});
+
+test("a block the kit marks required is its list item or its paragraph, read with the markers out and the whitespace collapsed; a site's copy keeps it re-wrapped, re-indented or unmarked", () => {
+  const kit = [
+    "# A rule",
+    "",
+    "- A line the site may edit.",
+    `- The engines hold, everywhere. ${REQUIRED}`,
+    "  - **copy:** every word from content,",
+    `    through props; ${REQUIRED}`,
+    "",
+    "A paragraph that wraps",
+    `across two lines. ${REQUIRED}`,
+    "```bash",
+    "pnpm lint",
+    "```",
+  ].join("\n");
+  assert.deepEqual(requiredBlocks(kit), [
+    { line: 4, text: "- The engines hold, everywhere." },
+    { line: 5, text: "- **copy:** every word from content, through props;" },
+    { line: 8, text: "A paragraph that wraps across two lines." },
+  ]);
+  const rewrapped = "# A rule, the site's\n\n- The engines hold,\n  everywhere.\n- **copy:** every word from content, through props;\n\nA paragraph that wraps across two lines.\n\n- The site's own line.\n";
+  assert.deepEqual(requiredGone(rewrapped, kit), [], "re-wrapped, re-indented, unmarked: kept");
+  assert.deepEqual(requiredGone(rewrapped.replace("everywhere", "in sections"), kit), [{ line: 4, text: "- The engines hold, everywhere." }], "a word changed is the block gone");
+  assert.deepEqual(requiredGone(kit.replace(/\n {2}- \*\*copy[^]*?props; .*\n/, "\n"), kit).map((b) => b.line), [5]);
+});
+
+test("every rule the kit gives a site ends with its tier line, marked required, and every skill ends its procedure with pnpm lint, marked required", () => {
+  const files = renderAgentFiles(KIT).filter(({ file }) => file.endsWith(".md") && !file.includes("/references/"));
+  for (const { file, text } of files.filter(({ file }) => file.startsWith(".claude/rules/"))) {
+    assert.match(text.trimEnd().split("\n").at(-1), new RegExp(`^- \\*\\*Tier:\\*\\* .*(?:required|preferred).* ${REQUIRED}$`), `${file}: its part, its tier and its check, last`);
+  }
+  for (const { file, text } of files.filter(({ file }) => file.endsWith("/SKILL.md"))) {
+    const verify = text.slice(text.indexOf("\n## Verify\n"));
+    assert.ok(text.includes("\n## Verify\n"), `${file}: a Verify section`);
+    assert.ok(requiredBlocks(verify).some((b) => b.text.startsWith("End the procedure with `pnpm lint`")), `${file}: its procedure ends with pnpm lint, marked required`);
+  }
+  for (const name of ["design", "design-options"]) {
+    assert.ok(requiredBlocks(read(KIT, `.claude/skills/${name}/SKILL.md`)).some((b) => /never writes copy into a candidate/.test(b.text)), `${name}: a round starts from the page's file`);
+  }
+});
+
+test("--check fails a site's edit that dropped a block the kit marks required, naming it; the refresh keeps the edit and says so, --accept reports it, --force takes the kit's text", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
+  const RULE = ".claude/rules/pages.md";
+  const kit = read(KIT, "templates/site/rules/pages.md");
+  const [gone] = requiredBlocks(kit);
+  const lines = kit.split("\n");
+  const at = lines.findIndex((line) => line.endsWith(REQUIRED));
+  const entry = (report) => report.find((f) => f.file === RULE);
+  // an edit that keeps every required block, re-wrapped and unmarked: modified, and --check passes
+  const rewrapped = [...lines.slice(0, at), lines[at].replace(` ${REQUIRED}`, "").replace("; its URL", ";\n  its URL"), ...lines.slice(at + 1), "- The site's own line."].join("\n");
+  fs.writeFileSync(path.join(target, RULE), rewrapped);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified" });
+  // the same edit without that block: the check names it, with where the kit has it
+  fs.writeFileSync(path.join(target, RULE), [...lines.slice(0, at), ...lines.slice(at + 1), "- The site's own line."].join("\n"));
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified, required gone", required: [gone] });
+  assert.equal(gone.line, at + 1);
+  const edited = read(target, RULE);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet })), { file: RULE, status: "kept, required gone", required: [gone] });
+  assert.equal(read(target, RULE), edited, "a site's edit is never clobbered");
+  assert.deepEqual(acceptAgentFiles(target, [RULE], { kitRoot: KIT }), [{ file: RULE, status: "modified, required gone", required: [gone] }]);
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet })).status, "updated");
+  assert.equal(read(target, RULE), kit);
+});
+
+test("--check holds .claude/settings.json to the editorial plugin: the kit's marketplace and the plugin enabled; the site's own keys pass, and a refresh writes it only when it is missing", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
+  const settings = () => agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet }).find((f) => f.file === SETTINGS);
+  const write = (value) => fs.writeFileSync(path.join(target, SETTINGS), typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  const kit = JSON.parse(read(KIT, "templates/site/settings.json"));
+  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" });
+  write({ ...kit, permissions: { allow: ["Bash(pnpm lint)"] }, hooks: {}, enabledPlugins: { ...kit.enabledPlugins, "other@elsewhere": true } });
+  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" }, "the site's own settings beside the kit's");
+  write({ ...kit, enabledPlugins: { "editorial@agentic-cms": false } });
+  assert.deepEqual(settings(), { file: SETTINGS, status: "modified, required gone", required: [{ text: 'enabledPlugins["editorial@agentic-cms"]: true' }] });
+  write({ permissions: kit.permissions });
+  assert.deepEqual(settings().required, [{ text: 'extraKnownMarketplaces["agentic-cms"]' }, { text: 'enabledPlugins["editorial@agentic-cms"]: true' }]);
+  const own = read(target, SETTINGS);
+  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet }).find((f) => f.file === SETTINGS).status, "kept, required gone");
+  assert.equal(read(target, SETTINGS), own, "never rewritten, forced or not");
+  write("{ not json");
+  assert.deepEqual(settings(), { file: SETTINGS, status: "unreadable" });
+  fs.rmSync(path.join(target, SETTINGS));
+  assert.deepEqual(settings(), { file: SETTINGS, status: "missing" });
+  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet }).find((f) => f.file === SETTINGS).status, "created");
+  assert.equal(read(target, SETTINGS), read(KIT, "templates/site/settings.json"));
+  assert.deepEqual(settingsGone({}, {}), [], "a template that names no plugin requires none");
 });
 
 test("a site's own rule that predates the manifest is kept on the first --agent-files run, not overwritten, and is a gap until the site accepts the kit's text", () => {

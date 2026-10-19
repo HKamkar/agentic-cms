@@ -90,7 +90,8 @@ content:lint`: fix every `FAIL` on the file, read every `WARN`. Stop.
 ## Hand-off
 
 `new-post` steps 3 (the images: the user's, or made from the workshop's
-`prompts` role), 5, 6 and 7 (lint, verify, commit). Publishing is the
+`prompts` role), 5, 6 and 7 (the content lint, then its verify block,
+which starts with `pnpm lint`, then the commit). Publishing is the
 user's flip of `draft` and `publishedAt`.
 
 ## Stop for the user
