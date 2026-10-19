@@ -246,7 +246,7 @@ console.log(response.status, received.length, received[0]?.version);`;
 const CONSENT_SMOKE = `const consent = await import("agentic-cms/consent");
 const google = await import("agentic-cms/consent/google");
 const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
-const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date().toISOString(), version: 1 }) }, policy);
+const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date(Date.now() - 1000).toISOString(), version: 1 }) }, policy); // a second old: a choice stamped after readChoice reads its clock is from the future and refused
 console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

@@ -39,6 +39,7 @@ changes what a capture writes says **recapture baselines**.
 - Each scoped rule, the kit's and a site's, ends with its tier line: its part, its tier and the check that holds it, with the rule ids.
 - The design skills and `setup` end their procedures with `pnpm lint`. The design skills start a round from the page's content file and never write copy into a candidate. The editorial skills that change a file end with the same verify line.
 - `init --agent-files --check` fails a site's edit of a rule or a skill that dropped a block the kit marks `<!-- required -->` (`modified, required gone`, naming the block, its line and the kit's file), and a `.claude/settings.json` that no longer names the kit's marketplace or enables the editorial plugin. A refresh writes the settings only when they are missing.
+- Fixed: `pnpm test:pack`'s consent probe no longer fails one run in many. It stored a choice stamped after `readChoice` had read its clock, so a millisecond apart the choice was from the future and refused (`answered 0: undefined …`); it now stores one a second old.
 
 ## [0.8.1] — 2026-10-17
 
