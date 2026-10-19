@@ -20,10 +20,14 @@ it.
   its own part, and the site keeps its choice with one line of reason.
 
 The engines' rules (`agentic-cms/copy`, `head`, `forms`, `tags`, `email`)
-fail `pnpm lint` across `src/`. Where nothing holds a part yet, its row
-names the 0.8.2 job that adds the check ([roadmap-0.8.2.md](roadmap-0.8.2.md)):
-job 3 adds the preferred tier's warnings and their `allow` key, job 4 adds
-`check-site` and the gates every build runs.
+fail `pnpm lint` across `src/`. The preferred tier's (`agentic-cms/motion`,
+`graphics`, `images`, `icons`, `styling`) warn there and fail nothing; a
+site keeps its own choice with its reason, an `allow` entry in
+`src/config/components.json` or an inline disable with its description
+([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
+Where nothing holds a part yet, its row names the 0.8.2 job that adds the
+check ([roadmap-0.8.2.md](roadmap-0.8.2.md)): job 4 adds `check-site` and
+the gates every build runs.
 
 **The four layers**, a section each below:
 
@@ -74,11 +78,11 @@ site draws around it.
 | An analytics tag | `GoogleTag` and `consentDefaultScript()` from `agentic-cms/consent/google`, the tag's id in `src/config/analytics.ts`; another tag gets an adapter that follows `currentDecision()` and `onConsentChange()` from `agentic-cms/consent` — [consent.md](consent.md) | required | `agentic-cms/tags` (`next/script` or a `<script src>` of another origin outside the consent adapter) | `owners.tags`: an adapter of the site's own |
 | A consent banner | the site's own design (the example's `ui/ConsentBanner`) on `useConsent()`, `useConsentDecision()` and `openConsent()` from `agentic-cms/consent`, the record in `readChoice()` / `writeChoice()`; a screenshot's seed in `src/config/harness.ts` — [consent.md § The hooks](consent.md#the-hooks), [visual-parity.md § A visitor's choice, seeded](visual-parity.md#a-visitors-choice-seeded) | required | the instructions alone; `agentic-cms/tags` holds the tags it governs | — |
 | An e-mail address on a page | `EmailLink` from `agentic-cms/components`, with a token from `encodeEmail()` (`agentic-cms/email`); a form's recipient through `withEmailToken()` — [email.md](email.md) | required | `agentic-cms guard-email` where a site adds it after `next build` (on whenever `site.ts` has an address: job 4 of 0.8.2); `agentic-cms/email` (a `mailto:` link built in code) | an inline disable with its reason |
-| Motion | `agentic-cms/ix`: the play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`, `motionScript()`), the reveals that replay (`Fx`, `OnView`), `InlineAnimation`, `ease()`, `useReducedMotionPref()`, `useMainBreakpoint()`; the start states in `src/styles/motion.css` — `STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs) | preferred | `no-restricted-imports` (`motion` and `framer-motion` only in the motion layer, across `src/`); `no-restricted-syntax` (no transition or animation class in a section or a pattern); the guard's `keyframes` pass; another library, a `requestAnimationFrame` loop, a transition outside the motion layer: job 3 of 0.8.2 | `motion` (the folder a site's own library goes in); `allow`: job 3 of 0.8.2 |
-| An image above the fold | `EagerImage` from `agentic-cms/components` in a server component (the example's `Media` with `eager`); everything else `loading="lazy"` — `STANDARD.md` §4 | preferred | `react/forbid-elements` (no `img` or `picture` in a section or a pattern: `Media`); `next/image`, an eager `<img>` outside `EagerImage`: job 3 of 0.8.2 | `elements`; `allow`: job 3 of 0.8.2 |
-| An icon | `Icon` from `agentic-cms/components`, its data from the site's map, `src/config/icons.ts` (`agentic-cms icons add` writes it) — [icons.md](icons.md) | preferred | `react/forbid-elements` (no `svg` in a section); an `<svg>` outside `Icon` elsewhere: job 3 of 0.8.2 | `elements`; `allow`: job 3 of 0.8.2 |
-| A primitive's looks, class names joined | `cx()`, `variants()` and `VariantProps` from `agentic-cms/cx` — `src/components/README.md` § Class helpers | preferred | in a section or a pattern, `no-restricted-syntax` (no inline style, no arbitrary value, no fill, border, radius, ring, outline or shadow class); in `ui/` and `src/app`: job 3 of 0.8.2 | `allow`: job 3 of 0.8.2 |
-| A colour, a size, a breakpoint | a token in the `@theme static` block of `src/app/globals.css` (the breakpoint steps in `src/styles/base.css`), used as a utility — `STANDARD.md` §1, `.claude/rules/styling.md` | preferred | the arbitrary-value ban above; the guard's `styles` pass (a CSS module only in `ui/` and the motion layer); an arbitrary value or a style colour in `ui/` and `src/app`: job 3 of 0.8.2 | `allow`: job 3 of 0.8.2 |
+| Motion | `agentic-cms/ix`: the play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`, `motionScript()`), the reveals that replay (`Fx`, `OnView`), `InlineAnimation`, `ease()`, `useReducedMotionPref()`, `useMainBreakpoint()`; the start states in `src/styles/motion.css` — `STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs) | preferred | `no-restricted-imports` (`motion` and `framer-motion` only in the motion layer, across `src/`); `no-restricted-syntax` (no transition or animation class in a section or a pattern); the guard's `keyframes` pass; `agentic-cms/motion` (another library, a `requestAnimationFrame` loop, an `IntersectionObserver`, `el.animate()`, a transition or animation class or style, outside the motion layer: a warning); the guard's `transitions` (one declared in CSS: a warning) | `motion` (the folder a site's own library goes in); `owners.motion`; `allow` (`agentic-cms/motion`) |
+| An image above the fold | `EagerImage` from `agentic-cms/components` in a server component (the example's `Media` with `eager`); everything else `loading="lazy"` — `STANDARD.md` §4 | preferred | `react/forbid-elements` (no `img` or `picture` in a section or a pattern: `Media`); `agentic-cms/images` (`next/image`, an eager `<img>` in a server component: a warning) | `elements`; `owners.images` (the example's `Media`); `allow` (`agentic-cms/images`) |
+| An icon | `Icon` from `agentic-cms/components`, its data from the site's map, `src/config/icons.ts` (`agentic-cms icons add` writes it) — [icons.md](icons.md) | preferred | `react/forbid-elements` (no `svg` in a section); `agentic-cms/icons` (an `<svg>` outside `Icon` anywhere: a warning) | `elements`; `owners.icons`; `allow` (`agentic-cms/icons`, the example's `Placeholder`) |
+| A primitive's looks, class names joined | `cx()`, `variants()` and `VariantProps` from `agentic-cms/cx` — `src/components/README.md` § Class helpers | preferred | in a section or a pattern, `no-restricted-syntax` (no inline style, no arbitrary value, no fill, border, radius, ring, outline or shadow class); in `ui/`, the motion layer and `src/app`, `agentic-cms/styling` (an arbitrary value, an arbitrary breakpoint, a style colour: a warning) | `allow` (`agentic-cms/styling`) |
+| A colour, a size, a breakpoint | a token in the `@theme static` block of `src/app/globals.css` (the breakpoint steps in `src/styles/base.css`), used as a utility — `STANDARD.md` §1, `.claude/rules/styling.md` | preferred | the arbitrary-value ban above; the guard's `styles` pass (a CSS module only in `ui/` and the motion layer); `agentic-cms/styling` outside the sections and the patterns (a warning) | `allow` (`agentic-cms/styling`, the example's honeypot offset) |
 | A component of the site's own | a primitive in `src/components/ui/`, with its entry in the catalogue, `src/components/README.md`, composed in a registered section; the layers import one way, motion ← ui ← patterns ← sections — [primitives.md](primitives.md) | preferred | the guard's `layers`, `catalogue` and `components` passes and the layers' `no-restricted-imports`, which fail `pnpm lint` | `ignores`; `inherited` (frozen) |
 
 ## Design tools
@@ -90,8 +94,8 @@ and the captures are removed before a merge.
 |---|---|---|---|---|
 | A design candidate | `agentic-cms demo new <name> --section <type>` (a section's candidates in its real frame, the page's copy read from its file), `--component` (a piece of the chrome), `--showcase`; `demo clean` removes the losers; the `design-options` skill — [design.md § The round](design.md#the-round) | preferred; the copy in it required | the guard passes a `*-demo` route by its name, and a round's candidates while its `demo.json` names them; a `*-demo` route `demo new` did not write, a round's pictures left after `demo clean`: job 4 of 0.8.2; `agentic-cms/copy` in the route and its candidates (the chip that names a block is `aria-hidden`, the lab's labels are the tool's) | a `*-demo` folder, by its name |
 | A static candidate: a mark, a palette, a type sample | `agentic-cms sheet <spec>`, a sheet of cells at their real size picked by row — [shot-probe-sheet.md](shot-probe-sheet.md) | preferred | job 4 of 0.8.2 (a site's own Playwright script warns) | — |
-| A graphic: an illustration, a mark, a loop | the lab: `agentic-cms lab new`, `lab serve` (on the site's tokens, in each scheme, on a phone), `lab route`, `lab render` (the file a page ships, pre-rendered), `lab clean`; `LabScenes` (on `LAB_GROUNDS` and the site's own), `LabStudy`, `LabTimeline` from `agentic-cms/lab` for a throwaway route, the timeline every animated preview is inspected with ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)); the `design-graphics` skill — [lab.md](lab.md) | preferred | `react/forbid-elements` (no `svg` in a section, the message naming the lab); a `<canvas>` or a rendering library: job 3 of 0.8.2 | `allow`: job 3 of 0.8.2 |
-| An icon set | `agentic-cms icons add` (`lucide:<name>`, `si:<slug>`, `file:<name>`), `icons remove`, `icons family` (marks from primitives), `icons audit` (every icon on the built pages, with the copy beside it), `icons round` (a round for a set); the `design-icons` skill — [icons.md](icons.md) | preferred | job 3 of 0.8.2 (an `<svg>` outside `Icon`) | — |
+| A graphic: an illustration, a mark, a loop | the lab: `agentic-cms lab new`, `lab serve` (on the site's tokens, in each scheme, on a phone), `lab route`, `lab render` (the file a page ships, pre-rendered), `lab clean`; `LabScenes` (on `LAB_GROUNDS` and the site's own), `LabStudy`, `LabTimeline` from `agentic-cms/lab` for a throwaway route, the timeline every animated preview is inspected with ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)); the `design-graphics` skill — [lab.md](lab.md) | preferred | `react/forbid-elements` (no `svg` in a section, the message naming the lab); `agentic-cms/graphics` (a rendering library, a `<canvas>`: a warning) | `allow` (`agentic-cms/graphics`) |
+| An icon set | `agentic-cms icons add` (`lucide:<name>`, `si:<slug>`, `file:<name>`), `icons remove`, `icons family` (marks from primitives), `icons audit` (every icon on the built pages, with the copy beside it), `icons round` (a round for a set); the `design-icons` skill — [icons.md](icons.md) | preferred | `agentic-cms/icons` (an `<svg>` outside `Icon`: a warning) | `owners.icons`; `allow` (`agentic-cms/icons`) |
 | A placeholder picture | `agentic-cms placeholder <out> <width> <height>` (the format from the extension); in markup, the example's `Placeholder` — `STANDARD.md` §4 | preferred | job 4 of 0.8.2 (a site's own `sharp` script over `public/` warns) | — |
 | A real picture made light | `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` — `scripts/README.md` | preferred | the content lint's `image-weight`, for a picture a content file names | — |
 | A screenshot or a proof | `agentic-cms visual-parity proof` (the baseline, the capture after, the compare, in one), `capture`, `compare`, `clean`; `agentic-cms parity` when the markup must not move either; a consent banner held back by the site's seed, `src/config/harness.ts`; the `design-proof` skill — [visual-parity.md](visual-parity.md), [browsers.md](browsers.md) | preferred | job 4 of 0.8.2 (a site's own Playwright script warns) | — |
@@ -130,11 +134,14 @@ Its options are the exception keys: `motion`, `ui`, `patterns`, `sections`,
 `registry` and `app` name the layers and the routes, `elements` allows an
 element or changes a message, `copy` sets the copy rule's `props`, `skip`,
 `decorations` and `tools` (the rule is required: `false` throws), `owners`
-names the files that own a `<form>` or a tag, each with its reason,
-`restrictedImports` adds the site's own bans and `ignores` leaves files out
-of every rule. An inline `eslint-disable` of a required rule needs its
-reason after `--` (the guard's `disables` pass, which lists every reason);
-of another rule it passes without one until job 3 of 0.8.2.
+names the files that own a `<form>`, a tag, an eager `<img>`, an `<svg>` or
+motion, each with its reason, `allow` the preferred rules a file keeps its
+own choice of, each with its reason, `restrictedImports` adds the site's
+own bans and `ignores` leaves files out of every rule. An inline
+`eslint-disable` of a required rule needs its reason after `--` (the
+guard's `disables` pass, which lists every reason); of another rule, one
+with no reason is a warning of the same pass. The preferred tier's rules
+warn and fail nothing.
 
 | Rule | Where | What it holds | Exception key |
 |---|---|---|---|
@@ -147,6 +154,11 @@ of another rule it passes without one until job 3 of 0.8.2.
 | `agentic-cms/forms` | all of `src/` | a `<form>` only in the form component, no server action, no `fetch()` of another origin in a component | `owners.forms`, `ignores` |
 | `agentic-cms/tags` | all of `src/` | `next/script` and a `<script src>` of another origin only in the consent adapter | `owners.tags`, `ignores` |
 | `agentic-cms/email` | all of `src/` | no `mailto:` link built in code: `EmailLink` | `ignores` |
+| `agentic-cms/motion` (a warning) | all of `src/` but the motion layer, tests left out | no animation library but `agentic-cms/ix` (the preset's `ANIMATION_ALTERNATIVES`), `requestAnimationFrame`, `IntersectionObserver`, `el.animate()`, transition or animation class (`className`, `cx()`, `variants()`) or style | `owners.motion`, `allow`, an inline disable with its reason, `ignores` |
+| `agentic-cms/graphics` (a warning) | all of `src/`, tests left out | no rendering library (the preset's `RENDERING_LIBRARIES`), `<canvas>` or canvas made in code: the lab | `allow`, an inline disable with its reason, `ignores` |
+| `agentic-cms/images` (a warning) | all of `src/`, tests left out | no `next/image`, no eager `<img>` in a server component: `Media`, `EagerImage` | `owners.images`, `allow`, an inline disable with its reason, `ignores` |
+| `agentic-cms/icons` (a warning) | all of `src/`, tests left out | no `<svg>` outside `Icon` | `owners.icons`, `allow`, an inline disable with its reason, `ignores` |
+| `agentic-cms/styling` (a warning) | all of `src/` but the sections and the patterns, tests left out | no arbitrary value or property, arbitrary breakpoint or style colour outside the tokens | `allow`, an inline disable with its reason, `ignores` |
 
 **The placement guard**, `agentic-cms check-components`, after ESLint in
 `pnpm lint`, configured in `src/config/components.json`
@@ -164,9 +176,11 @@ A running round's candidates (its `demo.json`) and the files on the frozen
 | `styles` | CSS modules only in `ui` and the motion layer | — |
 | `keyframes` | `@keyframes` only in the motion layer and `src/styles/motion.css` | `motionCss` |
 | `inherited` | the frozen `inherited` list only shrinks: a listed file that is gone is a finding | `inherited`, which takes nothing new |
-| `owners` | each file `owners` names (a `<form>`'s, a tag's) is there, with the reason it owns it | `owners` |
-| `disables` | an inline disable of a required rule (`agentic-cms/*`, or every rule) says why after `--`; the report lists each reason | — |
-| `preset` | the required rules hold: for a sample file per layer, a route, a round's route, `src/lib` and each owner's file, the setting ESLint resolves is the one `componentRules()` makes of the config — not replaced by a later block, not off, not set with other options, not ignored | the config's own options |
+| `owners` | each file `owners` names (a `<form>`'s, a tag's, an eager `<img>`'s, an `<svg>`'s, motion's) is there, with the reason it owns it | `owners` |
+| `allow` | each `allow` entry names a preferred rule (never a required one) and files that are there, with its reason | `allow` |
+| `disables` | an inline disable of a required rule (`agentic-cms/*`, or every rule) says why after `--`; the report lists each reason. One of another rule with no reason is a warning | — |
+| `transitions` (a warning) | no transition or animation declared in CSS outside the motion layer and `src/styles/motion.css` (`none` and a zero duration rest) | `allow` (`agentic-cms/motion`), `motionCss` |
+| `preset` | the required rules hold: for a sample file per layer, a route, a round's route, `src/lib` and each owner's file, the setting ESLint resolves is the one `componentRules()` makes of the config — not replaced by a later block, not off, not set with other options, not ignored. A preferred rule set otherwise is a warning | the config's own options |
 
 **The content lint**, `agentic-cms lint`, the first step of `pnpm build`
 (`--production` there, so placeholders fail); `pnpm content:lint` alone.

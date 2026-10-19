@@ -84,8 +84,12 @@ A component uses the role where one exists and a value only where no role
 does: `border-line`, never `border-ink`. The page ground, text, a filled block,
 muted text and the solid button's fill have no role, so they name their value.
 A fork restyles by changing a value, or by pointing a role at another value or
-giving it one of its own. A new value or role is a token first — never a
-literal in a component, never an alpha modifier on one of these.
+giving it one of its own. A new value or role is a token first, not a literal
+in a component or an alpha modifier on one of these. `pnpm lint` fails an
+arbitrary value in a section or a pattern; in `ui/` and `src/app` it warns
+about one, and about a colour outside the tokens in a `style`
+(`agentic-cms/styling`), and a file there that keeps its own says why in
+`allow` (`docs/primitives.md` § Enforced).
 
 <!-- dark-mode:start -->
 ### The theme
@@ -226,7 +230,9 @@ Above the fold in a **server** component, use `EagerImage` (from
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
-`rehype-post-images`).
+`rehype-post-images`). `pnpm lint` warns about such an `<img>`, and about
+`next/image`, which needs an image service the static host does not have
+(`agentic-cms/images`; `Media` owns its `<img>`).
 
 Placeholder files come from `pnpm kit placeholder <out> <width>
 <height>`: a mid-grey field with a one-pixel border and a corner-to-corner
@@ -267,7 +273,10 @@ the families — an icon of the site's own, an illustration, a short loop —
 is designed as SVG in the lab (`pnpm kit lab`, `docs/lab.md`) and ships
 pre-rendered like any other picture: a file here, or inline `Icon` data
 (`icons add file:<name>`, its source under `src/config/icons/`); the lab
-itself leaves nothing in the tree.
+itself leaves nothing in the tree. `pnpm lint` warns about an `<svg>`
+outside `Icon` (`agentic-cms/icons`; `Placeholder` keeps its crossed box in
+`allow`) and about a rendering library or a `<canvas>`
+(`agentic-cms/graphics`).
 
 
 ## 5. Components
@@ -458,6 +467,14 @@ rules that come with it:
   `rotate-*` or `scale-*` utility on an element a part moves (the keyframes
   set `transform`);
 - a sequence longer than two seconds says so with `settle`.
+
+Motion of a site's own is the site's to choose, and says why: another
+animation library, a `requestAnimationFrame` loop, an `IntersectionObserver`
+reveal, `el.animate()` or a transition or animation class or style outside
+the motion layer warns, naming this one (`agentic-cms/motion`), and so does
+a transition declared in CSS outside it and `motion.css` (the guard's
+`transitions`); a file that keeps its own has an `allow` entry with its
+reason (`docs/primitives.md` § Enforced).
 
 `capture --motion` sees the parts play and records them in the inventory, and
 `probe` lists an armed part whose root has not played among the pending
