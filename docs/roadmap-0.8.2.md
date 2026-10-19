@@ -217,6 +217,12 @@ On a site from `init`:
 - **An existing `package.json`:** `init` merges the gates into the site's
   `lint` and `build`, or refuses and names what to add. It never drops them
   silently.
+- **Dependabot for the site's CI actions** (owner, 2026-10-19). `init` writes
+  `.github/dependabot.yml` for GitHub Actions only: monthly, one grouped pull
+  request, and no `target-branch`, since a site may have no `develop`. Like
+  `verify.yml`, it is written once and kept as the site has it. A site's npm
+  packages follow the kit's releases instead. `docs/init.md` and the
+  upgrading notes say an existing site may copy it.
 - **pack-smoke** builds a fixture with one example of each bypass. Each
   required one fails with its message, and each preferred one warns.
 
