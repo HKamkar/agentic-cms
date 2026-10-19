@@ -290,7 +290,7 @@ and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
@@ -300,8 +300,9 @@ site's `pnpm-workspace.yaml` with the others the site's install needs, and
 the site's CI workflow with it.
 
 `init` lays out the example's code with a starter in place of its content,
-named after the folder (`--name "<Site>"` gives the name as it is spelled,
-`--url` and `--email` the site's address): one home page and the blog index
+under the name `--name` gives, as it is spelled (a new site needs it:
+without it `init` writes nothing; `--url` and `--email` give the site's
+address): one home page and the blog index
 whose copy is marked `(placeholder)`, the collections empty, the wireframe's
 neutral pictures and a logo placeholder with the site's name. Nothing of the
 example's brand, posts, reviews, use cases, FAQs, author or catalogue pages

@@ -38,11 +38,13 @@ test("an install that fails on stale metadata runs once more without --prefer-of
 test("the smoke runs docs/init.md's install line with the tarball for the git spec, and the README gives the same line", () => {
   const doc = read("docs/init.md");
   const args = documentedInstall(doc, { spec: "file:/tmp/agentic-cms-0.8.0.tgz", dir: "site" });
-  assert.deepEqual(args, ["dlx", `--allow-build=${ALLOW_BUILDS[0]}`, "agentic-cms@file:/tmp/agentic-cms-0.8.0.tgz", "init", "site"], "the build approval is the key init writes into the workspace");
-  const line = (text) => text.match(/^pnpm dlx .* init my-site$/m)?.[0];
+  assert.deepEqual(args, ["dlx", `--allow-build=${ALLOW_BUILDS[0]}`, "agentic-cms@file:/tmp/agentic-cms-0.8.0.tgz", "init", "site", "--name", "My Site"], "the build approval is the key init writes into the workspace; the site's name, required, one argument");
+  const line = (text) => text.match(/^pnpm dlx .* init my-site --name "My Site"$/m)?.[0];
+  assert.ok(line(doc));
   assert.equal(line(read("README.md")), line(doc));
-  assert.match(line(doc), new RegExp(`#v${JSON.parse(read("package.json")).version.replaceAll(".", "\\.")} init my-site$`), "the line installs the version the package is");
-  assert.equal(documentedInstall("pnpm init\npnpm exec agentic-cms init .\n", { spec: "file:x", dir: "site" }), null);
+  assert.match(line(doc), new RegExp(`#v${JSON.parse(read("package.json")).version.replaceAll(".", "\\.")} init my-site --name "My Site"$`), "the line installs the version the package is");
+  assert.equal(documentedInstall("pnpm init\npnpm exec agentic-cms init . --name \"X\"\n", { spec: "file:x", dir: "site" }), null);
+  assert.equal(documentedInstall("pnpm dlx agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site\n", { spec: "file:x", dir: "site" }), null, "a line without the name is no install line: init refuses it");
 });
 
 test("the smoke starts from what the old docs left, which init must repair", () => {

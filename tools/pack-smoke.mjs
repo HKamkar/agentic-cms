@@ -48,11 +48,11 @@ export async function installWithRetry(args, run, log = console.error) {
   return run(args.filter((arg) => arg !== "--prefer-offline"));
 }
 
-/** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site`) as pnpm's arguments, with the package spec and the folder swapped; null when the doc has no such line. */
+/** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site --name "My Site"`) as pnpm's arguments, a quoted one unquoted, with the package spec and the folder swapped; null when the doc has no such line. */
 export function documentedInstall(doc, { spec, dir }) {
-  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site$/m)?.[0];
+  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site --name "[^"\n]+"$/m)?.[0];
   if (!line) return null;
-  return line.split(/\s+/).slice(1).map((arg) => (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
+  return [...line.matchAll(/"([^"]*)"|(\S+)/g)].slice(1).map(([, quoted, arg]) => quoted ?? (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
 }
 
 /** What `pnpm init` writes, at the pnpm running the smoke (a newer one would be downloaded through devEngines). */
@@ -97,7 +97,7 @@ function layOut(scratch, site, tarball) {
   fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pnpmInitPackage("agentic-cms-smoke", pnpm), null, 2));
   fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), OLD_WORKSPACE);
   const dlx = documentedInstall(fs.readFileSync(path.join(ROOT, "docs/init.md"), "utf8"), { spec: `file:${tarball}`, dir: path.basename(site) });
-  if (!dlx) fail("docs/init.md has no `pnpm dlx … init my-site` install line to run");
+  if (!dlx) fail('docs/init.md has no `pnpm dlx … init my-site --name "My Site"` install line to run');
   run("pnpm", dlx, scratch);
   const pkg = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8"));
   if (pkg.scripts.test.includes("no test specified") || "main" in pkg) fail("init kept pnpm init's placeholder test or its main");

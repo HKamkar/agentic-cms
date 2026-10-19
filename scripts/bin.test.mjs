@@ -41,7 +41,7 @@ test("a command that reads the site refuses to run outside a site's root, with t
   try {
     const r = run(["lint"], dir);
     assert.equal(r.status, 2);
-    assert.match(r.stderr, /^agentic-cms lint: no src\/kit\.ts here — run it in the site's root \(where package\.json, src\/kit\.ts and content\/ are\); to start a site here, agentic-cms init \.\n$/);
+    assert.match(r.stderr, /^agentic-cms lint: no src\/kit\.ts here — run it in the site's root \(where package\.json, src\/kit\.ts and content\/ are\); to start a site here, agentic-cms init \. --name "<Site>"\n$/);
     fs.writeFileSync(path.join(dir, "package.json"), "{}");
     assert.doesNotMatch(run(["seo"], dir).stderr, /to start a site here/, "a package.json without src/kit.ts: the root of something else");
     assert.equal(run(["placeholder", "--help"], dir).status, 0);
@@ -125,11 +125,33 @@ test("a family inside a family: icons round lists its three actions, each has it
   assert.match(wrong.stderr, /icons: icons round has no subcommand publsh — did you mean publish\? \(new, publish, retire\)/);
 });
 
+test("init: a new site needs its name — without --name, or with an empty one, it exits 2 and writes nothing; a site that has content/ needs none", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "my-site");
+    const nameless = run(["init", site]);
+    assert.equal(nameless.status, 2);
+    assert.equal(nameless.stderr, 'init: a new site needs its name, as it is spelled: --name "<Site>" (agentic-cms init my-site --name "My Site"); nothing was written\n');
+    assert.ok(!fs.existsSync(site), "nothing written");
+    for (const args of [["--name", "  "], ["--light-only"], ["--url", "https://my-site.com"]]) {
+      const r = run(["init", site, ...args]);
+      assert.equal(r.status, 2, args.join(" "));
+      assert.match(r.stderr, args[0] === "--name" ? /^init: --name is empty: give the site's name, as it is spelled \(agentic-cms init my-site --name "My Site"\); nothing was written$/m : /^init: a new site needs its name/m);
+      assert.ok(!fs.existsSync(site), `${args.join(" ")}: nothing written`);
+    }
+    assert.equal(run(["init", site, "--name", "My Site", "--json"]).status, 0);
+    const again = run(["init", site]);
+    assert.equal(again.status, 0, again.stderr);
+    assert.match(again.stdout, /^init: content\/ was there: the site's own content, pictures, site\.ts and forms\.ts are left as they are \(the starter is for a new site\)$/m);
+    assert.match(run(["init", site, "--name", "Other"]).stdout, /\(the starter is for a new site\), and --name names nothing here$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB is named with its size and exits 1", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
-    assert.equal(run(["init", site, "--json"]).status, 0);
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
     const clean = run(["init", site, "--agent-files", "--check"]);
     assert.equal(clean.status, 0, clean.stderr);
     assert.match(clean.stdout, /agent files as the kit ships them/);
@@ -145,7 +167,7 @@ test("init --agent-files: --check fails a site's edit with no base, --diff print
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
-    assert.equal(run(["init", site, "--json"]).status, 0);
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
     const nothing = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
     assert.equal(nothing.status, 0, nothing.stderr);
     assert.equal(nothing.stdout, "");

@@ -27,8 +27,11 @@ writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 ## 0.8.1 → Unreleased
 
 A new site starts from a starter of its own name instead of the example
-([init.md § The starter](init.md#the-starter)). For an existing site nothing
-of its content changes: `init` lays the starter's content and pictures out
+([init.md § The starter](init.md#the-starter)), and `init` lays a new site
+out only with that name: `--name "<Site>"` is required, and without it
+`init` exits 2 and writes nothing. Nothing changes for an existing site:
+`init` on a site that has `content/` asks no name, and `--agent-files`
+takes none. For an existing site nothing of its content changes either: `init` lays the starter's content and pictures out
 only in a folder with no `content/` yet, and never rewrites a site's
 `content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`,
 `--force` included. Two things the content lint now reads, which a site

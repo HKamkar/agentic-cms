@@ -27,21 +27,22 @@ export class StarterError extends Error {}
 /** A site's own files: its copy, its pictures, its brand and its forms — never overwritten, --force included. */
 export const isSiteOwn = (file) => /^(?:content|public)\//.test(file) || file === "src/config/site.ts" || file === "src/config/forms.ts";
 
-/** A folder's name as a brand: its words capitalised (my-site → My Site). */
-export const nameOfFolder = (folder) => folder.split(/[-_.\s]+/).filter(Boolean).map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
+/** A new site's line, as the message that asks for its name shows it. */
+export const NAME_EXAMPLE = 'agentic-cms init my-site --name "My Site"';
 /** A name as a DNS label and a file name: lowercase ASCII letters, digits and single hyphens. */
-export const slugOf = (name) => name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+export const slugOf = (name) => name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 /**
- * The site init lays out: { name, slug, url, email, domain, today }. The name
- * defaults to the folder's; without --url and --email, the address stands on
- * a reserved domain (<slug>.example), which the content lint marks. Throws a
- * StarterError for an empty name, a URL that is not an origin, or an address
- * that is not one.
+ * The new site init lays out: { name, slug, url, email, domain, today }. The
+ * name is the owner's, as it is spelled, never guessed; without --url and
+ * --email, the address stands on a reserved domain (<slug>.example), which
+ * the content lint marks. Throws a StarterError for a name not given or
+ * empty, a URL that is not an origin, or an address that is not one.
  */
 export function siteIdentity(target, { name, url, email, now = new Date() } = {}) {
-  const siteName = (name ?? nameOfFolder(path.basename(path.resolve(target)))).trim();
-  if (!siteName) throw new StarterError("--name is empty: give the site's name, as it is spelled");
+  if (name === undefined) throw new StarterError(`a new site needs its name, as it is spelled: --name "<Site>" (${NAME_EXAMPLE})`);
+  const siteName = name.trim();
+  if (!siteName) throw new StarterError(`--name is empty: give the site's name, as it is spelled (${NAME_EXAMPLE})`);
   const slug = slugOf(siteName) || slugOf(path.basename(path.resolve(target))) || "site";
   const origin = url === undefined ? `https://${slug}.example` : originOf(url);
   if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new StarterError(`--email ${email}: not an e-mail address`);

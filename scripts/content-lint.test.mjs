@@ -359,7 +359,7 @@ describe("the starter's placeholders and the kit example's brand", () => {
   test("the starter init lays out: every collection reads with no entry, and its only findings are its placeholders, which a production build fails on and which go with the copy", async () => {
     const target = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "starter-")), "nimbus-notes");
     try {
-      scaffold(target, { kitRoot: REPO, version: "0.8.2", now: NOW, log: () => {} });
+      scaffold(target, { kitRoot: REPO, version: "0.8.2", name: "Nimbus Notes", now: NOW, log: () => {} });
       const { site: own } = await import(pathToFileURL(path.join(target, "src/config/site.ts")).href);
       const { findings, collections } = lint({ root: target, site: own, now: NOW });
       assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2"]);
