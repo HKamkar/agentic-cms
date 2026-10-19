@@ -1,4 +1,4 @@
-// Single place for everything brand- and site-specific. The blog engine reads
+// Single place for everything brand- and site-specific. The post pipeline reads
 // from here; swapping the brand means editing this file and the tokens in
 // src/app/globals.css.
 //

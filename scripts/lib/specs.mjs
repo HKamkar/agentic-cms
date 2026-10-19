@@ -30,6 +30,23 @@ const handover = (route) => ({
   "no-public": { type: "boolean", help: "do not look up the public address for the URLs (offline, or a machine no viewer reaches from outside)" },
 });
 
+// The families of commands, in the order of the kit's four layers (docs/parts.md): the content engine's own
+// commands, the design tools (which never ship), then the site's commands — its setup, the gates its lint and its
+// build run by default, and the steps a site adds to its build. The browser libraries are imports and have no
+// commands. The help (bin/agentic-cms.mjs) and docs/commands.md (tools/commands-doc.mjs) list them in this order.
+export const FAMILIES = [
+  { group: "content", layer: "the content engine" },
+  { group: "images", layer: "design tools" },
+  { group: "proof", layer: "design tools" },
+  { group: "look & measure", layer: "design tools" },
+  { group: "icons", layer: "design tools" },
+  { group: "lab", layer: "design tools" },
+  { group: "demo", layer: "design tools" },
+  { group: "site", layer: "the site's commands" },
+  { group: "default gates", layer: "the site's commands", about: "what every change passes: `pnpm build` runs `lint --production` and `docs --check` (content, above), `next build`, then `seo`; `pnpm lint` runs ESLint, then `check-components`; CI runs both" },
+  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds to its build when it needs them: `guard-email` after `next build` once the site shows an address, `critical-css` for the first paint, `assemble` last for a Node host" },
+];
+
 export const SPECS = {
   lint: {
     command: "lint", script: "content-lint", group: "content", site: true, summary: "the content rules: every collection read as the build reads it, then the voice, SEO, body, image and date rules",
@@ -67,7 +84,7 @@ export const SPECS = {
     exit: { 0: "written, or up to date", 1: "out of date (--check)", 2: "content/README.md has no markers" },
   },
   seo: {
-    command: "seo", script: "check-seo", group: "build gates", site: true, summary: "the audit of every prerendered page after next build: title, description, canonical, Open Graph, headings, images, JSON-LD, robots, sitemap, internal links",
+    command: "seo", script: "check-seo", group: "default gates", site: true, summary: "the audit of every prerendered page after next build: title, description, canonical, Open Graph, headings, images, JSON-LD, robots, sitemap, internal links",
     usage: "agentic-cms seo [--strict] [--report] [--json]",
     flags: { strict, report: report(".parity/seo-report.txt"), json: { type: "boolean", help: "print the findings as one JSON document" } },
     examples: ["agentic-cms seo                           # after next build", "agentic-cms seo --strict --json"],
@@ -335,7 +352,7 @@ export const SPECS = {
     json: "{ dev: { port, pid, started, reused }, lab: { port, started, taken, urls, scenes: [{ name, urls }] } | null, hosts: [{ where, host }], routes: [{ path, ready, status, tail, urls: [{ where, url }] }], origins: { file, exists, listed, missing, written }, restarted }",
   },
   "guard-email": {
-    command: "guard-email", script: "guard-email", group: "build gates", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
+    command: "guard-email", script: "guard-email", group: "opt-in steps", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
     usage: "agentic-cms guard-email [--domain <host>]… [--json]",
     flags: {
       domain: { type: "string", multiple: true, value: "<host>", help: "a domain whose addresses must not appear; default: the host of site.url from src/kit.ts" },
@@ -346,7 +363,7 @@ export const SPECS = {
     json: "{ domains, scanned, hits: [{ file, addresses }] }",
   },
   "critical-css": {
-    command: "critical-css", script: "critical-css", group: "build gates", summary: "inlines each prerendered page's critical CSS (the rules its own HTML uses, its stylesheets' @font-face) and loads the stylesheets without blocking the first paint; the build's pages and the standalone package's copy",
+    command: "critical-css", script: "critical-css", group: "opt-in steps", summary: "inlines each prerendered page's critical CSS (the rules its own HTML uses, its stylesheets' @font-face) and loads the stylesheets without blocking the first paint; the build's pages and the standalone package's copy",
     usage: "agentic-cms critical-css [--check] [--json]",
     flags: {
       check: { type: "boolean", help: "change nothing: only fail when a page still waits for a stylesheet before it paints" },
@@ -357,7 +374,7 @@ export const SPECS = {
     json: "{ dirs, pages, inlined, skipped, bytes: { inlined, before, after }, blocking: [{ page, sheets }] }",
   },
   assemble: {
-    command: "assemble", script: "assemble", group: "build gates", summary: "packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there; nothing is packaged while the starter's placeholder copy or address remains",
+    command: "assemble", script: "assemble", group: "opt-in steps", summary: "packages a standalone build for a Node host: public/ and .next/static copied into .next/standalone — into its folders, never as them — then every file of both checked there; nothing is packaged while the starter's placeholder copy or address remains",
     usage: "agentic-cms assemble [--check] [--json]",
     flags: {
       check: { type: "boolean", help: "copy nothing: only check the package against public/ and .next/static (in CI, or after a copy made by hand)" },
@@ -368,7 +385,7 @@ export const SPECS = {
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
   },
   "check-components": {
-    command: "check-components", script: "check-components", group: "build gates", summary: "the component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json",
+    command: "check-components", script: "check-components", group: "default gates", summary: "the component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json",
     usage: "agentic-cms check-components [--json]",
     flags: { json: { type: "boolean", help: "print the report as one JSON document" } },
     examples: ["agentic-cms check-components             # what pnpm lint runs after eslint", "agentic-cms check-components --json | jq '.findings[] | .file'"],

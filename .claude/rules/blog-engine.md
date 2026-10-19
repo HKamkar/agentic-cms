@@ -7,7 +7,7 @@ paths:
   - "src/app/feed.xml/**"
 ---
 
-# Blog engine — read `src/lib/blog/README.md` before editing
+# The post pipeline — read `src/lib/blog/README.md` before editing
 
 - Build time only: the content engine reads `content/blog` with `node:fs` at build time and `posts.ts` derives from it; every consumer prerendered. Never read `content/` at request time.
 - The filename is the indexed URL (`/blog-post/<slug>`); files starting with `_` are ignored; `draft: true` hides a post from production only.

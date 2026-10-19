@@ -9,23 +9,18 @@ to install.
 
 ## What works by default
 
-A checkout of this repo, or a site laid out by `agentic-cms init`, carries:
+A checkout of this repo, or a site laid out by `agentic-cms init`, carries
+the design tools with nothing to install: the skills, in `.claude/skills/`
+(Claude Code) and `.agents/skills/` (Codex), identical and auto-discovered
+from the checkout, and the commands they call.
+[parts.md § Design tools](parts.md#design-tools) maps each to the need it
+meets, how to use it and its doc; [skills.md](skills.md) says what each
+skill does.
 
-- **The skills**, in `.claude/skills/` (Claude Code) and `.agents/skills/`
-  (Codex), identical, auto-discovered from the checkout — no plugin, no
-  install: `design` (the loop), `design-options` (candidates the owner picks
-  from), `design-measure` (a screenshot claim turned into numbers),
-  `design-icons` (icons as families), `design-graphics` (the site's own
-  drawings, SVG in the lab, shipped pre-rendered), `design-proof` (the pixel
-  proof before a merge). [skills.md](skills.md) says what each does.
-- **The commands** every skill calls: `demo` (the round's route, for a section or a piece of the chrome), `shot`, `probe`, `sheet`
-  ([shot-probe-sheet.md](shot-probe-sheet.md)) and `visual-parity` with
-  `--ref`, `--json` and a compare that says what moved
-  ([visual-parity.md](visual-parity.md)).
-- **The rules**, path-scoped (`.claude/rules/`: Claude Code loads them by
-  path, Codex through `AGENTS.md`'s scoped-rules table), and `AGENTS.md`,
-  which every agent reads; `STANDARD.md`, where the design lives and where §8
-  keeps the decisions that look like bugs on purpose.
+It carries the rules too: path-scoped (`.claude/rules/`: Claude Code loads
+them by path, Codex through `AGENTS.md`'s scoped-rules table), and
+`AGENTS.md`, which every agent reads; `STANDARD.md`, where the design lives
+and where §8 keeps the decisions that look like bugs on purpose.
 
 ## The loop
 

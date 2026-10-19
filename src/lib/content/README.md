@@ -8,9 +8,12 @@ field and the problem. A site builds its registry once, in `src/kit.ts`
 (`createKit({ site, sections })`, which calls `createCollections()` and
 `createContent()` here), and reads it as `kit.collections` and
 `kit.content`; nothing in this directory imports the site. This document is the contract; read it before
-changing anything in `src/lib/content/` or adding a collection. The blog
-engine (`src/lib/blog/README.md`) runs on top of it: `posts.ts` maps the
-`posts` collection to `Post` objects and owns every derived field.
+changing anything in `src/lib/content/` or adding a collection. It is the
+kit's one engine, and the rest are its layers: pages, the post pipeline
+(`src/lib/blog/README.md`: `posts.ts` maps the `posts` collection to `Post`
+objects and owns every derived field) and SEO (`src/lib/seo/README.md`),
+with the form engine (`src/lib/forms/README.md`) beside it;
+`docs/parts.md` maps every part of the kit.
 
 ## Rules that must not break
 

@@ -86,7 +86,7 @@ paths. The table is written from the rules' frontmatter by
 
 | Paths | Read and follow |
 | --- | --- |
-| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
+| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [The post pipeline](.claude/rules/blog-engine.md) |
 | `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
@@ -258,7 +258,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   a script that calls `parseOrExit(SPECS.<name>, process.argv.slice(2))`, a
   test, its `docs/` page and a changelog line, in one pull request. Exit
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
-- `docs/` holds the guides (`docs/README.md` is the index): the command
+- `docs/` holds the guides (`docs/README.md` is the index): the map of
+  every part (`parts.md`, which `pnpm hygiene` holds complete), the command
   line, the screenshot harness, the one-shot page commands, designing, the
   skills, starting a site, setting up a clone (`setup.md`), serving
   previews to the owner's devices (`dev-server.md`), Chrome and Safari
@@ -411,12 +412,15 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   `src/config/`. Cards are the exception: a card's frame is `ui/Panel`, and
   what goes inside it is each section's own design, from its own copy
   fields; do not build a generic Card.
-- Four engines carry their full contract next to the code: `src/lib/blog/README.md`
-  (posts, frontmatter, body conventions), `src/lib/content/README.md`
-  (collections — posts, authors, categories, reviews, faqs, use cases, pages —
-  schemas, validation, the generated field tables), `src/lib/forms/README.md` (forms as
-  config, field primitives, backend factory) and `src/lib/seo/README.md`
-  (page blocks, head and structured data, the build-time audit); the design
+- One content engine, and its layers, carry their full contract next to the
+  code: `src/lib/content/README.md` (collections — posts, authors,
+  categories, reviews, faqs, use cases, pages — schemas, validation, the
+  generated field tables); on it the post pipeline, `src/lib/blog/README.md`
+  (posts, frontmatter, body conventions), and SEO, `src/lib/seo/README.md`
+  (page blocks, head and structured data, the build-time audit); beside it
+  the form engine, `src/lib/forms/README.md` (forms as config, field
+  primitives, backend factory). `docs/parts.md` maps every part of the kit
+  (the need it meets, its tier, the check that holds it); the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
   loads their invariants in Claude Code when those paths are edited, and the
   scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it

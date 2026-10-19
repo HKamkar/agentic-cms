@@ -130,5 +130,5 @@ in `src/components/sections/render.tsx`.
 
 **Change a page's copy.** Edit the page file, bump `seo.updated`, `pnpm build`.
 
-**Add a post.** `content/blog/_template.md`; the blog engine validates the
+**Add a post.** `content/blog/_template.md`; the post pipeline validates the
 frontmatter and the audit checks the rendered post.

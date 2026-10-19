@@ -9,21 +9,21 @@ written `<lan-ip>` or `<public-ip>`, and evidence is a measurement.
 
 ## Where the kit already covers a trap
 
-These are written once, where the code they describe lives; read them
-there.
+A trap a part of the kit covers is written once, in that part's doc, and
+[parts.md](parts.md) maps each need to its part and that doc. The row to
+read, by symptom:
 
-| Trap | Where |
+| Trap | The row in parts.md |
 |---|---|
-| An eager `<img>` in a server component is downloaded by every page that prefetches a link to it | `STANDARD.md` §4; `EagerImage` (`agentic-cms/components`) |
-| The dev server fails every page with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build; a removed route still fails the type check (`validator.ts`); a utility the build has and the dev page lacks | [design.md § When the dev server will not serve](design.md#when-the-dev-server-will-not-serve) |
-| `text-base` / `text-sm` set a line-height; two colour utilities on one element resolve by stylesheet order; preflight's zeroed margins, paddings and list markers; `h-auto` beside a `height` attribute | the styling rule (`.claude/rules/styling.md`) |
-| A timeline far down a page still running while off screen | [lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline) (it stops off screen) |
-| Critical CSS for a state a script sets after load | [deploy.md § Critical CSS](deploy.md#critical-css) (rules keyed on `data-` and `aria-` attributes are kept whole) |
-| `HOSTNAME`, the standalone package, a `cp` that nests `public/` | [deploy.md](deploy.md) |
-| `next start` or `wrangler dev` answering 500 straight after `next build` | [deploy.md § Cloudflare Workers](deploy.md#cloudflare-workers) |
-| A consent banner over every screenshot | [visual-parity.md § A visitor's choice, seeded](visual-parity.md#a-visitors-choice-seeded) |
-| Starting and stopping the dev server, the addresses to hand over | [dev-server.md](dev-server.md) |
-| What headless Chromium and WebKit cannot show; the engines' differences | [browsers.md](browsers.md) |
+| An eager `<img>` in a server component is downloaded by every page that prefetches a link to it | [an image above the fold](parts.md#browser-libraries) |
+| The dev server fails every page with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build; a removed route still fails the type check (`validator.ts`); a utility the build has and the dev page lacks; starting and stopping it, the addresses to hand over | [a dev server and its URLs](parts.md#the-sites-commands) |
+| `text-base` / `text-sm` set a line-height; two colour utilities on one element resolve by stylesheet order; preflight's zeroed margins, paddings and list markers; `h-auto` beside a `height` attribute | [a colour, a size, a breakpoint](parts.md#browser-libraries) |
+| A timeline far down a page still running while off screen | [a graphic](parts.md#design-tools) |
+| Critical CSS for a state a script sets after load | [the first paint without a blocking stylesheet](parts.md#the-sites-commands) |
+| `HOSTNAME`, the standalone package, a `cp` that nests `public/` | [a Node server host](parts.md#the-sites-commands) |
+| `next start` or `wrangler dev` answering 500 straight after `next build` | [a Cloudflare Worker](parts.md#the-sites-commands) |
+| A consent banner over every screenshot | [a screenshot or a proof](parts.md#design-tools) |
+| What headless Chromium and WebKit cannot show; the engines' differences | [the setup of a clone](parts.md#the-sites-commands) |
 
 ## Next.js
 
