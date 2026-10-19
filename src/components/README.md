@@ -477,7 +477,7 @@ in the harness's static captures every part is at rest.
 
 ## Content (`src/components/blog/`)
 
-These belong to the blog engine; its contract (frontmatter, body
+These belong to the post pipeline; its contract (frontmatter, body
 conventions, pipeline) is **`src/lib/blog/README.md`**.
 
 | Component | Props | Notes |

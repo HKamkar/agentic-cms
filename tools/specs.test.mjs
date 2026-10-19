@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { parse } from "../scripts/lib/args.mjs";
-import { SPECS } from "../scripts/lib/specs.mjs";
+import { FAMILIES, SPECS } from "../scripts/lib/specs.mjs";
 
 
 /** The commands that run: a spec without subcommands, else its subcommands' leaves, however deep. */
@@ -14,7 +14,7 @@ test("every spec names a script that exists, and its command is its key", () => 
     assert.equal(spec.command, key);
     assert.ok(spec.script, `${key} names its script`);
     assert.ok(fs.existsSync(path.resolve(import.meta.dirname, `../scripts/${spec.script}.mjs`)), `scripts/${spec.script}.mjs`);
-    assert.ok(spec.group, `${key} names its family`);
+    assert.ok(FAMILIES.some((f) => f.group === spec.group), `${key} names its family, one of FAMILIES`);
     const leaves = leavesOf(spec);
     for (const leaf of leaves) {
       assert.ok(leaf.summary && leaf.usage && leaf.exit, `${leaf.command} has a summary, a usage and exit codes`);
@@ -32,4 +32,14 @@ test("a command whose help says what --json prints takes --json: probe, which pr
     assert.equal(leaf.flags?.json?.type, "boolean", `${leaf.command}: its help says "--json prints ${leaf.json.slice(0, 30)}…", so --json is a flag`);
   }
   assert.equal(parse(SPECS.probe, ["/", "--select", ".card", "--motion", "--json"]).flags.json, true);
+});
+
+test("every family has a layer of the map and a command, and none is listed twice", () => {
+  const layers = ["the content engine", "design tools", "the site's commands"];
+  assert.equal(new Set(FAMILIES.map((f) => f.group)).size, FAMILIES.length);
+  for (const { group, layer } of FAMILIES) {
+    assert.ok(layers.includes(layer), `${group}: ${layer} is one of the layers in docs/parts.md`);
+    assert.ok(Object.values(SPECS).some((spec) => spec.group === group), `${group} has a command`);
+  }
+  assert.deepEqual([...new Set(FAMILIES.map((f) => f.layer))], layers, "the families run in the layers' order");
 });

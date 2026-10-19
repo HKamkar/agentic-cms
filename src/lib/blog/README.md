@@ -1,4 +1,4 @@
-# Blog engine
+# The post pipeline
 
 Turns markdown files in `content/blog/` into the blog index, the post pages,
 the RSS feed and the sitemap — all at build time. This document is the

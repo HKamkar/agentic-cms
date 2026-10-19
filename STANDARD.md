@@ -286,7 +286,7 @@ shared component goes into it in the same commit. In short:
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
 | Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
-| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
+| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the post pipeline (`src/lib/blog/README.md`) |
 | Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
 
 A card's frame is `ui/Panel`, and what goes inside it is each section's own
