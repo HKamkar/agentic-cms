@@ -108,6 +108,7 @@ Job 8 is the last pass over all of them.
 | 2 | The engines enforced | the required rules across `src/`, design-round routes included |
 | 3 | The rest guided | the preferred rules as warnings, and reasons in place of silence |
 | 4 | `check-site` and the gates on by default | the whole site checked; the build runs the lint; `init` merges the gates |
+| 4b | The e-mail engine for real | the starter and the example keep the address out of every served file; D5 on for new sites |
 | 5 | A starter without Acme | `init --name`, a clean starter, placeholders marked, the example's brand refused |
 | 6 | Agents told the way | the template `AGENTS.md`, the rules, the skills, the agent-file check |
 | 7 | Existing sites adopt | a baseline for engine bypasses; Acme leftovers listed; `docs/migrating-to-0.8.2.md` |
@@ -226,6 +227,37 @@ On a site from `init`:
 - **pack-smoke** builds a fixture with one example of each bypass. Each
   required one fails with its message, and each preferred one warns.
 
+### 4b — The e-mail engine for real
+
+Added 2026-10-19, when job 4 found that D5 can't hold yet. The guard
+fails the kit's own example and the starter, because the address leaks
+from `site.ts` into served files three ways:
+
+- **as text in the structured data:** the Organization's `email`, which the
+  blog's publisher and the About and Contact blocks reuse;
+- **in the contact form's messages:** `forms.ts` writes it in plain text in
+  `messages.error`, and in the mailto backend's `to`, without going through
+  `withEmailToken`;
+- **in a client bundle:** client components (the navbar, the consent
+  banner, the theme toggle, the cookie settings button) import `site.ts`,
+  so the whole `site` object, `email` included, ships in a JS chunk.
+
+Job 4 ships the gates with `guard-email` opt-in. This job:
+
+- moves the starter and the example onto the e-mail engine: the address in
+  a server-only module that no client component imports, the forms
+  through `withEmailToken`, and no `email` as text in the structured data
+  when the site guards its address (a `contactPoint` with the contact page's
+  `url` instead);
+- puts all of this behind a `site.ts` key that `init` writes on for a new
+  site. An existing site's output stays byte for byte until its owner turns
+  the key on: job 7's guide offers it as a step. Upgrades stay safe by
+  default (owner, 2026-10-19);
+- turns D5 on for a site with the key: the build runs `guard-email`, one
+  line in the gates, and the example and the starter pass it;
+- lets a site that wants its address public turn the key off, with its
+  reason, as a named exception that `check-site` prints.
+
 ### 5 — A starter without Acme
 
 - **`init --name "<Site>"`.** The name defaults to the folder's name. It
@@ -342,7 +374,7 @@ request at a time, and clears the Acme leftovers.
 ```
 after v0.8.1   [0 plan] → [5 starter] first (owner, 2026-10-17)
 Lane A         [1 map] → [6 agents] ──────────────────────────────┐
-Lane B         [2 engines] → [3 guided] → [4 check-site, gates] → [7 adopt] → [8 sweep] last
+Lane B         [2 engines] → [3 guided] → [4 check-site, gates] → [4b e-mail] ∥ [7 adopt] → [8 sweep] last
 then           gate → R → S
 ```
 
