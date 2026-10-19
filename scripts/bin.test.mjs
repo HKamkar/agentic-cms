@@ -174,6 +174,27 @@ test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("init --agent-files --check: a site's edit that dropped a required block, or settings without the editorial plugin, fails, naming each and where the kit has it", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
+    const rule = path.join(site, ".claude/rules/seo.md");
+    fs.writeFileSync(rule, fs.readFileSync(rule, "utf8").split("\n").filter((line) => !line.startsWith("- **Tier:**")).join("\n"));
+    const settings = path.join(site, ".claude/settings.json");
+    fs.writeFileSync(settings, JSON.stringify({ ...JSON.parse(fs.readFileSync(settings, "utf8")), enabledPlugins: {} }));
+    const check = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(check.status, 1);
+    assert.match(check.stderr, /^modified, required gone {2}\.claude\/rules\/seo\.md — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/rules\/seo\.md has it:\n {2}line \d+: - \*\*Tier:\*\* SEO, .{40,}…$/m);
+    assert.match(check.stderr, /^modified, required gone {2}\.claude\/settings\.json — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/settings\.json has it:\n {2}enabledPlugins\["editorial@agentic-cms"\]: true$/m);
+    assert.match(check.stdout, /modified, required gone: the site's edit dropped what the kit marks required/);
+    const refresh = run(["init", site, "--agent-files"]);
+    assert.equal(refresh.status, 0, refresh.stderr);
+    assert.match(refresh.stdout, /\(2 without a block the kit requires\)/);
+    assert.match(refresh.stderr, /^init: \.claude\/rules\/seo\.md is kept as the site edited it, without what the kit marks required/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("init --agent-files: --check fails a site's edit with no base, --diff prints the kit's text against it (exit 1), --accept makes it the site's edit of the kit's text and --check passes; the modes go with --agent-files, one at a time", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {

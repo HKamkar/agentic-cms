@@ -171,6 +171,11 @@ already stated. For anything that moves, `references/svg-motion.md`.
 
 ## Verify
 
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
+
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # the SEO audit reads every <img>
 pnpm kit lab render <name> --out <file> --json              # the report: size, frames, bytes, the console

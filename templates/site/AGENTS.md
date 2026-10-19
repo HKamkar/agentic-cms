@@ -7,6 +7,12 @@ repo holds what is the site's — the design, the content, the config, the
 docs. An engine change is a kit pull request, then a bumped tag here; never
 a patch under `node_modules`.
 
+- **The engines are required:** every word a reader sees comes from
+  `content/` or `site.ts`, in pages, sections, components and design rounds
+  alike; heads come from `kit.seo`, forms from the form engine, tags
+  through consent. For everything else, find the kit's part in
+  `node_modules/agentic-cms/docs/parts.md` and prefer it; if you use your
+  own, write its reason in one line. Never weaken a check to pass it.
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
   motion, the page recipe, and §8, the register of decisions that look like
@@ -75,8 +81,9 @@ a patch under `node_modules`.
   (the content lint first, the SEO audit last), 0 failures, before calling
   a change done; `pnpm kit visual-parity` before a merge that touches
   `src/`, styles or images. CI (`.github/workflows/verify.yml`) runs the
-  same, and `agentic-cms init . --agent-files --check`, on every pull
-  request.
+  same, and `agentic-cms init . --agent-files --check` (which fails an
+  edit of a rule or a skill that dropped a line marked
+  `<!-- required -->`), on every pull request.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex

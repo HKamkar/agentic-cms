@@ -96,7 +96,7 @@ and the captures are removed before a merge.
 | A real picture made light | `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` — `scripts/README.md` | preferred | the content lint's `image-weight`, for a picture a content file names | — |
 | A screenshot or a proof | `agentic-cms visual-parity proof` (the baseline, the capture after, the compare, in one), `capture`, `compare`, `clean`; `agentic-cms parity` when the markup must not move either; a consent banner held back by the site's seed, `src/config/harness.ts`; the `design-proof` skill — [visual-parity.md](visual-parity.md), [browsers.md](browsers.md) | preferred | job 4 of 0.8.2 (a site's own Playwright script warns) | — |
 | A measurement behind a screenshot claim | `agentic-cms shot` (a picture with its box), `agentic-cms probe` (the box, the computed styles, the stacking contexts, the pending reveals); the `design-measure` skill — [shot-probe-sheet.md](shot-probe-sheet.md) | preferred | job 4 of 0.8.2 | — |
-| The design procedure | the skills in `.claude/skills/` and `.agents/skills/`, identical: `design`, `design-options`, `design-measure`, `design-icons`, `design-graphics`, `design-proof` — [skills.md](skills.md), [design.md](design.md) | preferred | `agentic-cms init --agent-files --check` (a skill missing or stale) | — |
+| The design procedure | the skills in `.claude/skills/` and `.agents/skills/`, identical: `design`, `design-options`, `design-measure`, `design-icons`, `design-graphics`, `design-proof` — [skills.md](skills.md), [design.md](design.md) | preferred | `agentic-cms init --agent-files --check` (a skill missing or stale, or a site's edit that dropped a line the kit marks required: the closing `pnpm lint`, the copy rule) | — |
 
 ## The site's commands
 
@@ -192,5 +192,9 @@ A FAIL stops the build, a WARN is read, `--strict` promotes the warnings.
 collection and prerenders every page; `agentic-cms seo` audits every
 prerendered page (`src/lib/seo/README.md` § What the audit checks).
 `agentic-cms init --agent-files --check` reports an agent file that is
-missing or stale. The opt-in steps, `guard-email`, `critical-css` and
+missing or stale, a site's edit of a rule or a skill that dropped a line
+the kit marks required (`<!-- required -->`: each rule's tier line, the
+engines, each skill's closing `pnpm lint`), and a `.claude/settings.json`
+that no longer enables the editorial plugin
+([init.md § What an edit keeps](init.md#what-an-edit-keeps)). The opt-in steps, `guard-email`, `critical-css` and
 `assemble`, run where a site's `build` names them.

@@ -16,3 +16,4 @@ paths:
 - Structured data describes what is on the page — no reviews, ratings or offers that are not real, no self-ratings. Organisation blocks come from `organizationLd()`.
 - Sitemap and breadcrumbs follow from the page files; bump `seo.updated` when the content changes; internal links go only to pages that exist, with descriptive text; a public URL never changes without a redirect.
 - `pnpm build` runs `agentic-cms seo`: fix every FAIL, read every WARN; never loosen a rule to pass.
+- **Tier:** SEO, a layer of the content engine (`agentic-cms/seo`, `kit.seo`) — required: `pnpm lint` fails a head of the site's own (`agentic-cms/head`), `agentic-cms lint` the SEO fields at the source (`seo-title`, `seo-description`) and `pnpm build` a prerendered page out of line (`agentic-cms seo`).
