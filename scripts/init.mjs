@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// A site from the package: `agentic-cms init [dir] [--name <Site>]` lays out
+// A site from the package: `agentic-cms init [dir] --name <Site>` lays out
 // the wireframe example's code with the starter in place of its content (one
 // home page and the blog index, their copy marked as placeholder; the site's
-// name, and its address from --url and --email or a stand-in, where the
-// example says its own), the agent files (the rules and the design skills, so
+// name, which a new site must be given, and its address from --url and
+// --email or a stand-in, where the example says its own), the agent files (the rules and the design skills, so
 // an agent designs from the first session with nothing installed), the
 // config and a manifest; `--agent-files` refreshes only the rules and skills of an
 // existing site, keeping the site's own edits, `--check` reports what
@@ -117,7 +117,7 @@ function scaffoldSite() {
   const where = path.relative(process.cwd(), target);
   const { site } = result;
   console.log(`init: ${result.created.length} created, ${result.updated.length} updated, ${result.kept.length} kept in ${where || "."}${result.lightOnly ? " — light only: one scheme, no theme toggle" : ""}`);
-  if (!site.starter) console.log("init: content/ was there: the site's own content and pictures are left as they are (the starter is for a new site), and --name, --url and --email name only what init writes fresh");
+  if (!site.starter) console.log(`init: content/ was there: the site's own content, pictures, site.ts and forms.ts are left as they are (the starter is for a new site)${named ? `, and --${named} names nothing here` : ""}`);
   else {
     const standIn = [site.url, site.email].filter(onReservedDomain);
     console.log(`init: ${site.name} — the starter: a home page and the blog index whose copy is marked "(placeholder)"${standIn.length ? `, and ${standIn.join(" and ")} standing in for the site's address (--url, --email)` : ""}; pnpm content:lint names each, and a production build fails while one remains`);

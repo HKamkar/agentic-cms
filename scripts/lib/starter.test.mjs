@@ -7,25 +7,25 @@ import path from "node:path";
 import { describe, test } from "node:test";
 import { withContent } from "../../src/lib/content/test-helpers.ts";
 import { kit } from "../../src/kit.ts";
-import { fill, logoSvg, nameOfFolder, siteIdentity, slugOf, StarterError, starterFiles, starterMarkdown, voiceFile } from "./starter.mjs";
+import { fill, logoSvg, NAME_EXAMPLE, siteIdentity, slugOf, StarterError, starterFiles, starterMarkdown, voiceFile } from "./starter.mjs";
 
 const REPO = path.resolve(import.meta.dirname, "../..");
 const NOW = new Date("2026-10-17T09:00:00Z");
 
 /** The starter's content/ files, as withContent takes them (paths under content/). */
-const starterContent = () => Object.fromEntries([...starterFiles(REPO, siteIdentity("my-site", { now: NOW }))].filter(([file]) => file.startsWith("content/")).map(([file, text]) => [file.slice("content/".length), String(text)]));
+const starterContent = () => Object.fromEntries([...starterFiles(REPO, siteIdentity("my-site", { name: "My Site", now: NOW }))].filter(([file]) => file.startsWith("content/")).map(([file, text]) => [file.slice("content/".length), String(text)]));
 
 describe("the site's identity", () => {
-  test("the name is the folder's, its words capitalised; the slug a DNS label; the address a stand-in on the slug's reserved domain", () => {
-    assert.equal(nameOfFolder("my-site"), "My Site");
-    assert.equal(nameOfFolder("notes_and.more"), "Notes And More");
+  test("the name is the owner's, never the folder's; the slug a DNS label from it; the address a stand-in on the slug's reserved domain", () => {
+    assert.throws(() => siteIdentity("/x/my-site", { now: NOW }), (e) => e instanceof StarterError && e.message.includes(`--name "<Site>" (${NAME_EXAMPLE})`));
+    assert.equal(NAME_EXAMPLE, 'agentic-cms init my-site --name "My Site"');
     assert.equal(slugOf("Café \"Ünï\" & Co."), "cafe-uni-co");
-    assert.deepEqual(siteIdentity("/x/my-site", { now: NOW }), { name: "My Site", slug: "my-site", url: "https://my-site.example", email: "hello@my-site.example", domain: "my-site.example", today: "2026-10-17" });
+    assert.deepEqual(siteIdentity("/x/elsewhere", { name: " My Site ", now: NOW }), { name: "My Site", slug: "my-site", url: "https://my-site.example", email: "hello@my-site.example", domain: "my-site.example", today: "2026-10-17" });
     assert.equal(siteIdentity("/x/***", { name: "***" }).slug, "site", "a name with no letter to slug falls back");
-    assert.equal(siteIdentity("/x/a", { url: "http://localhost:8000/" }).url, "http://localhost:8000");
+    assert.equal(siteIdentity("/x/a", { name: "A", url: "http://localhost:8000/" }).url, "http://localhost:8000");
   });
   test("an empty name, a URL that is not an origin and an address that is not one are refused", () => {
-    for (const [options, error] of [[{ name: " " }, /--name is empty/], [{ url: "ftp://x.com" }, /give the site's origin alone/], [{ url: "https://x.com/?a=1" }, /give the site's origin alone/], [{ email: "a@b" }, /not an e-mail address/]]) {
+    for (const [options, error] of [[{ name: " " }, /--name is empty/], [{ name: "A", url: "ftp://x.com" }, /give the site's origin alone/], [{ name: "A", url: "https://x.com/?a=1" }, /give the site's origin alone/], [{ name: "A", email: "a@b" }, /not an e-mail address/]]) {
       assert.throws(() => siteIdentity("/x/a", options), (e) => e instanceof StarterError && error.test(e.message));
     }
   });
@@ -37,7 +37,7 @@ describe("the starter's files", () => {
     assert.throws(() => fill("{{nope}}", { name: "x" }, "templates/starter/x.yaml"), (e) => e instanceof StarterError && /templates\/starter\/x\.yaml: \{\{nope\}\} is no token of the starter \(name\)/.test(e.message));
   });
   test("every token of the starter is one the identity has, and every file lands where a site keeps it", () => {
-    const files = starterFiles(REPO, siteIdentity("my-site", { now: NOW }));
+    const files = starterFiles(REPO, siteIdentity("my-site", { name: "My Site", now: NOW }));
     for (const [file, text] of files) {
       assert.match(file, /^(?:content|public|src\/config)\//, file);
       if (typeof text === "string") assert.doesNotMatch(text, /\{\{\w+\}\}/, `${file}: a token left`);

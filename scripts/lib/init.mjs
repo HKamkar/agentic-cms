@@ -2,8 +2,8 @@
 // own files — the wireframe example's code (its app, components, config and
 // styles), the starter in place of the example's content (lib/starter.mjs: one
 // home page and the blog index with their copy marked as placeholder, empty
-// collections, the wireframe's neutral pictures, the site's name where the
-// example says its own), the agent files (a site's path-scoped rules from
+// collections, the wireframe's neutral pictures, the site's name — required,
+// the owner's — where the example says its own), the agent files (a site's path-scoped rules from
 // templates/site/rules/, the design skills for Claude Code and Codex), the
 // site templates (AGENTS.md, CLAUDE.md, README, PLAN, the Next
 // config, the Claude settings, .gitignore, the CI workflow, the setup
@@ -11,8 +11,8 @@
 // generated config (package.json, tsconfig.json, pnpm-workspace.yaml).
 // Nothing of the package's source, and nothing of the example's content. Existing
 // files are kept unless forced, and a site's own (its content, its pictures,
-// its brand and forms config) even then: the starter's content and pictures go
-// only into a site with no content/ yet;
+// its brand and forms config) even then: the starter and a site's own files
+// go only into a new site, one with no content/ yet;
 // package.json and pnpm-workspace.yaml are merged, forced or not, so what
 // `pnpm init` or an older install left there cannot stop the first install
 // or the first test. A manifest (.agentic-cms.json) records each agent file's
@@ -107,13 +107,14 @@ const filesOf = (kitRoot, entry) => (fs.statSync(path.join(kitRoot, entry)).isFi
 
 /**
  * Every file the scaffold lays out from the kit, by the path it lands at: the
- * example's code, then the starter over it (in a site with content/ already,
- * none of the starter's content or pictures), then STANDARD.md, its passages
- * on the example's own pages in the starter's words.
+ * example's code, then, for a new site (its `identity`), the starter over it —
+ * a site that has content/ gets none of it and none of a site's own files —
+ * then STANDARD.md, its passages on the example's own pages in the starter's
+ * words.
  */
-function sitePlan(kitRoot, identity, { fresh, standard }) {
-  const plan = new Map(EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).map((file) => [file, fs.readFileSync(path.join(kitRoot, file))]));
-  for (const [file, text] of starterFiles(kitRoot, identity)) if (fresh || !/^(?:content|public)\//.test(file)) plan.set(file, text);
+function sitePlan(kitRoot, identity, { standard }) {
+  const plan = new Map(EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter((file) => identity || !isSiteOwn(file)).map((file) => [file, fs.readFileSync(path.join(kitRoot, file))]));
+  if (identity) for (const [file, text] of starterFiles(kitRoot, identity)) plan.set(file, text);
   plan.set("STANDARD.md", starterMarkdown(standard, "STANDARD.md"));
   return plan;
 }
@@ -223,20 +224,22 @@ function putWorkspace(target, { result, log }) {
 }
 
 /**
- * Lays the site out under target — named `name` (default: the folder's), at
- * `url` with `email` (default: stand-ins on a reserved domain), with
- * lightOnly as a site without dark mode; { created, updated, kept, lightOnly,
- * site: { name, url, email, starter } }, `starter` false for a site whose
- * content/ was there already. Throws a StarterError (a name, a URL or an
- * address it cannot use) or a LightOnlyError before anything is written.
+ * Lays the site out under target — a new site (no content/ yet) named `name`,
+ * which it requires, at `url` with `email` (default: stand-ins on a reserved
+ * domain); a site that has content/ without the starter, its own files left
+ * alone and no name asked — with lightOnly as a site without dark mode;
+ * { created, updated, kept, lightOnly, site: { name, url, email, starter:
+ * true } | { starter: false } }. Throws a StarterError (a new site without
+ * its name, a name, a URL or an address it cannot use) or a LightOnlyError
+ * before anything is written.
  */
 export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, name, url, email, now, log = console.log }) {
-  const identity = siteIdentity(target, { name, url, email, now });
   const fresh = !fs.existsSync(path.join(target, "content"));
-  const result = { created: [], updated: [], kept: [], lightOnly, site: { name: identity.name, url: identity.url, email: identity.email, starter: fresh } };
+  const identity = fresh ? siteIdentity(target, { name, url, email, now }) : null;
+  const result = { created: [], updated: [], kept: [], lightOnly, site: identity ? { name: identity.name, url: identity.url, email: identity.email, starter: true } : { starter: false } };
   const opts = { force, result, log };
   const standard = fs.readFileSync(path.join(kitRoot, "STANDARD.md"), "utf8").replace(/^(# .*\n)/, `$1\n${STANDARD_NOTE}`);
-  const plan = sitePlan(kitRoot, identity, { fresh, standard });
+  const plan = sitePlan(kitRoot, identity, { standard });
   if (lightOnly) lightOnlyPlan(plan);
   fs.mkdirSync(target, { recursive: true });
   for (const [file, text] of plan) put(target, file, text, { ...opts, force: force && !isSiteOwn(file) });

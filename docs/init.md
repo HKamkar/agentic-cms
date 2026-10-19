@@ -6,14 +6,15 @@ site of its own out — the example's code with a starter of the site's name
 in place of the example's content — in one line:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
 `pnpm dlx` installs the kit in a temporary place and runs its `init`, which
-lays the site out in `my-site/` (`.` for the folder you are in), named after
-the folder (`my-site` → My Site); `--name "<Site>"` at the end of the line
-gives the name as it is spelled, `--url` and `--email` its address
+lays the site out in `my-site/` (`.` for the folder you are in) under the
+name `--name` gives, as it is spelled. A new site needs it: without it
+`init` exits 2 and writes nothing, and the folder's name is never taken for
+the site's. `--url` and `--email` give its address
 ([§ The starter](#the-starter)). The kit is
 a git dependency: it builds its `dist/` as it installs (`prepare`), which
 pnpm runs only for a package its build approvals name by that exact key — a
@@ -28,10 +29,11 @@ approval and records it in the workspace:
 
 ```bash
 pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1
-pnpm exec agentic-cms init .
+pnpm exec agentic-cms init . --name "My Site"
 ```
 
-From a checkout of the kit, `pnpm kit init ../my-site` does the same.
+From a checkout of the kit, `pnpm kit init ../my-site --name "My Site"` does
+the same.
 
 ## What it writes
 
@@ -99,8 +101,9 @@ written into its `PLAN.md`). An existing file is never overwritten unless
 `--force`; each file prints `created`, `updated` or `kept`. A site's own is
 never overwritten, `--force` included: its `content/` and `public/`,
 `src/config/site.ts` and `src/config/forms.ts`. The starter's content and
-pictures go only into a folder with no `content/` yet: `init` on an existing
-site, `--agent-files` or not, never deletes or rewrites the site's own
+pictures go only into a folder with no `content/` yet, a new site, which
+needs its name: `init` on an existing site, `--agent-files` or not, asks
+none, writes none of the site's own files and never deletes or rewrites its
 content. `package.json` and `pnpm-workspace.yaml` are merged, with `--force`
 too, and print `merged` with what changed.
 
@@ -112,12 +115,12 @@ A new site starts from its own name, never from the example's brand:
 pnpm exec agentic-cms init my-site --name "My Site" --url https://my-site.com --email hello@my-site.com
 ```
 
-- **The name** (`--name`, default the folder's, its words capitalised) goes
-  where the example says its own: `site.ts`'s `name` and `shortName`, the
-  starter's copy, `content/VOICE.md`'s brand (the prose, `brand.name` and
-  the claim and stack expressions), the logo placeholder's text, title and
-  file name (`public/images/brand/<slug>-logo.svg`, which `site.logo`
-  names).
+- **The name** (`--name`, required for a new site, as it is spelled; never
+  taken from the folder's name) goes where the example says its own:
+  `site.ts`'s `name` and `shortName`, the starter's copy,
+  `content/VOICE.md`'s brand (the prose, `brand.name` and the claim and
+  stack expressions), the logo placeholder's text, title and file name
+  (`public/images/brand/<slug>-logo.svg`, which `site.logo` names).
 - **The address** (`--url`, the origin; `--email`) goes into `site.ts` and
   the home page's contact card. Without them it stands on a domain reserved
   for examples, `https://<slug>.example` and `hello@<slug>.example`, and so
@@ -171,7 +174,7 @@ example is the example, is told by its package name and exempt.
 already has the kit,
 
 ```bash
-pnpm exec agentic-cms init my-site --light-only
+pnpm exec agentic-cms init my-site --name "My Site" --light-only
 ```
 
 — lays the same site out with one scheme, light:

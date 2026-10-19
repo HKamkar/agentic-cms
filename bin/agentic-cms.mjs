@@ -48,7 +48,7 @@ if (rest.includes("--help") || rest.includes("-h")) {
 }
 // A command that loads the site's registry (site: true) runs in the site's root: src/kit.ts is its mark.
 if (spec.site && !fs.existsSync("src/kit.ts")) {
-  console.error(`agentic-cms ${command}: no src/kit.ts here — run it in the site's root (where package.json, src/kit.ts and content/ are)${fs.existsSync("package.json") ? "" : "; to start a site here, agentic-cms init ."}`);
+  console.error(`agentic-cms ${command}: no src/kit.ts here — run it in the site's root (where package.json, src/kit.ts and content/ are)${fs.existsSync("package.json") ? "" : "; to start a site here, agentic-cms init . --name \"<Site>\""}`);
   process.exit(2);
 }
 // The scripts print and then process.exit(), which drops whatever a pipe has not
