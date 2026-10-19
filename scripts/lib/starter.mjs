@@ -24,6 +24,23 @@ const TOKEN = /\{\{(\w+)\}\}/g;
 /** A name, a URL or an address init cannot use: exit 2, nothing written. */
 export class StarterError extends Error {}
 
+/**
+ * The kit's own lines in the example's code, which a site does not take: the
+ * lint's and the guard's ignore of the package's source, src/lib — a site's
+ * src/lib is its own, and linted.
+ */
+export const KIT_ONLY = {
+  "eslint.config.mjs": `    // In the kit's own checkout src/lib is the package's source, the motion library's included: init leaves this line out of a site, whose src/lib is its own and linted.\n    ignores: ["src/lib/**"],\n`,
+  "src/config/components.json": `  "$ignores": "In the kit's own checkout src/lib is the package's source: init leaves these two lines out of a site, whose src/lib is its own and linted.",\n  "ignores": ["src/lib/**"],\n`,
+};
+
+/** An example file as a site takes it: the kit's own lines (KIT_ONLY) left out. Throws a StarterError, before anything is written, when they are not where init expects them. */
+export function siteCode(file, text) {
+  if (!Object.hasOwn(KIT_ONLY, file)) return text;
+  if (!text.includes(KIT_ONLY[file])) throw new StarterError(`${file}: the kit's ignore of src/lib is not where init expects it — a kit bug to report`);
+  return text.replace(KIT_ONLY[file], "");
+}
+
 /** A site's own files: its copy, its pictures, its brand and its forms — never overwritten, --force included. */
 export const isSiteOwn = (file) => /^(?:content|public)\//.test(file) || file === "src/config/site.ts" || file === "src/config/forms.ts";
 

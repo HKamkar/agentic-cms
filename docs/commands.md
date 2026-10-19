@@ -1068,7 +1068,7 @@ agentic-cms seo --strict --json
 
 ### `check-components`
 
-The component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them; the config is src/config/components.json.
+The component library's placement guard, which pnpm lint runs after ESLint: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them, every owner with its reason; and the engines held: the required agentic-cms/* rules as ESLint resolves them for a sample file per layer, set as componentRules() makes them of the config, and every inline disable of one with its reason, listed; the config is src/config/components.json.
 
 ```bash
 agentic-cms check-components [--json]
@@ -1078,9 +1078,9 @@ agentic-cms check-components [--json]
 |---|---|
 | `--json` | print the report as one JSON document |
 
-Exit: `0` every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass); `1` a finding (each with its file, the check, and the fix); `2` no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage.
+Exit: `0` every file where the library keeps it (a file on the config's inherited list, and a running design round's candidates, pass), and the engines' rules held; `1` a finding (each with its file, the check, and the fix); `2` no src/config/components.json here, a config that does not read (an unknown key named with the nearest one), or usage.
 
-`--json` prints `{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited, file, problem, fix }] }`.
+`--json` prints `{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, disables: [{ file, line, rules, reason }], findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited|owners|disables|preset, file, problem, fix }] }`.
 
 ```bash
 agentic-cms check-components             # what pnpm lint runs after eslint

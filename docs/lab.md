@@ -97,10 +97,18 @@ scene's size and, for an icon-sized one, at `sizes` (24 / 40 / 64 by
 default). `currentColor` is each ground's ink and the `var()` tokens are
 the site's, because the drawing is inline in the site's own document; the
 site's theme toggle flips the page ground and leaves a white card white,
-which is the point. The template starts with two grounds every site has —
-the page and a white card — and the site adds its own (a card, a panel, a
-dark band): keep them in a file of your own that the route imports, since
-`lab clean` deletes the route. The files are read on every render, so a
+which is the point. With no `grounds` it shows the two every site has,
+`LAB_GROUNDS` — the page and a white card — and the site adds its own (a
+card, a panel, a dark band) as `grounds={[...LAB_GROUNDS, …]}`: keep them in
+a file of your own that the route imports, since `lab clean` deletes the
+route. A ground's `label` names a surface for the review, which the copy
+rule reads as copy in data (`agentic-cms/copy`, `docs/primitives.md` §
+Enforced): that file says so once, `/* eslint-disable agentic-cms/copy --
+the lab's ground labels name surfaces for review, and the lab never ships
+*/`, and `check-components` lists the reason. The labels the lab's own
+components take (`LabStudy`, `LabTimeline`) are the tool's, and pass. The
+route's head is `kit.seo.unlistedMetadata()`. The files are read on every
+render, so a
 save in the lab is a refresh here. Every copy's ids are its own, and an
 animated scene gets a timeline of its own (§ Inspecting motion) — its
 controls, its cycle, one timeline for all its copies.

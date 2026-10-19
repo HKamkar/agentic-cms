@@ -15,6 +15,8 @@ export type SiteConfig = {
   readonly url: string;
   /** The `lang` of the page and the feed's language. */
   readonly locale: string;
+  /** The Open Graph locale, language_TERRITORY (`en_US`): every page's og:locale, from the root layout's metadata; left out, none. */
+  readonly ogLocale?: string;
   readonly tagline: string;
   /** The feed's description. */
   readonly description: string;

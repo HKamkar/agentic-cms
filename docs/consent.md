@@ -104,6 +104,13 @@ A change made on the page reaches the listeners synchronously, before React
 re-renders, so an adapter can act on it before anything that renders from
 it. An adapter treats `null` after a choice as a refusal.
 
+The lint keeps every tag behind an adapter: `agentic-cms/tags`
+(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails `next/script`
+and a `<script src>` of another origin anywhere in `src/` but the files
+`owners.tags` names in `src/config/components.json`, each with its reason.
+An adapter of the site's own is named there, and `eslint.config.mjs`
+passes the same file to `componentRules()`.
+
 ## Google: consent mode v2
 
 **The default.** `consentDefaultScript(policy)` is the inline script every

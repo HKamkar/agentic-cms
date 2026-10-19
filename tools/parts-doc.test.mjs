@@ -12,7 +12,7 @@ test("docs/parts.md names every export, command and rule of the kit", () => {
 
 test("the names come from the code: the exports as a site imports them, the preset's rules, the guard's passes, the content lint's rules", () => {
   assert.deepEqual(exportNames({ name: "kit", exports: { ".": "./a.js", "./eslint": "./b.mjs", "./forms/server": {} } }), ["kit", "kit/eslint", "kit/forms/server"]);
-  assert.deepEqual(presetRules().sort(), ["no-restricted-imports", "no-restricted-syntax", "react/forbid-elements", "react/no-multi-comp"]);
+  assert.deepEqual(presetRules().sort(), ["agentic-cms/copy", "agentic-cms/email", "agentic-cms/forms", "agentic-cms/head", "agentic-cms/tags", "no-restricted-imports", "no-restricted-syntax", "react/forbid-elements", "react/no-multi-comp"]);
   assert.deepEqual(guardPasses('finding("layers", a); finding( "routes", b); const finding = (check) => check;'), ["layers", "routes"]);
   assert.deepEqual(contentLintRules('{ rule: "seo-title" }; add("WARN", "voice-claim", x); add("FAIL", error.file, "schema", p, q); add("FAIL", `image ${src}`);').sort(), ["schema", "seo-title", "voice-claim"]);
   const kinds = new Set(requiredNames().map((r) => r.kind));

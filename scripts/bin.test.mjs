@@ -4,10 +4,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
 const run = (args, cwd = process.cwd()) => spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: "utf8" });
@@ -74,6 +76,10 @@ test("check-components: the kit's example passes; a stray section file is a find
     assert.equal(none.status, 2);
     assert.match(none.stderr, /^check-components: no src\/config\/components\.json here — the guard is not set up in this site/);
     write("src/config/components.json", JSON.stringify({ motion: null, patterns: null }));
+    // The site's ESLint config spreads the preset with the same options: the guard reads the required rules' settings from it.
+    const url = (file) => JSON.stringify(pathToFileURL(file).href);
+    const react = createRequire(createRequire(import.meta.url).resolve("eslint-config-next")).resolve("eslint-plugin-react");
+    write("eslint.config.mjs", `import react from ${url(react)};\nimport { componentRules } from ${url(path.join(import.meta.dirname, "lib/component-lint.mjs"))};\nexport default [{ plugins: { react } }, ...componentRules({ motion: null, patterns: null })];\n`);
     write("src/components/README.md", "## `Button`\n");
     write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
     write("src/components/sections/render.tsx", 'import { Hero } from "@/components/sections/Hero";\n');
@@ -87,6 +93,11 @@ test("check-components: the kit's example passes; a stray section file is a find
     const json = run(["check-components", "--json"], dir);
     assert.equal(json.status, 1);
     assert.deepEqual(JSON.parse(json.stdout).findings.map((f) => [f.check, f.file]), [["registry", "src/components/sections/Promo.tsx"]]);
+    fs.rmSync(path.join(dir, "src/components/sections/Promo.tsx"));
+    write("eslint.config.mjs", fs.readFileSync(path.join(dir, "eslint.config.mjs"), "utf8").replace("})];", '}), { files: ["src/app/**"], rules: { "agentic-cms/head": "off" } }];'));
+    const replaced = run(["check-components", "--json"], dir);
+    assert.equal(replaced.status, 1, "a later block that turns a required rule off fails the guard");
+    assert.deepEqual(JSON.parse(replaced.stdout).findings.map((f) => [f.check, f.file]), [["preset", "src/app/page.tsx"], ["preset", "src/app/sample-demo/page.tsx"]]);
     write("src/config/components.json", JSON.stringify({ sectons: ["sections"] }));
     assert.match(run(["check-components"], dir).stderr, /no option sectons — did you mean sections\?/);
     assert.match(run(["check-components", "--jsn"], dir).stderr, /did you mean --json\?/);

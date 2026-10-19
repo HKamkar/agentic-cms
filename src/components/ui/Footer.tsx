@@ -1,3 +1,5 @@
+import { EmailLink } from "agentic-cms/components";
+import { encodeEmail } from "agentic-cms/email";
 import { Container } from "./Container";
 import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
@@ -39,9 +41,7 @@ export function Footer() {
                 </span>
               ))}
             </address>
-            <a href={`mailto:${site.email}`} className="self-start">
-              {site.email}
-            </a>
+            <EmailLink token={encodeEmail(site.email)} className="self-start" />
           </div>
           <LinkColumn title={chrome.footer.quickLinks} links={site.footer.quickLinks} />
           <LinkColumn title={chrome.footer.social} links={site.footer.social} />

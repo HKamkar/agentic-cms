@@ -4,7 +4,7 @@
 // server components a throwaway route renders — LabScenes for the lab's,
 // LabStudy for a design round's (docs/lab.md).
 export { LAB_API } from "./api.ts";
-export { LabScenes, type LabScenesProps } from "./LabScenes.ts";
+export { LAB_GROUNDS, LabScenes, type LabScenesProps } from "./LabScenes.ts";
 export { LabStudy, type Ground, type LabStudyProps } from "./LabStudy.ts";
 export { LabTimeline, type LabTimelineProps } from "./LabTimeline.ts";
 export { TIMELINE_CSS, mountTimeline, timelineControlsHtml, timelineScript, type Timeline, type TimelineOptions } from "./timeline.ts";
