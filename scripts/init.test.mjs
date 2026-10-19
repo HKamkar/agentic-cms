@@ -10,7 +10,7 @@ import { checkComponents, formatReport } from "./lib/check-components.mjs";
 import { recordOf, recordText } from "../tools/agent-file-releases.mjs";
 import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, sha, siteVersion } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
-import { SHARED_CONTENT, STARTER, StarterError } from "./lib/starter.mjs";
+import { KIT_ONLY, SHARED_CONTENT, siteCode, STARTER, StarterError } from "./lib/starter.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "..");
@@ -39,6 +39,10 @@ test("scaffold lays out a site from the package: the example's code, the starter
   assert.equal(pkg.scripts.lint, LINT);
   const guard = checkComponents({ root: target, fs });
   assert.deepEqual(guard.findings, [], formatReport(guard).join("\n"));
+  assert.doesNotMatch(read(target, "eslint.config.mjs"), /src\/lib/, "a site's src/lib is its own, and linted: the kit's ignore of its package source stays in the kit");
+  const components = JSON.parse(read(target, "src/config/components.json"));
+  assert.ok(!("ignores" in components) && !("$ignores" in components), "nor in the guard's config");
+  assert.deepEqual(Object.keys(components.owners.forms), ["src/components/ui/form/Form.tsx"], "the form engine's renderer owns the one <form>");
   assert.ok(!("setup" in pkg.scripts), "no script named setup: pnpm setup is pnpm's own");
   assert.ok(pkg.devDependencies["playwright-core"] && pkg.devDependencies.tailwindcss && pkg.dependencies.next && pkg.dependencies.zod);
   assert.ok(!("@opennextjs/cloudflare" in pkg.devDependencies) && !("wrangler" in pkg.devDependencies));
@@ -262,6 +266,17 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.deepEqual((await readSiteProfile(both)).schemes, ["light", "dark"]);
 });
 
+test("the kit's own lines in the example's code stay in the kit: siteCode leaves them out, and a kit that moved them fails before anything is written", () => {
+  for (const [file, lines] of Object.entries(KIT_ONLY)) {
+    const text = read(KIT, file);
+    assert.ok(text.includes(lines), `${file} carries the kit's own lines where init expects them`);
+    assert.equal(siteCode(file, text), text.replace(lines, ""));
+    assert.throws(() => siteCode(file, text.replace(lines, "")), (error) => error instanceof StarterError && new RegExp(`^${file.replace(/[./]/g, "\\$&")}: the kit's ignore of src/lib is not where init expects it`).test(error.message));
+  }
+  assert.doesNotThrow(() => JSON.parse(siteCode("src/config/components.json", read(KIT, "src/config/components.json"))), "the guard's config still reads");
+  assert.equal(siteCode("src/app/layout.tsx", "x"), "x", "every other file as it is");
+});
+
 test("a light-only edit that misses its place in the example fails before anything is written", () => {
   const kit = tmp();
   for (const entry of [STARTER, ...SHARED_CONTENT]) fs.cpSync(path.join(KIT, entry), path.join(kit, entry), { recursive: true });
@@ -270,6 +285,7 @@ test("a light-only edit that misses its place in the example fails before anythi
     if (/\.[a-z]+$|^\.[a-z]+$/.test(path.basename(entry))) { fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, ""); } else fs.mkdirSync(full, { recursive: true });
   }
   fs.writeFileSync(path.join(kit, "src/app/layout.tsx"), "export const viewport = { colorScheme: \"light dark\" };\n");
+  for (const [file, lines] of Object.entries(KIT_ONLY)) fs.writeFileSync(path.join(kit, file), lines);
   fs.writeFileSync(path.join(kit, "STANDARD.md"), "# Standard\n\nFour values<!-- dark-mode:start -->, each a pair<!-- dark-mode:end -->.<!-- example:start --> Nine pages.<!-- example:end -->\n");
   const target = path.join(tmp(), "never");
   assert.throws(() => scaffold(target, { name: "My Site", kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/app\/layout\.tsx: the theme script and the comment above it not found/.test(error.message));

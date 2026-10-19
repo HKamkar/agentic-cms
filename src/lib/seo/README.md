@@ -20,9 +20,17 @@ on a structural problem.
    from `kit.seo.pageMetadata(page.seo)`, nothing hand-written: that is
    the exact title, the description, the canonical, Open Graph with the
    1200×630 image, the Twitter card. Posts get `kit.seo.postMetadata(post)`
-   from the post page; never build these by hand. `kit.seo` is
-   `createSeo({ site, urls, content, blog })`, composed once by
-   `createKit()` in the site's `src/kit.ts`; nothing here imports the site.
+   from the post page; the root layout's `metadata` is
+   `kit.seo.rootMetadata()` (the origin, the title template with the home
+   page's title, its description, Open Graph's name and `site.ogLocale`,
+   the feed); a design round's or the lab's route is
+   `kit.seo.unlistedMetadata()` (`noindex`). Never build these by hand:
+   `pnpm lint` fails any other `metadata` or `generateMetadata`, and a
+   `<head>`, `<title>`, `<meta>`, canonical `<link>` or JSON-LD `<script>`
+   of the site's own (`agentic-cms/head`, `docs/primitives.md` §
+   Enforced). `kit.seo` is `createSeo({ site, urls, content, blog })`,
+   composed once by `createKit()` in the site's `src/kit.ts`; nothing here
+   imports the site.
 3. **Structured data**: the same route emits `kit.seo.pageBreadcrumb(page.seo)`
    for every inner page (posts `postBreadcrumb(post)`) and the page-type
    block from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`,
@@ -104,7 +112,7 @@ on a structural problem.
 |---|---|
 | `src/lib/seo/index.ts` | `createSeo({ site, urls, content, blog })`: everything below, composed for one site (`kit.seo`) |
 | `src/lib/seo/types.ts` | `PageSeo` (the `seo` block's type, from the schema) |
-| `src/lib/seo/metadata.ts` | `pageMetadata()` (needs no site), `createMetadata(urls)` → `postMetadata()` |
+| `src/lib/seo/metadata.ts` | `pageMetadata()` and `unlistedMetadata()` (need no site), `createMetadata(urls)` → `postMetadata()`, `createRootMetadata(site, home)` → `rootMetadata()` |
 | `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
 | `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
 | `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |

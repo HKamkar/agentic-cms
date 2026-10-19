@@ -100,7 +100,7 @@ already stated. For anything that moves, `references/svg-motion.md`.
    And `pnpm kit lab route`, which waits until `/lab-demo` answers on the
    dev server (`pnpm kit serve` starts it, the lab beside it) and prints
    its URLs: the same scenes on the site's own grounds — its page, its cards, its panels, as
-   the route's `GROUNDS` list says — inside the real chrome, each animated
+   the route's grounds say (`LAB_GROUNDS` and the site's own) — inside the real chrome, each animated
    scene with a timeline of its own; `pnpm kit shot /lab-demo --url <dev
    server>` photographs it seeded, with the site's banner closed. When animated candidates are judged
    on a design round's demo route instead, they get the same timeline

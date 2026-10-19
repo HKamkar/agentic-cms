@@ -14,6 +14,12 @@ lines in the site. So the choice of service is a site's, made in its
 environment, and changing it later touches no form. The contract — every
 status, the wire format, the signature — is `src/lib/forms/README.md`.
 
+The lint keeps every form on the engine: `agentic-cms/forms`
+(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails a `<form>`
+anywhere in `src/` but the form component `owners.forms` names in
+`src/config/components.json` (the example's `ui/form/Form.tsx`), a server
+action, and a `fetch()` of another origin in a component.
+
 ## What a form can ask
 
 A form is a definition in `src/config/forms.ts`; every item is config, so a

@@ -72,12 +72,12 @@ function routeBody(name, props, timeline) {
     <>
       {CANDIDATES.map(({ letter, note, Candidate }) => (
         <div key={letter} data-candidate={letter}>
-          <p style={chip}><span style={letterStyle}>{letter}</span> {note}</p>
+          <p style={chip} aria-hidden="true"><span style={letterStyle}>{letter}</span> {note}</p>
           ${render("Candidate", "{letter}")}
         </div>
       ))}
       <div data-candidate="now">
-        <p style={chip}><span style={letterStyle}>now</span> the current version</p>
+        <p style={chip} aria-hidden="true"><span style={letterStyle}>now</span> the current version</p>
         ${render(name, '"now"')}
       </div>
     </>
@@ -87,7 +87,7 @@ function routeBody(name, props, timeline) {
 }
 
 // The chip that names a block, in the page's column: a hairline in the site's ink, no colour of its own.
-const CHIP = `// The chip that names a block, in the page's column: a hairline in the site's ink, no colour of its own.
+const CHIP = `// The chip that names a block for the owner's pick, in the page's column: a hairline in the site's ink, no colour of its own; aria-hidden, the round's label and none of the page's copy.
 const chip = { display: "flex", alignItems: "baseline", gap: ".5rem", maxWidth: "var(--container-page, 72rem)", margin: "3rem auto .5rem", padding: "0 1rem", font: ".75rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", letterSpacing: ".06em" } as const;
 const letterStyle = { border: "1px solid currentColor", padding: ".1rem .5rem", fontWeight: 700 } as const;`;
 
@@ -108,9 +108,9 @@ function showcaseSource({ demo, components, timeline }) {
   const blocks = (components.length ? components : [null]).map((c) => {
     const label = c ? c.name : "1";
     const piece = c ? `<${c.name} />` : "{/* the piece under review: a primitive in each of its states, a motion layer's parts, … */}";
-    const note = c ? `${c.file}: each look and state it has, with real copy` : "what this block shows, in one line";
+    const note = c ? `${c.file}: each look and state it has, with real copy from a content file` : "what this block shows, in one line";
     return `      <div data-showcase="${label}">
-        <p style={chip}><span style={letterStyle}>${label}</span> ${note}</p>
+        <p style={chip} aria-hidden="true"><span style={letterStyle}>${label}</span> ${note}</p>
         <div style={column}>${timeline ? timed(`"${label}"`, piece) : piece}</div>
       </div>`;
   }).join("\n");
@@ -118,10 +118,14 @@ function showcaseSource({ demo, components, timeline }) {
 // page that is not a section's candidates — the library's primitives, a
 // motion layer, a set of states — a block per piece, each rendered bare to
 // start from (give it the props, looks and states to review), inside the
-// site's own layout so it is judged on its theme. Written by
+// site's own layout so it is judged on its theme. Its copy is read from a
+// content file — a page's (kit.content.getPage("<slug>")) or the chrome in
+// src/config/site.ts — never typed in: the lint's copy rule holds here as
+// everywhere in src. Written by
 ${removal(demo, "every file only it uses (the pieces it shows stay)", " --showcase")}
+import { kit } from "@/kit";
 ${timeline ? TIMELINE_IMPORT : ""}${imports}${imports ? "\n" : ""}
-export const metadata = { robots: { index: false } };
+export const metadata = kit.seo.unlistedMetadata();
 
 ${CHIP}
 ${COLUMN}
@@ -151,9 +155,10 @@ export function routeSource({ demo, type, slug, component, letters, data = false
 // lettered with one line on what differs, the current version last. Written by
 ${removal(demo)}
 import type { ComponentType } from "react";
+import { kit } from "@/kit";
 ${imports}
 
-export const metadata = { robots: { index: false } };
+export const metadata = kit.seo.unlistedMetadata();
 
 const CANDIDATES: { letter: string; note: string; Candidate: ComponentType }[] = [
 ${rows}
@@ -176,7 +181,7 @@ import type { SectionOf, SectionProps } from "@/components/sections/schemas";
 import { kit } from "@/kit";
 ${imports}
 
-export const metadata = { robots: { index: false } };
+export const metadata = kit.seo.unlistedMetadata();
 
 type Props = SectionProps<"${type}">;
 const CANDIDATES: { letter: string; note: string; Candidate: (props: Props) => ReactNode }[] = [

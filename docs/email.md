@@ -43,6 +43,13 @@ the mobile menu, and a Markdown post's `mailto:` links through the site's
 `a` mapping (`mdx.tsx`: a `href` starting with `mailto:` becomes an
 `EmailLink` with the address encoded).
 
+The lint holds it everywhere in `src/`: `agentic-cms/email`
+(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails a `mailto:`
+link built in code — a string with an address after `mailto:`, a template
+with `mailto:` in it, a `"mailto:"` added to something — and names
+`EmailLink`. The bare `"mailto:"` a mapping tests an href against builds
+no link, and passes.
+
 ## The form — `withEmailToken`
 
 ```tsx

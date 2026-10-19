@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { GoogleTag, consentDefaultScript } from "agentic-cms/consent/google";
 import { ConsentBanner } from "@/components/ui/ConsentBanner";
 import { Footer } from "@/components/ui/Footer";
@@ -13,16 +13,8 @@ import "./globals.css";
 // runs before hydration — hence suppressHydrationWarning on <html>.
 const THEME_SCRIPT = "try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}";
 
-const home = () => kit.content.getPage("home");
-
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: { default: home().seo.title, template: `%s | ${site.name}` },
-  description: home().seo.description,
-  openGraph: { type: "website", siteName: site.name, locale: "en_US" },
-  twitter: { card: "summary_large_image" },
-  alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
-};
+// The head every page starts from: the origin, the title template and the home page's title and description, Open Graph's name and locale, the feed (src/lib/seo/README.md).
+export const metadata = kit.seo.rootMetadata();
 
 export const viewport: Viewport = { colorScheme: "light dark" };
 

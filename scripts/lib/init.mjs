@@ -44,7 +44,7 @@ import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
 import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
-import { isSiteOwn, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
+import { isSiteOwn, KIT_ONLY, siteCode, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
 import { unifiedDiff } from "./unified-diff.mjs";
 
 /** The example's code, copied as it is but where the starter has a file of its own (lib/starter.mjs): the content and the pictures are the starter's. */
@@ -107,13 +107,15 @@ const filesOf = (kitRoot, entry) => (fs.statSync(path.join(kitRoot, entry)).isFi
 
 /**
  * Every file the scaffold lays out from the kit, by the path it lands at: the
- * example's code, then, for a new site (its `identity`), the starter over it —
+ * example's code (but the kit's own lines, KIT_ONLY), then, for a new site
+ * (its `identity`), the starter over it —
  * a site that has content/ gets none of it and none of a site's own files —
  * then STANDARD.md, its passages on the example's own pages in the starter's
  * words.
  */
 function sitePlan(kitRoot, identity, { standard }) {
   const plan = new Map(EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter((file) => identity || !isSiteOwn(file)).map((file) => [file, fs.readFileSync(path.join(kitRoot, file))]));
+  for (const file of Object.keys(KIT_ONLY)) if (plan.has(file)) plan.set(file, siteCode(file, plan.get(file).toString("utf8")));
   if (identity) for (const [file, text] of starterFiles(kitRoot, identity)) plan.set(file, text);
   plan.set("STANDARD.md", starterMarkdown(standard, "STANDARD.md"));
   return plan;

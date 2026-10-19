@@ -5,12 +5,12 @@ import type { Blog } from "../blog/posts.ts";
 import type { Content, SectionLike } from "../content/index.ts";
 import type { SiteConfig, Urls } from "../site.ts";
 import { createJsonLd } from "./jsonld.ts";
-import { createMetadata } from "./metadata.ts";
+import { createMetadata, createRootMetadata } from "./metadata.ts";
 import { createPageJsonLd } from "./pageJsonLd.ts";
 import { createPostJsonLd } from "./postJsonLd.ts";
 import { createRoutes } from "./routes.ts";
 
-export { pageMetadata } from "./metadata.ts";
+export { pageMetadata, unlistedMetadata } from "./metadata.ts";
 export type { Crumb } from "./jsonld.ts";
 export type { ChangeFrequency, PageSeo } from "./types.ts";
 
@@ -18,7 +18,8 @@ export type { ChangeFrequency, PageSeo } from "./types.ts";
 export function createSeo<S extends ZodType<SectionLike>>({ site, urls, content, blog }: { site: SiteConfig; urls: Urls; content: Content<S>; blog: Blog }) {
   const jsonld = createJsonLd({ site, urls, content });
   const pageJsonLd = createPageJsonLd({ site, urls, content, blog, organizationLd: jsonld.organizationLd });
-  return { ...createMetadata(urls), ...jsonld, pageJsonLd, ...createPostJsonLd({ site, urls }), ...createRoutes({ site, urls, content, blog }) };
+  const rootMetadata = createRootMetadata(site, () => content.getPage("home").seo);
+  return { ...createMetadata(urls), rootMetadata, ...jsonld, pageJsonLd, ...createPostJsonLd({ site, urls }), ...createRoutes({ site, urls, content, blog }) };
 }
 
 export type Seo = ReturnType<typeof createSeo>;

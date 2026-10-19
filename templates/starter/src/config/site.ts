@@ -19,6 +19,7 @@ export const site = {
   shortName: "{{name}}",
   url: "{{url}}",
   locale: "en",
+  ogLocale: "en_US",
   tagline: "(placeholder) What {{name}} does, in one sentence: the line under the brand in the footer.",
   description: "(placeholder) What a reader finds on {{name}}, in one or two sentences: the description of the feed.",
   email: "{{email}}",

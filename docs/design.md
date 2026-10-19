@@ -65,7 +65,7 @@ the round, and the `design` skill gets the copy first, from the owner or
    skips the stop.
 3. **The pick of what to build.** "All" is every idea, none trimmed.
 4. **The candidates, real.** `pnpm kit demo new <name> --section <type>`
-   writes `src/app/<name>-demo/page.tsx` (`robots: { index: false }`) and a
+   writes `src/app/<name>-demo/page.tsx` (`kit.seo.unlistedMetadata()`, `noindex`) and a
    candidate per letter — a copy of the section's component beside it,
    `<Name>A.tsx`, `<Name>B.tsx`, edited into its idea. The route reads the
    page's copy from its file on every render and shows each candidate in
@@ -84,8 +84,15 @@ the round, and the `design` skill gets the copy first, from the owner or
    primitives, the parts of a motion layer — is `--showcase`, with a
    `--component <file>` for each piece it shows (repeat the flag): a block
    per piece inside the site's layout, rendered bare to start from, for the
-   agent to give the props, looks and states under review. `demo clean`
-   removes it and every file only it uses, and keeps the pieces.
+   agent to give the props, looks and states under review — its copy read
+   from a content file (a page's, `kit.content.getPage("<slug>")`, or the
+   chrome in `site.ts`), never typed in. `demo clean` removes it and every
+   file only it uses, and keeps the pieces.
+   The copy rule holds in a round as everywhere in `src/` (`agentic-cms/copy`,
+   `docs/primitives.md` § Enforced): the route and its candidates carry no
+   words of their own, the chip that names a block is `aria-hidden`, and the
+   labels of the lab's components (`LabTimeline`, `LabStudy`) are the
+   tool's, which pass.
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.

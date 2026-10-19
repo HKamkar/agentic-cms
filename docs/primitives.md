@@ -91,16 +91,111 @@ site names an exception, in the catalogue, with its reason.
 
 ## Enforced: `agentic-cms/eslint`
 
-The library holds only while nothing else draws UI, and the lint says so.
-`componentRules(options)` from `agentic-cms/eslint` returns flat ESLint
-configs; spread them after `eslint-config-next`, which registers the
-`react` plugin two of the rules come from:
+The engines hold, and the library holds, only while nothing goes around
+them, and the lint says so. `componentRules(options)` from
+`agentic-cms/eslint` returns flat ESLint configs; spread them after
+`eslint-config-next`, which registers the `react` plugin two of the rules
+come from:
 
 ```js
 import { componentRules } from "agentic-cms/eslint";
 
 export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ sections: ["sections"] })]);
 ```
+
+### The engines, required across `src/`
+
+Five rules of the preset's own ESLint plugin, `agentic-cms`, fail the lint
+everywhere under `src/` (and the app folder): sections, patterns, `ui/`,
+layouts, `not-found`, the design-round routes (`*-demo`) and the lab's
+`lab-demo` alike. Test files and `ignores` are left out. Each message
+names the engine to use and its doc.
+
+- **`agentic-cms/copy`:** every word a reader sees comes from `content/`
+  or the chrome in `src/config/site.ts`, through props. Copy is text with a
+  letter or a digit in it, wherever a reader sees it:
+  - JSX text, and a string in `{…}` among the children: written straight,
+    in a template, in a condition or a fallback;
+  - the string of a copy prop on any element: `children`, `title`, `alt`,
+    `aria-label`, `aria-description`, `aria-roledescription`,
+    `aria-valuetext`, `aria-placeholder`, `placeholder`, `label`,
+    `heading`, `eyebrow`, `text`, `body`, `description`, `caption`,
+    `subtitle`, `summary`, `quote`; a field of that name in data (an array
+    at the top of the file, an inline object) and a prop's default too;
+  - any other prop of a component whose string reads as words: a space, a
+    capital or a letter outside ASCII in it (`note="Since 2019"`). A token
+    reads as no words (`variant="primary"`, `ratio="aspect-video"`,
+    `icon="arrow-right"`) and passes;
+  - on a native element, `value` when it reads as words, and HTML handed
+    to `dangerouslySetInnerHTML` outside a `<script>` or a `<style>`.
+
+  The props the rule skips, whatever their strings read like: `className`,
+  `class`, `id`, `key`, `ref`, `style`, `href`, `src`, `srcSet`, `sizes`,
+  `media`, `type`, `role`, `rel`, `target`, `as`, `lang`, `dir`, `name`,
+  `htmlFor`, `form`, `method`, `action`, `accept`, `autoComplete`,
+  `inputMode`, `enterKeyHint`, `pattern`, `loading`, `decoding`,
+  `fetchPriority`, `crossOrigin`, `referrerPolicy`, `integrity`, `nonce`,
+  `width`, `height`, `dateTime`, `tabIndex`, `slot`, an icon's `d`,
+  `viewBox`, `points`, `transform`, `preserveAspectRatio`, `fill` and
+  `stroke`; by their shape, `data-*`, the `aria-*` attributes that are not
+  copy (ids, states), event handlers (`on…`), and a name ending in
+  `ClassName`, `Id`, `Href`, `Src`, `Url` or `As` (`headingClassName`,
+  `ctaHref`, `headingAs`); and `copy.skip`, a site's own.
+
+  What passes: a symbol (`→`, `·`), which has no letter; the text and the
+  props of an `aria-hidden` element and everything under it; the props
+  and children of a primitive that draws them `aria-hidden`, and what its
+  own definition draws (`copy.decorations`: `Placeholder`, `TypeTag`); the
+  props of the design tools' components (`copy.tools`: those imported from
+  `agentic-cms/lab`, whose labels name a block for review and never ship),
+  though what they wrap is still read. The message says where the copy
+  goes from where it was found: a section's page file and schema, a
+  primitive's props or the chrome, a route's page file, a round's page
+  file. A design round's route reads the page's copy from its file, as
+  `demo new --section` writes it, and a showcase from a content file; the
+  chip that names a candidate is `aria-hidden`.
+- **`agentic-cms/head`:** no `<head>`, `<title>` (an svg's is its name, and
+  passes), `<meta>`, canonical `<link>`, `application/ld+json` `<script>`
+  or `next/head` of the site's own. A route's `metadata`, and every return
+  of its `generateMetadata`, is a `kit.seo` helper: a call of `seo.…` or
+  `….seo.…`, of a helper imported from `agentic-cms/seo` or destructured
+  from `kit.seo`, directly or through a const, behind a condition, `await`,
+  `as` or `satisfies` — or `{}`, the page that is not there. The helpers
+  are `rootMetadata()` (the root layout), `pageMetadata()`,
+  `postMetadata()` and `unlistedMetadata()` (a design round's or the lab's
+  route); structured data is `<JsonLd>` (`src/lib/seo/README.md`).
+- **`agentic-cms/forms`:** a `<form>` only in the files `owners.forms`
+  names; no server action (`"use server"`) anywhere; no `fetch()` of
+  another origin (`https://`, `//`) in a component, `.jsx` or `.tsx` — a
+  build-time script elsewhere may (`docs/forms.md`).
+- **`agentic-cms/tags`:** `next/script`, and a `<script src>` of another
+  origin (or one the lint cannot read), only in the consent adapter
+  `owners.tags` names; an inline `<script>` and a file of the site's own
+  (`src="/…"`) pass (`docs/consent.md`).
+- **`agentic-cms/email`:** no `mailto:` in a string or a template:
+  `<EmailLink token={encodeEmail(address)} />` from `agentic-cms/components`
+  and `agentic-cms/email` (`docs/email.md`).
+
+**Owners.** A file that owns an engine's raw element is named, with the
+reason it does, in `owners` in `src/config/components.json`; the same
+files go to `componentRules()` (a list of globs, or the same map). The
+preset turns that part's rule off in those files alone:
+
+```json
+"owners": {
+  "forms": { "src/components/ui/form/Form.tsx": "the form engine's renderer: the one <form>, posting each definition of src/config/forms.ts through its backend" },
+  "tags": { "src/components/ui/AnalyticsTag.tsx": "the consent adapter of the site's analytics: next/script, after a grant" }
+}
+```
+
+**An inline disable carries its reason.** A real need the engines do not
+meet yet is `// eslint-disable-next-line agentic-cms/copy -- <the reason>`
+(or a block comment, or `eslint-disable` for a file): `check-components`
+fails a disable of a required rule, or of every rule, with no description
+after `--`, and lists every other one with its reason. A workaround is
+fine; a silent one is not.
+
+### The library's shape
 
 - **The layers import one way:** motion ← `ui/` ← `patterns/` ← the
   sections. A primitive imports no pattern and no section, a pattern no
@@ -114,15 +209,6 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
   no arbitrary value (`[…]`, `(…)`); no fill, border, radius, ring, outline,
   divider, shadow, transition or animation class, whether the class string
   is a `className` literal, a template literal or a `cx()` argument.
-- **A section or a pattern holds no copy:** no JSX text with a letter or a
-  digit in it, and no such string in a copy-bearing prop (`title`, `alt`,
-  `aria-label`, `placeholder`, `label`, `children`), written straight, as
-  `{…}`, in a template or a fallback, or as a field of that name in a data
-  array. The copy goes in the page's file, `content/pages/<slug>.yaml`, as
-  a field of the section's schema, and arrives as a prop. A symbol (`→`,
-  `·`) passes, and so does a decoration: the text of an `aria-hidden`
-  element, and the props and children of a primitive that draws them
-  `aria-hidden` (`Placeholder`, `TypeTag`).
 
 | Option | Default | What it is |
 |---|---|---|
@@ -130,11 +216,13 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
 | `motion`, `ui`, `patterns` | `"motion"`, `"ui"`, `"patterns"` | each layer's folder under `root`; `null` for a layer the site does not have |
 | `sections` | `["sections"]` | the section folders under `root` |
 | `registry` | `"sections/render.tsx"` | the section registry under `root`, left out of the section rules: it imports every section |
+| `app` | `"src/app"` | the routes' folder: a round's routes are its `*-demo` folders |
 | `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
-| `copy` | `{ props: [the six above], decorations: ["Placeholder", "TypeTag"] }` | the props whose strings are copy, and the primitives that draw their props and children `aria-hidden`; `false` turns the copy rule off |
+| `copy` | `{ props: [the copy props above], skip: [], decorations: ["Placeholder", "TypeTag"], tools: ["agentic-cms/lab"] }` | the props whose strings are copy (replacing the list); the site's own props whose strings never are (added to the rule's); the primitives that draw their props and children `aria-hidden`; the design tools' modules. Required: `false` throws |
+| `owners` | `{}` | `{ forms, tags }`: the files that own a `<form>` or a tag, as `{ "<file>": "<reason>" }` or a list of globs |
 | `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
-| `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban covers, and the tsconfig alias for it |
+| `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban and the engines cover, and the tsconfig alias for it |
 
 **Extend the preset through its options, never a block that sets one of
 its rules again.** Flat config keeps one setting of a rule per file, the
@@ -143,8 +231,15 @@ last block's: a block of the site's after `...componentRules()` that sets
 setting there, and those files lose the layers' and the animation bans
 without a warning. The same holds for `react/forbid-elements` and
 `no-restricted-syntax` in a section or a pattern file (the second has no
-option to extend it yet). A restriction of the site's own on imports goes
-into `restrictedImports`, a forbidden element into `elements`:
+option to extend it yet), and for every `agentic-cms/*` rule — which
+`check-components` catches: it reads the setting ESLint resolves for one
+sample file per layer (each section folder, a route, a round's route,
+`src/lib`, each owner's file) and fails a required rule that is off, a
+warning, unset, ignored, or set with other options than `componentRules()`
+makes of `src/config/components.json`. So `eslint.config.mjs` passes the
+config's layers, `copy`, `owners` and `ignores` alike. A restriction of
+the site's own on imports goes into `restrictedImports`, a forbidden
+element into `elements`:
 
 ```js
 ...componentRules({
@@ -160,9 +255,12 @@ Its restrictions hold wherever the kit's do, every file under `src` but
 `ignores`; a block of your own is still right for files the preset leaves
 alone (outside `src`, or in `ignores`).
 
-The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`
-and its six section folders, the page folders with `sections/` and
-`blog/`. A rule a site cannot meet yet is a new primitive or option, never
+The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`,
+its six section folders (the page folders with `sections/` and `blog/`),
+the form engine's renderer as the owner of `forms`, and `ignores:
+["src/lib/**"]`, the package's own source — a line `init` leaves out of a
+site, whose `src/lib` is its own and linted. A rule a site cannot meet yet
+is a new primitive or option, or an inline disable with its reason, never
 a rule turned off in passing; loosening one is its own pull request, said
 so in its title.
 

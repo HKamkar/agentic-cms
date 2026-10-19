@@ -12,7 +12,11 @@
     "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
     "src/app/feed.xml": "the RSS feed, written from the posts"
   },
-  "$ignores": "In the kit's own checkout src/lib is the package's source; a site has none.",
+  "$owners": "The files that own a part the engines keep out of code, each with its reason: forms (a <form>, a server action, a fetch of another origin), tags (next/script, a <script src> of another origin). eslint.config.mjs passes the same files to componentRules().",
+  "owners": {
+    "forms": { "src/components/ui/form/Form.tsx": "the form engine's renderer: the one <form>, posting each definition of src/config/forms.ts through its backend" }
+  },
+  "$ignores": "In the kit's own checkout src/lib is the package's source: init leaves these two lines out of a site, whose src/lib is its own and linted.",
   "ignores": ["src/lib/**"],
   "$inherited": "Files the guard leaves alone, frozen: here the blog's post template, which the blog routes render themselves rather than the registry (the body with its stylesheet, its element overrides, the card and the hero). Nothing new is added; a file leaves the list when a registered section or a primitive replaces it.",
   "inherited": [

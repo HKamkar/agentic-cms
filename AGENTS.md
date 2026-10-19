@@ -60,7 +60,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   content engine (the API, the feed, the post template, a design round's
   `*-demo`, `lab-demo`) is a named exception with its reason
   (`exceptions` in `src/config/components.json`); `pnpm lint` fails any
-  other, and copy in a section or a pattern. The pages rule has the rest.
+  other, and copy anywhere in `src/`. The pages rule has the rest.
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
@@ -87,7 +87,7 @@ paths. The table is written from the rules' frontmatter by
 | Paths | Read and follow |
 | --- | --- |
 | `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [The post pipeline](.claude/rules/blog-engine.md) |
-| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/engine-rules.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |

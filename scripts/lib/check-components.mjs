@@ -15,7 +15,15 @@
 //     folder — a design round's route, the lab's lab-demo — is one by name);
 //   - no component (.tsx, .jsx) outside src/components and src/app;
 //   - CSS modules only in ui and the motion layer, @keyframes only in the
-//     motion layer and src/styles/motion.css.
+//     motion layer and src/styles/motion.css;
+//   - each file an `owners` entry names (the files that own a <form> or a
+//     tag) is there, with its reason;
+//   - an inline disable of a required rule (the engines' agentic-cms/*, or
+//     every rule) says why after `--`; the report lists each reason;
+//   - and, through ESLint (checkPreset), the required rules hold: their
+//     resolved setting for one sample file per layer is the one
+//     componentRules() makes of the config, so no later block of the site's
+//     replaced one and eslint.config.mjs passes the config's options.
 // A running round's candidates (the `created` of a src/app/*-demo/demo.json,
 // with their module.css) pass, and so does every file on the config's frozen
 // `inherited` list, which only shrinks: a listed file that is gone is a
@@ -24,7 +32,7 @@
 // in as `fs` (existsSync, readFileSync, readdirSync with withFileTypes).
 import path from "node:path";
 import { suggest } from "./args.mjs";
-import { DEFAULTS as LINT_DEFAULTS, resolveOptions } from "./component-lint.mjs";
+import { DEFAULTS as LINT_DEFAULTS, OWNED, REQUIRED, requiredConfigs, resolveOptions } from "./component-lint.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
 export const CONFIG_FILE = "src/config/components.json";
@@ -37,7 +45,7 @@ export const EXCEPTIONS = {
   "src/app/feed.xml": "the RSS feed, written from the posts",
 };
 /** The guard's keys beyond componentRules()'s, with their defaults; `catalogue` is under `root`. */
-export const GUARD_DEFAULTS = { catalogue: "README.md", app: "src/app", routes: ROUTES, exceptions: EXCEPTIONS, motionCss: "src/styles/motion.css", inherited: [] };
+export const GUARD_DEFAULTS = { catalogue: "README.md", routes: ROUTES, exceptions: EXCEPTIONS, motionCss: "src/styles/motion.css", inherited: [] };
 const KEYS = new Set([...Object.keys(LINT_DEFAULTS), ...Object.keys(GUARD_DEFAULTS)]);
 /** The files Next.js reads in a route folder: the route's own files and its metadata, plus the root layout's stylesheet. */
 export const ROUTE_FILE = /^(?:(?:page|layout|template|loading|error|global-error|not-found|forbidden|unauthorized|default|route)\.(?:tsx|ts|jsx|js)|(?:sitemap|robots|manifest)\.(?:ts|js|xml|txt|json|webmanifest)|(?:icon|apple-icon|opengraph-image|twitter-image)\d*\.(?:ico|jpe?g|png|gif|svg|tsx|ts|jsx|js)|(?:opengraph-image|twitter-image)\d*\.alt\.txt|favicon\.ico|globals\.css)$/;
@@ -49,6 +57,7 @@ const SOURCE = /\.(tsx|ts|jsx|js|mjs)$/;
 const TEST = /\.test\.[cm]?[jt]sx?$/;
 
 export class GuardConfigError extends Error {}
+const isMap = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 /** The site's config as written, every key checked; throws GuardConfigError naming the fix. */
 export function readConfig(root, fs) {
@@ -59,7 +68,8 @@ export function readConfig(root, fs) {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new GuardConfigError(`${CONFIG_FILE}: an object of options, not ${JSON.stringify(config)}`);
   for (const key of Object.keys(config)) if (!key.startsWith("$") && !KEYS.has(key)) throw new GuardConfigError(`${CONFIG_FILE}: no option ${key}${suggest(key, [...KEYS])} (a key starting with $ is a comment)`);
   for (const key of ["sections", "ignores", "routes", "inherited"]) if (key in config && !(Array.isArray(config[key]) && config[key].every((v) => typeof v === "string"))) throw new GuardConfigError(`${CONFIG_FILE}: ${key} is a list of paths`);
-  if ("exceptions" in config && (!config.exceptions || typeof config.exceptions !== "object" || Array.isArray(config.exceptions))) throw new GuardConfigError(`${CONFIG_FILE}: exceptions is { "<route folder>": "<reason>" } — each route outside the content engine, with the reason it stays there`);
+  if ("exceptions" in config && !isMap(config.exceptions)) throw new GuardConfigError(`${CONFIG_FILE}: exceptions is { "<route folder>": "<reason>" } — each route outside the content engine, with the reason it stays there`);
+  if ("owners" in config && !(isMap(config.owners) && Object.entries(config.owners).every(([part, files]) => OWNED.includes(part) && isMap(files)))) throw new GuardConfigError(`${CONFIG_FILE}: owners is { ${OWNED.map((part) => `"${part}": { "<file>": "<reason>" }`).join(", ")} } — the files that own a part of an engine, each with the reason it does`);
   return config;
 }
 
@@ -67,7 +77,7 @@ export function readConfig(root, fs) {
 export function resolveGuard(config = {}) {
   const layers = resolveOptions(config);
   const own = { ...GUARD_DEFAULTS, ...config };
-  return { ...layers, catalogue: `${layers.root}/${own.catalogue}`, app: own.app, routes: own.routes, exceptions: own.exceptions, motionCss: own.motionCss, inherited: own.inherited, ignores: layers.ignores };
+  return { ...layers, catalogue: `${layers.root}/${own.catalogue}`, routes: own.routes, exceptions: own.exceptions, motionCss: own.motionCss, inherited: own.inherited, ignores: layers.ignores };
 }
 
 /** A glob (`**`, `*`, `?`) as a regex over a root-relative path. */
@@ -214,7 +224,42 @@ function checkInherited(g, tree) {
   return g.inherited.filter((file) => !tree.exists(file)).map((file) => finding("inherited", file, `on the frozen "inherited" list, but gone`, `take it out of "inherited" in ${CONFIG_FILE}: the list only shrinks`));
 }
 
-export const CHECKS = [checkLayers, checkCatalogue, checkRegistry, checkRoutes, checkStrayComponents, checkModules, checkKeyframes, checkInherited];
+/** Each owner has its reason and names a file that is there. */
+function checkOwners(g, tree) {
+  return OWNED.flatMap((part) => Object.entries(g.owners[part] ?? {}).flatMap(([glob, reason]) => {
+    const fix = `"owners": { "${part}": { "${glob}": "<why this file owns it>" } } in ${CONFIG_FILE}`;
+    const out = [];
+    if (typeof reason !== "string" || !reason.trim()) out.push(finding("owners", glob, `an owner of ${part} with no reason`, fix));
+    const re = globRegex(glob);
+    if (!tree.files.some((file) => re.test(file))) out.push(finding("owners", glob, `an owner of ${part} that names no file here`, `take it out of "owners" in ${CONFIG_FILE}, or point it at the file that owns ${part}`));
+    return out;
+  }));
+}
+
+const LINE_DIRECTIVE = /\/\/\s*(eslint-disable(?:-next-line|-line)?)(?![\w-])(.*)$/gm;
+const BLOCK_DIRECTIVE = /\/\*\s*(eslint-disable(?:-next-line|-line)?)(?![\w-])([\s\S]*?)\*\//g;
+
+/** The inline disables of a required rule (an agentic-cms/* engine rule, or every rule when none is named) in the site's source: [{ file, line, rules, reason }], the reason "" when there is none. */
+export function inlineDisables(g, tree) {
+  const out = [];
+  for (const file of tree.files.filter((f) => SOURCE.test(f))) {
+    const text = tree.read(file) ?? "";
+    for (const match of [...text.matchAll(LINE_DIRECTIVE), ...text.matchAll(BLOCK_DIRECTIVE)]) {
+      const [list, ...description] = match[2].split(/\s-{2,}\s/);
+      const rules = list.split(/[\s,]+/).filter(Boolean);
+      if (rules.length && !rules.some((rule) => REQUIRED.includes(rule))) continue;
+      out.push({ file, line: text.slice(0, match.index).split("\n").length, rules: rules.length ? rules.filter((rule) => REQUIRED.includes(rule)) : ["every rule"], reason: description.join(" -- ").trim() });
+    }
+  }
+  return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
+/** An inline disable of a required rule says why (D2: a workaround is fine, a silent one is not). */
+function checkDisables(g, tree) {
+  return inlineDisables(g, tree).filter((entry) => !entry.reason).map(({ file, line, rules }) => finding("disables", `${file}:${line}`, `turns off ${rules.join(", ")} with no reason`, `an inline disable of a required rule says why after --: // eslint-disable-next-line ${rules[0] === "every rule" ? "<the rule>" : rules[0]} -- <the reason>; better, the engine's own way, which the rule's message names`));
+}
+
+export const CHECKS = [checkLayers, checkCatalogue, checkRegistry, checkRoutes, checkStrayComponents, checkModules, checkKeyframes, checkInherited, checkOwners, checkDisables];
 
 /** How many files each layer holds: { motion, ui, patterns, sections } (null for a layer the site does not have), and the section folders. */
 function layerCounts(g, tree) {
@@ -222,26 +267,78 @@ function layerCounts(g, tree) {
   return { motion: count(g.motion), ui: count(g.ui), patterns: count(g.patterns), sections: g.sections.reduce((n, folder) => n + count(folder), 0), sectionFolders: g.sections.length };
 }
 
-/** The guard over a site: { config, layers, inherited, candidates, findings: [{ check, file, problem, fix }] }. Throws GuardConfigError for a config it cannot read. */
+/** The guard over a site: { config, layers, inherited, candidates, disables, findings: [{ check, file, problem, fix }] }, the disables those with a reason. Throws GuardConfigError for a config it cannot read. */
 export function checkComponents({ root, fs, config = readConfig(root, fs) }) {
   const g = resolveGuard(config);
   const tree = readTree(root, fs, g);
   const candidates = roundCandidates(g, tree);
   const exempt = new Set([...g.inherited, ...candidates]);
   const findings = CHECKS.flatMap((check) => check(g, tree, exempt));
-  return { config: CONFIG_FILE, layers: layerCounts(g, tree), inherited: g.inherited.length, candidates: [...candidates].filter((file) => tree.exists(file)), findings };
+  const disables = inlineDisables(g, tree).filter((entry) => entry.reason);
+  return { config: CONFIG_FILE, layers: layerCounts(g, tree), inherited: g.inherited.length, candidates: [...candidates].filter((file) => tree.exists(file)), disables, findings };
 }
 
-/** The report as lines: one line when clean; else each finding with its file, the check, what is wrong and the fix. */
+/** The files whose resolved ESLint config the preset check reads, as [what, file]: one per layer and section folder, a route, a design round's route, src/lib, and each file an owner names. */
+export function presetSamples(g) {
+  return [
+    ...layerFolders(g).map(([key, folder]) => [key === "sections" ? `the section folder ${folder}` : `the ${key} layer`, `${folder}/Sample.tsx`]),
+    ["the routes", `${g.app}/page.tsx`],
+    ["a design round's route", `${g.app}/sample-demo/page.tsx`],
+    [`${g.src}/lib`, `${g.src}/lib/sample.tsx`],
+    ...OWNED.flatMap((part) => Object.keys(g.owners[part] ?? {}).filter((glob) => !/[*?{[]/.test(glob)).map((file) => [`an owner of ${part}`, file])),
+  ];
+}
+
+/** A rule's resolved setting in words. */
+const setting = (value, ignored) => (ignored ? "is not linted (no block of the config covers the file, or one ignores it)" : !value ? "is not set" : value[0] === 0 ? "is off" : value[0] === 1 ? "is a warning" : "is an error");
+const PRESET_FIX = `eslint.config.mjs spreads ...componentRules() with the options of ${CONFIG_FILE} (its layers, copy, owners and ignores), and no block after it sets the rule again: a site extends the preset through its options (agentic-cms's docs/primitives.md § Enforced)`;
+
+/**
+ * The required rules hold (D1): for each sample file, the setting of each
+ * agentic-cms/* rule in the site's ESLint config is the one componentRules()
+ * makes of the guard's config — not replaced by a later block, not passed
+ * other options than the config's, not ignored. Async: it loads the site's
+ * eslint.config through ESLint (`ESLint` comes in for the tests). Findings
+ * as the guard's.
+ */
+export async function checkPreset({ root, config, ESLint }) {
+  ESLint ??= (await import("eslint")).ESLint;
+  const g = resolveGuard(config);
+  const site = new ESLint({ cwd: root });
+  const kit = new ESLint({ cwd: root, overrideConfigFile: true, overrideConfig: requiredConfigs(resolveOptions(config)) });
+  const findings = [];
+  for (const [what, file] of presetSamples(g)) {
+    const full = path.join(root, file);
+    let actual;
+    try { actual = await site.calculateConfigForFile(full); } catch (error) {
+      return [finding("preset", "eslint.config.mjs", `ESLint cannot read the site's config, so the required rules are not set: ${String(error.message).split("\n")[0]}`, PRESET_FIX)];
+    }
+    const expected = await kit.calculateConfigForFile(full);
+    for (const rule of REQUIRED) {
+      const [got, want] = [actual?.rules?.[rule], expected?.rules?.[rule]];
+      if (JSON.stringify(got ?? null) === JSON.stringify(want ?? null)) continue;
+      const same = got?.[0] === want?.[0] && Boolean(got) === Boolean(want);
+      const problem = same ? `${rule} has other options here (${what}) than componentRules() makes of ${CONFIG_FILE}` : `${rule} ${setting(got, !actual)} here (${what}), where componentRules() makes of ${CONFIG_FILE} that it ${setting(want, !expected)}`;
+      findings.push(finding("preset", file, problem, PRESET_FIX));
+    }
+  }
+  return findings;
+}
+
+/** The inline disables of a required rule, each with its reason, as lines. */
+const disableLines = (disables = []) => disables.map(({ file, line, rules, reason }) => `  disabled ${rules.join(", ")} at ${file}:${line} — ${reason}`);
+
+/** The report as lines: one line when clean, then each inline disable of a required rule with its reason; else each finding with its file, the check, what is wrong and the fix, then the disables. */
 export function formatReport(report) {
-  const { layers, inherited, candidates, findings } = report;
+  const { layers, inherited, candidates, disables, findings } = report;
   if (!findings.length) {
     const held = ["motion", "ui", "patterns"].filter((key) => layers[key] !== null).map((key) => `${key} ${layers[key]}`);
     held.push(`sections ${layers.sections} in ${layers.sectionFolders} folder${layers.sectionFolders === 1 ? "" : "s"}`);
-    return [`check-components: ok (${held.join(", ")}; ${inherited} inherited${candidates.length ? `; ${candidates.length} round candidates` : ""})`];
+    return [`check-components: ok (${held.join(", ")}; ${inherited} inherited${candidates.length ? `; ${candidates.length} round candidates` : ""}${disables?.length ? `; ${disables.length} inline disable${disables.length === 1 ? "" : "s"} of a required rule, each with its reason` : ""})`, ...disableLines(disables)];
   }
   const lines = [`check-components: ${findings.length} problem${findings.length === 1 ? "" : "s"}`, ""];
   for (const { check, file, problem, fix } of findings) lines.push(`  ✗ ${file}  [${check}]`, `    ${problem}`, `    → ${fix}`, "");
+  if (disables?.length) lines.push("The inline disables of a required rule, each with its reason:", ...disableLines(disables), "");
   lines.push(LIBRARY_NOTE);
   return lines;
 }
