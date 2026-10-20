@@ -54,6 +54,12 @@ changes what a capture writes says **recapture baselines**.
 - `guard-email` stays opt-in until 0.8.2 job 4b; its gate waits in `scripts/lib/gates.mjs` behind one switch.
 - The kit's own `pnpm lint` runs `check-site`, and its `pnpm build` runs `pnpm lint` first.
 - pack-smoke lays a fixture of every bypass in the 0.8.2 survey over the fresh site: required ones fail with their messages, preferred ones warn.
+- `guardEmail` in `src/config/site.ts` (0.8.2 job 4b, D5):
+  - `true` keeps the site's address out of every served file: no structured data carries it as text (a ContactPoint with the contact page's URL takes its place), and the build ends with `agentic-cms guard-email`, which `check-site` holds;
+  - `{ off: "<why>" }` keeps it public on purpose, an exception `check-site` lists with its reason;
+  - left out, nothing changes for an existing site.
+- `init` writes `guardEmail: true` for a new site and `guard-email` into its build. The starter and the example keep the address out of their structured data, their contact form (`{email}` through `withEmailToken`) and their client bundles: no client component imports `site.ts`, and the chrome's client components (`Navbar`, `ThemeToggle`, `ConsentBanner`, `CookieSettingsButton`) take what they show as props.
+- `guard-email` names the fix for a page and for a bundle, and joins the default gates in `docs/commands.md`.
 
 ## [0.8.1] — 2026-10-17
 
