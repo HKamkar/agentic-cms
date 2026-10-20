@@ -44,6 +44,16 @@ changes what a capture writes says **recapture baselines**.
 - `src/config/components.json` and `componentRules()` take `allow: [{ rule, files, reason }]`; `componentRules()` refuses an entry with a required rule or no reason. `owners` also takes `images`, `icons` and `motion`.
 - `agentic-cms check-components`: an `allow` pass, and warnings that fail nothing: a transition or animation declared in CSS outside the motion layer (`transitions`), an inline disable of a non-required rule with no reason, and a preferred rule a later block turned off. The JSON report has `allowed` and `warnings`.
 - The example: `Placeholder`'s `<svg>` and the honeypot's offset are kept in `allow`, `Media` owns its `<img>`, and the footer's grid is the token `--grid-template-columns-2-1-1` (pixel-identical). A new site lints with no warning.
+- `agentic-cms check-site`: every pass of `check-components`, then the site's own.
+  - `rounds`: a hand-made `*-demo` route, and a round's pictures left after `demo clean`.
+  - `exceptions`: every exception added since the merge base listed with its reason, and `inherited` only shrinking.
+  - `scripts` and `ci`: the gates in `package.json` and in CI.
+  - `tools` (warnings): a site's own Playwright, `sharp` or `next dev` script, or a machine's address in `next.config.*`, each quieted by an `allow` entry of `agentic-cms/site-tools` with its reason.
+- `init` writes the gates: `lint` runs ESLint, then `check-site`, and `build` runs `pnpm lint` first. Into an existing `package.json` they are merged, or `init` refuses before writing anything, naming what to add.
+- `init` writes `.github/dependabot.yml` for the CI's actions (monthly, one grouped pull request), and `verify.yml` checks out the history `check-site` compares against. An existing site may copy both from `node_modules/agentic-cms/templates/site/`.
+- `guard-email` stays opt-in until 0.8.2 job 4b; its gate waits in `scripts/lib/gates.mjs` behind one switch.
+- The kit's own `pnpm lint` runs `check-site`, and its `pnpm build` runs `pnpm lint` first.
+- pack-smoke lays a fixture of every bypass in the 0.8.2 survey over the fresh site: required ones fail with their messages, preferred ones warn.
 
 ## [0.8.1] — 2026-10-17
 
