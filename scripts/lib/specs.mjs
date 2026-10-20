@@ -43,8 +43,8 @@ export const FAMILIES = [
   { group: "lab", layer: "design tools" },
   { group: "demo", layer: "design tools" },
   { group: "site", layer: "the site's commands" },
-  { group: "default gates", layer: "the site's commands", about: "what every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`; CI runs them on every pull request" },
-  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds to its build when it needs them: `guard-email` after `next build` once the site shows an address (opt-in until 0.8.2 job 4b), `critical-css` for the first paint, `assemble` last for a Node host" },
+  { group: "default gates", layer: "the site's commands", about: "what every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`, and `guard-email` last on a site whose `src/config/site.ts` turns `guardEmail` on (what `init` writes for a new site); CI runs them on every pull request" },
+  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host" },
 ];
 
 export const SPECS = {
@@ -352,7 +352,7 @@ export const SPECS = {
     json: "{ dev: { port, pid, started, reused }, lab: { port, started, taken, urls, scenes: [{ name, urls }] } | null, hosts: [{ where, host }], routes: [{ path, ready, status, tail, urls: [{ where, url }] }], origins: { file, exists, listed, missing, written }, restarted }",
   },
   "guard-email": {
-    command: "guard-email", script: "guard-email", group: "opt-in steps", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text",
+    command: "guard-email", script: "guard-email", group: "default gates", site: true, summary: "fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text, naming each file and the fix; the build's last step on a site whose src/config/site.ts turns guardEmail on, a step a site without the key may add",
     usage: "agentic-cms guard-email [--domain <host>]… [--json]",
     flags: {
       domain: { type: "string", multiple: true, value: "<host>", help: "a domain whose addresses must not appear; default: the host of site.url from src/kit.ts" },
@@ -393,7 +393,7 @@ export const SPECS = {
     json: "{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, disables: [{ file, line, rules, reason }], allowed: [{ rule, files, reason }], findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited|owners|allow|disables|preset, file, problem, fix }], warnings: [{ check: transitions|disables|preset, file, problem, fix }] }",
   },
   "check-site": {
-    command: "check-site", script: "check-site", group: "default gates", summary: "the site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo) holding the gates; a workflow on pull requests running the lint, the tests, the build and the agent-file check; and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason",
+    command: "check-site", script: "check-site", group: "default gates", summary: "the site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason",
     usage: "agentic-cms check-site [--base <ref>] [--json]",
     flags: {
       base: { type: "string", value: "<ref>", help: "the branch or commit the exceptions are compared with, through its merge base with HEAD (default: the pull request's base branch in CI, GITHUB_BASE_REF, else origin/HEAD, origin/main or main; a checkout without that history — no git, no commit, a shallow clone — compares nothing and says so)" },

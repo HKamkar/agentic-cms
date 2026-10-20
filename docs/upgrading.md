@@ -74,9 +74,9 @@ reason; a file added to `inherited` fails), the gates in `package.json` and
 in CI, and, as warnings, the site's own Playwright, `sharp` or `next dev`
 script and a machine's address in `next.config.*`
 ([primitives.md § The whole site](primitives.md#the-whole-site-agentic-cms-check-site)).
-Its `pnpm build` runs `pnpm lint` first (`guard-email` stays a step a site
-adds: opt-in until 0.8.2 job 4b). An existing site's `package.json` is its
-own, so it moves to them by hand:
+Its `pnpm build` runs `pnpm lint` first, and `guard-email` last when its
+`site.ts` turns `guardEmail` on (below). An existing site's `package.json`
+is its own, so it moves to them by hand:
 
 ```json
 "lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s",
@@ -91,6 +91,40 @@ reports: a warning fails nothing and goes quiet with an `allow` entry of
 In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
 `with:` gives the check the history it compares the exceptions against;
 without it CI says it compared nothing.
+
+**The e-mail engine, behind a key** ([email.md](email.md)). A new site's
+`src/config/site.ts` has `guardEmail: true`: no structured data carries its
+address as text (a `ContactPoint` with the contact page's URL in its
+place), no client component imports `site.ts`, the form's message and
+recipient are tokens, and the build ends with `agentic-cms guard-email`.
+Nothing changes for an existing site unless it adds the key: without it,
+its structured data, its pages and its bundles are what they were, byte
+for byte, and nothing asks it for the guard. To add it:
+
+1. `guardEmail: true` in `site.ts`, beside `email`. The Organization blocks
+   change at once: `email` gives way to a contact point
+   ([the SEO contract](../src/lib/seo/README.md)), and a ContactPage's
+   contact points carry its URL, so a contact's `email` in its page file
+   can go.
+2. No `"use client"` module imports `site.ts`
+   (`grep -l '"use client"' -r src | xargs grep -l config/site` lists
+   them): each takes what it shows as props from the server component that
+   renders it. The kit's example passes the navbar its brand, links and
+   words from the layout, the theme switch as its child, the consent
+   banner its copy and the Cookie settings button its label.
+3. A form's messages write `{email}` with `messages.email: site.email`, and
+   the server component that renders the form passes
+   `withEmailToken(definition)`; every other place the address shows is an
+   `EmailLink` (`pnpm lint` already fails a `mailto:` built in code).
+4. `&& agentic-cms guard-email` last in the `build` (`agentic-cms init .`
+   merges it; `check-site` names it while it is missing), then
+   `pnpm build`: the guard names each served file that still carries the
+   address, and the fix. Prove the change with `visual-parity`: only the
+   structured data and the bundles move, not a pixel.
+
+A site whose address is public on purpose says so instead:
+`guardEmail: { off: "<why>" }`, which `check-site` lists with its reason
+once it is added. `false` alone fails `check-site`.
 
 **Dependabot for the CI's actions.** `init` now writes
 `.github/dependabot.yml`: the GitHub Actions alone, one grouped pull

@@ -148,6 +148,18 @@ test("exceptions: every one added since the base is listed with its reason, an i
   assert.deepEqual(checks(adopted.findings), [], "a config new since the base adopts its frozen list");
 });
 
+test("exceptions: guardEmail turned off since the base is listed with its reason; one already off at the base is not", async () => {
+  const on = 'export const site = {\n  email: "hello@ours.dev",\n  guardEmail: true,\n};\n';
+  const off = on.replace("true", '{ off: "printed on every invoice, as the law asks" }');
+  const files = { ...CLEAN, "package.json": JSON.stringify({ name: "ours", scripts: { lint: LINT, build: BUILD.replace(" && agentic-cms guard-email", "") } }), "src/config/site.ts": off };
+  const report = await site(files, { git: fakeGit({ files: { [CONFIG_FILE]: CLEAN[CONFIG_FILE], "src/config/site.ts": on } }) });
+  assert.deepEqual(report.findings, []);
+  assert.deepEqual(report.added, [{ kind: "guardEmail off", name: "src/config/site.ts", reason: "printed on every invoice, as the law asks" }]);
+  assert.match(formatSiteReport(report).join("\n"), /\+ guardEmail off src\/config\/site\.ts — printed on every invoice, as the law asks/);
+  const kept = await site(files, { git: fakeGit({ files: { [CONFIG_FILE]: CLEAN[CONFIG_FILE], "src/config/site.ts": off.replace("as the law asks", "the law") } }) });
+  assert.deepEqual(kept.added, [], "the reason reworded is the same exception");
+});
+
 test("configAdded reads a config of any age: nothing at the base is everything added", () => {
   assert.deepEqual(configAdded({}, { exceptions: { a: "why" }, owners: { tags: { "src/x.tsx": "the adapter" } }, allow: [{ rule: "r", files: ["f"], reason: "y" }, { rule: "r", files: "not a list" }] }), [
     { kind: "exceptions", name: "a", reason: "why" },
@@ -157,13 +169,21 @@ test("configAdded reads a config of any age: nothing at the base is everything a
   assert.deepEqual(configAdded({ allow: [{ rule: "r", files: ["f"] }] }, { allow: [{ rule: "s", files: ["f"], reason: "z" }] }), [{ kind: "allow s", name: "f", reason: "z" }], "the same file under another rule is another exception");
 });
 
-test("scripts: the lint and the build hold the gates; guard-email is the site's own step until D5's switch turns it on", async () => {
+test("scripts: the lint and the build hold the gates; guard-email among them when site.ts turns guardEmail on (D5), and an off says why", async () => {
   const scripts = (lint, build, siteTs = CLEAN["src/config/site.ts"]) => site({ ...CLEAN, "package.json": JSON.stringify({ name: "ours", scripts: { lint, build } }), "src/config/site.ts": siteTs }).then((r) => r.findings.map((f) => f.problem));
   assert.deepEqual(await scripts("eslint; s=$?; agentic-cms check-components || s=1; exit $s", "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"), [
     '"lint" runs no agentic-cms check-site: the lint is ESLint, then the site check, failing on either while both report',
     '"build" runs no pnpm lint as a step of its && chain',
   ]);
-  assert.deepEqual(await scripts(LINT, BUILD.replace(" && agentic-cms guard-email", "")), [], "an address in site.ts, and no guard asked for it yet");
+  assert.deepEqual(await scripts(LINT, BUILD.replace(" && agentic-cms guard-email", "")), [], "an address in site.ts without the key: a site from before it builds as it did");
+  const guarded = 'export const site = {\n  email: "hello@ours.dev",\n  guardEmail: true,\n};\n';
+  assert.deepEqual(await scripts(LINT, BUILD, guarded), []);
+  assert.deepEqual(await scripts(LINT, BUILD.replace(" && agentic-cms guard-email", ""), guarded), ['"build" runs no agentic-cms guard-email as a step of its && chain (src/config/site.ts turns guardEmail on: guard-email keeps the address out of every served file)']);
+  assert.deepEqual(await scripts(LINT, BUILD.replace(" && agentic-cms guard-email", ""), guarded.replace("true", '{ off: "printed on every invoice, as the law asks" }')), [], "an address public on purpose");
+  const bare = await site({ ...CLEAN, "src/config/site.ts": guarded.replace("true", "false") });
+  assert.deepEqual(checks(bare.findings), ["scripts src/config/site.ts"]);
+  assert.match(bare.findings[0].problem, /turns guardEmail off with no reason/);
+  assert.match(bare.findings[0].fix, /guardEmail: \{ off: "<why>" \}/);
   assert.deepEqual(await scripts("eslint || true", "next build && agentic-cms seo && pnpm lint && agentic-cms lint --production && agentic-cms docs --check && agentic-cms guard-email || true"), [
     '"lint" runs no agentic-cms check-site: the lint is ESLint, then the site check, failing on either while both report',
     '"lint" turns a failure into a pass',

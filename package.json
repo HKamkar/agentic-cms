@@ -102,7 +102,7 @@
   ],
   "scripts": {
     "dev": "next dev -p 8000",
-    "build": "pnpm lint && node bin/agentic-cms.mjs lint --production && node bin/agentic-cms.mjs docs --check && next build && node bin/agentic-cms.mjs seo",
+    "build": "pnpm lint && node bin/agentic-cms.mjs lint --production && node bin/agentic-cms.mjs docs --check && next build && node bin/agentic-cms.mjs seo && node bin/agentic-cms.mjs guard-email",
     "start": "next start",
     "lint": "eslint; s=$?; node bin/agentic-cms.mjs check-site || s=1; exit $s",
     "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/*.test.mjs\" \"scripts/lib/*.test.mjs\" \"tools/**/*.test.mjs\"",

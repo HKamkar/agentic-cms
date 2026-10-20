@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { domainPattern, scanServed } from "./guard-email.mjs";
+import { domainPattern, remedies, scanServed } from "./guard-email.mjs";
 
 function site(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "guard-"));
@@ -47,4 +47,15 @@ test("a site without a build scans nothing and says so", () => {
   assert.equal(result.scanned, 0);
   assert.deepEqual(result.hits, []);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("each way in names its fix: a page or a payload, the tokens and the key; a bundle, the client component that imports the address", () => {
+  const page = { file: ".next/server/app/index.html", addresses: ["hello@acme.example"] };
+  const chunk = { file: ".next/static/chunks/app.js", addresses: ["hello@acme.example"] };
+  assert.deepEqual(remedies([]), []);
+  assert.equal(remedies([page]).length, 1);
+  assert.match(remedies([page])[0], /EmailLink[\s\S]*withEmailToken[\s\S]*guardEmail: true/);
+  assert.equal(remedies([chunk]).length, 1);
+  assert.match(remedies([chunk])[0], /a client component imports the module that holds the address[\s\S]*props/);
+  assert.equal(remedies([page, chunk]).length, 2);
 });

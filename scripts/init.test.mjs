@@ -34,7 +34,8 @@ test("scaffold lays out a site from the package: the example's code, the starter
   assert.equal(pkg.name, "my-site");
   assert.equal(pkg.private, true);
   assert.equal(pkg.dependencies["agentic-cms"], "github:HKamkar/agentic-cms#v0.4.0");
-  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo", "the build runs the lint first; the e-mail guard is a step a site adds until 0.8.2 job 4b turns it on");
+  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "the build runs the lint first, and the e-mail guard last: the starter's site.ts turns guardEmail on (D5)");
+  assert.match(read(target, "src/config/site.ts"), /^ {2}email: "hello@my-site\.example",\n(?: {2}\/\/[^\n]*\n)+ {2}guardEmail: true,$/m, "a new site keeps its address out of every served file");
   assert.equal(pkg.scripts.kit, "agentic-cms");
   assert.equal(pkg.scripts.urls, "agentic-cms urls");
   assert.equal(pkg.scripts.lint, "eslint; s=$?; agentic-cms check-site || s=1; exit $s", "the lint runs ESLint, then the site check, failing on either");
@@ -74,7 +75,7 @@ test("init --name: a new site needs its name, which goes where the example says 
   assert.deepEqual(result.site, { name: "My Site", url: "https://my-site.example", email: "hello@my-site.example", starter: true }, "the slug from the name, not the folder");
   const config = read(plain, "src/config/site.ts");
   assert.match(config, /^ {2}name: "My Site",\n {2}shortName: "My Site",\n {2}url: "https:\/\/my-site\.example",$/m);
-  assert.match(config, /^ {2}email: "hello@my-site\.example",\n {2}logo: "\/images\/brand\/my-site-logo\.svg",$/m);
+  assert.match(config, /^ {2}email: "hello@my-site\.example",\n(?: {2}\/\/[^\n]*\n)+ {2}guardEmail: true,\n {2}logo: "\/images\/brand\/my-site-logo\.svg",$/m);
   assert.match(config, /^ {2}tagline: "\(placeholder\) What My Site does, in one sentence/m);
   const logo = read(plain, "public/images/brand/my-site-logo.svg");
   for (const where of [/aria-label="My Site"/, /<title>My Site<\/title>/, />My Site<\/text>/]) assert.match(logo, where, "the logo placeholder names the site");
@@ -207,7 +208,7 @@ test("pnpm init's package.json: its failing test gives way to the kit's, its mai
   assert.equal(pkg.version, "1.0.0");
   assert.deepEqual(pkg.devEngines, PNPM_INIT.devEngines);
   assert.equal(pkg.packageManager, "pnpm@12.11.2");
-  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo");
+  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email");
   assert.ok(logged.includes('merged   package.json (the kit\'s test script in place of pnpm init\'s placeholder; pnpm init\'s main: "index.js" dropped)'), logged.join("\n"));
   // a main that names a file the site has is the site's
   const own = tmp();
@@ -228,13 +229,15 @@ test("the site's own lint and build take the gates in, its own steps kept where 
   };
   const older = merged({ lint: "eslint; s=$?; agentic-cms check-components || s=1; exit $s", build: "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo" });
   assert.equal(older.scripts.lint, LINT, "the old kit's lint: check-site in place of check-components");
-  assert.equal(older.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo", "the lint first");
-  assert.ok(older.logged.includes("merged   package.json (lint: check-site in place of check-components; build: pnpm lint added)"), older.logged.join("\n"));
+  assert.equal(older.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "the lint first, and the e-mail guard the starter's site.ts asks for");
+  assert.ok(older.logged.includes("merged   package.json (lint: check-site in place of check-components; build: pnpm lint, agentic-cms guard-email added)"), older.logged.join("\n"));
   const nextApp = merged({ lint: "eslint --max-warnings 50", build: "next build --turbopack" }, { siteTs: "export const site = { name: \"Ours\" };\n" });
   assert.equal(nextApp.scripts.lint, "eslint --max-warnings 50; s=$?; agentic-cms check-site || s=1; exit $s", "the site's ESLint command kept, the check after it");
-  assert.equal(nextApp.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build --turbopack && agentic-cms seo", "the gates around the site's next build");
+  assert.equal(nextApp.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build --turbopack && agentic-cms seo", "the gates around the site's next build; its own site.ts, without guardEmail, asks for no guard");
+  const guarded = merged({ build: "next build" }, { siteTs: "export const site = {\n  email: \"hello@ours.dev\",\n  guardEmail: true,\n};\n" });
+  assert.equal(guarded.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "its own site.ts turning guardEmail on: the guard after the audit");
   const chain = merged({ build: "pnpm lint && agentic-cms lint --production && node scripts/og.mjs && next build && agentic-cms assemble" });
-  assert.equal(chain.scripts.build, "pnpm lint && agentic-cms lint --production && node scripts/og.mjs && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms assemble", "the site's own steps where they were, each gate in its place");
+  assert.equal(chain.scripts.build, "pnpm lint && agentic-cms lint --production && node scripts/og.mjs && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble", "the site's own steps where they were, each gate in its place");
   const held = merged({ lint: LINT, build: "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email && agentic-cms critical-css" });
   assert.ok(!held.logged.some((line) => /lint:|build:/.test(line)), "a site that holds the gates is left as it is");
 });
@@ -244,7 +247,7 @@ test("a lint or a build the gates cannot go into is refused, naming what to add,
     [{ lint: "biome lint ." }, /package\.json's lint \("biome lint \."\) runs no ESLint: make it ESLint, then the site check — "lint": "eslint; s=\$\?; agentic-cms check-site \|\| s=1; exit \$s"/],
     [{ lint: "eslint || true" }, /lint \("eslint \|\| true"\) turns a failure into a pass/],
     [{ lint: "eslint; exit 0" }, /lint \("eslint; exit 0"\) turns a failure into a pass/],
-    [{ build: "vite build" }, /package\.json's build \("vite build"\) runs no next build as a step of its && chain: make it the gates joined by && — "build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"/],
+    [{ build: "vite build" }, /package\.json's build \("vite build"\) runs no next build as a step of its && chain: make it the gates joined by && — "build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"/],
     [{ build: "next build; agentic-cms seo" }, /runs no next build as a step of its && chain/],
     [{ build: "next build && agentic-cms seo || true" }, /turns a failure into a pass/],
     [{ build: "agentic-cms seo && next build" }, /runs agentic-cms seo on the wrong side of next build/],
@@ -314,7 +317,8 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.match(standard, /^\| Value \| Colour \| What it is \|$/m);
   assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
   assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
-  assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{site\.cta\.href\}/, "the navbar keeps everything else");
+  assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{cta\.href\}/, "the navbar keeps everything else");
+  assert.match(layout, /^ {8}<Navbar brand=\{site\.shortName\} [^\n]*copy=\{chrome\.navbar\} \/>$/m, "the layout's navbar closes itself, the toggle it held gone");
   const config = read(target, "src/config/site.ts");
   assert.doesNotMatch(config, /themeToggle|ThemeToggle/, "no labels for a toggle the site does not have");
   assert.match(config, /^ {2}navbar: \{ label: "Main", menu: "Menu" \},\n {2}\/\*\* ui\/Footer's/m, "the chrome's other words stay, and so does the comment above the next");

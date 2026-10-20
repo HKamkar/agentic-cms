@@ -3,8 +3,9 @@ import { GoogleTag, consentDefaultScript } from "agentic-cms/consent/google";
 import { ConsentBanner } from "@/components/ui/ConsentBanner";
 import { Footer } from "@/components/ui/Footer";
 import { Navbar } from "@/components/ui/Navbar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { analytics } from "@/config/analytics";
-import { chrome, site } from "@/config/site";
+import { chrome, consentBanner, site } from "@/config/site";
 import { kit } from "@/kit";
 import "./globals.css";
 
@@ -29,8 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:border focus:border-line focus:bg-panel focus:px-3 focus:py-2">
           {chrome.skipLink}
         </a>
-        {analytics.tagId && <ConsentBanner />}
-        <Navbar />
+        {/* The chrome's client components get what they show as props: none imports site.ts, which would ship all of it, the address included, in a bundle (docs/email.md). */}
+        {analytics.tagId && <ConsentBanner copy={consentBanner} />}
+        <Navbar brand={site.shortName} links={site.nav} signIn={site.signIn} cta={site.cta} copy={chrome.navbar}>
+          <ThemeToggle labels={chrome.themeToggle} />
+        </Navbar>
         {/* The one outline-none on the site: <main> is focused by the skip link, not reached by tabbing. */}
         <main id="main" tabIndex={-1} className="outline-none">
           {children}

@@ -1,18 +1,27 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildGaps, buildScript, EMAIL_GUARD, GatesError, guardsEmail, hasAddress, LINT, lintGaps, mergeBuild, mergeLint } from "./gates.mjs";
+import { buildGaps, buildScript, emailGuard, GatesError, guardsEmail, LINT, lintGaps, mergeBuild, mergeLint } from "./gates.mjs";
 
 const BUILD = "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email";
 const ids = (gates) => gates.map((gate) => gate.id);
 
-test("a new site's lint is ESLint then the site check, its build the gates joined by && — the e-mail guard among them only once D5's switch is on", () => {
+test("a new site's lint is ESLint then the site check, its build the gates joined by && — the e-mail guard among them when site.ts turns guardEmail on (D5)", () => {
   assert.equal(LINT, "eslint; s=$?; agentic-cms check-site || s=1; exit $s");
-  assert.equal(buildScript({ guard: true }), BUILD, "the machinery, ready for the switch");
+  assert.equal(buildScript({ guard: true }), BUILD);
   assert.equal(buildScript({ guard: false }), BUILD.replace(" && agentic-cms guard-email", ""));
-  assert.equal(hasAddress('export const site = { email: "hello@ours.dev" };'), true);
-  assert.equal(hasAddress("export const site = { name: `Ours`, url: \"https://ours.dev\" };"), false);
-  assert.equal(EMAIL_GUARD, false, "guard-email stays a step a site adds until 0.8.2 job 4b: the starter and the example carry their address into served files today");
-  assert.equal(guardsEmail('export const site = { email: "hello@ours.dev" };'), false, "so no site's build is asked for it");
+  assert.equal(guardsEmail('export const site = {\n  email: "hello@ours.dev",\n  guardEmail: true,\n};'), true, "what init writes for a new site");
+  assert.equal(guardsEmail('export const site = {\n  email: "hello@ours.dev",\n};'), false, "a site from before the key builds as it did");
+  assert.equal(guardsEmail('export const site = {\n  email: "hello@ours.dev",\n  guardEmail: { off: "printed on every invoice" },\n};'), false);
+});
+
+test("emailGuard reads site.ts's key on a line of its own: on, off with its reason, or off bare", () => {
+  const none = { on: false, off: null, bare: false };
+  assert.deepEqual(emailGuard("  guardEmail: true,"), { ...none, on: true });
+  assert.deepEqual(emailGuard('  guardEmail: { off: "printed on every invoice" },'), { ...none, off: "printed on every invoice" });
+  assert.deepEqual(emailGuard("  guardEmail: {\n    off: 'the law\\'s contact',\n  },"), { ...none, off: "the law's contact" }, "across lines, an escape read");
+  assert.deepEqual(emailGuard("  guardEmail: false,"), { ...none, bare: true });
+  assert.deepEqual(emailGuard('  guardEmail: { off: "  " },'), { ...none, bare: true }, "a reason of blanks is none");
+  for (const text of ["// guardEmail: true", " * guardEmail: true", 'export const site = { name: "Ours" };', ""]) assert.deepEqual(emailGuard(text), none, text);
 });
 
 test("the lint's gates are read from its commands, through any form of the command line, and a masked failure is named", () => {

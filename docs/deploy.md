@@ -61,8 +61,9 @@ package complete, as the last step of the build:
 "preview": "pnpm build && HOSTNAME=0.0.0.0 PORT=8000 node .next/standalone/server.js"
 ```
 
-(`guard-email` belongs there only on a site that keeps its address out of
-the HTML; [email.md](email.md); `critical-css` is the next section.) What
+(`guard-email` is there on a site whose `site.ts` turns `guardEmail` on,
+as a new site's does: [email.md](email.md); `critical-css` is the next
+section.) What
 deploys is the `.next/standalone` folder, whose start command is
 `node server.js`.
 Nothing of the starter's placeholders deploys: the content lint fails on

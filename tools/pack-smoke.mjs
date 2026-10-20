@@ -10,9 +10,10 @@
 // placeholders warnings — the content lint, the field-table check, next build
 // and the SEO audit — then a production build, which fails on them, then,
 // with the copy replaced as a site writes its own, the production build
-// clean; its lint (ESLint, then the site check, whose component guard a
-// planted stray section file fails), with no warning, and its Dependabot
-// config; then, the site committed to git, the bypass fixture
+// clean, guard-email last finding its address in no served file (and one
+// planted in a bundle); its lint (ESLint, then the site check, whose
+// component guard a planted stray section file fails), with no warning, and
+// its Dependabot config; then, the site committed to git, the bypass fixture
 // (tools/bypass-fixture.mjs: one example of each way around the kit the
 // 0.8.2 plan found) laid over it for one run of its checks — each required
 // bypass failing with its message, each preferred one warning — and taken
@@ -124,6 +125,7 @@ async function build(site) {
   }
   noExample(site);
   starterBuilds(site);
+  emailGuarded(site);
   lintsClean(site);
   guardFails(site);
   dependabot(site);
@@ -160,6 +162,30 @@ function starterBuilds(site) {
   run("pnpm", ["build"], site);
 }
 
+/**
+ * The starter keeps its address out of every served file (guardEmail, D5):
+ * the builds above ran guard-email last; run again, it scans the clean build
+ * and finds the address nowhere, the blog's publisher carries a contact point
+ * in its place, and an address planted in a bundle fails it, naming the
+ * client-component fix — the guard watches the site's own domain.
+ */
+function emailGuarded(site) {
+  const config = fs.readFileSync(path.join(site, "src/config/site.ts"), "utf8");
+  const [address, origin] = [/^ {2}email: "([^"]+)",$/m, /^ {2}url: "([^"]+)",$/m].map((re) => config.match(re)?.[1]);
+  if (!address || !origin || !/^ {2}guardEmail: true,$/m.test(config)) fail("the starter's site.ts does not turn guardEmail on for its address");
+  const guard = () => spawnSync("pnpm", ["exec", "agentic-cms", "guard-email", "--json"], { cwd: site, encoding: "utf8", env: ENV });
+  const clean = guard();
+  const scan = (() => { try { return JSON.parse(clean.stdout); } catch { return null; } })();
+  if (clean.status !== 0 || !scan?.scanned || scan.hits.length) fail(`guard-email over the starter's build answered ${clean.status}: ${`${clean.stdout}${clean.stderr}`.trim().slice(-600)}`);
+  const blog = fs.readFileSync(path.join(site, ".next/server/app/blog.html"), "utf8");
+  if (blog.includes(address) || !blog.includes(`"contactPoint":{"@type":"ContactPoint","url":"${origin}/#contact-form"}`)) fail("the blog's structured data carries the address, or no contact point in its place");
+  const leak = path.join(site, ".next/static/chunks/pack-smoke-leak.js");
+  fs.writeFileSync(leak, `const to = ${JSON.stringify(address)};\n`);
+  const caught = guard();
+  fs.rmSync(leak);
+  if (caught.status !== 1 || !caught.stderr.includes(".next/static/chunks/pack-smoke-leak.js") || !caught.stderr.includes("a client component imports the module that holds the address")) fail(`guard-email with the address planted in a bundle answered ${caught.status}: ${caught.stderr.trim().slice(-600)}`);
+}
+
 /** The site's lint passes with no warning: what the starter keeps of its own that the preferred tier guides (the placeholder's crossed box, the honeypot's offset) carries its reason in "allow". */
 function lintsClean(site) {
   const result = spawnSync("pnpm", ["lint"], { cwd: site, encoding: "utf8", env: ENV });
@@ -173,8 +199,8 @@ function lintsClean(site) {
 function guardFails(site) {
   const { lint, build } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
   if (!/; agentic-cms check-site \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the site check after ESLint: ${lint}`);
-  // The builds above ran the lint first: the gates init writes (the e-mail guard joins them with 0.8.2 job 4b).
-  if (!/^pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo$/.test(build)) fail(`the site's build does not hold the gates in their order: ${build}`);
+  // The builds above ran the lint first: the gates init writes, the e-mail guard last (the starter turns guardEmail on).
+  if (!/^pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email$/.test(build)) fail(`the site's build does not hold the gates in their order: ${build}`);
   if (!fs.existsSync(path.join(site, "src/config/components.json")) || !fs.existsSync(path.join(site, ".claude/rules/components.md"))) fail("init wrote the guard's config without the components rule, or neither");
   const stray = path.join(site, "src/components/sections/Stray.tsx");
   fs.writeFileSync(stray, "export function Stray() {\n  return null;\n}\n");

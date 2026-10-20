@@ -126,7 +126,7 @@ that runs the build runs the lint too:
 
 ```json
 "lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s",
-"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"
 ```
 
 - **The lint** runs ESLint with the component rules, then the site check
@@ -136,12 +136,13 @@ that runs the build runs the lint too:
   failing on either while both report. A warning never fails it.
 - **The build** runs the lint first, then the content lint for production
   (a placeholder fails it), the field tables' check, `next build` and the
-  SEO audit. Each is a step of the `&&` chain, so the first that fails
-  stops the build. `agentic-cms guard-email` is a step a site adds after
-  the audit ([email.md § The guard](email.md#the-guard--agentic-cms-guard-email)):
-  guard-email: opt-in until 0.8.2 job 4b, which takes the starter's
-  address out of its structured data, its forms and its client bundles and
-  then makes it a gate of every site with an address.
+  SEO audit, and last `agentic-cms guard-email`, which fails a build that
+  lets the site's address into a served file as text: the gate of a site
+  whose `src/config/site.ts` turns `guardEmail` on, as the starter's does
+  ([email.md](email.md)). Each is a step of the `&&` chain, so the first
+  that fails stops the build. A site without the key (one from before
+  0.8.2 job 4b) is asked for no guard, and `init` adds none to its
+  `build`.
 
 Into an existing `package.json`, `init` merges the gates and keeps the
 site's own steps where they are, printing what went in (a site from 0.8.1:
@@ -181,7 +182,15 @@ pnpm exec agentic-cms init my-site --name "My Site" --url https://my-site.com --
   the home page's contact card. Without them it stands on a domain reserved
   for examples, `https://<slug>.example` and `hello@<slug>.example`, and so
   do the navbar's sign-in link and the footer's one profile, until the site
-  has its own.
+  has its own. `site.ts` has `guardEmail: true`: the address reaches the
+  browser only as a token — the footer's link, the contact card, the
+  form's message and recipient — no structured data carries it as text, no
+  client component imports `site.ts`, and the build's last step,
+  `guard-email`, proves it ([email.md](email.md)). It watches the domain of
+  `--url`; an address on another domain is named to it with `--domain` in
+  the build's `guard-email` step. An address public on purpose is
+  `guardEmail: { off: "<why>" }`, which `check-site` lists with its
+  reason.
 - **The content**: one home page (`content/pages/home.yaml`: the hero, the
   service split, the five feature cards, the statement and its figures, the
   contact form and the contact cards — sections the wireframe renders) and

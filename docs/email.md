@@ -10,7 +10,72 @@ the volume comes from. Where a law wants the address findable (a business
 contact requirement), the script-rendered link satisfies it; the alias
 behind the address and its filtering are the real guard.
 
-The kit gives a site four pieces; a site opts in by using them.
+The kit gives a site four pieces — the token, the link, the form's tokens,
+the guard — and one key in `src/config/site.ts` that puts them to work:
+`guardEmail: true`, which `agentic-cms init` writes for a new site and the
+kit's own example has on.
+
+## The key — `guardEmail`
+
+```ts
+// src/config/site.ts
+export const site = {
+  // …
+  email: "hello@acme.example",
+  guardEmail: true,
+  // …
+} as const satisfies SiteConfig;
+```
+
+| `guardEmail` | The structured data | The build | `check-site` |
+|---|---|---|---|
+| `true` | no `email` as text: a `ContactPoint` with the contact page's URL in its place | `agentic-cms guard-email` after the SEO audit | fails a `build` without the guard |
+| `{ off: "<why>" }` | `email` as text | no guard asked for | lists it, with its reason, among the exceptions added since the merge base |
+| left out | `email` as text, as before 0.8.2 | no guard asked for | — |
+
+A site whose address is public on purpose — a contact a law wants
+findable as text, say — turns it off with its reason, which the review of
+the pull request that does it reads:
+
+```ts
+guardEmail: { off: "the address our trade register requires on every page, as text" },
+```
+
+`false` alone, or an `off` without a reason, fails `check-site`. Left out,
+the key changes nothing: a site from before it builds byte for byte as it
+did, and adds the key when its owner chooses
+([upgrading.md](upgrading.md)).
+
+## The three ways in, and how each is closed
+
+An address in `site.ts` reaches a served file three ways, and the key's
+site closes each:
+
+1. **The structured data.** The Organization's `email` — the blocks
+   `organizationLd()` writes, the Blog's publisher, the About and the
+   Contact page's organisation — is text in every page that carries one.
+   With the key on, the engine writes
+   `"contactPoint": { "@type": "ContactPoint", "url": "<site.url><links.contact>" }`
+   where the `email` was, and a ContactPage's contact points carry the
+   page's URL, a contact's own `email` left out
+   ([the SEO contract](../src/lib/seo/README.md)). Google needs no e-mail
+   for any rich result.
+2. **A form.** A message written with the address in it, and a `mailto`
+   backend's `to`, are text in the prerendered page and its payload. The
+   form writes `{email}` where the address goes, with `messages.email`,
+   and the server component that renders it passes the definition through
+   `withEmailToken()` ([The form](#the-form--withemailtoken)).
+3. **A client bundle.** A client component that imports `site.ts` ships
+   the whole `site` object, the address included, in a JavaScript chunk.
+   No client component imports it: the layout and the footer, server
+   components, hand the chrome's client components what they show as
+   props — the navbar its brand, links and words, the theme switch as its
+   child; the consent banner its copy; the Cookie settings button its
+   label. `site.ts` stays the one place for the config, and the address
+   in it stays on the server.
+
+`guard-email`, the build's last step, catches whatever slips past these:
+it names each file, and the fix for a page and for a bundle.
 
 ## The token — `agentic-cms/email`
 
@@ -28,12 +93,12 @@ component alike.
 ## The link — `EmailLink`
 
 ```tsx
-// a server component; the address never leaves server code
+// a server component (the footer); the address never leaves server code
 import { EmailLink } from "agentic-cms/components";
 import { encodeEmail } from "agentic-cms/email";
-import { contact } from "@/config/contact";
+import { site } from "@/config/site";
 
-<EmailLink token={encodeEmail(contact.email)} className="…" />
+<EmailLink token={encodeEmail(site.email)} className="…" />
 ```
 
 Renders the readable form in a `<span>` until hydration and the `mailto:`
@@ -53,7 +118,7 @@ no link, and passes.
 ## The form — `withEmailToken`
 
 ```tsx
-// the server component that renders the form
+// the server component that renders the form (the example's contact/ContactForm)
 import { withEmailToken } from "agentic-cms/forms";
 <Form definition={withEmailToken(forms.contact)} />
 ```
@@ -66,11 +131,13 @@ destination is in the server's environment ([forms.md](forms.md)).
 A form's messages may name the address, for either backend:
 
 ```ts
+// src/config/forms.ts
 messages: {
   success: "Thank you.",
   error: "Something went wrong. Please email us directly at {email}.",
-  email: contact.email,
+  email: site.email,
 },
+backend: { kind: "mailto", to: site.email, subject: "Contact form" },
 ```
 
 `withEmailToken` encodes `messages.email` too, and the site's `FormShell`
@@ -80,10 +147,13 @@ prerendered page, hidden until a submit; the address in them is a token.
 
 ## The address itself
 
-The address lives in a server-only module a client component never imports
-(`src/config/contact.ts`, say) — not in `site.ts`, which the structured
-data reads: with `SiteConfig.email` left out, the Organization carries no
-`email` and a ContactPoint carries the page's URL instead.
+The address lives in `site.ts`, beside the rest of the config, and
+`site.ts` is server-only: no `"use client"` module imports it. A client
+component that needs a link, a label or a list from it takes it as props
+from the server component that renders it. A site whose address is not in
+`site.ts` at all (`SiteConfig.email` left out) gets no `email` and no
+contact point in its Organization; its address lives in a server-only
+module of its own, under the same rule.
 
 ## The guard — `agentic-cms guard-email`
 
@@ -94,13 +164,17 @@ agentic-cms guard-email --domain acme.example --domain acme.co.uk --json
 
 Scans every file the build serves — the pages and RSC payloads under
 `.next/server/app`, the `.body` routes (feed, sitemap, robots), the static
-chunks — for an address at the site's domain, and fails naming each file.
-The documented place is the last step of the site's build:
+chunks — for an address at the site's domain, and fails naming each file
+and the fix: for a page or its payload the link, the form's tokens and the
+key; for a chunk the client component that imports the address. Its place
+is the last step of the site's build, where `init` puts it for a site with
+`guardEmail: true` and `check-site` holds it:
 
 ```json
-"build": "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"
 ```
 
-The wireframe example keeps `hello@acme.example` visible in its config on
-purpose (a wireframe shows its address); a site that guards its address
-takes the four steps above and adds the guard to its build.
+It watches the domain of `site.url`; an address on another domain is
+named to it with `--domain` in the build's step, the site's own domain
+beside it. A site without the key may add the step itself; it scans the
+same files.

@@ -43,11 +43,14 @@ export const forms = {
     submit: { label: "Submit now", waitLabel: "Please wait..." },
     messages: {
       success: `Thank you. Your message has reached ${site.name}; the person who reads that mailbox replies.`,
-      error: `Something went wrong. Please email us directly at ${site.email}.`,
+      // {email} renders the address as a link, a token in the page (withEmailToken, where the form is rendered).
+      error: "Something went wrong. Please email us directly at {email}.",
+      email: site.email,
     },
-    // Opens the visitor's mail client: nothing to run. To deliver instead, set
-    // { kind: "endpoint", url: "/api/forms/contact" } and a destination in the
-    // environment (src/config/form-delivery.ts, docs/forms.md).
+    // Opens the visitor's mail client: nothing to run, the recipient a token
+    // in the page. To deliver instead, set { kind: "endpoint", url:
+    // "/api/forms/contact" } and a destination in the environment
+    // (src/config/form-delivery.ts, docs/forms.md).
     backend: { kind: "mailto", to: site.email, subject: "Contact form" },
   },
 } satisfies Record<string, FormDefinition>;
