@@ -5,7 +5,7 @@ import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
 import { Panel } from "./Panel";
 import { analytics } from "@/config/analytics";
-import { chrome, site } from "@/config/site";
+import { chrome, consentBanner, site } from "@/config/site";
 
 const columnTitle = "font-label uppercase";
 
@@ -48,7 +48,7 @@ export function Footer() {
           <p className="text-muted lg:col-span-3">
             © {new Date().getFullYear()} {site.name}
           </p>
-          {analytics.tagId && <CookieSettingsButton className="justify-self-start underline lg:col-span-3" />}
+          {analytics.tagId && <CookieSettingsButton label={consentBanner.settings} className="justify-self-start underline lg:col-span-3" />}
         </Panel>
       </Container>
     </footer>

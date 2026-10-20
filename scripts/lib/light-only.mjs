@@ -64,10 +64,10 @@ function apply(text, file, { what, pattern, by }) {
   return text.replace(pattern, by);
 }
 
-/** A component that uses the toggle, without it: its import and its element, each on a line of its own. */
+/** A component that uses the toggle, without it: its import and its element, each on a line of its own; an element the toggle was the only child of (the layout's Navbar) closes itself. */
 function withoutToggle(text, file) {
   const edits = [edit("ThemeToggle's import", /^import \{ ThemeToggle \} from "[^"]+";\n/m, ""), edit("the <ThemeToggle /> element", /^[ \t]*<ThemeToggle\b[^>]*\/>\n/gm, "")];
-  return edits.reduce((out, e) => apply(out, file, e), text);
+  return edits.reduce((out, e) => apply(out, file, e), text).replace(/(<([A-Z]\w*)\b[^<>]*?)>\n[ \t]*<\/\2>/g, "$1 />");
 }
 
 /** A Markdown file's dark-mode passages removed and its light-only text put in their place. */

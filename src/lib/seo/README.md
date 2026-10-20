@@ -47,11 +47,30 @@ on a structural problem.
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
-   The organisation's `email` is optional: a site that keeps its address
-   out of the HTML (assembled by script, against harvesters) leaves
-   `site.email` out and the blocks carry none; a `ContactPoint` without an
-   `email` carries the contact page's `url` instead. Google needs no e-mail
-   for any rich result.
+   The organisation's address follows `site.guardEmail`
+   (`docs/email.md`). Without the key, or with `{ off: "<why>" }`, every
+   Organization block — `organizationLd()` (the provider, the publisher of
+   a page and of the Blog), the AboutPage's `about`, the ContactPage's
+   organisation — carries `site.email` as `email`, and a ContactPage's
+   contact point its contact's `email`:
+
+   ```json
+   { "@type": "Organization", "name": "Acme", "logo": { … }, "email": "hello@acme.example", "sameAs": [ … ] }
+   ```
+
+   With `guardEmail: true` no block carries an address as text: in
+   `organizationLd()` and the AboutPage's `about` a `ContactPoint` with the
+   contact page's URL (`site.links.contact`) takes the `email`'s place; a
+   ContactPage's organisation drops its `email`, and every one of its
+   contact points carries that page's `url`, a contact's own `email` left
+   out:
+
+   ```json
+   { "@type": "Organization", "name": "Acme", "logo": { … }, "contactPoint": { "@type": "ContactPoint", "url": "https://acme.example/#contact-form" }, "sameAs": [ … ] }
+   ```
+
+   A site without `site.email` gets neither. Google needs no e-mail for any
+   rich result.
 4. **The sitemap follows from the page files and the published posts**;
    nothing is added by hand. `updated` is the page's last-modified date —
    bump it when the content changes, not on refactors.

@@ -1,7 +1,6 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { chrome } from "@/config/site";
 
 type Theme = "system" | "light" | "dark";
 
@@ -16,9 +15,12 @@ const NEXT: Record<Theme, Theme> = { system: "light", light: "dark", dark: "syst
  *
  * The attribute is the state — the button reads it rather than keeping a copy,
  * so the server renders "system" and the first client render agrees with it,
- * then the real value arrives without a flash of the wrong label.
+ * then the real value arrives without a flash of the wrong label. The labels
+ * come in as props (chrome.themeToggle, from the layout): a client component
+ * imports nothing from site.ts, which would ship all of it, the address
+ * included, in a bundle.
  */
-export function ThemeToggle() {
+export function ThemeToggle({ labels }: { labels: Readonly<Record<Theme, string>> }) {
   const theme = useSyncExternalStore(subscribe, read, readOnServer);
   const cycle = () => {
     apply(NEXT[theme]);
@@ -27,7 +29,7 @@ export function ThemeToggle() {
 
   return (
     <button type="button" onClick={cycle} className="border border-line px-3 py-1 font-label text-h6">
-      {chrome.themeToggle[theme]}
+      {labels[theme]}
     </button>
   );
 }

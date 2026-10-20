@@ -4,7 +4,6 @@ import { useEffect, useId, useRef } from "react";
 import { useConsent } from "agentic-cms/consent";
 import { cx } from "agentic-cms/cx";
 import { analytics } from "@/config/analytics";
-import { consentBanner as copy } from "@/config/site";
 import { OutlineButton } from "./OutlineButton";
 import { panel } from "./Panel";
 
@@ -16,9 +15,11 @@ import { panel } from "./Panel";
  * it first. The two answers are the same `OutlineButton`, side by side. A
  * first visit's banner leaves focus where it is; a reopened one takes it to
  * the first answer, and a choice hands it back. Nothing renders on the
- * server: the choice lives in the browser.
+ * server: the choice lives in the browser. Its words come in as props
+ * (consentBanner, from the layout): a client component imports nothing from
+ * site.ts, which would ship all of it, the address included, in a bundle.
  */
-export function ConsentBanner() {
+export function ConsentBanner({ copy }: { copy: { readonly title: string; readonly text: string; readonly decline: string; readonly allow: string } }) {
   const { open, reopened, choose } = useConsent(analytics.consent);
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();

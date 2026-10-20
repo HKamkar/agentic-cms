@@ -16,7 +16,10 @@
 //     checkout without that history (no git, no commit, a shallow clone)
 //     compares nothing and says why;
 //   - scripts: package.json's `lint` and `build` hold the kit's gates
-//     (./gates.mjs, which `init` writes and merges);
+//     (./gates.mjs, which `init` writes and merges), `guard-email` among them
+//     when src/config/site.ts turns `guardEmail` on; a `guardEmail` turned
+//     off has its reason (`{ off: "<why>" }`), an exception the exceptions
+//     pass lists once it is added;
 //   - ci: a workflow that runs on pull requests (init's
 //     .github/workflows/verify.yml) runs the lint (or a build that runs it),
 //     the tests, the build and the agent-file check;
@@ -36,7 +39,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { CONFIG_FILE, componentsReport, DEMO_FOLDER, disablesIn, entryLines, formatReport, globRegex, isSource, plural, readConfig, resolveGuard, validAllow } from "./check-components.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
-import { buildGaps, buildScript, guardsEmail, LINT, lintGaps } from "./gates.mjs";
+import { buildGaps, buildScript, emailGuard, LINT, lintGaps } from "./gates.mjs";
 import { KIT_NAME } from "./placeholders.mjs";
 import { SITE_TOOLS } from "./preferred-rules.mjs";
 
@@ -150,6 +153,12 @@ function exceptionFindings({ ref }, before, config, added) {
   return out;
 }
 
+/** The e-mail guard turned off since the base, with its reason: site.ts's `guardEmail: { off: "<why>" }`, which its text at the base did not have; [{ kind, name, reason }]. */
+function emailGuardAdded(site, show) {
+  const now = emailGuard(site.read(SITE_CONFIG) ?? "");
+  return now.off && !emailGuard(show(SITE_CONFIG) ?? "").off ? [{ kind: "guardEmail off", name: SITE_CONFIG, reason: now.off }] : [];
+}
+
 /** The exceptions pass: the merge base, what was added since it, and its findings; with no base, the note why and nothing compared. */
 function checkExceptions({ git, env, base }, g, site, config) {
   const found = mergeBase({ git, env, base });
@@ -157,25 +166,28 @@ function checkExceptions({ git, env, base }, g, site, config) {
   const show = (file) => { const r = git(["show", `${found.commit}:./${file}`]); return r.status === 0 ? r.stdout : null; };
   const text = show(CONFIG_FILE);
   const before = text === null ? null : readJson(text);
-  const added = [...configAdded(before ?? {}, config), ...disablesAdded(g, site, show)];
+  const added = [...configAdded(before ?? {}, config), ...disablesAdded(g, site, show), ...emailGuardAdded(site, show)];
   return { base: { ref: found.ref, commit: found.commit }, note: null, added, findings: exceptionFindings(found, before, config, added) };
 }
 
-/** package.json's lint and build hold the gates (./gates.mjs). */
+/** package.json's lint and build hold the gates (./gates.mjs); site.ts's `guardEmail`, when off, says why. */
 function checkScripts(site, pkg) {
-  if (!pkg) return [finding("scripts", "package.json", "no package.json here that reads as JSON, so nothing says what the lint and the build run", "agentic-cms init writes one, its lint and build holding the gates")];
-  const guard = guardsEmail(site.read(SITE_CONFIG) ?? "");
+  const email = emailGuard(site.read(SITE_CONFIG) ?? "");
+  const bare = email.bare && finding("scripts", SITE_CONFIG, "turns guardEmail off with no reason, so the build lets the address into served files as text and no review reads why", `guardEmail: true keeps it out of every served file, guard-email in the build (docs/email.md); an address public on purpose says why: guardEmail: { off: "<why>" }`);
+  if (!pkg) return [bare, finding("scripts", "package.json", "no package.json here that reads as JSON, so nothing says what the lint and the build run", "agentic-cms init writes one, its lint and build holding the gates")].filter(Boolean);
+  const guard = email.on;
   const { lint, build } = pkg.scripts ?? {};
   const lintFix = `"lint": ${JSON.stringify(LINT)}, the site's own commands beside them`;
   const buildFix = `"build": ${JSON.stringify(buildScript({ guard }))}, the gates joined by && around the site's own steps (agentic-cms init merges them)`;
   const lintGap = lintGaps(lint);
   const buildGap = buildGaps(build, { guard });
   const named = (gates) => gates.map((gate) => gate.command).join(", ");
-  const email = buildGap.missing.some((gate) => gate.id === "guard-email") ? ` (${SITE_CONFIG} has an address, which guard-email keeps out of every served file)` : "";
+  const why = buildGap.missing.some((gate) => gate.id === "guard-email") ? ` (${SITE_CONFIG} turns guardEmail on: guard-email keeps the address out of every served file)` : "";
   return [
+    bare,
     lintGap.missing.length && finding("scripts", "package.json", `"lint" runs no ${named(lintGap.missing)}: the lint is ESLint, then the site check, failing on either while both report`, lintFix),
     lintGap.masked && finding("scripts", "package.json", `"lint" turns a failure into a pass`, lintFix),
-    buildGap.missing.length && finding("scripts", "package.json", `"build" runs no ${named(buildGap.missing)} as a step of its && chain${email}`, buildFix),
+    buildGap.missing.length && finding("scripts", "package.json", `"build" runs no ${named(buildGap.missing)} as a step of its && chain${why}`, buildFix),
     buildGap.misplaced.length && finding("scripts", "package.json", `"build" runs ${named(buildGap.misplaced)} on the wrong side of next build`, buildFix),
     buildGap.masked && finding("scripts", "package.json", `"build" turns a failure into a pass`, buildFix),
   ].filter(Boolean);

@@ -11,6 +11,11 @@
 // on a domain reserved for examples (.example), stand in for the site's own
 // until it has them. `pnpm content:lint` lists what is left by line, and a
 // production build (`pnpm build`) fails while any remains.
+//
+// The address is the server's alone (guardEmail, docs/email.md): no client
+// component imports this file, whose whole text a bundle would carry. The
+// layout and the footer, server components, hand the chrome's client
+// components what they show as props.
 
 import type { SiteConfig } from "agentic-cms";
 
@@ -23,6 +28,10 @@ export const site = {
   tagline: "(placeholder) What {{name}} does, in one sentence: the line under the brand in the footer.",
   description: "(placeholder) What a reader finds on {{name}}, in one or two sentences: the description of the feed.",
   email: "{{email}}",
+  // No structured data carries the address as text (a ContactPoint with the
+  // contact page's URL in its place) and the build runs guard-email; an
+  // address public on purpose is { off: "<why>" }.
+  guardEmail: true,
   logo: "/images/brand/{{slug}}-logo.svg",
   address: ["(placeholder) The street and number", "(placeholder) The city"],
 

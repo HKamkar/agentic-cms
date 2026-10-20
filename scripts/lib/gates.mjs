@@ -6,11 +6,11 @@
 // runs the lint first (D4: agents run the build more often than the lint, and
 // a warning never fails it), then the content lint for production (a
 // placeholder fails it), the field tables' check, `next build` and the SEO
-// audit. `guard-email` after them, whenever src/config/site.ts has an
-// address (D5), waits on one switch, EMAIL_GUARD: off until the starter and
-// the example keep the address out of every served file (0.8.2 job 4b), a
-// step a site adds itself till then. A gate is a step of the build's `&&`
-// chain, so a failing one stops the build.
+// audit. `guard-email` after them (D5) for a site whose src/config/site.ts
+// turns `guardEmail` on, as `init` writes it for a new site (0.8.2 job 4b);
+// a site without the key builds as it did, the guard a step it may add
+// itself. A gate is a step of the build's `&&` chain, so a failing one stops
+// the build.
 // A command is the installed bin (`agentic-cms`, through pnpm exec, npx or
 // the site's `pnpm kit`), or `node bin/agentic-cms.mjs` in the kit's own
 // checkout.
@@ -41,18 +41,20 @@ export const BUILD_GATES = [
 const MASKED = /\|\|\s*(?:true|:|exit\s+0)(?:\s|;|$)|(?:^|;|&&)\s*exit\s+0\s*$/;
 
 /**
- * D5, the e-mail guard in the build of every site with an address: off until
- * the starter and the example keep the address out of every served file
- * (0.8.2 job 4b). This line is the switch; till then `guard-email` is a step
- * a site adds to its build, and no check asks for it.
+ * The `guardEmail` key of src/config/site.ts, read from its text (the key on
+ * a line of its own, as SiteConfig spells it): { on, off, bare } — `on` for
+ * `true`, the address kept out of every served file; `off`, the reason of
+ * `{ off: "<why>" }`, the address public on purpose; `bare` for `false`, or
+ * an off without a reason, which check-site refuses. Absent: all three empty.
  */
-export const EMAIL_GUARD = false;
+export function emailGuard(siteTs = "") {
+  const off = siteTs.match(/^[ \t]*guardEmail\s*:\s*\{\s*off\s*:\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/m);
+  const reason = off ? off[2].replace(/\\(.)/g, "$1").trim() : null;
+  return { on: /^[ \t]*guardEmail\s*:\s*true\b/m.test(siteTs), off: reason || null, bare: /^[ \t]*guardEmail\s*:\s*false\b/m.test(siteTs) || reason === "" };
+}
 
-/** Whether src/config/site.ts names an address: an e-mail in a string. */
-export const hasAddress = (siteTs = "") => /["'`][^"'`\s@]+@[^"'`\s@]+\.[^"'`\s@]+["'`]/.test(siteTs);
-
-/** Whether a site's build holds `guard-email` among its gates: the switch on, and an address in its site.ts. */
-export const guardsEmail = (siteTs = "") => EMAIL_GUARD && hasAddress(siteTs);
+/** D5: whether a site's build holds `guard-email` among its gates — its site.ts turns `guardEmail` on. */
+export const guardsEmail = (siteTs = "") => emailGuard(siteTs).on;
 
 /** The gates a build holds for a site: guard-email only with `guard` (guardsEmail()). */
 export const buildGates = ({ guard }) => BUILD_GATES.filter((gate) => !gate.guard || guard);

@@ -1039,9 +1039,9 @@ agentic-cms serve --lab --no-public --port 8002
 
 ## default gates
 
-Layer: [the site's commands](parts.md#the-sites-commands). `seo` · `check-components` · `check-site` — `seo` reads the site's registry and runs in its root
+Layer: [the site's commands](parts.md#the-sites-commands). `seo` · `guard-email` · `check-components` · `check-site` — `seo`, `guard-email` read the site's registry and run in its root
 
-What every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`; CI runs them on every pull request.
+What every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`, and `guard-email` last on a site whose `src/config/site.ts` turns `guardEmail` on (what `init` writes for a new site); CI runs them on every pull request.
 
 ### `seo`
 
@@ -1064,6 +1064,28 @@ Exit: `0` no FAIL; `1` a FAIL; `2` no build under .next/server/app.
 ```bash
 agentic-cms seo                           # after next build
 agentic-cms seo --strict --json
+```
+
+### `guard-email`
+
+Fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text, naming each file and the fix; the build's last step on a site whose src/config/site.ts turns guardEmail on, a step a site without the key may add.
+
+```bash
+agentic-cms guard-email [--domain <host>]… [--json]
+```
+
+| flag | what |
+|---|---|
+| `--domain <host>` | a domain whose addresses must not appear; default: the host of site.url from src/kit.ts (repeatable) |
+| `--json` | print { domains, scanned, hits: [{ file, addresses }] } |
+
+Exit: `0` no address as text; `1` an address in a served file (each named); `2` usage, or no build under .next.
+
+`--json` prints `{ domains, scanned, hits: [{ file, addresses }] }`.
+
+```bash
+agentic-cms guard-email
+agentic-cms guard-email --domain acme.example --json
 ```
 
 ### `check-components`
@@ -1089,7 +1111,7 @@ agentic-cms check-components --json | jq '.findings[] | .file'
 
 ### `check-site`
 
-The site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo) holding the gates; a workflow on pull requests running the lint, the tests, the build and the agent-file check; and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason.
+The site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason.
 
 ```bash
 agentic-cms check-site [--base <ref>] [--json]
@@ -1112,31 +1134,9 @@ agentic-cms check-site --json | jq '.added'
 
 ## opt-in steps
 
-Layer: [the site's commands](parts.md#the-sites-commands). `guard-email` · `critical-css` · `assemble` — `guard-email` reads the site's registry and runs in its root
+Layer: [the site's commands](parts.md#the-sites-commands). `critical-css` · `assemble`
 
-What a site adds to its build when it needs them: `guard-email` after `next build` once the site shows an address (opt-in until 0.8.2 job 4b), `critical-css` for the first paint, `assemble` last for a Node host.
-
-### `guard-email`
-
-Fails when a served file of the build (a page, an RSC payload, the feed, a bundle) carries the site's e-mail address as text.
-
-```bash
-agentic-cms guard-email [--domain <host>]… [--json]
-```
-
-| flag | what |
-|---|---|
-| `--domain <host>` | a domain whose addresses must not appear; default: the host of site.url from src/kit.ts (repeatable) |
-| `--json` | print { domains, scanned, hits: [{ file, addresses }] } |
-
-Exit: `0` no address as text; `1` an address in a served file (each named); `2` usage, or no build under .next.
-
-`--json` prints `{ domains, scanned, hits: [{ file, addresses }] }`.
-
-```bash
-agentic-cms guard-email
-agentic-cms guard-email --domain acme.example --json
-```
+What a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host.
 
 ### `critical-css`
 

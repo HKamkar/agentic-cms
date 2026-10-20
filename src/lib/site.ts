@@ -20,8 +20,18 @@ export type SiteConfig = {
   readonly tagline: string;
   /** The feed's description. */
   readonly description: string;
-  /** The public e-mail address, if the site prints one in structured data. A site that keeps its address out of the HTML (assembled by script against harvesters) leaves it out here and the JSON-LD carries none. */
+  /** The site's e-mail address: the footer's link, a form's recipient, and — unless `guardEmail` is on — the `email` of the structured data. */
   readonly email?: string;
+  /**
+   * Whether the address stays out of every served file (docs/email.md).
+   * `true`: no structured data carries it as text (a ContactPoint with the
+   * contact page's URL takes its place) and the build runs `agentic-cms
+   * guard-email`; what `agentic-cms init` writes for a new site.
+   * `{ off: "<why>" }`: the address public on purpose, an exception
+   * `agentic-cms check-site` prints with its reason. Left out, as before
+   * 0.8.2: the address in the structured data, and no guard asked for.
+   */
+  readonly guardEmail?: true | { readonly off: string };
   /** The brand mark, a path under public/. */
   readonly logo: string;
   readonly address: readonly string[];
