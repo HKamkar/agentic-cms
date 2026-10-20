@@ -27,6 +27,8 @@ export const NOT_CONTENT = new Set(["README.md", "VOICE.md", "editorial"]);
 const BRAND_WORD = /(?<![A-Za-z0-9])Acme(?![A-Za-z0-9])/;
 const BRAND_MARKS = /acme\.example|acme-editorial/i;
 const TEXT = /\.(?:md|mdx|ya?ml|json|txt|ts|tsx|mjs|js|svg)$/i;
+/** The guard's config, which names files and never holds copy: its baseline names each of the example's leftovers by its path. */
+const NOT_BRAND = new Set(["src/config/components.json"]);
 
 /** Whether a string is placeholder copy. */
 export const hasPlaceholder = (text) => MARKER.test(text);
@@ -59,32 +61,33 @@ export function exampleBrandIn(text, { siteName = "" } = {}) {
   return text.match(BRAND_WORD)?.[0] ?? null;
 }
 
-const walk = (dir, base = dir) => (fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name), base) : [path.relative(base, path.join(dir, e.name)).split(path.sep).join("/")])) : []);
+const walk = (dir, base = dir, fsys = fs) => (fsys.existsSync(dir) ? fsys.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name), base, fsys) : [path.relative(base, path.join(dir, e.name)).split(path.sep).join("/")])) : []);
 
 /**
  * Where a site keeps what the brand rule reads: every text file under
- * content/ (templates included), the config under src/config/, and under
+ * content/ (templates included), the config under src/config/ (but the
+ * guard's, which names files), and under
  * public/ every file by its name and every SVG by its text. Paths are
- * root-relative.
+ * root-relative; `fsys` is the file system (node:fs unless a test brings its own).
  */
-export function brandSources(root) {
-  const under = (dir) => walk(path.join(root, dir)).map((rel) => `${dir}/${rel}`);
+export function brandSources(root, fsys = fs) {
+  const under = (dir) => walk(path.join(root, dir), undefined, fsys).map((rel) => `${dir}/${rel}`);
   return {
-    texts: [...under("content"), ...under("src/config"), ...under("public").filter((file) => file.endsWith(".svg"))].filter((file) => TEXT.test(file)),
+    texts: [...under("content"), ...under("src/config"), ...under("public").filter((file) => file.endsWith(".svg"))].filter((file) => TEXT.test(file) && !NOT_BRAND.has(file)),
     names: under("public"),
   };
 }
 
-/** The example's brand left in a site: [{ file, path, found }], `path` a line (`line 3`) or empty for a file's own name. */
-export function exampleBrandLeftovers(root, { siteName = "" } = {}) {
-  const { texts, names } = brandSources(root);
+/** The example's brand left in a site: [{ file, path, found }], `path` a line (`line 3`) or empty for a file's own name; `fs` as brandSources() takes it. */
+export function exampleBrandLeftovers(root, { siteName = "", fs: fsys = fs } = {}) {
+  const { texts, names } = brandSources(root, fsys);
   const out = [];
   for (const file of names) {
     const found = exampleBrandIn(file, { siteName });
     if (found) out.push({ file, path: "", found });
   }
   for (const file of texts) {
-    fs.readFileSync(path.join(root, file), "utf8").split("\n").forEach((line, index) => {
+    fsys.readFileSync(path.join(root, file), "utf8").split("\n").forEach((line, index) => {
       const found = exampleBrandIn(line, { siteName });
       if (found) out.push({ file, path: `line ${index + 1}`, found });
     });

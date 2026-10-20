@@ -22,6 +22,8 @@
     { "rule": "agentic-cms/icons", "files": ["src/components/ui/Placeholder.tsx"], "reason": "the wireframe's crossed box: two lines stretched to any ratio, which no icon draws" },
     { "rule": "agentic-cms/styling", "files": ["src/components/ui/form/Form.tsx"], "reason": "the honeypot sits far off-screen, where a bot fills it and a reader never sees it: an offset no token names" }
   ],
+  "$baseline": "The engine bypasses and the kit example's leftovers a site had when it took 0.8.2, which agentic-cms check-site --baseline writes here, each to move onto its engine in a pull request of its own: the list only shrinks. A site laid out by init 0.8.2 or later starts with none and takes none (docs/migrating-to-0.8.2.md).",
+  "baseline": [],
   "$ignores": "In the kit's own checkout src/lib is the package's source: init leaves these two lines out of a site, whose src/lib is its own and linted.",
   "ignores": ["src/lib/**"],
   "$inherited": "Files the guard leaves alone, frozen: here the blog's post template, which the blog routes render themselves rather than the registry (the body with its stylesheet, its element overrides, the card and the hero). Nothing new is added; a file leaves the list when a registered section or a primitive replaces it.",

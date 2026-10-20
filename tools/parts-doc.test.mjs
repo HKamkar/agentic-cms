@@ -17,7 +17,7 @@ test("the names come from the code: the exports as a site imports them, the pres
   assert.deepEqual(contentLintRules('{ rule: "seo-title" }; add("WARN", "voice-claim", x); add("FAIL", error.file, "schema", p, q); add("FAIL", `image ${src}`);').sort(), ["schema", "seo-title", "voice-claim"]);
   const kinds = new Set(requiredNames().map((r) => r.kind));
   assert.deepEqual([...kinds], ["export", "command", "ESLint preset rule", "guard pass", "site check pass", "content lint rule"]);
-  assert.deepEqual(requiredNames().filter((r) => r.kind === "site check pass").map((r) => r.name), ["rounds", "exceptions", "scripts", "ci", "tools"]);
+  assert.deepEqual(requiredNames().filter((r) => r.kind === "site check pass").map((r) => r.name), ["rounds", "exceptions", "scripts", "ci", "tools", "leftovers", "baseline"]);
 });
 
 test("a page that lacks a name is told which; a rule counts only in The checks, and a command only as itself", () => {

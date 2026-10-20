@@ -3,17 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { CONFIG_FILE } from "./check-components.mjs";
-import { checkSite, configAdded, formatSiteReport, LAB_HEADER, machineAddresses, mergeBase, SiteCheckError } from "./check-site.mjs";
+import { baselineSite, checkSite, configAdded, formatBaselineReport, formatSiteReport, LAB_HEADER, machineAddresses, mergeBase, SiteCheckError } from "./check-site.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "../..");
 
-/** A site tree in memory, `{ path: text }`, behind the three calls the check makes; the root lists too. */
+/** A site tree in memory, `{ path: text }`, behind the calls the check makes (and the one --baseline writes with); the root lists too. */
 function memfs(files) {
   const dirs = new Set(["", ...Object.keys(files).flatMap((file) => file.split("/").slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join("/")))]);
   const rel = (p) => path.relative("/site", p).split(path.sep).join("/");
   const parent = (p) => (p.includes("/") ? path.posix.dirname(p) : "");
   return {
     existsSync: (p) => rel(p) in files || dirs.has(rel(p)),
+    writeFileSync: (p, text) => { files[rel(p)] = text; },
     readFileSync: (p) => { if (!(rel(p) in files)) throw Object.assign(new Error(`ENOENT: ${rel(p)}`), { code: "ENOENT" }); return files[rel(p)]; },
     readdirSync: (p, opts) => {
       const dir = rel(p);
@@ -64,7 +65,7 @@ test("a site that holds every pass: no finding, no warning, one line, and the re
   const report = await site(CLEAN);
   assert.deepEqual([...report.findings, ...report.warnings], [], formatSiteReport(report).join("\n"));
   assert.equal(report.history, "not a git checkout, so the exceptions added since the merge base are not compared");
-  assert.deepEqual(formatSiteReport(report), ["check-components: ok (ui 1, sections 0 in 0 folders; 0 inherited)", "check-site: ok (package.json's gates, CI on pull requests, the site's own tools; 0 round routes; exceptions not compared: not a git checkout, so the exceptions added since the merge base are not compared)"]);
+  assert.deepEqual(formatSiteReport(report), ["check-components: ok (ui 1, sections 0 in 0 folders; 0 inherited)", "check-site: ok (package.json's gates, CI on pull requests, the site's own tools, the example's leftovers; 0 round routes; exceptions not compared: not a git checkout, so the exceptions added since the merge base are not compared)"]);
 });
 
 test("the components pass runs first, with the config read once; its findings are the site check's, in their own part of the report", async () => {
@@ -245,4 +246,90 @@ test("tools: the site's own Playwright, sharp over public/ and next dev scripts 
 
 test("machineAddresses: an IPv4 address in the code, loopback, 0.0.0.0, a version and a comment line left out", () => {
   assert.deepEqual(machineAddresses('const a = "203.0.113.4";\n// 192.0.2.1\n * 192.0.2.2\nconst v = "1.2.3";\nconst l = ["127.0.0.1", "0.0.0.0"];\nconst b = "http://198.51.100.20:3000";\n'), [{ line: 1, address: "203.0.113.4" }, { line: 6, address: "198.51.100.20" }]);
+});
+
+test("leftovers: the example's brand by line and its sample content, each a finding of its rule; none in the kit, whose example is the example", async () => {
+  const files = { ...CLEAN, "content/blog/pages-are-files.md": "---\ntitle: Pages are files\n---\n", "public/images/brand/mark.svg": '<svg xmlns="http://www.w3.org/2000/svg"><title>Acme</title></svg>\n' };
+  const report = await site(files);
+  assert.deepEqual(report.findings.map(({ check, rule, file }) => `${check} ${rule} ${file}`), ["leftovers example-content content/blog/pages-are-files.md", "leftovers example-brand public/images/brand/mark.svg:1"]);
+  assert.match(formatSiteReport(report).join("\n"), /✗ content\/blog\/pages-are-files\.md {2}\[leftovers\]\n {4}one of the example's posts, at the path the example shipped it\n {4}→ replace it with the site's own, or delete it, its pictures with it; a live URL is retired/);
+  const kit = await site({ ...files, "package.json": JSON.stringify({ name: "agentic-cms", scripts: { lint: LINT, build: BUILD } }), ".github/workflows/verify.yml": VERIFY.replace("pnpm exec agentic-cms init . --agent-files --check", "pnpm hygiene") });
+  assert.deepEqual(checks(kit.findings), []);
+});
+
+/** A site that took 0.8.2 with a round made by hand and a leftover post, and the baseline it wrote. */
+const ADOPTED = { ...CLEAN, "src/app/promo-demo/page.tsx": "export default function Page() { return null; }\n", "content/blog/pages-are-files.md": "---\ntitle: Pages are files\n---\n" };
+const withList = (baseline, config = JSON.parse(CLEAN[CONFIG_FILE])) => JSON.stringify({ ...config, baseline });
+const held = (file, rule, count, reason = "") => ({ file, rule, count, reason });
+
+test("baseline: the site check's rules held while their count does; past it each stays, under it the entry asks to shrink; an entry that does not read fails, one with no reason warns", async () => {
+  const list = [held("src/app/promo-demo", "rounds", 1), held("content/blog/pages-are-files.md", "example-content", 1, "the launch post, until its successor is written")];
+  const quiet = await site({ ...ADOPTED, [CONFIG_FILE]: withList(list) });
+  assert.deepEqual(checks(quiet.findings), []);
+  assert.deepEqual(quiet.baseline, { entries: 2, held: 2 });
+  assert.deepEqual(quiet.warnings.map(({ check, problem }) => `${check}: ${problem}`), ["baseline: 1 baseline entry says no reason yet: src/app/promo-demo (rounds)"]);
+  assert.match(formatSiteReport(quiet).join("\n"), /check-site: ok \(.*; the baseline: 2 entries, 2 findings of the site check's held\)/);
+  const grown = await site({ ...ADOPTED, "src/app/sale-demo/page.tsx": "export default function Page() { return null; }\n", [CONFIG_FILE]: withList(list) });
+  assert.deepEqual(checks(grown.findings), ["rounds src/app/sale-demo"], "another round made by hand is no entry's");
+  const shrunk = await site({ ...CLEAN, [CONFIG_FILE]: withList(list) });
+  assert.deepEqual(shrunk.findings.map(({ check, file, problem }) => `${check} ${file}: ${problem.split(":")[0]}`), ["baseline src/app/promo-demo: the baseline holds 1 of rounds here and 0 are left (or the file is gone)", "baseline content/blog/pages-are-files.md: the baseline holds 1 of example-content here and 0 are left (or the file is gone)"]);
+  const unread = await site({ ...ADOPTED, [CONFIG_FILE]: withList([...list, held("src/x.tsx", "agentic-cms/motion", 1)]) });
+  assert.deepEqual(unread.findings.map(({ check, file }) => `${check} ${file}`), ["baseline src/x.tsx"]);
+  assert.match(unread.findings[0].problem, /a preferred rule, which a baseline never holds/);
+});
+
+test("baseline against the merge base: the pull request that takes 0.8.2 lists the whole list as added; after it, an entry added or raised fails", async () => {
+  const list = [held("src/app/promo-demo", "rounds", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 1)];
+  const files = { ...ADOPTED, "src/components/ui/Footer.tsx": "export function Footer() { return null; }\n", "content/blog/pages-are-files.md": undefined };
+  delete files["content/blog/pages-are-files.md"];
+  const first = await site({ ...files, [CONFIG_FILE]: withList(list) }, { git: fakeGit({ files: { [CONFIG_FILE]: CLEAN[CONFIG_FILE] } }) });
+  assert.deepEqual(checks(first.findings), []);
+  assert.deepEqual(first.added, [{ kind: "baseline", name: "src/app/promo-demo", rules: ["rounds ×1"], reason: "" }, { kind: "baseline", name: "src/components/ui/Footer.tsx", rules: ["agentic-cms/email ×1"], reason: "" }]);
+  assert.match(formatSiteReport(first).join("\n"), /\+ baseline src\/components\/ui\/Footer\.tsx \(agentic-cms\/email ×1\) — no reason/);
+  const later = await site({ ...files, [CONFIG_FILE]: withList([...list, held("src/components/ui/Nav.tsx", "agentic-cms/copy", 2)]) }, { git: fakeGit({ files: { [CONFIG_FILE]: withList([held("src/app/promo-demo", "rounds", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 2)]) } }) });
+  assert.deepEqual(later.findings.map(({ check, file, problem }) => `${check} ${file}: ${problem}`), ["exceptions src/components/ui/Nav.tsx: added to the baseline (agentic-cms/copy ×2) since origin/HEAD: the baseline only shrinks, and takes no new bypass", "baseline src/components/ui/Nav.tsx: the baseline holds 2 of agentic-cms/copy here and 0 are left (or the file is gone): an entry that holds more than its file has lets a new one in unseen"]);
+  const raised = await site({ ...files, [CONFIG_FILE]: withList(list) }, { git: fakeGit({ files: { [CONFIG_FILE]: withList([]) } }) });
+  assert.deepEqual(checks(raised.findings), ["exceptions src/app/promo-demo", "exceptions src/components/ui/Footer.tsx"], "a new site's empty list takes nothing");
+});
+
+/** The engines' findings as --baseline reads them from the site's ESLint: each a rule, a file and a line. */
+const engines = (...found) => async () => found.map(([file, rule]) => ({ check: rule, rule, file, problem: `No ${rule.split("/")[1]} of the site's own` }));
+
+test("--baseline: the first time the whole list, the config's other bytes kept; then only ever shrunk, growth refused and each reason kept", async () => {
+  const config = '{\n  "motion": null,\n  "patterns": null,\n  "exceptions": { "src/app/feed.xml": "the RSS feed, written from the posts" }\n}\n';
+  const files = { ...ADOPTED, "src/components/ui/Footer.tsx": "export function Footer() { return null; }\n", [CONFIG_FILE]: config };
+  const first = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Footer.tsx:44", "agentic-cms/email"]) });
+  assert.equal(first.written, true);
+  assert.equal(first.first, true);
+  assert.deepEqual(first.baseline, [held("content/blog/pages-are-files.md", "example-content", 1), held("src/app/layout.tsx", "agentic-cms/head", 1), held("src/app/promo-demo", "rounds", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 2)]);
+  assert.ok(files[CONFIG_FILE].startsWith(config.replace(/\n\}\n$/, ",\n  \"$baseline\": ")), files[CONFIG_FILE]);
+  assert.deepEqual([first.refused, first.remaining], [[], []]);
+  const text = formatBaselineReport(first).join("\n");
+  assert.match(text, /^check-site --baseline: wrote the first baseline into src\/config\/components\.json: 4 entries, 5 findings/);
+  assert.match(text, /\n {2}src\/components\/ui\/Footer\.tsx {2}agentic-cms\/email ×2\n {4}src\/components\/ui\/Footer\.tsx:40 {2}No email of the site's own\n {4}src\/components\/ui\/Footer\.tsx:44/);
+  const after = await site(files);
+  assert.deepEqual(checks(after.findings), [], "the site check holds what it wrote");
+
+  files[CONFIG_FILE] = files[CONFIG_FILE].replace('"reason": "" }\n  ]', '"reason": "the footer, until the address moves to the e-mail engine" }\n  ]');
+  delete files["src/app/promo-demo/page.tsx"];
+  const shrunk = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Nav.tsx:3", "agentic-cms/copy"]) });
+  assert.deepEqual(shrunk.baseline, [held("content/blog/pages-are-files.md", "example-content", 1), held("src/app/layout.tsx", "agentic-cms/head", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 1, "the footer, until the address moves to the e-mail engine")]);
+  assert.deepEqual(shrunk.removed.map((e) => e.file), ["src/app/promo-demo"]);
+  assert.deepEqual(shrunk.shrunk.map((e) => `${e.file} ${e.count}→${e.to}`), ["src/components/ui/Footer.tsx 2→1"]);
+  assert.deepEqual(shrunk.refused.map((e) => `${e.file} ${e.rule} ${e.count}→${e.found}`), ["src/components/ui/Nav.tsx agentic-cms/copy 0→1"]);
+  assert.deepEqual(JSON.parse(files[CONFIG_FILE]).baseline, shrunk.baseline, "written, shrunk, and nothing new in it");
+  const said = formatBaselineReport(shrunk).join("\n");
+  assert.match(said, /− src\/app\/promo-demo {2}rounds: none left, the entry is gone\n {2}↓ src\/components\/ui\/Footer\.tsx {2}agentic-cms\/email: 2 → 1/);
+  assert.match(said, /refused 1 entry: the baseline only shrinks, and takes nothing new\n\n {2}✗ src\/components\/ui\/Nav\.tsx {2}agentic-cms\/copy: 1 here, and the baseline holds 0 \(no entry\)/);
+  const same = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"]) });
+  assert.equal(same.written, false);
+  assert.match(formatBaselineReport(same)[0], /src\/config\/components\.json unchanged — 3 entries, 3 findings/);
+});
+
+test("--baseline takes none of the gates' and the config's findings: they stay, named, until fixed", async () => {
+  const files = { ...ADOPTED, "package.json": JSON.stringify({ name: "ours", scripts: { lint: "eslint", build: BUILD, test: "node --test" } }) };
+  const result = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines() });
+  assert.deepEqual(result.baseline.map((e) => e.rule), ["example-content", "rounds"]);
+  assert.deepEqual(checks(result.remaining), ["scripts package.json"]);
+  assert.match(formatBaselineReport(result).join("\n"), /check-site: 1 problem no baseline takes, which fail until fixed \(docs\/migrating-to-0\.8\.2\.md § 1\)/);
 });

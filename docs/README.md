@@ -94,6 +94,10 @@ The build, its gates and the setup.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
   0.8 (pin 0.8.1): the one required step, what it may adopt, what it deletes if it
   wrote its own.
+- [migrating-to-0.8.2.md](migrating-to-0.8.2.md) — a site from 0.8.1 to
+  0.8.2: the upgrade with its baseline, which keeps CI green and only
+  shrinks; then the copy into content files, the example's leftovers, the
+  preferred tier's reasons and the e-mail key, a pull request at a time.
 
 ## Across the layers
 

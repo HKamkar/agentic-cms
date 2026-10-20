@@ -27,7 +27,8 @@
 //   - and, through ESLint (checkPreset), the required rules hold: their
 //     resolved setting for one sample file per layer is the one
 //     componentRules() makes of the config, so no later block of the site's
-//     replaced one and eslint.config.mjs passes the config's options.
+//     replaced one and eslint.config.mjs passes the config's options (the
+//     baseline's counts among them, ./baseline.mjs).
 // What the preferred tier guides is a warning, which fails nothing and stays
 // in the report until it has its reason: an inline disable of any other rule
 // with none, a transition or animation declared in CSS outside the motion
@@ -45,6 +46,7 @@
 // components pass alone.
 import path from "node:path";
 import { suggest } from "./args.mjs";
+import { validBaseline } from "./baseline.mjs";
 import { ALLOWABLE, checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, preferredConfigs, REQUIRED, requiredConfigs, resolveOptions, SITE_TOOLS } from "./component-lint.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
@@ -84,12 +86,13 @@ export function readConfig(root, fs) {
   if ("exceptions" in config && !isMap(config.exceptions)) throw new GuardConfigError(`${CONFIG_FILE}: exceptions is { "<route folder>": "<reason>" } — each route outside the content engine, with the reason it stays there`);
   if ("owners" in config && !(isMap(config.owners) && Object.entries(config.owners).every(([part, files]) => OWNED.includes(part) && isMap(files)))) throw new GuardConfigError(`${CONFIG_FILE}: owners is { ${OWNED.map((part) => `"${part}": { "<file>": "<reason>" }`).join(", ")} } — the files that own a part, each with the reason it does`);
   if ("allow" in config && !(Array.isArray(config.allow) && config.allow.every(isMap))) throw new GuardConfigError(`${CONFIG_FILE}: allow is a list of { "rule": "agentic-cms/<rule>", "files": ["<glob>", …], "reason": "<why the site keeps its own>" } — the preferred rules a file keeps its own choice of`);
+  if ("baseline" in config && !Array.isArray(config.baseline)) throw new GuardConfigError(`${CONFIG_FILE}: baseline is a list of { "file", "rule", "count", "reason" } — the engine bypasses and the example's leftovers the site had when it took 0.8.2, which agentic-cms check-site --baseline writes`);
   return config;
 }
 
 /** The config with the defaults filled in: the layers resolved under `root` as componentRules() resolves them, the guard's own paths beside them. */
 export function resolveGuard(config = {}) {
-  const layers = resolveOptions({ ...config, allow: validAllow(config.allow) });
+  const layers = resolveOptions({ ...config, allow: validAllow(config.allow), baseline: validBaseline(config.baseline) });
   const own = { ...GUARD_DEFAULTS, ...config };
   return { ...layers, catalogue: `${layers.root}/${own.catalogue}`, routes: own.routes, exceptions: own.exceptions, motionCss: own.motionCss, inherited: own.inherited, ignores: layers.ignores, allow: config.allow ?? [] };
 }
@@ -358,6 +361,7 @@ export function presetSamples(g) {
 /** A rule's resolved setting in words. */
 const setting = (value, ignored) => (ignored ? "is not linted (no block of the config covers the file, or one ignores it)" : !value ? "is not set" : value[0] === 0 ? "is off" : value[0] === 1 ? "is a warning" : "is an error");
 const PRESET_FIX = `eslint.config.mjs spreads ...componentRules() with the options of ${CONFIG_FILE} (its layers, copy, owners and ignores), and no block after it sets the rule again: a site extends the preset through its options (agentic-cms's docs/primitives.md § Enforced)`;
+const BASELINE_FIX = `eslint.config.mjs passes "baseline" from ${CONFIG_FILE} to componentRules(), as it passes "allow": const { allow, baseline } = JSON.parse(readFileSync(new URL("./${CONFIG_FILE}", import.meta.url), "utf8")) (agentic-cms's docs/migrating-to-0.8.2.md § 1)`;
 const PREFERRED_FIX = `a preferred rule a site keeps its own choice of is an "allow" entry in ${CONFIG_FILE}, with its reason, which eslint.config.mjs passes to componentRules() — never a block that turns the warning off without a word (agentic-cms's docs/primitives.md § Enforced)`;
 
 /**
@@ -366,13 +370,15 @@ const PREFERRED_FIX = `a preferred rule a site keeps its own choice of is an "al
  * makes of the guard's config — not replaced by a later block, not passed
  * other options than the config's, not ignored. A preferred rule set
  * otherwise is a warning: a site keeps its own choice in `allow`, with its
- * reason. Async: it loads the site's eslint.config through ESLint (`ESLint`
- * comes in for the tests). { findings, warnings }, as the guard's.
+ * reason. Each file the baseline holds an engine rule's count for gets that
+ * count in its settings, so the rule holds it. Async: it loads the site's
+ * eslint.config through ESLint (`ESLint` comes in for the tests).
+ * { findings, warnings }, as the guard's.
  */
 export async function checkPreset({ root, config, ESLint }) {
   ESLint ??= (await import("eslint")).ESLint;
   const g = resolveGuard(config);
-  const options = resolveOptions({ ...config, allow: validAllow(g.allow) });
+  const options = resolveOptions({ ...config, allow: validAllow(g.allow), baseline: validBaseline(config.baseline) });
   const site = new ESLint({ cwd: root });
   const kit = new ESLint({ cwd: root, overrideConfigFile: true, overrideConfig: [...requiredConfigs(options), ...preferredConfigs(options)] });
   const findings = [];
@@ -393,7 +399,20 @@ export async function checkPreset({ root, config, ESLint }) {
       else warnings.push(finding("preset", file, problem, PREFERRED_FIX));
     }
   }
-  return { findings, warnings };
+  return { findings: [...findings, ...await baselineTold(site, root, options.baseline)], warnings };
+}
+
+/** Each file the baseline holds an engine rule's count for: the count its settings carry (none when eslint.config.mjs does not pass the list), a finding where the two differ. */
+async function baselineTold(site, root, baseline) {
+  const counts = new Map();
+  for (const { file, rule, count } of baseline.filter((entry) => REQUIRED.includes(entry.rule))) counts.set(file, { ...counts.get(file), [rule]: count });
+  const out = [];
+  for (const [file, rules] of counts) {
+    const actual = await site.calculateConfigForFile(path.join(root, file));
+    const told = actual?.settings?.["agentic-cms"]?.baseline ?? {};
+    for (const [rule, count] of Object.entries(rules).filter(([rule, count]) => actual && told[rule] !== count)) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and ESLint is told ${told[rule] ?? "none"}: the rule fails every one`, BASELINE_FIX));
+  }
+  return out;
 }
 
 /**
