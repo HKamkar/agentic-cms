@@ -16,7 +16,9 @@
 // a description outside 70–160, a future date, a stale draft, an orphan, a
 // stray file) WARN — the CLI's --strict promotes those too. Placeholder copy
 // and a placeholder address WARN, and FAIL with `production` (`lint
-// --production`, the first step of a site's `pnpm build`).
+// --production`, the first step of a site's `pnpm build`). The example's
+// brand in a file the site's baseline holds (lib/baseline.mjs: what a site
+// had when it took 0.8.2) passes while the file has no more than its count.
 //
 // Loaded through scripts/lib/load-ts.mjs: the tests via `node --import`, the
 // CLI via a dynamic import after the hook (in the package's own checkout the
@@ -26,6 +28,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { ContentError, formatPath, readCollection, sourceOf } from "agentic-cms/content";
+import { baselineCounts } from "./baseline.mjs";
 import { exampleBrandIn, exampleBrandLeftovers, hasPlaceholder, isKit, NOT_CONTENT, onReservedDomain, placeholderLines, REPLACE } from "./placeholders.mjs";
 
 export const LIMITS = {
@@ -280,9 +283,17 @@ function configPlaceholders(root, marks) {
   return placeholderLines(root, { content: false }).map(({ file, path: p, value, domain }) => (domain ? domainFinding(marks, file, p, value) : { level: marks.level, file, rule: "placeholder", path: p, problem: `holds placeholder copy${shipsNone(marks)}: ${REPLACE}` }));
 }
 
-/** The kit example's brand, its domain or its author left in a site: FAIL at any time (never run in the kit's own repository). */
+/**
+ * The kit example's brand, its domain or its author left in a site: FAIL at
+ * any time (never run in the kit's own repository), but in a file the site's
+ * baseline holds for example-brand while the file has no more than its
+ * count; past it, each FAILs, saying so.
+ */
 function brandRules(root, site) {
-  return exampleBrandLeftovers(root, { siteName: `${site.name} ${site.shortName}` }).map(({ file, path: p, found }) => ({ level: "FAIL", file, rule: "example-brand", path: p, problem: `${q(found)} is the kit example's ${/editorial/i.test(found) ? "author" : /\./.test(found) ? "domain" : "brand"}, which a site never keeps: write the site's own${p ? "" : " (rename or delete the file)"}, or delete what came from the example` }));
+  const found = exampleBrandLeftovers(root, { siteName: `${site.name} ${site.shortName}` });
+  const held = baselineCounts(root, "example-brand");
+  const inFile = (file) => found.filter((entry) => entry.file === file).length;
+  return found.filter(({ file }) => !(held.get(file) >= inFile(file))).map(({ file, path: p, found: what }) => ({ level: "FAIL", file, rule: "example-brand", path: p, problem: `${q(what)} is the kit example's ${/editorial/i.test(what) ? "author" : /\./.test(what) ? "domain" : "brand"}, which a site never keeps: write the site's own${p ? "" : " (rename or delete the file)"}, or delete what came from the example${held.has(file) ? ` (${inFile(file)} in this file, and the baseline holds ${held.get(file)}: it only shrinks)` : ""}` }));
 }
 
 /** `content/editorial/workshop.yaml`, when it exists, has the shape the plugin reads; whether the folder is present is no finding (a fresh clone has no workshop). */

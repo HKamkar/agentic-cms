@@ -147,7 +147,7 @@ that runs the build runs the lint too:
 Into an existing `package.json`, `init` merges the gates and keeps the
 site's own steps where they are, printing what went in (a site from 0.8.1:
 `merged package.json (lint: check-site in place of check-components;
-build: pnpm lint added)`):
+build: pnpm lint added; --production on its content lint)`):
 
 - a site with no `lint` or `build` takes the kit's;
 - a `lint` that runs `agentic-cms check-components` (the kit's before
@@ -155,7 +155,9 @@ build: pnpm lint added)`):
   its command, the check after it;
 - a `build` with a `next build` step takes each gate it lacks in its place:
   the lint first of all, the content lint and the docs check right ahead
-  of `next build`, the audit and the guard after it.
+  of `next build`, the audit and the guard after it. A content lint it
+  runs already without `--production` (0.8.1's `agentic-cms lint`) takes
+  the flag where it is, so the build runs it once.
 
 A script the gates cannot go into is refused: a `lint` that runs no ESLint
 or ends in its own `exit`, a `build` with no `next build` step in its `&&`

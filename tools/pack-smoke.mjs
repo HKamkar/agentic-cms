@@ -17,7 +17,13 @@
 // (tools/bypass-fixture.mjs: one example of each way around the kit the
 // 0.8.2 plan found) laid over it for one run of its checks — each required
 // bypass failing with its message, each preferred one warning — and taken
-// back; its tests through the installed command line;
+// back; then the site as 0.8.1 left it (tools/upgrade-fixture.mjs: 0.8.1's
+// scripts and configs, a head written by hand, a mailto: of its own, a round
+// made by hand, the example's posts, author, logo and reviews) upgraded as
+// docs/migrating-to-0.8.2.md § 1 says, its CI build green on the baseline
+// `check-site --baseline` writes, a new bypass failing and a fixed one
+// shrinking the list, and the fresh site put back; its tests through the
+// installed command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
@@ -34,6 +40,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { LEGACY, unexpected, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
 const MAX_TARBALL = 1024 * 1024;
@@ -130,6 +137,7 @@ async function build(site) {
   guardFails(site);
   dependabot(site);
   bypasses(site);
+  upgrade(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
 }
@@ -262,6 +270,73 @@ function bypasses(site) {
   const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
   if (left) fail(`the bypass fixture was not taken back: ${left}`);
   console.log(`pack-smoke: the bypass fixture answered — ${BYPASSES.filter((b) => b.tier === "required").length} required bypasses fail their checks with their messages, ${BYPASSES.filter((b) => b.tier === "preferred").length} preferred ones warn`);
+}
+
+/** The site's own history is the base of the site check's comparisons: a pull request's base branch in the kit's CI names none here. */
+const ownBase = () => Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== "GITHUB_BASE_REF"));
+/** A command in the site, its exit and its output kept, run as its own CI runs it. */
+const answer = (site, args, env = {}) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env: { ...ownBase(), ...env } }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
+const edit = (site, file, change) => { const full = path.join(site, file); fs.writeFileSync(full, change(fs.readFileSync(full, "utf8"))); };
+const setScripts = (site, scripts) => edit(site, "package.json", (text) => `${JSON.stringify({ ...JSON.parse(text), scripts: { ...JSON.parse(text).scripts, ...scripts } }, null, 2)}\n`);
+
+/** The fresh site made the site 0.8.1 left (tools/upgrade-fixture.mjs), the example's files copied from the kit's checkout. */
+function layLegacy(site) {
+  setScripts(site, LEGACY.scripts);
+  for (const [file, text] of Object.entries(LEGACY.files)) { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); }
+  for (const [file, change] of Object.entries(LEGACY.edit)) edit(site, file, change);
+  for (const file of LEGACY.example) fs.cpSync(path.join(ROOT, file), path.join(site, file), { recursive: true });
+  edit(site, "src/components/README.md", (text) => `${text}\n${LEGACY.catalogued.map((name) => `\`${name}\``).join(", ")}: the site's own, from before 0.8.2.\n`);
+}
+
+/** docs/migrating-to-0.8.2.md § 1 on the site: the gates, ESLint reading the guard's config, the owners. */
+function layUpgrade(site) {
+  setScripts(site, UPGRADE.scripts);
+  for (const [file, change] of Object.entries(UPGRADE.edit)) edit(site, file, change);
+  for (const [file, change] of Object.entries(UPGRADE.json)) edit(site, file, (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`);
+}
+
+/**
+ * 3b. The site as 0.8.1 left it, committed, then upgraded by § 1 of the
+ * guide: on 0.8.2 its 0.8.1 lint fails on the engines; with § 1's edits,
+ * `check-site --baseline` writes each engine bypass and each of the
+ * example's leftovers into the baseline and the site's CI build passes on
+ * it. A new mailto: in a baselined file then fails the lint; the hand-written
+ * head put back on kit.seo asks for its entry to shrink, `--baseline` takes
+ * it out, and the lint passes. Last, the fresh site is put back, which git
+ * confirms.
+ */
+function upgrade(site) {
+  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const layout = fs.readFileSync(path.join(site, "src/app/layout.tsx"), "utf8");
+  layLegacy(site);
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site as 0.8.1 left it");
+  const old = answer(site, ["lint"]);
+  if (old.status !== 1 || !/agentic-cms\/head/.test(old.output) || !/agentic-cms\/email/.test(old.output)) fail(`the site as 0.8.1 left it answered ${old.status} to its own lint, which should fail on 0.8.2's engines: ${old.output.trim().slice(-1200)}`);
+  layUpgrade(site);
+  const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const missing = unexpected(baseline);
+  if (taken.status !== 0 || missing.length) fail(`check-site --baseline answered ${taken.status}${missing.length ? `, and wrote ${missing.join(", ")}` : ""}: ${taken.output.trim().slice(-2000)}`);
+  const build = answer(site, ["build"], CI_BUILD);
+  if (build.status !== 0) fail(`the upgraded site's CI build failed on its baseline: ${build.output.trim().slice(-3000)}`);
+  const mailLink = fs.readFileSync(path.join(site, "src/components/ui/MailLink.tsx"), "utf8");
+  edit(site, "src/components/ui/MailLink.tsx", (text) => text.replace("className={className}>", "className={className} data-copy={`mailto:${address}`}>"));
+  const grown = answer(site, ["lint"]);
+  fs.writeFileSync(path.join(site, "src/components/ui/MailLink.tsx"), mailLink);
+  if (grown.status !== 1 || !/2 of this rule here, and the baseline \(src\/config\/components\.json\) holds 1: the baseline only shrinks/.test(grown.output)) fail(`a second mailto: in a baselined file answered ${grown.status}, and should fail the lint naming the count: ${grown.output.trim().slice(-1500)}`);
+  fs.writeFileSync(path.join(site, "src/app/layout.tsx"), layout);
+  const fixed = answer(site, ["lint"]);
+  if (fixed.status !== 1 || !/The baseline \(src\/config\/components\.json\) holds 1 of this rule here and 0 are left/.test(fixed.output)) fail(`the head put back on kit.seo answered ${fixed.status}, and should ask for its entry to shrink: ${fixed.output.trim().slice(-1500)}`);
+  const shrunk = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  if (shrunk.status !== 0 || !/− src\/app\/layout\.tsx {2}agentic-cms\/head: none left, the entry is gone/.test(shrunk.output)) fail(`check-site --baseline answered ${shrunk.status}, and should take the head's entry out: ${shrunk.output.trim().slice(-1500)}`);
+  const clean = answer(site, ["lint"]);
+  if (clean.status !== 0) fail(`the lint after the baseline shrank answered ${clean.status}: ${clean.output.trim().slice(-1500)}`);
+  git(site, "reset", "-q", "--hard", fresh);
+  git(site, "clean", "-fdq");
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`the fresh site was not put back after the upgrade: ${left}`);
+  console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
 }
 
 /** 5. A site without dark mode, laid out by the installed init --light-only with a name of its own: it builds as its CI runs it, lints and tests, and its pages carry no theme script. */

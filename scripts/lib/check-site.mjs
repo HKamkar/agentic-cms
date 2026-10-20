@@ -27,10 +27,18 @@
 //     the site's own under scripts/ that drives Playwright (or another
 //     headless browser), runs sharp over public/ or starts next dev, and a
 //     machine's address in next.config.*; each names the kit's command, and
-//     an `allow` entry of agentic-cms/site-tools with its reason quiets it.
+//     an `allow` entry of agentic-cms/site-tools with its reason quiets it;
+//   - leftovers: what is left of the kit's example (./leftovers.mjs), its
+//     brand by line and its sample content by path, by bytes and by entry;
+//   - baseline (job 7, ./baseline.mjs): the findings of the rules a
+//     baseline holds (rounds, the leftovers) are held while their file's
+//     count does; an entry that does not read, or holds more than its file
+//     has, is a finding, and one added or raised since the merge base is the
+//     exceptions pass's. `--baseline` (baselineSite()) writes the list.
 // In the kit's own repository (its package.json is the kit's) scripts/ holds
-// the kit's commands themselves, so the tools pass reads nothing, and its CI
-// checks its agent files through `pnpm hygiene`. The file system comes in as
+// the kit's commands themselves and the example is the example, so the tools
+// and the leftovers passes read nothing, and its CI checks its agent files
+// through `pnpm hygiene`. The file system comes in as
 // `fs` (existsSync, readFileSync, readdirSync with withFileTypes), git as
 // `git(args)` → { status, stdout }, and the components pass as
 // `components({ root, fs, config })`, so the tests need neither a checkout
@@ -39,12 +47,14 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { CONFIG_FILE, componentsReport, DEMO_FOLDER, disablesIn, entryLines, formatReport, globRegex, isSource, plural, readConfig, resolveGuard, validAllow } from "./check-components.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
+import { baselineGrowth, countable, engineFindings, entryFindings, holdFindings, nextBaseline, validBaseline, withBaseline } from "./baseline.mjs";
 import { buildGaps, buildScript, emailGuard, LINT, lintGaps } from "./gates.mjs";
+import { exampleLeftovers } from "./leftovers.mjs";
 import { KIT_NAME } from "./placeholders.mjs";
 import { SITE_TOOLS } from "./preferred-rules.mjs";
 
 /** The passes check-site adds to the components pass. */
-export const SITE_PASSES = ["rounds", "exceptions", "scripts", "ci", "tools"];
+export const SITE_PASSES = ["rounds", "exceptions", "scripts", "ci", "tools", "leftovers", "baseline"];
 /** The lists that only shrink against the merge base. */
 export const SHRINK_ONLY = ["inherited"];
 /** The first line of the lab's throwaway route as `lab route` writes it (templates/lab-demo/page.tsx). */
@@ -143,6 +153,14 @@ function disablesAdded(g, site, show) {
   });
 }
 
+/** The baseline against the base's: each entry added or raised since, a finding (the first list, which the pull request that takes 0.8.2 adds, is listed as added). */
+function baselineFindings({ ref }, before, config) {
+  return baselineGrowth(before, config).grown.map((entry) => finding("exceptions", entry.file, entry.was ? `the baseline's ${entry.rule} here was raised from ${entry.was} to ${entry.count} since ${ref}: the baseline only shrinks` : `added to the baseline (${entry.rule} ×${entry.count}) since ${ref}: the baseline only shrinks, and takes no new bypass`, `move it onto its engine as the rule's message says, and give the entry back the count ${ref} has (agentic-cms check-site --baseline shrinks, never grows)`));
+}
+
+/** The baseline's entries the base had none of, the pull request that takes 0.8.2: each listed as added, with its rule, count and reason. */
+const baselineAdded = (before, config) => (baselineGrowth(before, config).first ? validBaseline(config.baseline).map(({ file, rule, count, reason }) => ({ kind: "baseline", name: file, rules: [`${rule} ×${count}`], reason })) : []);
+
 /** What an added exception lacks: an ignores glob with no `$ignores` reason; a file on a frozen list. */
 function exceptionFindings({ ref }, before, config, added) {
   const out = added.filter((entry) => entry.kind === "ignores" && !String(entry.reason).trim()).map((entry) => finding("exceptions", entry.name, `an ignores glob added since ${ref} with no reason: ignores leaves its files out of every rule`, `say why in "$ignores" beside it in ${CONFIG_FILE}; better, the rule's own exception, with its reason (an owner, an allow entry, an inline disable with its description)`));
@@ -166,8 +184,8 @@ function checkExceptions({ git, env, base }, g, site, config) {
   const show = (file) => { const r = git(["show", `${found.commit}:./${file}`]); return r.status === 0 ? r.stdout : null; };
   const text = show(CONFIG_FILE);
   const before = text === null ? null : readJson(text);
-  const added = [...configAdded(before ?? {}, config), ...disablesAdded(g, site, show), ...emailGuardAdded(site, show)];
-  return { base: { ref: found.ref, commit: found.commit }, note: null, added, findings: exceptionFindings(found, before, config, added) };
+  const added = [...configAdded(before ?? {}, config), ...baselineAdded(before, config), ...disablesAdded(g, site, show), ...emailGuardAdded(site, show)];
+  return { base: { ref: found.ref, commit: found.commit }, note: null, added, findings: [...exceptionFindings(found, before, config, added), ...baselineFindings(found, before, config)] };
 }
 
 /** package.json's lint and build hold the gates (./gates.mjs); site.ts's `guardEmail`, when off, says why. */
@@ -269,17 +287,37 @@ function checkTools(site, config, kit) {
   return { findings, warnings };
 }
 
+/** A count of entries, "entry" the noun plural() cannot make. */
+const entryCount = (n, kind = "") => `${n} ${kind}${n === 1 ? "entry" : "entries"}`;
+
+/** The site's name and short name from its site.ts, as the brand rule spares them (a site named like the example keeps its name). */
+const siteNames = (text = "") => ["name", "shortName"].map((field) => text.match(new RegExp(`^\\s*${field}:\\s*["'\`]([^"'\`\\n]+)["'\`]`, "m"))?.[1] ?? "").join(" ");
+
+/** What is left of the kit's example in the site (./leftovers.mjs); none in the kit, whose example is the example. */
+const checkLeftovers = ({ root, fs }, site, kit) => (kit ? [] : exampleLeftovers({ root, fs, siteName: siteNames(site.read(SITE_CONFIG) ?? "") }).map(({ check, rule, file, problem, fix }) => ({ check, rule, file, problem, fix })));
+
+/** The baseline over every finding: the site check's rules held while their file's count does, the entries that do not read or hold too much; { findings, held, warnings }. */
+function baselinePass(config, findings, site) {
+  if (!Object.hasOwn(config, "baseline")) return { findings, held: [], warnings: [] };
+  const holding = holdFindings(findings, config.baseline, site.exists);
+  const silent = validBaseline(config.baseline).filter((entry) => !String(entry.reason ?? "").trim());
+  const warnings = silent.length ? [finding("baseline", CONFIG_FILE, `${entryCount(silent.length, "baseline ")} ${silent.length === 1 ? "says" : "say"} no reason yet: ${silent.slice(0, 3).map((entry) => `${entry.file} (${entry.rule})`).join(", ")}${silent.length > 3 ? ", …" : ""}`, "say in each entry's \"reason\" why it is still here — the review reads it — or move its findings onto their engine and take it out")] : [];
+  return { findings: [...holding.findings, ...entryFindings(config.baseline)], held: holding.held, warnings };
+}
+
 /**
  * The site check: { config, kit, components, rounds, base, history, added,
- * findings, warnings } — `components` the components pass's summary (its
- * layers, inherited, candidates, disables, allowed), `base` the merge base
- * ({ ref, commit }) or null with `history` saying why, `added` the
- * exceptions added since it, and the findings and the warnings of every
- * pass, the components pass's first, each { check, file, problem, fix }.
- * Throws a GuardConfigError for a config it cannot read, a SiteCheckError
- * for a --base that names no commit.
+ * baseline, findings, warnings } — `components` the components pass's
+ * summary (its layers, inherited, candidates, disables, allowed), `base` the
+ * merge base ({ ref, commit }) or null with `history` saying why, `added`
+ * the exceptions added since it, `baseline` the list's entries and the
+ * findings it held, and the findings and the warnings of every pass, the
+ * components pass's first, each { check, file, problem, fix } (a leftover's
+ * with its `rule`). `hold: false` holds nothing to the baseline (what
+ * `--baseline` counts). Throws a GuardConfigError for a config it cannot
+ * read, a SiteCheckError for a --base that names no commit.
  */
-export async function checkSite({ root, fs, git, env = {}, base, components = componentsReport }) {
+export async function checkSite({ root, fs, git, env = {}, base, components = componentsReport, hold = true }) {
   const config = readConfig(root, fs);
   const { findings: componentFindings, warnings: componentWarnings, ...summary } = await components({ root, fs, config });
   const site = siteReader(root, fs);
@@ -288,9 +326,10 @@ export async function checkSite({ root, fs, git, env = {}, base, components = co
   const kit = pkg?.name === KIT_NAME;
   const exceptions = checkExceptions({ git, env, base }, g, site, config);
   const tools = checkTools(site, config, kit);
-  const findings = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...checkCi(site, pkg, kit), ...tools.findings];
+  const own = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...checkCi(site, pkg, kit), ...tools.findings, ...checkLeftovers({ root, fs }, site, kit)];
+  const baseline = hold ? baselinePass(config, [...componentFindings, ...own], site) : { findings: [...componentFindings, ...own], held: [], warnings: [] };
   const rounds = folders(site, g.app).filter((name) => DEMO_FOLDER.test(name)).length;
-  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, findings: [...componentFindings, ...findings], warnings: [...componentWarnings, ...tools.warnings] };
+  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...tools.warnings, ...baseline.warnings] };
 }
 
 /** Each exception added since the base, with its reason. */
@@ -299,6 +338,9 @@ const addedLines = (added) => added.map(({ kind, name, rules, reason }) => `  + 
 /** The exceptions pass in one clause: how many were added since the base, or why nothing was compared. */
 const sinceClause = ({ base, history, added }) => (base ? `${plural(added.length, "exception")} added since ${base.ref} (${base.commit.slice(0, 7)})` : `exceptions not compared: ${history}`);
 
+/** The baseline in one clause, when the site has one. */
+const baselineClause = ({ baseline }) => (baseline?.entries ? `; the baseline: ${entryCount(baseline.entries)}, ${plural(baseline.held, "finding")} of the site check's held` : "");
+
 /** The report as lines: the components pass as check-components prints it, then the site's passes — one line when clean, else each finding — the exceptions added since the base with their reasons, and the warnings last. */
 export function formatSiteReport(report) {
   const site = new Set(SITE_PASSES);
@@ -306,10 +348,56 @@ export function formatSiteReport(report) {
   const ofComponents = (entries) => entries.filter((entry) => !site.has(entry.check));
   const lines = formatReport({ ...report.components, findings: ofComponents(report.findings), warnings: ofComponents(report.warnings) });
   const [findings, warnings] = [ofSite(report.findings), ofSite(report.warnings)];
-  const held = [`package.json's gates, CI on pull requests${report.kit ? "" : ", the site's own tools"}`, plural(report.rounds, "round route"), sinceClause(report)];
-  if (findings.length) lines.push(`check-site: ${plural(findings.length, "problem")} (${sinceClause(report)})`, "", ...entryLines(findings, "✗"));
-  else lines.push(`check-site: ok (${held.join("; ")})`);
+  const held = [`package.json's gates, CI on pull requests${report.kit ? "" : ", the site's own tools, the example's leftovers"}`, plural(report.rounds, "round route"), sinceClause(report)];
+  if (findings.length) lines.push(`check-site: ${plural(findings.length, "problem")} (${sinceClause(report)}${baselineClause(report)})`, "", ...entryLines(findings, "✗"));
+  else lines.push(`check-site: ok (${held.join("; ")}${baselineClause(report)})`);
   if (report.added.length) lines.push(`The exceptions added since ${report.base.ref}, each with its reason:`, ...addedLines(report.added));
   if (warnings.length) lines.push("", `check-site: ${plural(warnings.length, "warning")}, which fail nothing: the kit's command, or the site's own with its reason`, "", ...entryLines(warnings, "⚠"));
+  return lines;
+}
+
+/**
+ * `check-site --baseline`: what the site holds now of the rules a baseline
+ * holds — the engines' findings as its ESLint reads them, the baseline
+ * ignored (`engines`, ./baseline.mjs engineFindings()), and the site check's
+ * own (rounds, the leftovers) — written into the config's `baseline`: the
+ * whole list, each reason empty, when the config has none; else the list
+ * shrunk to it (an entry gone or lowered), growth refused. The config's
+ * other bytes stay as they are. Then the site check again, as the lint will
+ * run it (`recheck`: the CLI runs it in a process of its own, which reads
+ * eslint.config.mjs afresh — this one's import of it holds the list as it
+ * was). { config, written, first, baseline, found, shrunk, removed,
+ * refused, remaining, warnings } — `remaining` the findings no baseline
+ * takes (the gates, the config's own), which fail until they are fixed.
+ */
+export async function baselineSite({ root, fs, git, env = {}, base, components = componentsReport, engines = engineFindings, recheck = () => checkSite({ root, fs, git, env, base, components }) }) {
+  const config = readConfig(root, fs);
+  const file = path.join(root, CONFIG_FILE);
+  const text = fs.readFileSync(file, "utf8");
+  const raw = await checkSite({ root, fs, git, env, base, components, hold: false });
+  const found = [...countable([...raw.findings, ...await engines({ root })]).values()].map(({ file: at, rule, findings }) => ({ file: at, rule, count: findings.length, findings: findings.map((entry) => ({ at: entry.file, problem: entry.problem })) }));
+  const next = nextBaseline(Object.hasOwn(config, "baseline") ? config.baseline : undefined, found);
+  const out = withBaseline(text, next.baseline);
+  if (out !== text) fs.writeFileSync(file, out);
+  const after = await recheck();
+  return { config: CONFIG_FILE, written: out !== text, first: next.first, baseline: next.baseline, found, shrunk: next.shrunk, removed: next.removed, refused: next.refused, remaining: after.findings, warnings: after.warnings };
+}
+
+/** What `--baseline` did, as lines: what it wrote (each entry with its findings, the first time), what it shrank, what it refused, and what no baseline takes. */
+export function formatBaselineReport(result) {
+  const total = (entries) => entries.reduce((n, entry) => n + entry.count, 0);
+  const size = `${entryCount(result.baseline.length)}, ${plural(total(result.baseline), "finding")}`;
+  const lines = [];
+  if (result.first) {
+    lines.push(`check-site --baseline: wrote the first baseline into ${result.config}: ${size}, each to move onto its engine in a pull request of its own; the list only shrinks`);
+    for (const entry of result.found) lines.push(`  ${entry.file}  ${entry.rule} ×${entry.count}`, ...entry.findings.map(({ at, problem }) => `    ${at}  ${problem}`));
+    if (result.baseline.length) lines.push(`Each entry's "reason" is empty for the owner to fill: why it is still here.`);
+  } else {
+    lines.push(`check-site --baseline: ${result.written ? `wrote ${result.config}` : `${result.config} unchanged`} — ${size}`);
+    lines.push(...result.removed.map((entry) => `  − ${entry.file}  ${entry.rule}: none left, the entry is gone`), ...result.shrunk.map((entry) => `  ↓ ${entry.file}  ${entry.rule}: ${entry.count} → ${entry.to}`));
+  }
+  if (result.refused.length) lines.push("", `check-site --baseline: refused ${entryCount(result.refused.length)}: the baseline only shrinks, and takes nothing new`, "", ...result.refused.map((entry) => `  ✗ ${entry.file}  ${entry.rule}: ${entry.found} here, and the baseline holds ${entry.count}${entry.count ? "" : " (no entry)"}\n    → move ${entry.found - entry.count === 1 ? "it" : `${entry.found - entry.count} of them`} onto the engine, as the lint's message says`));
+  if (result.remaining.length) lines.push("", `check-site: ${plural(result.remaining.length, "problem")} no baseline takes, which fail until fixed (docs/migrating-to-0.8.2.md § 1):`, "", ...entryLines(result.remaining, "✗"));
+  if (result.warnings.length) lines.push("", `check-site: ${plural(result.warnings.length, "warning")}, which fail nothing and no baseline takes: each goes quiet with its reason (docs/migrating-to-0.8.2.md § 4)`);
   return lines;
 }

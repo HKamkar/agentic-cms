@@ -309,6 +309,7 @@ prints no warning.
 | `copy` | `{ props: [the copy props above], skip: [], decorations: ["Placeholder", "TypeTag"], tools: ["agentic-cms/lab"] }` | the props whose strings are copy (replacing the list); the site's own props whose strings never are (added to the rule's); the primitives that draw their props and children `aria-hidden`; the design tools' modules. Required: `false` throws |
 | `owners` | `{}` | `{ forms, tags, images, icons, motion }`: the files that own a `<form>`, a tag, an eager `<img>`, an `<svg>` or motion, as `{ "<file>": "<reason>" }` or a list of globs |
 | `allow` | `[]` | a list of `{ rule, files, reason }`: a preferred rule a site keeps its own choice of, in those files, with its reason; a required rule, an unknown one or an entry with no reason throws |
+| `baseline` | `[]` | `src/config/components.json`'s list of `{ file, rule, count, reason }`, the engine bypasses a site had when it took 0.8.2: each engine rule stays quiet in a listed file while it holds no more than the count ([§ The whole site](#the-whole-site-agentic-cms-check-site)); an entry that does not read throws |
 | `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
 | `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban and the engines cover, and the tsconfig alias for it |
@@ -439,8 +440,9 @@ site's own is a finding until it moves to `exceptions` with its reason.
 ## The whole site: `agentic-cms check-site`
 
 The placement guard holds `src/`; the site check holds the rest of what
-makes a site the kit's: its design rounds, its exceptions, its gates and
-its tools. `pnpm lint` runs it after ESLint (above), so `pnpm build`, which
+makes a site the kit's: its design rounds, its exceptions, its gates, its
+tools, what is left of the kit's example, and the baseline an existing
+site took 0.8.2 with. `pnpm lint` runs it after ESLint (above), so `pnpm build`, which
 runs `pnpm lint` first, and CI run it too. It runs every pass of
 `check-components` first, from the same `src/config/components.json`, then
 its own:
@@ -455,7 +457,9 @@ its own:
   `ignores` glob and an inline disable (matched by its rules and its reason,
   so a moved one is not new). An `ignores` glob takes its reason from the
   `$ignores` comment beside it, and an added one without it fails. The
-  frozen `inherited` list only shrinks: a file added since the base fails.
+  frozen `inherited` list only shrinks: a file added since the base fails,
+  and so does a baseline entry added or raised (the pull request that adds
+  the first list, where the base has none, lists it whole as added).
   The base is git's merge base of HEAD with `--base`, else the pull
   request's base branch (`GITHUB_BASE_REF` in CI), else `origin/HEAD`,
   `origin/main` or `main`. A checkout without that history (no git, no
@@ -490,8 +494,45 @@ its own:
   An `agentic-cms/site-tools` entry that names no file the pass reads is a
   finding. In the kit's own repository, whose `scripts/` are the commands
   themselves, the pass reads nothing.
+- **`leftovers`**: nothing of the kit's example stays in a site. Up to
+  0.8.1 `init` copied the example's content and pictures; the package
+  carries what it shipped at every release (`scripts/lib/example-files.json`).
+  `example-brand` is its name, domain or author in a line, as the content
+  lint's rule of that name finds it (a site named like it keeps its name).
+  `example-content` is one of its posts or catalogue pages at its path, a
+  file it shipped copied under any name (by its bytes), and a review, use
+  case, FAQ or author it shipped among the site's own (by the entry's
+  content). Each names the fix: the site's own, or delete it, a live URL
+  retired with `/editorial:retire-content`. The kit's own repository,
+  whose example is the example, is exempt.
+- **`baseline`**: the engine bypasses and the leftovers a site had when it
+  took 0.8.2, which `check-site --baseline` writes into the config:
+
+  ```json
+  "baseline": [
+    { "file": "src/app/layout.tsx", "rule": "agentic-cms/head", "count": 1, "reason": "the root head, until it is kit.seo.rootMetadata()" }
+  ]
+  ```
+
+  An entry's rule is an engine's ESLint rule, `rounds`, `example-brand` or
+  `example-content`; never a preferred rule, whose warning stays until it
+  has its reason, and never a gate or the config's own. The engines' rules
+  hold their entries in ESLint (`componentRules({ baseline })`, which
+  `eslint.config.mjs` passes from the config as it passes `allow`), the
+  site check the rest, and the content lint its `example-brand`: quiet
+  while the file holds no more than the count, every finding and a line on
+  the count past it, and under it a line asking for the entry to shrink, so
+  a fixed bypass makes no room for a new one. An entry that does not read
+  is a finding, one with no reason a warning, and the guard's `preset`
+  fails a file whose count ESLint is not told. `--baseline` writes the
+  whole list where the config has none (each reason empty, for the owner),
+  and from then on only shrinks it: an entry gone or lowered, growth
+  refused. A site from `init` 0.8.2 starts with `"baseline": []`, and takes
+  nothing ([migrating-to-0.8.2.md](migrating-to-0.8.2.md)).
 
 Each finding names its file, the pass and the fix; exit 1 on any, the
 components pass's included, and 2 when the config is missing or does not
 read or `--base` finds no history; `--json` prints the report, the
 exceptions added under `added` ([commands.md](commands.md#check-site)).
+`--baseline` exits 1 while it refuses growth or something no baseline
+takes is left, each named with its fix.

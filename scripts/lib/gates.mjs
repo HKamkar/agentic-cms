@@ -37,6 +37,9 @@ export const BUILD_GATES = [
   { id: "guard-email", command: "agentic-cms guard-email", test: kit(String.raw`guard-email(?:\s|$)`), at: "after", guard: true },
 ];
 
+/** The content lint as a build ran it before the gates (0.8.1's): without `--production`. */
+const BARE_CONTENT_LINT = kit(String.raw`lint(?:\s+(?!--production(?:\s|$))\S+)*\s*$`);
+
 /** A failure turned into a pass: `|| true`, `|| :`, `|| exit 0`, a bare `exit 0`. */
 const MASKED = /\|\|\s*(?:true|:|exit\s+0)(?:\s|;|$)|(?:^|;|&&)\s*exit\s+0\s*$/;
 
@@ -119,7 +122,8 @@ export function mergeLint(script) {
  * site's `&&` chain with each gate it lacks put in its place — the lint
  * first of all, the other ones before `next build` in their order right
  * ahead of it, the ones after it behind it — and the site's own steps kept
- * where they are. A build with no `next
+ * where they are. A content lint without `--production` (0.8.1's build)
+ * takes the flag in its place rather than a second run beside it. A build with no `next
  * build` step, one that turns a failure into a pass or one whose gates sit
  * on the wrong side of `next build` throws a GatesError naming what to add.
  * { script, note } — note null when nothing changed.
@@ -134,11 +138,15 @@ export function mergeBuild(script, { guard }) {
   if (gaps.missing.some((gate) => gate.id === "next-build")) refuse("runs no next build as a step of its && chain");
   const chain = steps(script);
   const order = buildGates({ guard });
-  for (const gate of gaps.missing) {
+  const bare = gaps.missing.some((gate) => gate.id === "content-lint") ? chain.findIndex((step) => BARE_CONTENT_LINT.test(step)) : -1;
+  if (bare !== -1) chain[bare] = `${chain[bare]} --production`;
+  for (const gate of gaps.missing.filter((missing) => bare === -1 || missing.id !== "content-lint")) {
     const rank = order.indexOf(gate);
     const later = chain.findIndex((step) => order.slice(rank + 1).some((other) => other.test.test(step)));
     const earlier = chain.findLastIndex((step) => order.slice(0, rank).some((other) => other.test.test(step)));
     chain.splice(gate.first ? 0 : gate.at === "before" ? later : earlier + 1, 0, gate.command);
   }
-  return { script: chain.join(" && "), note: `build: ${gaps.missing.map((gate) => gate.command).join(", ")} added` };
+  const added = gaps.missing.filter((gate) => bare === -1 || gate.id !== "content-lint").map((gate) => gate.command);
+  const notes = [added.length && `${added.join(", ")} added`, bare !== -1 && "--production on its content lint"].filter(Boolean);
+  return { script: chain.join(" && "), note: `build: ${notes.join("; ")}` };
 }

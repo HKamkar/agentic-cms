@@ -1,0 +1,220 @@
+{
+ "$comment": "What the kit's example shipped to a site, which check-site's leftovers pass looks for: init copied the example's content/ and public/ up to 0.8.1 and copies none of them from 0.8.2, so this is every release's example from v0.2.0 to v0.8.1 and does not change. Written by tools/example-files.mjs from the kit's tags.",
+ "releases": [
+  "v0.2.0",
+  "v0.3.0",
+  "v0.3.1",
+  "v0.3.2",
+  "v0.3.3",
+  "v0.4.0",
+  "v0.4.1",
+  "v0.4.2",
+  "v0.4.3",
+  "v0.5.0",
+  "v0.5.1",
+  "v0.5.2",
+  "v0.5.3",
+  "v0.5.4",
+  "v0.5.5",
+  "v0.6.0",
+  "v0.6.1",
+  "v0.7.0",
+  "v0.7.1",
+  "v0.7.2",
+  "v0.7.3",
+  "v0.7.4",
+  "v0.7.5",
+  "v0.7.6",
+  "v0.8.0",
+  "v0.8.1"
+ ],
+ "paths": [
+  "content/blog/how-a-post-is-built.md",
+  "content/blog/pages-are-files.md",
+  "content/blog/the-voice-file-and-the-lint.md",
+  "content/pages/sections-about.yaml",
+  "content/pages/sections-contact.yaml",
+  "content/pages/sections-home.yaml",
+  "content/pages/sections-use-cases.yaml"
+ ],
+ "files": [
+  {
+   "path": "content/authors.json",
+   "size": 331,
+   "sha256": "b183d573345bcfc97b9530585a2adb5c52660b8ec9d80bd035155f0a02932b5f"
+  },
+  {
+   "path": "content/blog/how-a-post-is-built.md",
+   "size": 5709,
+   "sha256": "65ce0bef9175ab40cf030276e4a0f45a633365409fe31e245e7d2f7956e6ac37"
+  },
+  {
+   "path": "content/blog/how-a-post-is-built.md",
+   "size": 5712,
+   "sha256": "c9bee9dfa7c464735114c27ebb4aae0a7e06e35c79571a9895d8af02c6c59b08"
+  },
+  {
+   "path": "content/blog/pages-are-files.md",
+   "size": 5386,
+   "sha256": "80c135387fd6116721e39b42e19e5d2b97592f70d1082b61bd33f56c8ccd3698"
+  },
+  {
+   "path": "content/blog/pages-are-files.md",
+   "size": 5348,
+   "sha256": "9f94c63ccf02a85461621e138519aaf7e830e8271a71210ed09bdd46ab2ab8a8"
+  },
+  {
+   "path": "content/blog/the-voice-file-and-the-lint.md",
+   "size": 5499,
+   "sha256": "7192c6de93a7e0215065a57cb67266627da1ba889c7de813578e39903d5cbdd1"
+  },
+  {
+   "path": "content/faqs/general.yaml",
+   "size": 2095,
+   "sha256": "f4a450ba818b679ff9cd2f3dc4535529d61de0df077aabcbbf4f696b5cf55619"
+  },
+  {
+   "path": "content/pages/blog.yaml",
+   "size": 877,
+   "sha256": "36cbaad2a57a506ee49be92c03d0a4ad810fcf1ae5fa11e47317faeaa1ec289f"
+  },
+  {
+   "path": "content/pages/blog.yaml",
+   "size": 873,
+   "sha256": "77aaee13c5aa75d58c2c1b9e6ba685b6c135200965d875342320a84c8cd2df73"
+  },
+  {
+   "path": "content/pages/home.yaml",
+   "size": 6281,
+   "sha256": "5afba136735d52380940a8c5919ab8b47dc9d32f9eb36aed1cb264ea925ba738"
+  },
+  {
+   "path": "content/pages/home.yaml",
+   "size": 6281,
+   "sha256": "b037187c078328b07b405a6a9f857120ff6ea553a7e07922c3417158a9b37136"
+  },
+  {
+   "path": "content/pages/home.yaml",
+   "size": 6232,
+   "sha256": "ebb4a339c125586b03a5f97cd698b458cd5f825fbc640ec55aa71194567b6011"
+  },
+  {
+   "path": "content/pages/sections-about.yaml",
+   "size": 3963,
+   "sha256": "778386202fdb3d4c38547fc4bcab850ec213a4f2a29de40c6caf5fd6553d9439"
+  },
+  {
+   "path": "content/pages/sections-about.yaml",
+   "size": 3920,
+   "sha256": "9abe2049800fe6a6f66c55bf0651f3eb7ae58d828ace4150f5abe3a49a51d5f1"
+  },
+  {
+   "path": "content/pages/sections-contact.yaml",
+   "size": 2270,
+   "sha256": "be652d0097b30b84efff08c251401d3af3b7c6b828fed8d9a9859f81114e5005"
+  },
+  {
+   "path": "content/pages/sections-home.yaml",
+   "size": 2778,
+   "sha256": "23451f14cd0ee655dd57429e63d833d88205fe09192c62ddefd91f197e250919"
+  },
+  {
+   "path": "content/pages/sections-home.yaml",
+   "size": 2775,
+   "sha256": "b7a2a34443c9626c309ddaf9278ee4d898cf8af07ff45ee9d7c755dabcb4ce7d"
+  },
+  {
+   "path": "content/pages/sections-use-cases.yaml",
+   "size": 3904,
+   "sha256": "74f5196cff6541f8263423063e1d5b304ff77d1819d186f1abda84722999028c"
+  },
+  {
+   "path": "content/pages/sections-use-cases.yaml",
+   "size": 3907,
+   "sha256": "82a98d580e0e7271f6d0bfa7ff60a2faf505cd80034926737c72de5609516497"
+  },
+  {
+   "path": "content/reviews.yaml",
+   "size": 766,
+   "sha256": "e7024976f1a2a77962e7dd795d90f352ea53d6895af0df2fc7c416992c89c747"
+  },
+  {
+   "path": "content/use-cases.yaml",
+   "size": 1236,
+   "sha256": "c684f52f0ec6f453ffe1e38e452f1bbf0587e008836f454fb18e29952ba6e26f"
+  },
+  {
+   "path": "public/images/authors/acme-editorial.webp",
+   "size": 990,
+   "sha256": "b17506456a84249df78f2e56ab1ac7e4400600c8acbe07d6f8630e095cc0bfa6"
+  },
+  {
+   "path": "public/images/blog/how-a-post-is-built/how-a-post-is-built-card.webp",
+   "size": 4586,
+   "sha256": "502a8870fc995dd4fb6b2046dece0eab2f8f330cb6dc8428a10ea5326b5a4bdf"
+  },
+  {
+   "path": "public/images/blog/how-a-post-is-built/how-a-post-is-built-hero.webp",
+   "size": 6372,
+   "sha256": "de531f296d32c30805dee6d5b9da6d389cd67d0e53220c707c76f679379be892"
+  },
+  {
+   "path": "public/images/brand/logo.svg",
+   "size": 371,
+   "sha256": "c7489a125fe1b928d678c7aa626c9c9ef903da49f03e8e80ab824432b1d8fd78"
+  },
+  {
+   "path": "public/images/home/review-1.webp",
+   "size": 634,
+   "sha256": "c76db15281e4404d079f74b1b9614b30c95ea5c7004386e893c9fe3ea1a63800"
+  },
+  {
+   "path": "public/images/sections-home/choose-us-demo.webp",
+   "size": 1642,
+   "sha256": "c7c4cdd0a0611403866dac90190a67b3bc06f35910a1fe233ad0bba0dbfbba54"
+  },
+  {
+   "path": "public/images/sections-home/choose-us-stats.webp",
+   "size": 2486,
+   "sha256": "8af55bce42796ba983928dcc54e44fdc2833454fd4733be948db89557edae6d4"
+  }
+ ],
+ "entries": [
+  {
+   "file": "content/authors.json",
+   "sha256": "d1873a826af31e998b0d47809430ae21507ea86b25b41281ec153aa54addf5b7"
+  },
+  {
+   "file": "content/faqs/general.yaml",
+   "sha256": "2043734692c0dd65938cbedafd8fb7f9839d7b3ee34529c122a84842d6517115"
+  },
+  {
+   "file": "content/faqs/general.yaml",
+   "sha256": "2389fd5c0d1c1c0f8f8abfefd11f408763db847e18efeb095474724c2b81885d"
+  },
+  {
+   "file": "content/faqs/general.yaml",
+   "sha256": "43d0e9dee32dfe1482163707c2f4b84ef308930f1103acc2ab1d83829815951e"
+  },
+  {
+   "file": "content/faqs/general.yaml",
+   "sha256": "e4e12a65814d3fb7bcd257f03e5ddbbe7a83e5e3abad40070ff05d5765de8b00"
+  },
+  {
+   "file": "content/reviews.yaml",
+   "sha256": "3b44eb088f305824d2a10b13cf8288d89ff5363d500d265c44e204da0773fb2a"
+  },
+  {
+   "file": "content/use-cases.yaml",
+   "sha256": "a2ffeb95eedc94b9479ac9d92dbd2911edcb060f0d56abd0fbc3da8984bb2936"
+  },
+  {
+   "file": "content/use-cases.yaml",
+   "sha256": "c604bb47c67de16193f87015fa238a68fa69532be9dcfd79f4bbc555d8a1b07b"
+  },
+  {
+   "file": "content/use-cases.yaml",
+   "sha256": "e52e39e2054658725978c8aa3c82953b9edcacf3abad9117ec1c1d84c0de9b18"
+  }
+ ]
+}

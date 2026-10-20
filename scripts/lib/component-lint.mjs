@@ -8,7 +8,10 @@
 //     reader sees comes from content/ or site.ts's chrome, through props; no
 //     head of the site's own; forms through the form engine; tags through
 //     agentic-cms/consent; no mailto: link. The files that own a form or a
-//     tag are named in `owners`;
+//     tag are named in `owners`. A site that took 0.8.2 with bypasses keeps
+//     them in `baseline` (./baseline.mjs): each rule stays quiet on a file
+//     while it holds no more than the file's count, and the list only
+//     shrinks;
 //   - preferred, the libraries and the tools (./preferred-rules.mjs),
 //     warnings across all of src: motion through agentic-cms/ix, graphics
 //     from the lab, pictures through Media and EagerImage, icons through
@@ -38,12 +41,13 @@
 // Loosening a rule is its own pull request, said so in its title (the
 // components rule, .claude/rules/components.md).
 
+import { baselineConfigs, checkBaseline, heldByBaseline } from "./baseline.mjs";
 import { COPY_PROPS, ENGINE_RULES, PLUGIN, REQUIRED, TOOLS } from "./engine-rules.mjs";
 import { ALLOWABLE, ANIMATION_ALTERNATIVES, PREFERRED, PREFERRED_RULES, RENDERING_LIBRARIES, SITE_TOOLS } from "./preferred-rules.mjs";
 
 export { ALLOWABLE, ANIMATION_ALTERNATIVES, COPY_PROPS, PREFERRED, REQUIRED, RENDERING_LIBRARIES, SITE_TOOLS, TOOLS };
-/** The plugin, one object for every block that registers it: `plugins: { "agentic-cms": plugin }`, the required rules and the preferred ones. */
-export const plugin = { meta: { name: PLUGIN }, rules: { ...ENGINE_RULES, ...PREFERRED_RULES } };
+/** The plugin, one object for every block that registers it: `plugins: { "agentic-cms": plugin }`, the required rules (each holding a site's baseline, ./baseline.mjs) and the preferred ones. */
+export const plugin = { meta: { name: PLUGIN }, rules: { ...Object.fromEntries(Object.entries(ENGINE_RULES).map(([name, rule]) => [name, heldByBaseline(`${PLUGIN}/${name}`, rule)])), ...PREFERRED_RULES } };
 
 /** The animation libraries: only the motion layer imports them. */
 export const ANIMATION_LIBRARIES = ["motion", "framer-motion"];
@@ -65,6 +69,7 @@ export const DEFAULTS = {
   copy: { props: COPY_PROPS, skip: [], decorations: ["Placeholder", "TypeTag"], tools: TOOLS },
   owners: {},
   allow: [],
+  baseline: [],
   restrictedImports: { paths: [], patterns: [] },
   ignores: [],
 };
@@ -123,6 +128,7 @@ export function resolveOptions(options = {}) {
   if (!merged.copy || typeof merged.copy !== "object" || Array.isArray(merged.copy)) throw new TypeError("componentRules(): copy is { props, skip, decorations, tools }, and the copy rule is required: a file that needs words of its own says why in an inline disable (// eslint-disable-next-line agentic-cms/copy -- <the reason>).");
   if (!merged.owners || typeof merged.owners !== "object" || Array.isArray(merged.owners) || Object.keys(merged.owners).some((part) => !OWNED.includes(part))) throw new TypeError(`componentRules(): owners is { ${OWNED.map((part) => `${part}: { "<file>": "<reason>" }`).join(", ")} } — the files that own a part, each with its reason (or a list of the files).`);
   checkAllow(merged.allow);
+  checkBaseline(merged.baseline);
   return {
     ...merged,
     copy: { ...DEFAULTS.copy, ...merged.copy },
@@ -301,7 +307,11 @@ export function preferredConfigs(opts) {
  * motion }: the files that own a <form>, a tag, an eager <img>, an <svg> or
  * motion, as { "<glob>": "<reason>" } or a list of globs), `allow` (a list
  * of { rule, files, reason }: a preferred rule a site keeps its own choice of
- * in those files, with the reason — checkAllow()), `restrictedImports`
+ * in those files, with the reason — checkAllow()), `baseline` (a list of
+ * { file, rule, count, reason }: an existing site's engine bypasses, each
+ * file's count of an engine rule, which that rule holds there while the
+ * count does — ./baseline.mjs, written by `check-site --baseline`),
+ * `restrictedImports`
  * ({ paths, patterns } in no-restricted-imports'
  * own form: the site's own restrictions, added to every setting of that rule
  * here, so they hold wherever the kit's do, all of `src` but `ignores`) and
@@ -314,5 +324,5 @@ export function componentRules(options = {}) {
   const sectionFiles = opts.sections.map((folder) => `${folder}/${COMPONENTS}`);
   if (sectionFiles.length) configs.push(compositionConfig(sectionFiles, opts, elements));
   if (opts.patterns) configs.push(compositionConfig([`${opts.patterns}/${COMPONENTS}`], opts, { ...elements, svg: false }));
-  return [...configs, ...requiredConfigs(opts), ...preferredConfigs(opts)];
+  return [...configs, ...requiredConfigs(opts), ...preferredConfigs(opts), ...baselineConfigs(opts.baseline)];
 }

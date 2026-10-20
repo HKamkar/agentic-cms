@@ -356,6 +356,14 @@ describe("the starter's placeholders and the kit example's brand", () => {
     const own = run(files, { site: { ...site, name: "Acme Labs", shortName: "Acme Labs" }, setup });
     assert.deepEqual(own.filter((line) => line.includes(" example-brand: ")).map((line) => line.split(" example-brand: ")[0]), ["FAIL public/images/authors/acme-editorial.webp", "FAIL content/_templates/author.json", "FAIL src/config/site.ts"], "a site named Acme keeps its name; the example's author and domain still fail");
   });
+  test("the example's brand in a file the site's baseline holds passes while the file has no more than its count; past it each FAILs, saying so", () => {
+    const files = { "editorial/backlog.md": "# Backlog\n\n- **x**: a post by Acme\n- **y**: and Acme again\n" };
+    const baseline = (count) => (root) => rootFile(root, "src/config/components.json", JSON.stringify({ baseline: [{ file: "content/editorial/backlog.md", rule: "example-brand", count, reason: "" }, { file: "content/editorial/backlog.md", rule: "example-content", count: 9, reason: "" }] }));
+    lacks(run(files, { site: nimbus, setup: baseline(2) }), "example-brand");
+    const past = run(files, { site: nimbus, setup: baseline(1) }).filter((line) => line.includes(" example-brand: "));
+    assert.equal(past.length, 2, past.join("\n"));
+    assert.match(past[0], /^FAIL content\/editorial\/backlog\.md example-brand: line 3 "Acme" is the kit example's brand, .* \(2 in this file, and the baseline holds 1: it only shrinks\)$/);
+  });
   test("the starter init lays out: every collection reads with no entry, and its only findings are its placeholders, which a production build fails on and which go with the copy", async () => {
     const target = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "starter-")), "nimbus-notes");
     try {

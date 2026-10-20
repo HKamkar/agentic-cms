@@ -24,7 +24,16 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.8.1 → Unreleased
+## 0.8.1 → 0.8.2 (unreleased)
+
+The engines are required, and none of the example's brand or sample
+content stays in a site. [migrating-to-0.8.2.md](migrating-to-0.8.2.md) is
+the guide. Its § 1 is the upgrade: the pin, the agent files, the gates,
+ESLint reading the guard's config, and `agentic-cms check-site --baseline`,
+which writes what the site holds now of the engines' findings and the
+example's leftovers into `src/config/components.json`. Its CI stays green
+on that list, which only shrinks after that, one pull request at a time.
+The lines below are what changed.
 
 A new site starts from a starter of its own name instead of the example
 ([init.md § The starter](init.md#the-starter)), and `init` lays a new site
@@ -39,11 +48,14 @@ sees on its first build after the upgrade:
 
 - **The kit example's brand fails** in a site at any time (`example-brand`):
   `Acme` as a word, `acme.example`, the example's author `acme-editorial`,
-  in any file under `content/` and `src/config/`, in an SVG's text and in a
-  picture's name under `public/`. A site that kept the example's posts, its
-  author, its logo or a line of its copy sees each named: replace it with
-  the site's own, or delete it. A site whose own name is Acme keeps it; the
-  example's domain and author still fail.
+  in any file under `content/` and `src/config/` (but the guard's config),
+  in an SVG's text and in a picture's name under `public/`. A site that kept
+  the example's posts, its author, its logo or a line of its copy sees each
+  named: replace it with the site's own, or delete it. A site whose own name
+  is Acme keeps it; the example's domain and author still fail. Until each
+  is replaced, the baseline the guide's § 1 writes holds them: the brand
+  lines of a file it lists pass while the file has no more than its count
+  ([migrating-to-0.8.2.md § 3](migrating-to-0.8.2.md#3-the-examples-leftovers)).
 - **Placeholders** (`placeholder`): a string marked `(placeholder)`, or an
   address on a domain reserved for examples (`.example`, `.test`,
   `.invalid`, `localhost`, example.com), warns. A site that wants a
@@ -83,9 +95,10 @@ is its own, so it moves to them by hand:
 "build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"
 ```
 
-with its own steps kept where they are (`agentic-cms init .` merges them the
-same way, or refuses naming what to add, and also writes any file of the
-example the site removed). Then `pnpm lint` and read what `check-site`
+with its own steps kept where they are (0.8.1's `agentic-cms lint` step
+becomes `agentic-cms lint --production`; `agentic-cms init .` merges them
+the same way, or refuses naming what to add, and also writes any file of
+the example the site removed). Then `pnpm lint` and read what `check-site`
 reports: a warning fails nothing and goes quiet with an `allow` entry of
 `agentic-cms/site-tools` and its reason in `src/config/components.json`.
 In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
