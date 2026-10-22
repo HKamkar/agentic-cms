@@ -8,9 +8,14 @@ reader's browser. The lab is a tool an agent opens when a drawing is needed
 and removes when its files are rendered: nothing of it lives under `src/`,
 in `package.json` or in a route. The flags are in
 [commands.md](commands.md); the procedure is the `design-graphics` skill.
-A rendering library or a `<canvas>` under `src/` warns in `pnpm lint`
-(`agentic-cms/graphics`), and a site that keeps its own says why in `allow`
+Graphics are the preferred tier ([parts.md](parts.md#design-tools)): a
+rendering library or a `<canvas>` under `src/` warns in `pnpm lint`
+(`agentic-cms/graphics`), naming the lab, and fails nothing; a site that
+keeps its own says why in one line, an `allow` entry in
+`src/config/components.json` or an inline disable with its description
 ([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
+An `<svg>` written in a section fails (`react/forbid-elements`, the message
+naming the lab).
 
 ## Open, draw, look
 
@@ -108,7 +113,8 @@ route. A ground's `label` names a surface for the review, which the copy
 rule reads as copy in data (`agentic-cms/copy`, `docs/primitives.md` §
 Enforced): that file says so once, `/* eslint-disable agentic-cms/copy --
 the lab's ground labels name surfaces for review, and the lab never ships
-*/`, and `check-components` lists the reason. The labels the lab's own
+*/`, and `pnpm lint` lists the reason (the guard's `disables` pass). The
+copy rule is required in the route as everywhere: the labels the lab's own
 components take (`LabStudy`, `LabTimeline`) are the tool's, and pass. The
 route's head is `kit.seo.unlistedMetadata()`. The files are read on every
 render, so a

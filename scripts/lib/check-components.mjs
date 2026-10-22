@@ -55,7 +55,7 @@ export const CONFIG_FILE = "src/config/components.json";
 export const ROUTES = ["src/app", "src/app/[[...slug]]"];
 /** The kit example's routes outside the content engine, each with the reason it stays there: what a site that names none has. */
 export const EXCEPTIONS = {
-  "src/app/blog-post/[slug]": "the blog engine: a post is content/blog/<slug>.md, rendered by the post template",
+  "src/app/blog-post/[slug]": "the post pipeline: a post is content/blog/<slug>.md, rendered by the post template",
   "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
   "src/app/feed.xml": "the RSS feed, written from the posts",
 };

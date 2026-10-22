@@ -7,8 +7,12 @@ backend. Adding a landing-page form means adding a definition, not writing
 components. A form delivers one of two ways: `mailto` opens the visitor's
 mail client, `endpoint` posts to a route of the site, which checks the
 submission and hands it to the site's **sink** — a webhook, or a provider's
-API behind the same interface. This document is the complete contract; the
-guide for switching a site over is `docs/forms.md`.
+API behind the same interface. The form engine sits beside the content
+engine and is required like it (`docs/parts.md`): `pnpm lint` fails a
+`<form>` outside the form component, a server action and a `fetch()` of
+another origin in a component (`agentic-cms/forms`, across `src/`), and a
+form field written in a section. This document is the complete contract;
+the guide for switching a site over is `docs/forms.md`.
 
 ## Rules that must not break
 
@@ -392,14 +396,15 @@ class implementing `FormBackend` in `backends/` that never throws, and the
 `case` in `createFormBackend()`.
 
 **The address as a token.** A site that keeps its address out of served
-files (`docs/email.md`) wraps the definition in the server component that
+files (`guardEmail: true` in `src/config/site.ts`, as `init` writes it for
+a new site; `docs/email.md`) wraps the definition in the server component that
 renders the form: `<Form definition={withEmailToken(forms.contact)} />`.
 It encodes a `mailto` backend's recipient, which the backend resolves at
 submit (`resolveRecipient`; a plain address passes through), and
 `messages.email` for any backend, which `FormShell` renders where a message
 says `{email}` (`messageParts` splits it, `EmailLink` draws it). The
-address never crosses to the browser as text; `agentic-cms guard-email`
-checks the build.
+address never crosses to the browser as text; `agentic-cms guard-email`,
+the build's last step on such a site, checks it.
 
 **Change copy or fields of the contact form.** Edit `forms.contact` only.
 

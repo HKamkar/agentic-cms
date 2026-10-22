@@ -70,7 +70,7 @@ installs the package),
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # 0 failures; the SEO audit covers the new route
-pnpm preview                                                # open /<slug>; then stop it
+pnpm preview                                                # pnpm start where the site has none; open /<slug>; then stop it
 git push                                                    # when the user says
 ```
 

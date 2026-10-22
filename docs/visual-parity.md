@@ -5,7 +5,11 @@ moved exactly the pixels it meant to. It renders every prerendered page of
 the production build at the site's widths, makes the rendering deterministic,
 and diffs two captures pixel by pixel. The flags and exit codes are in
 [commands.md](commands.md#visual-parity); this page is what the captures
-contain, how to read a compare, and the traps a long run meets.
+contain, how to read a compare, and the traps a long run meets. It is the
+kit's part for a screenshot or a proof, a design tool of the preferred
+tier ([parts.md § Design tools](parts.md#design-tools)): a script of the
+site's own that drives Playwright warns in `pnpm lint` (`check-site`'s
+`tools`), naming these commands, until an `allow` entry gives its reason.
 
 ```bash
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling directory and captured

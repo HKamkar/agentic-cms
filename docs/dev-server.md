@@ -151,7 +151,12 @@ change. The lab server is not Next and needs no entry.
 
 **A machine's address never goes into the repo**: not in `.env.example`,
 a doc, a test, a commit message or a pull request. Each developer's
-`.env.local` holds their own, found when they need it.
+`.env.local` holds their own, found when they need it. `pnpm lint` warns
+about one in `next.config.*`, and about a script of the site's own under
+`scripts/` that starts `next dev` (`check-site`'s `tools`, the preferred
+tier: it fails nothing, names `urls --write` and `serve`, and an `allow`
+entry of `agentic-cms/site-tools` with its reason quiets it;
+[primitives.md § The whole site](primitives.md#the-whole-site-agentic-cms-check-site)).
 
 ## Stopping a server
 

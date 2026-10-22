@@ -3,9 +3,13 @@
 `agentic-cms <command>` runs against the site in the current directory: its
 registry and config through `src/kit.ts`, its `content/`, `public/`, `.next`
 and `.parity`. In this checkout it is `pnpm kit <command>`; on a site that
-installs the package, `package.json` names the ones a build needs
-(`content:lint`, `content:check`, `content:status`, `content:docs`, and
-`build` runs `lint`, `docs --check`, `next build` and `seo` in that order).
+installs the package, `package.json` names the ones a change needs, as
+`init` writes them: `content:lint`, `content:check`, `content:status`,
+`content:docs`, `urls`, `kit` (every command, `pnpm kit <command>`), a
+`lint` that runs ESLint and then `check-site`, and a `build` that runs
+`pnpm lint`, `lint --production`, `docs --check`, `next build` and `seo` in
+that order, and `guard-email` last on a site whose `src/config/site.ts`
+turns `guardEmail` on ([§ default gates](#default-gates)).
 
 The conventions every command keeps, because the caller is usually an agent:
 
@@ -961,7 +965,7 @@ agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit
 | flag | what |
 |---|---|
 | `--check` | report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap |
-| `--build` | verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute), the starter's placeholders warnings (AGENTIC_CMS_PLACEHOLDERS=warn: this build deploys nothing) |
+| `--build` | verify with pnpm build too (the lint again, the content lint, the prerender, the SEO audit and, on a site that turns guardEmail on, the e-mail guard; about a minute), the starter's placeholders warnings (AGENTIC_CMS_PLACEHOLDERS=warn: this build deploys nothing) |
 | `--no-browsers` | skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium) |
 | `--engines <a,b>` | the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md) (default `chromium,webkit`) |
 | `--deps` | on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed) |
@@ -1085,7 +1089,7 @@ Exit: `0` no address as text; `1` an address in a served file (each named); `2` 
 
 ```bash
 agentic-cms guard-email
-agentic-cms guard-email --domain acme.example --json
+agentic-cms guard-email --domain my-site.com --json
 ```
 
 ### `check-components`

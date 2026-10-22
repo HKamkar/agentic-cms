@@ -15,13 +15,20 @@ the guard — and one key in `src/config/site.ts` that puts them to work:
 `guardEmail: true`, which `agentic-cms init` writes for a new site and the
 kit's own example has on.
 
+E-mail is one of the engines, so it is required
+([parts.md](parts.md#browser-libraries)): `pnpm lint` fails a `mailto:`
+link built in code anywhere in `src/` ([§ The link](#the-link--emaillink)),
+and on a site with the key `pnpm build` ends with the guard, which fails a
+served file that carries the address as text, and `check-site` fails a
+`build` that dropped it ([§ The guard](#the-guard--agentic-cms-guard-email)).
+
 ## The key — `guardEmail`
 
 ```ts
 // src/config/site.ts
 export const site = {
   // …
-  email: "hello@acme.example",
+  email: "hello@my-site.com",
   guardEmail: true,
   // …
 } as const satisfies SiteConfig;
@@ -86,7 +93,7 @@ import { encodeEmail, decodeEmail, isEmailToken, readableEmail } from "agentic-c
 `encodeEmail(address)` is the address reversed and base64-encoded:
 trivially reversible on purpose, and never containing an `@`, which is how
 a token is told from an address (`isEmailToken`). `readableEmail(address)`
-spells it for a page before hydration: `hello [at] acme [dot] example`.
+spells it for a page before hydration: `hello [at] my-site [dot] com`.
 Plain TypeScript, usable from server code, the command line and a client
 component alike.
 
@@ -109,7 +116,7 @@ the mobile menu, and a Markdown post's `mailto:` links through the site's
 `EmailLink` with the address encoded).
 
 The lint holds it everywhere in `src/`: `agentic-cms/email`
-(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails a `mailto:`
+(`agentic-cms/eslint`, [primitives.md § Enforced](primitives.md#the-engines-required-across-src)) fails a `mailto:`
 link built in code — a string with an address after `mailto:`, a template
 with `mailto:` in it, a `"mailto:"` added to something — and names
 `EmailLink`. The bare `"mailto:"` a mapping tests an href against builds
@@ -159,7 +166,7 @@ module of its own, under the same rule.
 
 ```bash
 agentic-cms guard-email                    # the host of site.url; exit 1 naming each served file that carries an address
-agentic-cms guard-email --domain acme.example --domain acme.co.uk --json
+agentic-cms guard-email --domain my-site.com --domain my-site.co.uk --json
 ```
 
 Scans every file the build serves — the pages and RSC payloads under
