@@ -51,10 +51,9 @@ changes what a capture writes says **recapture baselines**.
   - `tools` (warnings): a site's own Playwright, `sharp` or `next dev` script, or a machine's address in `next.config.*`, each quieted by an `allow` entry of `agentic-cms/site-tools` with its reason.
 - `init` writes the gates: `lint` runs ESLint, then `check-site`, and `build` runs `pnpm lint` first. Into an existing `package.json` they are merged, or `init` refuses before writing anything, naming what to add.
 - `init` writes `.github/dependabot.yml` for the CI's actions (monthly, one grouped pull request), and `verify.yml` checks out the history `check-site` compares against. An existing site may copy both from `node_modules/agentic-cms/templates/site/`.
-- `guard-email` stays opt-in until 0.8.2 job 4b; its gate waits in `scripts/lib/gates.mjs` behind one switch.
 - The kit's own `pnpm lint` runs `check-site`, and its `pnpm build` runs `pnpm lint` first.
 - pack-smoke lays a fixture of every bypass in the 0.8.2 survey over the fresh site: required ones fail with their messages, preferred ones warn.
-- `guardEmail` in `src/config/site.ts` (0.8.2 job 4b, D5):
+- `guardEmail` in `src/config/site.ts`:
   - `true` keeps the site's address out of every served file: no structured data carries it as text (a ContactPoint with the contact page's URL takes its place), and the build ends with `agentic-cms guard-email`, which `check-site` holds;
   - `{ off: "<why>" }` keeps it public on purpose, an exception `check-site` lists with its reason;
   - left out, nothing changes for an existing site.
@@ -68,7 +67,7 @@ changes what a capture writes says **recapture baselines**.
   - A site from `init` starts with `"baseline": []`.
 - `check-site`'s `leftovers` pass lists what is left of the kit's example in a site: its brand by line (`example-brand`); its posts and catalogue pages by path, any file it shipped by its bytes, and its reviews, use cases, FAQs and author by entry (`example-content`). The source is `scripts/lib/example-files.json`, every release's example up to 0.8.1. The guard's config is no source of the brand rule.
 - `init`'s merge of an existing build turns 0.8.1's bare `agentic-cms lint` into `agentic-cms lint --production` in its place, instead of adding a second content lint.
-- Docs: `docs/migrating-to-0.8.2.md`, the guide for a site on 0.8.1: the upgrade with its baseline (§ 1), hard-coded copy into content files (§ 2), the example's leftovers (§ 3), the preferred tier's reasons (§ 4), the e-mail key (§ 5), the check (§ 6), and two worked paths. `docs/upgrading.md` gets `0.8.1 → 0.8.2 (unreleased)`.
+- Docs: `docs/migrating-to-0.8.2.md`, the guide for a site on 0.8.1: the upgrade with its baseline (§ 1), hard-coded copy into content files (§ 2), the example's leftovers (§ 3), the preferred tier's reasons (§ 4), the e-mail key (§ 5), the check (§ 6), and two worked paths. `docs/upgrading.md` gets `0.8.1 → 0.8.2`.
 - The docs sweep: every doc follows the map (`docs/parts.md`), with the four layers, the engines required and the rest preferred with a reason.
   - The README gets The parts, a real build output, the gates, `guardEmail` and Dependabot in Start your own site, a renamed fork's leftovers, `migrating-to-0.8.2.md` in Upgrading, and Commands and Map grouped by the layers.
   - Both `AGENTS.md`, the rules, the plugin, the contracts and every guide give the same gates: `pnpm lint` is ESLint then `check-site`, and `pnpm build` runs the lint first and ends with `guard-email` on a site with `guardEmail: true`.
