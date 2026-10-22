@@ -60,6 +60,15 @@ changes what a capture writes says **recapture baselines**.
   - left out, nothing changes for an existing site.
 - `init` writes `guardEmail: true` for a new site and `guard-email` into its build. The starter and the example keep the address out of their structured data, their contact form (`{email}` through `withEmailToken`) and their client bundles: no client component imports `site.ts`, and the chrome's client components (`Navbar`, `ThemeToggle`, `ConsentBanner`, `CookieSettingsButton`) take what they show as props.
 - `guard-email` names the fix for a page and for a bundle, and joins the default gates in `docs/commands.md`.
+- `agentic-cms check-site --baseline`: an existing site's engine bypasses (`agentic-cms/copy`, `head`, `forms`, `tags`, `email`), its hand-made rounds and the kit example's leftovers are written into `src/config/components.json`'s `baseline`, one `{ file, rule, count, reason }` per file and rule. The whole list goes in once, in the pull request that takes 0.8.2. After that it only shrinks, and growth is refused (exit 1).
+  - The engines' rules hold their entries in ESLint (`componentRules({ baseline })`; `eslint.config.mjs` passes it from the config as it passes `allow`), and `check-site` and the content lint's `example-brand` hold theirs.
+  - Each holds while its file has no more than the count. Past it, every finding fails; under it, the entry is asked to shrink.
+  - `check-site` fails an entry added or raised since the merge base, and the guard's `preset` fails a file whose count ESLint is not told.
+  - The preferred tier's warnings and the gates' and the config's own findings are never baselined.
+  - A site from `init` starts with `"baseline": []`.
+- `check-site`'s `leftovers` pass lists what is left of the kit's example in a site: its brand by line (`example-brand`); its posts and catalogue pages by path, any file it shipped by its bytes, and its reviews, use cases, FAQs and author by entry (`example-content`). The source is `scripts/lib/example-files.json`, every release's example up to 0.8.1. The guard's config is no source of the brand rule.
+- `init`'s merge of an existing build turns 0.8.1's bare `agentic-cms lint` into `agentic-cms lint --production` in its place, instead of adding a second content lint.
+- Docs: `docs/migrating-to-0.8.2.md`, the guide for a site on 0.8.1: the upgrade with its baseline (§ 1), hard-coded copy into content files (§ 2), the example's leftovers (§ 3), the preferred tier's reasons (§ 4), the e-mail key (§ 5), the check (§ 6), and two worked paths. `docs/upgrading.md` gets `0.8.1 → 0.8.2 (unreleased)`.
 
 ## [0.8.1] — 2026-10-17
 
