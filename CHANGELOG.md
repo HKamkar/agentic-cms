@@ -69,6 +69,11 @@ changes what a capture writes says **recapture baselines**.
 - `check-site`'s `leftovers` pass lists what is left of the kit's example in a site: its brand by line (`example-brand`); its posts and catalogue pages by path, any file it shipped by its bytes, and its reviews, use cases, FAQs and author by entry (`example-content`). The source is `scripts/lib/example-files.json`, every release's example up to 0.8.1. The guard's config is no source of the brand rule.
 - `init`'s merge of an existing build turns 0.8.1's bare `agentic-cms lint` into `agentic-cms lint --production` in its place, instead of adding a second content lint.
 - Docs: `docs/migrating-to-0.8.2.md`, the guide for a site on 0.8.1: the upgrade with its baseline (§ 1), hard-coded copy into content files (§ 2), the example's leftovers (§ 3), the preferred tier's reasons (§ 4), the e-mail key (§ 5), the check (§ 6), and two worked paths. `docs/upgrading.md` gets `0.8.1 → 0.8.2 (unreleased)`.
+- The docs sweep: every doc follows the map (`docs/parts.md`), with the four layers, the engines required and the rest preferred with a reason.
+  - The README gets The parts, a real build output, the gates, `guardEmail` and Dependabot in Start your own site, a renamed fork's leftovers, `migrating-to-0.8.2.md` in Upgrading, and Commands and Map grouped by the layers.
+  - Both `AGENTS.md`, the rules, the plugin, the contracts and every guide give the same gates: `pnpm lint` is ESLint then `check-site`, and `pnpm build` runs the lint first and ends with `guard-email` on a site with `guardEmail: true`.
+- "The blog engine" goes from the guard's default exception reason and the scoped-rules table's intro.
+- The package READMEs and the e-mail, forms and `guard-email` examples use a neutral site in place of the example's brand.
 
 ## [0.8.1] — 2026-10-17
 
