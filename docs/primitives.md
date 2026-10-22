@@ -454,8 +454,8 @@ its own:
   route is; `demo clean` takes both.
 - **`exceptions`**: every exception added since the merge base is listed
   with its reason — a route exception, an owner, an `allow` entry, an
-  `ignores` glob and an inline disable (matched by its rules and its reason,
-  so a moved one is not new). An `ignores` glob takes its reason from the
+  `ignores` glob, an inline disable (matched by its rules and its reason,
+  so a moved one is not new) and a `guardEmail` turned off. An `ignores` glob takes its reason from the
   `$ignores` comment beside it, and an added one without it fails. The
   frozen `inherited` list only shrinks: a file added since the base fails,
   and so does a baseline entry added or raised (the pull request that adds
@@ -469,7 +469,11 @@ its own:
 - **`scripts`**: `package.json`'s `lint` runs ESLint, then `check-site`; its
   `build` runs `pnpm lint`, `agentic-cms lint --production` and
   `agentic-cms docs --check` before `next build`, `agentic-cms seo` after
-  it. Each gate is a step of the build's `&&` chain, so a failing
+  it, and `agentic-cms guard-email` too on a site whose
+  `src/config/site.ts` turns `guardEmail` on ([email.md](email.md)); a
+  `guardEmail` turned off says why (`{ off: "<why>" }`, listed under
+  `exceptions` once added), and `false` alone fails. Each gate is a step
+  of the build's `&&` chain, so a failing
   one stops it; one joined by `;`, a failure turned into a pass (`|| true`,
   `exit 0`) or a gate on the wrong side of `next build` fails. `init`
   writes these scripts and merges the gates into a site's own

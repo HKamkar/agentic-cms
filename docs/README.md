@@ -15,8 +15,9 @@ pages, the post pipeline and SEO on it and forms beside it. Its contracts
 live next to its code and ship with the package (under
 `node_modules/agentic-cms/` on a site that installs it):
 `src/lib/content/README.md`, `blog/README.md` (the post pipeline),
-`seo/README.md`, `forms/README.md`. The voice is `content/VOICE.md`; the
-editorial plugin's contract is `plugin/README.md`.
+`seo/README.md`, `forms/README.md`. The door for editing is
+`content/README.md`, the voice `content/VOICE.md`, and the editorial
+plugin's contract `plugin/README.md`.
 
 - [forms.md](forms.md) — what a form can ask (every ordinary field type,
   notes, groups, a prefill from the URL) and forms that deliver: the

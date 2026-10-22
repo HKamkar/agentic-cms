@@ -307,7 +307,7 @@ export const SPECS = {
     usage: "agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit] [--deps] [--no-public] [--port <n>] [--lab-port <n>] [--json]",
     flags: {
       check: { type: "boolean", help: "report each step — Node, pnpm, the browsers, WebKit's libraries, .env.local, the origins, the servers on the ports — and write, install and run nothing; exit 1 on a gap" },
-      build: { type: "boolean", help: "verify with pnpm build too (the content lint, the prerender, the SEO audit; about a minute), the starter's placeholders warnings (AGENTIC_CMS_PLACEHOLDERS=warn: this build deploys nothing)" },
+      build: { type: "boolean", help: "verify with pnpm build too (the lint again, the content lint, the prerender, the SEO audit and, on a site that turns guardEmail on, the e-mail guard; about a minute), the starter's placeholders warnings (AGENTIC_CMS_PLACEHOLDERS=warn: this build deploys nothing)" },
       "no-browsers": { type: "boolean", help: "skip the browsers (a machine that only edits content; shot, probe, sheet, visual-parity and lab render need Chromium)" },
       engines: { type: "string", default: "chromium,webkit", value: "<a,b>", help: "the browsers to install: chromium (every kit command), webkit (the Safari-engine checks of docs/browsers.md)" },
       deps: { type: "boolean", help: "on Linux, install WebKit's system libraries when WebKit does not launch: sudo, which asks for a password (without it, the line to run is printed)" },
@@ -358,7 +358,7 @@ export const SPECS = {
       domain: { type: "string", multiple: true, value: "<host>", help: "a domain whose addresses must not appear; default: the host of site.url from src/kit.ts" },
       json: { type: "boolean", help: "print { domains, scanned, hits: [{ file, addresses }] }" },
     },
-    examples: ["agentic-cms guard-email", "agentic-cms guard-email --domain acme.example --json"],
+    examples: ["agentic-cms guard-email", "agentic-cms guard-email --domain my-site.com --json"],
     exit: { 0: "no address as text", 1: "an address in a served file (each named)", 2: "usage, or no build under .next" },
     json: "{ domains, scanned, hits: [{ file, addresses }] }",
   },

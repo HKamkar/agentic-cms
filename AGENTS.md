@@ -13,9 +13,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **The engines are required:** every word a reader sees comes from
   `content/` or `site.ts`, in pages, sections, components and design rounds
   alike; heads come from `kit.seo`, forms from the form engine, tags
-  through consent. For everything else, find the kit's part in
-  `docs/parts.md` and prefer it; if you use your own, write its reason in
-  one line. Never weaken a check to pass it.
+  through consent, an address through `EmailLink`. For everything else,
+  find the kit's part in `docs/parts.md` and prefer it; if you use your
+  own, write its reason in one line. Never weaken a check to pass it.
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
   the page recipe. Read it before writing any markup or CSS; the component
@@ -34,9 +34,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
   the pages in `content/pages/`; the door for editing is `content/README.md`,
   the templates are `content/_templates/`. The voice and claim rules are
-  `content/VOICE.md`; `agentic-cms lint` enforces its fenced block
-  first in `pnpm build` (a FAIL stops the build, a WARN is read, `--strict`
-  promotes them). Never read `content/` at request time: pages are
+  `content/VOICE.md`; `agentic-cms lint` enforces its fenced block in
+  `pnpm build`, right after `pnpm lint` (a FAIL stops the build, a WARN is
+  read, `--strict` promotes them). Never read `content/` at request time: pages are
   prerendered, the Worker has no filesystem.
 - The procedures for content jobs are the `editorial` plugin in `plugin/`
   (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
@@ -84,8 +84,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Before editing or reviewing a file, read and follow **every** rule below
 whose paths match it: `**` spans directories, and matches add up (a post
-needs its content, blog and SEO rules). Claude Code loads these files
-itself through their `paths` frontmatter; Codex does not, so open each
+needs its content, post pipeline and SEO rules). Claude Code loads these
+files itself through their `paths` frontmatter; Codex does not, so open each
 matching file before the edit, and again when the task reaches other
 paths. The table is written from the rules' frontmatter by
 `pnpm docs:rules`: a scope changes in its rule, never here.
@@ -238,7 +238,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - Verify = `pnpm lint` (ESLint, then `check-site`: the component guard,
   the rounds, the exceptions added since the merge base, the gates in
   `package.json` and CI) + `pnpm build` (`pnpm lint` first, then the
-  content lint; the SEO audit last) +
+  content lint and the docs check; after `next build` the SEO audit, and
+  `guard-email` last, which `guardEmail: true` in `site.ts` asks for) +
   `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
@@ -250,7 +251,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   request (`tools/hygiene.mjs`: no one site's name outside the README's
   showcase, no machine paths or addresses, no captures, pictures or scratch
   files committed, the two skills trees identical, the changelog,
-  `docs/commands.md`, the scoped-rules tables and the agent files' record
+  `docs/commands.md`, `docs/parts.md` naming every part, the scoped-rules
+  tables and both AGENTS.md within their budgets, and the agent files' record
   of every release, which `init` reads (`pnpm agent-files:releases`, from
   the tags; a release commit rewrites it), current). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
@@ -432,7 +434,9 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   (page blocks, head and structured data, the build-time audit); beside it
   the form engine, `src/lib/forms/README.md` (forms as config, field
   primitives, backend factory). `docs/parts.md` maps every part of the kit
-  (the need it meets, its tier, the check that holds it); the design
+  in four layers (the content engine, the browser libraries, the design
+  tools, the site's commands): the need it meets, its tier, the check that
+  holds it; the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
   loads their invariants in Claude Code when those paths are edited, and the
   scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it

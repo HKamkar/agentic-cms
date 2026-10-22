@@ -4,7 +4,10 @@ Everything a reader sees that is copy rather than design lives here, as
 files, and every file is checked at build time: a wrong value fails
 `pnpm build` (and `pnpm content:lint`, in about a second) with a line that
 names the file, the field and the problem. Nothing here is read at
-request time. This is the door: what exists, how to change it, how to
+request time, and nothing else holds copy: every word a reader sees comes
+from a file here or from the chrome's text in `src/config/site.ts`, and
+`pnpm lint` fails copy written in code anywhere under `src/`
+(`agentic-cms/copy`). This is the door: what exists, how to change it, how to
 prove it. The contract behind it is `src/lib/content/README.md` (the
 engine, the field tables, the error catalogue); posts have their own
 pipeline in `src/lib/blog/README.md`; how the copy is written, and what it
@@ -142,7 +145,7 @@ above the ones that start with `<h3>`; the build says so if not. Verify.
 
 ```bash
 pnpm content:lint                        # every collection, then the voice, SEO, structure, image and date rules, in a second
-pnpm lint && pnpm test && pnpm build     # the build runs the lint first, then audits every rendered page
+pnpm lint && pnpm test && pnpm build     # the build runs the lint and the content lint first, then audits every rendered page
 pnpm preview                             # the real Worker on http://<ip>:8000 — look at the page you changed
 ```
 

@@ -1,11 +1,15 @@
 # SEO contract
 
 Every page and post ships with a complete, correct search and social surface,
-and the build proves it. This document is the contract; the enforcement is
-the types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`, and
-`agentic-cms seo`, which `pnpm build` runs after `next build` and
-which fails the build (and therefore `pnpm preview` and `pnpm run deploy`)
-on a structural problem.
+and the build proves it. SEO is a layer of the content engine
+(`agentic-cms/seo`, `kit.seo`) and one of the engines a site must use
+(`docs/parts.md`). This document is the contract; the enforcement is the
+types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`,
+`agentic-cms/head` in `pnpm lint` (a head of the site's own), the content
+lint's `seo-title` and `seo-description` at the source, and
+`agentic-cms seo`, which `pnpm build` runs after `next build` and which
+fails the build (and therefore `pnpm preview` and `pnpm run deploy`) on a
+structural problem.
 
 ## Rules that must not break
 
@@ -55,7 +59,7 @@ on a structural problem.
    contact point its contact's `email`:
 
    ```json
-   { "@type": "Organization", "name": "Acme", "logo": { … }, "email": "hello@acme.example", "sameAs": [ … ] }
+   { "@type": "Organization", "name": "My Site", "logo": { … }, "email": "hello@my-site.com", "sameAs": [ … ] }
    ```
 
    With `guardEmail: true` no block carries an address as text: in
@@ -66,11 +70,12 @@ on a structural problem.
    out:
 
    ```json
-   { "@type": "Organization", "name": "Acme", "logo": { … }, "contactPoint": { "@type": "ContactPoint", "url": "https://acme.example/#contact-form" }, "sameAs": [ … ] }
+   { "@type": "Organization", "name": "My Site", "logo": { … }, "contactPoint": { "@type": "ContactPoint", "url": "https://my-site.com/#contact-form" }, "sameAs": [ … ] }
    ```
 
    A site without `site.email` gets neither. Google needs no e-mail for any
-   rich result.
+   rich result. With the key on, the build ends with `agentic-cms
+   guard-email`, which fails a served file that still carries the address.
 4. **The sitemap follows from the page files and the published posts**;
    nothing is added by hand. `updated` is the page's last-modified date —
    bump it when the content changes, not on refactors.

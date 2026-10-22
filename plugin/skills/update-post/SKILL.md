@@ -41,7 +41,7 @@ The post file, `content/VOICE.md`, `src/lib/blog/README.md`, and
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # 0 failures; read every WARN
-pnpm preview                                                # open <postPrefix>/<slug>; then stop it
+pnpm preview                                                # pnpm start where the site has none; open <postPrefix>/<slug>; then stop it
 git push                                                    # when the user says
 ```
 

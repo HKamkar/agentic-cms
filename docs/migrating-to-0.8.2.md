@@ -51,8 +51,12 @@ pnpm exec agentic-cms init . --agent-files           # the rules, the skills, th
 guide as the release's gate pins the release commit instead,
 `github:HKamkar/agentic-cms#<sha>`, and moves to the tag once it exists.
 
-**The agent files.** `--agent-files` brings each rule's tier line and the
-engines rule. It keeps a file you edited, as
+**The agent files.** `--agent-files` brings each rule's tier line, the
+components rule's engines and each skill's closing `pnpm lint`. It
+rewrites no more of `AGENTS.md` than its scoped-rules table, so the
+engines rule at the top of the site's `AGENTS.md` goes in by hand, from
+`node_modules/agentic-cms/templates/site/AGENTS.md`, as
+[upgrading.md](upgrading.md) lists. It keeps a file you edited, as
 [init.md § After a kit upgrade](init.md#after-a-kit-upgrade) says (`--diff`,
 merge, `--accept`). An edited file must keep the lines the kit marks
 required (`<!-- required -->`), and `.claude/settings.json` must keep

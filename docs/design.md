@@ -135,8 +135,11 @@ when the owner asked for all, the current version last, every one with
 the page's real copy; a "more" is an edit inside the round, and an
 alternative is added beside the candidates already shown, never over one;
 what is generic leaves the section for the library in the same job; the
-route and the losers never merge — the build's SEO audit fails a route
-without a `seo` block, which is the guard.
+route and the losers never merge — the build's SEO audit fails a round's
+route, which carries `noindex` and no `seo` block, and `check-site`'s
+`rounds` fails a `*-demo` route `demo new` did not write and a round's
+pictures left after `demo clean` ([primitives.md § The whole
+site](primitives.md#the-whole-site-agentic-cms-check-site)).
 
 A worked example, on the example's own home page. The owner: "the service
 cards read like a list". Ideas: A a grid with a mark on each card, B a tab

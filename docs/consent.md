@@ -5,7 +5,10 @@ nothing about the visit leaves the page. `agentic-cms/consent` keeps the
 visitor's answer in their own browser and tells whoever needs it what it now
 may do; `agentic-cms/consent/google` is the Google tag (Google Analytics 4)
 behind that answer, with Google's consent mode v2. Both are headless: the kit
-carries the behaviour, the banner is the site's design.
+carries the behaviour, the banner is the site's design. Consent is one of
+the engines, so it is required: a tag that needs consent loads only through
+it, and `pnpm lint` fails one that goes around it, naming the part
+([§ Another tag](#another-tag), [parts.md](parts.md#browser-libraries)).
 
 The example wires it the way a site would, and leaves it off: with no
 `GOOGLE_TAG_ID` in the build's environment it ships no tag and no banner.
@@ -105,7 +108,7 @@ re-renders, so an adapter can act on it before anything that renders from
 it. An adapter treats `null` after a choice as a refusal.
 
 The lint keeps every tag behind an adapter: `agentic-cms/tags`
-(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails `next/script`
+(`agentic-cms/eslint`, [primitives.md § Enforced](primitives.md#the-engines-required-across-src)) fails `next/script`
 and a `<script src>` of another origin anywhere in `src/` but the files
 `owners.tags` names in `src/config/components.json`, each with its reason.
 An adapter of the site's own is named there, and `eslint.config.mjs`

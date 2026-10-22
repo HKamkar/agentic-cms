@@ -13,7 +13,10 @@ kit's one engine, and the rest are its layers: pages, the post pipeline
 (`src/lib/blog/README.md`: `posts.ts` maps the `posts` collection to `Post`
 objects and owns every derived field) and SEO (`src/lib/seo/README.md`),
 with the form engine (`src/lib/forms/README.md`) beside it;
-`docs/parts.md` maps every part of the kit.
+`docs/parts.md` maps every part of the kit. The engine is required: every
+word a reader sees comes from a content file or from the chrome in
+`src/config/site.ts`, and `pnpm lint` fails copy written in code anywhere
+under `src/` (`agentic-cms/copy`, `docs/primitives.md` § Enforced).
 
 ## Rules that must not break
 
@@ -59,7 +62,7 @@ with the form engine (`src/lib/forms/README.md`) beside it;
 | `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
 | `agentic-cms check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
-| `agentic-cms lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`, first in `pnpm build`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
+| `agentic-cms lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`; in `pnpm build` after `pnpm lint` and before `next build`, as `lint --production`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
 | `content/VOICE.md` | The voice and claim rules, prose plus the fenced block the lint reads |
 | `agentic-cms docs` (`scripts/content-docs.mjs`) | Generates the field tables of the site's registry into the site's `content/README.md` from the schemas; `--check` (run by `pnpm build`) fails when they are stale |
 | `content/README.md`, `content/_templates/` | The door for editing content, and one annotated template per collection |
@@ -112,7 +115,7 @@ derive that). The object itself carries a `.describe()` too.
 `ContentError` has `file`, `path`, `problem` and `issues` (every issue of
 that file); its message is one line per issue, `<file>: <path> <problem>`
 (`<file>: <problem>` when the path is empty). Paths read `title`,
-`related[1]`, `[2].quote` (list entries), `acme-editorial.name` (map entries),
+`related[1]`, `[2].quote` (list entries), `jane-doe.name` (map entries),
 `items[0].question`. The first bad file throws; a build fixes one file at a
 time, `pnpm content:check` shows every collection's first bad file at once.
 
@@ -124,12 +127,12 @@ content/blog/x.md: keywords must be a list of strings          content/blog/x.md
 content/blog/x.md: draft must be true or false
 content/blog/x.md: date is required (YYYY-MM-DD)                content/blog/x.md: date "2026-13-40" must be a valid YYYY-MM-DD
 content/blog/x.md: publishedAt "nope" must be an ISO timestamp
-content/blog/x.md: author "nobody" is not in content/authors.json (acme-editorial)
+content/blog/x.md: author "nobody" is not in content/authors.json (jane-doe)
 content/blog/x.md: related[1] "y" is not in content/blog (how-a-post-is-built, …)
 content/blog/x.md: unknown key(s) foo; allowed: title, excerpt, date, category, author, image, …, draft
 content/blog/x.md: frontmatter must be a mapping                content/blog/x.md: invalid frontmatter: <parser message>
 content/blog: duplicate slug "x" (x.md, x.mdx)                  content/blog: no such directory
-content/authors.json: acme-editorial.name is required           content/authors.json: acme-editorial unknown key(s) twitter; allowed: name, title, bio, image, imageAlt
+content/authors.json: jane-doe.name is required                 content/authors.json: jane-doe unknown key(s) twitter; allowed: name, title, bio, image, imageAlt
 content/authors.json: must be a mapping of entries keyed by slug   content/reviews.yaml: must be a list of entries
 content/x.yaml: is empty                                        content/faqs: no entry "genera" (general)
 ```
@@ -170,8 +173,9 @@ fails that one.
   kinds, the error catalogue, one case per rule of the post contract, and
   the post pipeline on the real posts (`src/lib/blog/posts.test.ts`).
 - `pnpm content:check` reads the real `content/` exactly as a build would,
-  and `pnpm build` runs it first, so a bad file fails in a fraction of a
-  second with the catalogue line. Left to `next build` alone, the same
+  and the content lint that `pnpm build` runs before `next build` reads it
+  the same way first, so a bad file fails in a fraction of a second with
+  the catalogue line. Left to `next build` alone, the same
   error surfaces at "Collecting page data" as
   `Error [ContentError]: content/blog/x.md: author "nobody" is not in …`
   followed by `> Build error occurred` and

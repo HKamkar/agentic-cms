@@ -296,10 +296,10 @@ shared component goes into it in the same commit. In short:
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
 | Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
 | Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the post pipeline (`src/lib/blog/README.md`) |
-| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
+| Engine | `JsonLd`, `EagerImage`, `FaqAccordion`, `EmailLink`, `Icon` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour; an address as a link that is never text in a served file (`docs/email.md`); an icon from the site's path data (`docs/icons.md`) |
 
 A card's frame is `ui/Panel`, and what goes inside it is each section's own
-design: a section renders its cards from a data array at the top of its file or
+design: a section renders its cards from the list its page file gives it or
 from the collection the registry resolves for it, each a `<Panel as="li">`. Do
 not build a generic `Card`.
 
@@ -371,14 +371,14 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
 ```
 
 A server component (nothing here needs the browser); the frame and title block
-from `Section`; cards as `Panel` list items from the section's own array, the
+from `Section`; cards as `Panel` list items from the page file's list, the
 layout inside them the section's own; the card's `<h3>` a `Heading`, after the
 section's `<h2>`; body copy as a bare `<p>`; the icon a `Media` in its `icon`
 box, the file's own size in the attributes. A call to action would be
 `<Button href={site.links.contact} label={cta} />`. No raw element and no box
 of its own: `pnpm lint` fails a section that writes either (the component
 rules, `agentic-cms/eslint`), and a section file the registry does not
-import (the placement guard, `agentic-cms check-components`;
+import (the placement guard, the first pass of `agentic-cms check-site`;
 `src/components/README.md` § Library first).
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.
@@ -567,8 +567,8 @@ three things: a copy schema in `schemas.ts` (copy only, every field
 `.describe()`d), a component in `src/components/<page>/` built as in §6 inside
 `ui/Section`, and a registry entry in `render.tsx` — `plain()`, or `withData()`
 when the section shows a collection. Verify with `pnpm lint`, `pnpm test`,
-`pnpm content:lint`, `pnpm build` (the content lint runs first, the SEO audit
-last) and `pnpm preview`.
+`pnpm content:lint`, `pnpm build` (the lint and the content lint run first,
+the SEO audit after `next build`) and `pnpm preview`.
 
 **Changing an existing page.** A refactor moves no pixels and proves it:
 
@@ -589,7 +589,7 @@ committed before the next change starts. A refactor that also leaves the markup
 alone proves that with `agentic-cms parity` (prerendered HTML plus JSON-LD,
 `diff -r`).
 
-**What the SEO audit checks.** `agentic-cms seo` runs at the end of
+**What the SEO audit checks.** `agentic-cms seo` runs after `next build` in
 `pnpm build` and fails it on a structural problem, so `preview` and `deploy`
 cannot skip it: per prerendered page, exactly one non-empty unique `<title>` (at
 most 70 characters) and one meta description (50–200), one canonical that is
@@ -606,9 +606,18 @@ hand-write head tags.
 
 ## 10. Content and configuration
 
+- **Every word a reader sees** comes from `content/` or from the chrome's
+  text in `src/config/site.ts`, never from a component, a route or a design
+  round's candidate: `pnpm lint` fails copy written in code anywhere under
+  `src/` (`agentic-cms/copy`). The content, the SEO, the forms, the consent
+  and the e-mail are the engines a site must use; for everything else
+  `docs/parts.md` names the kit's part, and a site's own choice says why
+  (`docs/primitives.md` § Enforced).
 - **Brand data, URLs, navigation, footer**: `src/config/site.ts` — the name, the
   tagline, the address, the e-mail, the logo, `links`, `nav`, `signIn`, `cta`,
-  `footer`. Every page is served by this app, so entries stay relative. The
+  `footer`; `guardEmail: true` keeps the address out of every served file and
+  ends the build with `agentic-cms guard-email` (`docs/email.md`). Every
+  page is served by this app, so entries stay relative. The
   chrome's own words sit beside them: `chrome` (the skip link, the header's,
   the footer's column titles,<!-- dark-mode:start --> the theme switch's,<!-- dark-mode:end -->
   the 404, the post template's) and `consentBanner`.
@@ -620,6 +629,11 @@ hand-write head tags.
   `src/lib/forms/README.md`; where endpoint forms deliver is
   `src/config/form-delivery.ts`, read from the environment
   ([docs/forms.md](docs/forms.md)).
+- **Tags**: the Google tag's id and the consent policy in
+  `src/config/analytics.ts`; a tag that needs consent loads only through
+  `agentic-cms/consent` (`GoogleTag` from `agentic-cms/consent/google`),
+  and `pnpm lint` fails `next/script` or another origin's `<script src>`
+  anywhere else (`agentic-cms/tags`, [docs/consent.md](docs/consent.md)).
 - **Content**: files under `content/`, one collection each, read and validated
   at build time by the content engine (`src/lib/content/README.md`; the door for
   editing is `content/README.md`, the templates are `content/_templates/`):
@@ -635,7 +649,7 @@ hand-write head tags.
 - A section that shows a collection keeps its presentation in code, keyed by
   position; the collection carries only copy.
 - The voice and claim rules are `content/VOICE.md`, enforced by
-  `agentic-cms lint` at the start of `pnpm build`; the procedures for
-  content jobs are the `editorial` plugin in `plugin/`.
+  `agentic-cms lint` in `pnpm build`, after the lint and before `next build`;
+  the procedures for content jobs are the `editorial` plugin in `plugin/`.
 - Everything is read at build time. Nothing reads the filesystem at request
   time — the Worker has none.

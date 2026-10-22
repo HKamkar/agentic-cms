@@ -10,7 +10,7 @@
 
 ![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers or Node](https://img.shields.io/badge/serves_from-Cloudflare_Workers_%C2%B7_Node-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000) ![Claude Code and Codex](https://img.shields.io/badge/plugin-Claude_Code_%C2%B7_Codex-000)
 
-[The loop](#the-loop) · [Files, not a database](#files-not-a-database) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
+[The loop](#the-loop) · [The parts](#the-parts) · [Files, not a database](#files-not-a-database) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
 
 </div>
 
@@ -23,20 +23,24 @@ Code and Codex the skills that write, add, update, review, retire and report
 on that content, reading the site's own rules from the repo and stopping at
 every gate for a person.
 
-**2. The build says no.** Every file is parsed against its schema, every
-string is read against the site's voice rules, every prerendered page is
-audited for its title, description, canonical, Open Graph, headings, image
-attributes, structured data and sitemap entry. Break a few things and build;
-this is what it says, verbatim:
+**2. The build says no.** The lint runs first: a word of copy written in
+code, a head tag written by hand, a form or a tag outside its engine fails
+it, naming the part to use. Then every file is parsed against its schema,
+every string is read against the site's voice rules, and every prerendered
+page is audited for its title, description, canonical, Open Graph,
+headings, image attributes, structured data and sitemap entry. Break a few
+things and build; past the lint, these are the lines it stops on, verbatim:
 
 ```
 $ pnpm build
+…
+FAIL content/blog/pages-are-files.md em-dash: title contains an em dash; use a period, a comma, or restructure the sentence
+FAIL content/blog/pages-are-files.md voice-banned: excerpt "seamless" is banned (hype); write "say what the reader does not have to do"
+WARN content/blog/pages-are-files.md seo-title: seoTitle is 67 characters; Google shows about 60
 FAIL content/pages/home.yaml schema: sections[0].eyebrow is required
 FAIL content/pages/home.yaml schema: sections[0] unknown key(s) eyebrows
 FAIL content/pages/home.yaml schema: sections[2].cards must have exactly 5 cards
-FAIL content/pages/home.yaml voice-banned: sections[0].cta "seamless" is banned (hype); write "say what the reader does not have to do"
-FAIL content/pages/home.yaml em-dash: sections[1].heading contains an em dash; use a period, a comma, or restructure the sentence
-WARN content/blog/pages-are-files.md seo-title: seoTitle is 66 characters; Google shows about 60
+content-lint: 7 collections, 11 entries, 5 failures, 1 warning
 ```
 
 `pnpm content:lint` gives the same answer in about a second, without the build.
@@ -56,6 +60,34 @@ pnpm dev          # http://localhost:8000, then change a line in content/pages/h
 <div align="center">
 <img src="docs/readme/landing.png" alt="The example site's landing page, light mode on the left and dark mode on the right: a boxed hero section tagged home-hero, a heading, a button and a crossed placeholder for the hero illustration" width="960">
 </div>
+
+## The parts
+
+Every part of the kit is on one map, [docs/parts.md](docs/parts.md): the
+need it meets, how to use it, its tier and the check that holds it, in
+four layers.
+
+| Layer | Ships | Parts |
+|---|---|---|
+| The content engine | the pages | the collections (`agentic-cms/content`), composed once with `createKit()`; on it pages (`content/pages/`, the section registry), the post pipeline (`agentic-cms/blog`) and SEO (`agentic-cms/seo`); beside it forms (`agentic-cms/forms`) |
+| Browser libraries | to the reader | motion (`agentic-cms/ix`), the components (`agentic-cms/components`), consent (`agentic-cms/consent`), e-mail (`agentic-cms/email`), `agentic-cms/cx` |
+| Design tools | never | the lab, design rounds (`demo`), the screenshot harness (`visual-parity`, `parity`, `shot`, `probe`, `sheet`), icons, images, the design skills |
+| The site's commands | the build and the setup | `init`, `setup`, `urls`, `serve`; the gates every change passes (`pnpm lint` with `check-site`, `pnpm build` with `seo` and `guard-email`) and the steps a site adds (`critical-css`, `assemble`); `agentic-cms/eslint`, `agentic-cms/loader` |
+
+Two tiers:
+
+- **The engines are required.** Every word a reader sees comes from
+  `content/` or the chrome in `src/config/site.ts`; the head and the
+  structured data come through `kit.seo`; a form through the form engine;
+  a tag that needs consent through `agentic-cms/consent`; an address on a
+  page through `EmailLink` and the guard. Code that goes around one fails
+  `pnpm lint`, so `pnpm build` and CI too, and the message names the part
+  to use. A real need is a named exception with its reason.
+- **The rest is preferred.** A site may bring its own motion library, a
+  canvas, `next/image` or a script of its own: the lint warns, names the
+  kit's part and passes, and one line of reason keeps the choice (an
+  `allow` entry in `src/config/components.json`, or an inline disable with
+  its description).
 
 ## Files, not a database
 
@@ -100,8 +132,9 @@ exactly what the section takes; a card list has an exact length, so a fourth car
 rather than a typo. Presentation stays in the component. There is no
 `page.tsx` to write: one catch-all route renders every page file.
 
-The four pages under `/sections/` are the catalogue: every section type the
-landing page leaves out, rendered with copy that says what each slot is for.
+The four pages under `/sections/` are the example's catalogue: every
+section type the landing page leaves out, rendered with copy that says what
+each slot is for. A site laid out by `init` starts without them.
 
 <img src="docs/readme/sections.png" alt="The use-cases demo page: a hero section, then a dashed group box labelled group · use-cases-upper holding a vision section with four stat cards" width="820">
 
@@ -318,6 +351,21 @@ build fails while one remains (the site's own CI, which deploys nothing,
 keeps them warnings), and the example's brand fails the lint in a site at
 any time.
 
+`init` writes the gates as well. `pnpm lint` is ESLint with the kit's
+preset, then `agentic-cms check-site`; `pnpm build` runs `pnpm lint`
+first, then the content lint for production, the field tables' check,
+`next build`, the SEO audit and, last, `agentic-cms guard-email`, because
+the starter's `src/config/site.ts` sets `guardEmail: true`. With it, the
+address reaches a reader only as the token `EmailLink` decodes, never as
+text in a page, a payload or a bundle ([docs/email.md](docs/email.md)); a
+site whose address is public on purpose says so with
+`guardEmail: { off: "<why>" }`. Into a `package.json` that is there,
+`init` merges the gates into the site's own `lint` and `build`, or refuses
+and names what to add. The CI workflow, `.github/workflows/verify.yml`,
+runs the lint, the tests, the build and the agent-file check on every pull
+request, and `.github/dependabot.yml` keeps its actions current: GitHub
+Actions alone, monthly, in one grouped pull request.
+
 Either way the site carries, from the first session and with nothing
 installed, what an agent needs to design it: the rules (`AGENTS.md`, and
 `.claude/rules/`, which Claude Code loads by path and Codex finds through
@@ -330,7 +378,12 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
 <summary><b>Then: the six steps</b></summary>
 
 1. Forking: rename the package and the plugin marketplace to your own name,
-   and drop the Cloudflare files if you host elsewhere. Installing: `init`
+   and drop the Cloudflare files if you host elsewhere. Renamed, the fork
+   is a site: the example's brand fails the content lint and `check-site`
+   lists the rest of the example, so take them into a baseline first
+   (`pnpm kit check-site --baseline`) and replace them a pull request at a
+   time ([docs/migrating-to-0.8.2.md § 3](docs/migrating-to-0.8.2.md#3-the-examples-leftovers)).
+   Installing: `init`
    wrote `src/kit.ts`, where your site composes the engine — the one file
    the app and the command line read (server code only):
 
@@ -343,11 +396,14 @@ what comes next; [docs/design.md](docs/design.md) is the loop.
    // kit.seo (pageMetadata, pageJsonLd, postMetadata, sitemap, feed, robots, …) · kit.urls (postUrl, absoluteUrl) · kit.site
    ```
 
-   and `package.json` names the commands: `"content:lint": "agentic-cms
-   lint"`, `"content:check"`, `"content:status"`, `"content:docs"`, `"kit":
-   "agentic-cms"`, `"build": "agentic-cms lint --production && agentic-cms
-   docs --check && next build && agentic-cms seo"`, and for the site's own tests
-   `"test": "node --import agentic-cms/loader --test \"src/**/*.test.ts\""`.
+   and `package.json` names the commands: the gates, `"lint": "eslint;
+   s=$?; agentic-cms check-site || s=1; exit $s"` and `"build": "pnpm lint
+   && agentic-cms lint --production && agentic-cms docs --check && next
+   build && agentic-cms seo && agentic-cms guard-email"`; `"content:lint":
+   "agentic-cms lint"`, `"content:check"`, `"content:status"`,
+   `"content:docs"`, `"urls"`, `"kit": "agentic-cms"`; and for the site's
+   own tests `"test": "node --import agentic-cms/loader --test
+   \"src/**/*.test.ts\""`.
 2. `content/VOICE.md`, your voice and claim rules; the prose and the fenced
    block say the same thing. Installing: `init` wrote it from
    `content/_templates/VOICE.md` with your site's name and the generic
@@ -384,6 +440,7 @@ choice in their browser and `agentic-cms/consent/google` loads the Google
 tag only once they allow it, with consent mode v2 denying everything until
 then; the banner is the site's own design, and the example's is off until
 `GOOGLE_TAG_ID` is set ([docs/consent.md](docs/consent.md)).
+
 ## Upgrading
 
 A site pins the package by tag. An upgrade is the new tag, `pnpm install`,
@@ -394,34 +451,67 @@ an edit that dropped a line the kit marks required), the steps of that release i
 baseline for the screenshot harness. `CHANGELOG.md` says what changed and
 marks every change to what a capture writes.
 
+From 0.8.1, [docs/migrating-to-0.8.2.md](docs/migrating-to-0.8.2.md) is
+the guide: the upgrade in one pull request, with a baseline
+(`check-site --baseline`) that holds what the site has now, so CI stays
+green and nothing a reader sees changes; then, a pull request at a time,
+the copy written in code moved into content files, the example's
+leftovers replaced, a reason for each preferred-tier warning, and the
+e-mail key. The baseline only shrinks.
+
 ## Commands
 
+In the order of the layers, as `pnpm kit --help` and
+[docs/commands.md](docs/commands.md) group them.
+
+**The content engine**
+
 ```bash
-pnpm dev             # next dev on :8000
-pnpm build           # lint → content lint → docs check → next build → SEO audit; every page prerendered
-pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
-pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
-pnpm lint            # ESLint with the component rules, then the site check (agentic-cms check-site: the placement guard first)
-pnpm test            # the engine's, the post pipeline's and the lint's node:test suites, about a second
-pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
-pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
-pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
-pnpm content:lint    # the content rules, about a second
+pnpm content:lint    # the content rules, about a second (agentic-cms lint; the build runs it with --production, where a placeholder fails)
+pnpm content:check   # the schemas alone, in a fraction of a second
 pnpm content:status  # what is live, in draft and planned, from the files
-pnpm content:docs    # the field tables into content/README.md
-pnpm kit <command>   # the command line: placeholder, optimize-webp, optimize-svg-rasters, parity, visual-parity, seo, …
+pnpm content:docs    # the field tables into content/README.md (the build checks them with docs --check)
+```
+
+**Design tools**
+
+```bash
+pnpm kit placeholder <out> <width> <height>   # a wireframe placeholder image; optimize-webp and optimize-svg-rasters make real ones light
+pnpm kit visual-parity <proof|capture|compare|clean>   # the screenshot harness; parity when the markup must not move either
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
+pnpm kit icons <add|remove|family|audit|round>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory, a design round for its own
+pnpm kit lab <new|serve|route|render|clean>   # the design canvas: SVG scenes on the site's tokens, on a phone, and as a throwaway route on the site's theme; rendered to the files a page ships; removed after
 pnpm kit demo <new|clean>   # the design round's throwaway route: candidates for a section in its frame with the page's copy, on the site's theme, the current version last; waits for it on the dev server and prints its URLs
-pnpm kit init <dir> --name "<Site>"  # a site from the package: the example's code, a starter of the site's name, the agent files, the config
+```
+
+**The site's commands**: the setup, the gates every change passes, the
+steps a site adds
+
+```bash
+pnpm kit init <dir> --name "<Site>"  # a site from the package: the example's code, a starter of the site's name, the agent files, the config, the CI workflow
 pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
 pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
 pnpm kit serve       # next dev and the lab for a look: every demo route waited for, every URL (localhost, LAN, public) in one table; Ctrl-C stops both
-pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text
-pnpm kit critical-css   # each prerendered page paints from its own inlined rules, its stylesheets no longer block
-pnpm kit assemble    # a standalone build packaged for a Node host: public/ and .next/static copied in, every file checked
-pnpm kit icons <add|remove|family|audit|round>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory, a design round for its own
-pnpm kit lab <new|serve|route|render|clean>   # the design canvas: SVG scenes on the site's tokens, on a phone, and as a throwaway route on the site's theme; rendered to the files a page ships; removed after
+pnpm dev             # next dev on :8000
+pnpm lint            # a gate: ESLint with the component rules, then the site check (agentic-cms check-site, the placement guard check-components first)
+pnpm build           # a gate: pnpm lint → content lint --production → docs check → next build → SEO audit → e-mail guard; every page prerendered
+pnpm kit check-site  # the site check alone; --baseline writes an existing site's engine bypasses and leftovers once, when it takes 0.8.2
+pnpm kit seo         # the SEO audit of every prerendered page, after next build
+pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text; the build's last step with guardEmail: true
+pnpm kit critical-css   # a step a site adds: each prerendered page paints from its own inlined rules, its stylesheets no longer block
+pnpm kit assemble    # a step a site adds, last: a standalone build packaged for a Node host, public/ and .next/static copied in, every file checked
+pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
+pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes
+```
+
+**The kit's own checks**, in this repository
+
+```bash
+pnpm test            # the content engine's, the post pipeline's, the lint's and the command line's node:test suites, about a second
+pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
+pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
+pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
 ```
 
 Every command's flags, defaults and exit codes are in
@@ -468,27 +558,39 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
 ## Map
 
 ```
+# The content engine: the content, and what composes and renders it
 content/pages/<slug>.yaml    every page: seo, jsonld, sections
 content/blog/<slug>.md       posts (slug = filename); _template.md is the annotated template
 content/authors.json         content/categories.json   content/reviews.yaml   content/faqs/<key>.yaml   content/use-cases.yaml
 content/VOICE.md             the voice and claim rules; _templates/VOICE.md is the blank
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
-plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
-.claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
-templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow, scripts/setup.sh; templates/lab-demo/ the lab's route
-templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
-src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 src/kit.ts                   the example composing the package for itself; the file every site has
 src/components/sections/     the section registry and the copy schemas
-src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, ConsentBanner, the form primitives
-src/config/site.ts           the brand, URLs, nav, footer, calls to action
+src/config/site.ts           the brand, URLs, nav, footer, calls to action, and guardEmail
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
-src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy; harness.ts, the screenshot harness's seed
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
-bin/, scripts/               the command line: lint, check, status, docs, seo, critical-css, guard-email, assemble, check-components, check-site, placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo, init; the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
+plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
+
+# Browser libraries, and the site's components around them
+src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, ConsentBanner, the form primitives
+src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy
+
+# Design tools
+.claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
+src/config/harness.ts        the screenshot harness's profile (widths, schemes) and its seed
+templates/lab-demo/          the lab's throwaway route
+
+# The site's commands
+bin/, scripts/               the command line, by layer: lint, check, status, docs; placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo; init, setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
+src/config/components.json   the site check's config: the layers, the owners, the allow list, the route exceptions, the baseline; eslint.config.mjs passes the same to the preset
+templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow and Dependabot, scripts/setup.sh
+templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
+
+# Across the layers
+src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides: parts.md (the map of every part), commands.md, visual-parity.md, shot-probe-sheet.md, design.md, skills.md, init.md, setup.md, dev-server.md, browsers.md, primitives.md, gotchas.md, upgrading.md, migrating-to-0.8.0.md, deploy.md, forms.md, consent.md, icons.md, lab.md, email.md, roadmap.md
+docs/                        the guides, indexed by layer in docs/README.md: parts.md (the map of every part and its tier), commands.md, init.md, upgrading.md, migrating-to-0.8.2.md, …
 ```
 
 MIT licensed.

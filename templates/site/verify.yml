@@ -2,7 +2,8 @@
 # lint (ESLint, then agentic-cms check-site, which lists every exception
 # added since the pull request's base branch — the checkout takes the
 # history for it), the unit tests, the build (the lint again, the content
-# lint, next build and the SEO audit), and the agent files against the
+# lint, the docs check, next build, the SEO audit and, while site.ts says
+# guardEmail: true, the e-mail guard), and the agent files against the
 # kit's — a rule or skill the kit has updated since (stale), one
 # that is missing, or an edit that dropped a line the kit marks required
 # fails that step (node_modules/agentic-cms/docs/init.md). pnpm comes from

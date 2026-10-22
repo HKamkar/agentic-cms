@@ -21,16 +21,33 @@ Before building anything (a section, a card, a button):
 
 `pnpm lint` enforces it, and so does CI on every pull request: ESLint runs
 `componentRules()` from `agentic-cms/eslint` (configured in
-`eslint.config.mjs`). In a section's file it fails a raw `<button>`, `<a>`,
-`<img>`, `<picture>`, `<video>`, form field, `<h1>`–`<h6>` or `<svg>`, a
-`style` attribute, an arbitrary value (`[…]`, `(…)`), a fill, border,
-radius, ring, outline, shadow, transition or animation class, a second
-component in the file, each message naming the primitive to use, and copy:
-JSX text, or a string in a `title`, `alt`, `aria-label`, `placeholder`,
-`label` or `children`, which comes from the page's file instead (a symbol,
-an `aria-hidden` decoration and the labels of `Placeholder` and `TypeTag`
-pass). Anywhere
-in `src/`, it fails an import that goes the wrong way between the layers:
+`eslint.config.mjs`). In a section's file (and a pattern's) it fails a raw
+`<button>`, `<a>`, `<img>`, `<picture>`, `<video>`, form field,
+`<h1>`–`<h6>` or `<svg>`, a `style` attribute, an arbitrary value (`[…]`,
+`(…)`), a fill, border, radius, ring, outline, shadow, transition or
+animation class and a second component in the file, each message naming
+the primitive to use.
+
+Across all of `src/` (sections, patterns, `ui/`, layouts, `not-found`, the
+design-round and lab routes) it holds the engines, which are required:
+copy — JSX text, a copy prop (`title`, `alt`, `aria-label`, `placeholder`,
+`label`, `heading`, `text`, `children`, …) or any other prop whose string
+reads as words — comes from the page's file or the chrome in
+`src/config/site.ts` instead (`agentic-cms/copy`; a symbol, an
+`aria-hidden` decoration and the labels of `Placeholder` and `TypeTag`
+pass); no head of a component's own (`agentic-cms/head`), no `<form>`
+outside `Form` (`agentic-cms/forms`), no tag outside its consent adapter
+(`agentic-cms/tags`), no `mailto:` but `EmailLink` (`agentic-cms/email`).
+What the kit only prefers warns and fails nothing: another animation
+library, a `<canvas>` or a rendering library, `next/image` or an eager
+`<img>` in a server component, an `<svg>` outside `Icon`, a value outside
+the tokens in `ui/` and
+`src/app` (`agentic-cms/motion`, `graphics`, `images`, `icons`,
+`styling`). Each warning names the kit's part, and a file that keeps its
+own choice says why in one line: an `allow` entry in
+`src/config/components.json` or an inline disable with its description
+(`docs/primitives.md` § Enforced). Anywhere in `src/`, it fails an import
+that goes the wrong way between the layers:
 
 | Layer | Holds | May import |
 |---|---|---|
@@ -55,7 +72,11 @@ template, the form endpoint, the feed, each with its reason); no component
 lives elsewhere in `src/`; CSS modules only in `ui/` (and a motion folder),
 `@keyframes` only in `src/styles/motion.css`. The blog's post template,
 which the blog routes render rather than the registry, is on the guard's
-frozen `inherited` list. A rule the library cannot meet yet is a new
+frozen `inherited` list. The site's own passes follow: a design round's
+route that `demo new` did not write, every exception added since the merge
+base listed with its reason, the gates in `package.json` and CI, and what
+is left of the kit's example (`docs/parts.md` § The checks). A rule the
+library cannot meet yet is a new
 primitive or option, never a rule turned off in passing: loosening one —
 a rule, a layer, a route exception, an `inherited` file — is its own pull
 request, said so in its title.

@@ -56,7 +56,8 @@ the user named, and `content/editorial/workshop.yaml` if it exists (its
 5. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; read every
    `WARN` on the new file and fix it or say why it stays.
 6. **Verify** (below). Drafts render in `pnpm dev` only; to see the post in
-   `pnpm preview`, flip `draft` in the working tree, build, look, flip back.
+   the built site (`pnpm preview`, or `pnpm start`), flip `draft` in the
+   working tree, build, look, flip back.
 7. **Commit** `Post: <title>` on the repo's working branch. Publishing is
    the user's: they set `draft: false` and `publishedAt` (now, ISO), then
    push.
@@ -65,7 +66,7 @@ the user named, and `content/editorial/workshop.yaml` if it exists (its
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # 0 failures; read every WARN
-pnpm preview                                                # open <postPrefix>/<slug>; then stop it
+pnpm preview                                                # pnpm start where the site has none; open <postPrefix>/<slug>; then stop it
 git push                                                    # when the user says
 ```
 

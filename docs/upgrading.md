@@ -58,12 +58,11 @@ sees on its first build after the upgrade:
   ([migrating-to-0.8.2.md § 3](migrating-to-0.8.2.md#3-the-examples-leftovers)).
 - **Placeholders** (`placeholder`): a string marked `(placeholder)`, or an
   address on a domain reserved for examples (`.example`, `.test`,
-  `.invalid`, `localhost`, example.com), warns. A site that wants a
-  production build to fail on them, as a new one does, adds `--production`
-  to the lint in its `build` script (`"build": "agentic-cms lint
-  --production && …"`), and to its CI's `pnpm build` step
-  `env: { AGENTIC_CMS_PLACEHOLDERS: warn }` if that run deploys nothing.
-  `agentic-cms assemble` packages nothing while one remains.
+  `.invalid`, `localhost`, example.com), warns, and fails a production
+  build: the build's content lint runs with `--production` once the site
+  takes the gates (below). A CI `pnpm build` step that deploys nothing
+  takes `env: { AGENTIC_CMS_PLACEHOLDERS: warn }`. `agentic-cms assemble`
+  packages nothing while one remains.
 
 The CI workflow `init` writes pins newer actions, the commits the kit's own
 CI runs: `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and
@@ -104,6 +103,16 @@ reports: a warning fails nothing and goes quiet with an `allow` entry of
 In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
 `with:` gives the check the history it compares the exceptions against;
 without it CI says it compared nothing.
+
+**The site's `AGENTS.md`** takes the template's new lines by hand, from
+`node_modules/agentic-cms/templates/site/AGENTS.md`: the engines rule,
+first among the rules (every word from `content/` or `site.ts`, heads from
+`kit.seo`, forms from the form engine, tags through consent, and the rest
+from `docs/parts.md` or with its reason); the sentence on `(placeholder)`
+copy in the content bullet; and the verify bullet, with the gates and the
+agent-file check's required lines. `--agent-files` brings the rules' tier
+lines and the skills' closing `pnpm lint`
+([init.md § What an edit keeps](init.md#what-an-edit-keeps)).
 
 **The e-mail engine, behind a key** ([email.md](email.md)). A new site's
 `src/config/site.ts` has `guardEmail: true`: no structured data carries its

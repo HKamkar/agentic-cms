@@ -55,9 +55,11 @@ the same.
   the door, `content/README.md`), `public/images/` (the wireframe's neutral
   placeholders and a logo placeholder with the site's name), and
   `src/config/site.ts` and `src/config/forms.ts` written for the site.
-- **The agent files**: `AGENTS.md` (a site's rules; `CLAUDE.md` includes
-  it), `.claude/rules/` (path-scoped invariants for the content engine, the
-  blog, forms, SEO, styling, design and the components, pointing at the
+- **The agent files**: `AGENTS.md` (a site's rules, the engines rule
+  first; `CLAUDE.md` includes it), `.claude/rules/` (path-scoped invariants
+  for the content engine and its layers — pages, the post pipeline, SEO —
+  the form engine, styling, design and the components, each ending with its
+  part, its tier and the check that holds it, pointing at the
   engine's READMEs under `node_modules/agentic-cms/`; `AGENTS.md`'s
   scoped-rules table routes Codex to them; the components rule is written
   only beside the guard's config, which the example brings), `.claude/skills/` and
@@ -140,9 +142,10 @@ that runs the build runs the lint too:
   lets the site's address into a served file as text: the gate of a site
   whose `src/config/site.ts` turns `guardEmail` on, as the starter's does
   ([email.md](email.md)). Each is a step of the `&&` chain, so the first
-  that fails stops the build. A site without the key (one from before
-  0.8.2 job 4b) is asked for no guard, and `init` adds none to its
-  `build`.
+  that fails stops the build. A site without the key (one laid out before
+  0.8.2) is asked for no guard, and `init` adds none to its `build`
+  ([migrating-to-0.8.2.md § 5](migrating-to-0.8.2.md#5-the-e-mail-key)
+  turns it on).
 
 Into an existing `package.json`, `init` merges the gates and keeps the
 site's own steps where they are, printing what went in (a site from 0.8.1:
@@ -233,7 +236,12 @@ The kit example's brand fails in a site at any time: `Acme` as a word,
 `acme.example`, and the example's author `acme-editorial`, in any file
 under `content/` and `src/config/`, in an SVG's text and in a picture's
 name under `public/` (`example-brand`). The kit's own repository, where the
-example is the example, is told by its package name and exempt.
+example is the example, is told by its package name and exempt. A fork is
+the kit's repository until it renames the package; from then on it is a
+site, and the example's brand fails its lint and `check-site` lists what
+else is left of the example (`leftovers`), which `check-site --baseline`
+holds while each is replaced
+([migrating-to-0.8.2.md § 3](migrating-to-0.8.2.md#3-the-examples-leftovers)).
 
 ## A site without dark mode
 
@@ -265,8 +273,8 @@ The code edits anchor on the theme's own names, not on the lines around
 them; one that finds nothing to change stops `init` (exit 2) before any
 file is written, naming the file — a kit bug to report. The rules and skills
 are the same for every site: they speak of "each scheme the profile names".
-A site already laid out goes light-only by hand, as the migration guide's
-§ 3.4 says.
+A site already laid out goes light-only by hand, as
+[migrating-to-0.8.0.md § 3.4](migrating-to-0.8.0.md#34-light-only) says.
 
 ## Then
 
@@ -397,4 +405,6 @@ permissions, hooks and other plugins pass; a key gone is
 
 Each release's own steps — the lines a site's `AGENTS.md` and its edited
 rules take by hand, the scripts to change, the baselines to recapture — are
-in [upgrading.md](upgrading.md).
+in [upgrading.md](upgrading.md); 0.8.2's, the gates and the baseline of an
+existing site's engine bypasses, in
+[migrating-to-0.8.2.md](migrating-to-0.8.2.md).

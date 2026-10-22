@@ -45,7 +45,7 @@ that page and the chrome of the others. Verify, commit `Retire: /<slug>`.
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # 0 failures
-pnpm preview                                                # the route is gone (a retired post 404s); then stop it
+pnpm preview                                                # pnpm start where the site has none; the route is gone (a retired post 404s); then stop it
 git push                                                    # when the user says
 ```
 

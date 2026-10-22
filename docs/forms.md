@@ -14,11 +14,16 @@ lines in the site. So the choice of service is a site's, made in its
 environment, and changing it later touches no form. The contract — every
 status, the wire format, the signature — is `src/lib/forms/README.md`.
 
-The lint keeps every form on the engine: `agentic-cms/forms`
-(`agentic-cms/eslint`, `docs/primitives.md` § Enforced) fails a `<form>`
-anywhere in `src/` but the form component `owners.forms` names in
-`src/config/components.json` (the example's `ui/form/Form.tsx`), a server
-action, and a `fetch()` of another origin in a component.
+The form engine is one of the engines, so it is required
+([parts.md](parts.md#the-content-engine)), and `pnpm lint` keeps every form
+on it, naming the part to use: `agentic-cms/forms` (`agentic-cms/eslint`,
+[primitives.md § Enforced](primitives.md#the-engines-required-across-src))
+fails a `<form>` anywhere in `src/` but the form component `owners.forms`
+names in `src/config/components.json` with its reason (the example's
+`ui/form/Form.tsx`), a server action, and a `fetch()` of another origin in a
+component; in a section or a pattern, `react/forbid-elements` fails a form
+field of its own (`form`, `input`, `select`, `textarea`, `label`). A real
+need is an inline disable with its reason after `--`, which the lint lists.
 
 ## What a form can ask
 
@@ -38,12 +43,13 @@ new landing-page form is an entry there and no component code. The items
 | `{ row: [...] }`, `{ note }`, `{ group }` | two fields side by side; a line of text with a link; a fieldset with a legend |
 
 Every field takes a `hint`, and where the control has them `autocomplete`,
-a default value and `fromQuery`: a link to `/sections/contact?topic=design`
-chooses that option of a field with `fromQuery: "topic"`, read in the
-browser after hydration, so the page stays prerendered. A form that mixes
+a default value and `fromQuery`: a link to the form's page with
+`?topic=design` chooses that option of a field with `fromQuery: "topic"`,
+read in the browser after hydration, so the page stays prerendered. A form that mixes
 required and optional fields sets `optionalMarker` (`"(optional)"`), shown
 after each optional field's label. `{email}` in a message is the address
-(`messages.email`) as a link.
+(`messages.email`) as a link: `EmailLink`, with the address a token on a
+site that guards it (`withEmailToken()`, [email.md](email.md)).
 
 Every one of them validates natively in the browser and again on the
 server, never stricter (`rules.ts`), and reads the same on both backends:
@@ -59,7 +65,8 @@ fields, multi-step forms, a multiple select, password, range and colour.
    backend: { kind: "endpoint", url: "/api/forms/contact" },   // the form's id
    ```
 
-   A `withEmailToken` wrapper can stay; it leaves an endpoint form alone.
+   A `withEmailToken` wrapper stays: it leaves an endpoint backend alone
+   and still keeps the messages' address a token.
 
 2. **The route and the delivery config.** A site made with `init` from 0.6.0
    has them: `src/app/api/forms/[id]/route.ts` and
@@ -205,9 +212,10 @@ With `pnpm dev` running and no destination set:
 
 ```bash
 curl -si http://localhost:8000/api/forms/contact -H 'content-type: application/json' \
-  -d '{"values":{"firstName":"Ada","lastName":"L","organisation":"Acme","email":"ada@acme.example","message":"Hello"}}'
+  -d '{"values":{"firstName":"Ada","lastName":"L","email":"ada@example.com","message":"Hello"}}'
 ```
 
 answers `{"ok":true}` and prints the submission in the dev server's
-terminal (the example's contact form must be on `endpoint` first). A field
-it refuses comes back by name: `{"ok":false,"error":"invalid","fields":["email"]}`.
+terminal (the contact form must be on `endpoint` first; the values are the
+starter's fields, and the kit's example also asks for an `organisation`). A
+field it refuses comes back by name: `{"ok":false,"error":"invalid","fields":["email"]}`.
