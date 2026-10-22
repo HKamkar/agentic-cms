@@ -315,7 +315,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.8.1`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.8.2`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -329,7 +329,7 @@ and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site --name "My Site"
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.2 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 

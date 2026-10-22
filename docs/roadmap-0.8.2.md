@@ -1,11 +1,11 @@
 # Roadmap — 0.8.2: the engines hold, the rest stays open, and no Acme
 
-> Plan, not started: it begins after the `v0.8.1` tag, and 0.9.0
-> (`docs/roadmap-0.9.0.md`) follows it. Written 2026-10-17 from a survey of
-> `develop` c9ac3ed, and revised the same day after the owner's review: the
-> engines are enforced, everything else is guided and never blocked, and a
-> new site starts without the example's brand. The owner took every
-> decision's recommendation on 2026-10-17, with job 5 (the starter) first.
+> Landed in 0.8.2 (2026-10-22); 0.9.0 (`docs/roadmap-0.9.0.md`) follows
+> it. Written 2026-10-17 from a survey of `develop` c9ac3ed, and revised
+> the same day after the owner's review: the engines are enforced,
+> everything else is guided and never blocked, and a new site starts
+> without the example's brand. The owner took every decision's
+> recommendation on 2026-10-17, with job 5 (the starter) first.
 
 Three problems came from building a site on the kit:
 

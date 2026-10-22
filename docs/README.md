@@ -107,7 +107,7 @@ The build, its gates and the setup.
   the symptom, the reason and what to do.
 - [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
   1.0.0.
-- [roadmap-0.8.2.md](roadmap-0.8.2.md) — the plan for 0.8.2: every part of
+- [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest
   preferred, and a new site's starter without the example's brand.
 - [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: agentic-cms

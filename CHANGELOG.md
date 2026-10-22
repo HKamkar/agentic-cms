@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.8.2] — 2026-10-22
 
 - Docs: `docs/roadmap-0.8.2.md` is the plan for 0.8.2. The engines are enforced: content, SEO, forms, consent and e-mail fail the lint when bypassed, design rounds included. The kit's libraries and tools are preferred: a warning names the part, and a reason keeps a site's own. A new site starts without the example's brand or content. Every part goes on one map (`docs/parts.md`), and the README and every doc are swept. `docs/roadmap-0.9.0.md` now follows it.
 - `init --name "<Site>"`, `--url`, `--email`: a new site starts from a starter of its own name instead of the example. It gets one home page and the blog index with copy marked `(placeholder)`, empty collections, the wireframe's neutral pictures and a logo placeholder. It gets none of the example's brand, posts, reviews, use cases, FAQs, author or catalogue pages, and the package no longer ships them.

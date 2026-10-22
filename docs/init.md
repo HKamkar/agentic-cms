@@ -6,7 +6,7 @@ site of its own out — the example's code with a starter of the site's name
 in place of the example's content — in one line:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site --name "My Site"
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.2 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
@@ -28,7 +28,7 @@ Into a project that already has a `package.json`, `pnpm add` takes the same
 approval and records it in the workspace:
 
 ```bash
-pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.1
+pnpm add --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.2
 pnpm exec agentic-cms init . --name "My Site"
 ```
 

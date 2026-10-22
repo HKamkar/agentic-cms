@@ -24,7 +24,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.8.1 → 0.8.2 (unreleased)
+## 0.8.1 → 0.8.2
 
 The engines are required, and none of the example's brand or sample
 content stays in a site. [migrating-to-0.8.2.md](migrating-to-0.8.2.md) is
