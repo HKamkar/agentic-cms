@@ -22,7 +22,10 @@
 // made by hand, the example's posts, author, logo and reviews) upgraded as
 // docs/migrating-to-0.8.2.md § 1 says, its CI build green on the baseline
 // `check-site --baseline` writes, a new bypass failing and a fixed one
-// shrinking the list, and the fresh site put back; its tests through the
+// shrinking the list, and the fresh site put back; then the site as one
+// that never took 0.8.0's § 3.7 left it, on each of the guide's two paths,
+// upgraded by § 1 with § 3.7 inside it to a green lint and build, its
+// sections' composition held by the baseline; its tests through the
 // installed command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
@@ -40,7 +43,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
-import { LEGACY, unexpected, UPGRADE } from "./upgrade-fixture.mjs";
+import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
 const MAX_TARBALL = 1024 * 1024;
@@ -138,6 +141,7 @@ async function build(site) {
   dependabot(site);
   bypasses(site);
   upgrade(site);
+  for (const way of PATHS) upgradeUnguarded(site, way);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
 }
@@ -337,6 +341,58 @@ function upgrade(site) {
   const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
   if (left) fail(`the fresh site was not put back after the upgrade: ${left}`);
   console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
+}
+
+/** The text of each of a site's files, to put back. */
+const texts = (site, files) => Object.fromEntries(files.map((file) => [file, fs.readFileSync(path.join(site, file), "utf8")]));
+const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
+
+/**
+ * 3c. The site as one that never took 0.8.0's § 3.7 left it, on one of the
+ * guide's two paths (tools/upgrade-fixture.mjs: no guard's config, Next's
+ * ESLint rules alone, a registered section from before the composition
+ * rules, a stale agent worktree; on the second path a route written by
+ * hand), committed, then § 1 with § 3.7 inside it: the guard's config and
+ * the ESLint config as the package gives a site, its `"baseline": []` a
+ * first run on a base that has none, the gates, the path's route
+ * exceptions. `check-site --baseline` writes exactly what the path
+ * expects; the CI build passes; a second `--baseline` changes nothing; one
+ * more raw link in the baselined section fails the lint naming the count.
+ * Then the fresh site is put back, which git confirms.
+ */
+function upgradeUnguarded(site, way) {
+  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const given = texts(site, ["src/config/components.json", "eslint.config.mjs"]);
+  const gates = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
+  setScripts(site, UNGUARDED.scripts);
+  for (const file of UNGUARDED.remove) fs.rmSync(path.join(site, file));
+  for (const [file, text] of Object.entries({ ...UNGUARDED.files, ...way.files })) write(site, file, text);
+  for (const [file, change] of Object.entries(way.edit)) edit(site, file, change);
+  for (const [to, from] of Object.entries(way.copies)) fs.copyFileSync(path.join(site, from), path.join(site, to));
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site before the rules");
+  for (const [file, text] of Object.entries(UNGUARDED.worktree)) write(site, file, text);
+  for (const [file, text] of Object.entries(given)) write(site, file, text);
+  edit(site, "src/config/components.json", (text) => `${JSON.stringify({ ...JSON.parse(text), exceptions: { ...JSON.parse(text).exceptions, ...way.exceptions } }, null, 2)}\n`);
+  setScripts(site, { lint: gates.lint, build: gates.build });
+  const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const wrong = heldOtherwise(baseline, way.expected);
+  const extra = baseline.filter(({ file, rule }) => way.expected[file]?.[rule] === undefined).map(({ file, rule, count }) => `${file} ${rule}: ${count}, expected no entry`);
+  if (taken.status !== 0 || wrong.length || extra.length) fail(`${way.name}: check-site --baseline answered ${taken.status}${[...wrong, ...extra].length ? `, and wrote ${[...wrong, ...extra].join("; ")}` : ""}: ${taken.output.trim().slice(-2500)}`);
+  const build = answer(site, ["build"], CI_BUILD);
+  if (build.status !== 0) fail(`${way.name}: the upgraded site's CI build failed on its baseline: ${build.output.trim().slice(-3000)}`);
+  const again = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  if (again.status !== 0 || !/src\/config\/components\.json unchanged/.test(again.output)) fail(`${way.name}: a second check-site --baseline answered ${again.status}, and should change nothing: ${again.output.trim().slice(-1500)}`);
+  edit(site, "src/components/home/Service.tsx", (text) => text.replace("            {cta}\n          </a>", "            {cta}\n          </a>\n          <a href={site.links.contact}>{cta}</a>"));
+  const grown = answer(site, ["lint"]);
+  if (grown.status !== 1 || !/4 of this rule here, and the baseline \(src\/config\/components\.json\) holds 3: the baseline only shrinks/.test(grown.output)) fail(`${way.name}: one more raw link in the baselined section answered ${grown.status}, and should fail the lint naming the count: ${grown.output.trim().slice(-1500)}`);
+  fs.rmSync(path.join(site, ".claude/worktrees/stale-copy"), { recursive: true, force: true });
+  git(site, "reset", "-q", "--hard", fresh);
+  git(site, "clean", "-fdq");
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`${way.name}: the fresh site was not put back after the upgrade: ${left}`);
+  console.log(`pack-smoke: ${way.name}, upgraded by the guide's § 1 with § 3.7 inside it — ${baseline.length} baseline entries, its sections' composition among them, its lint and CI build green, a second --baseline unchanged, a new finding refused`);
 }
 
 /** 5. A site without dark mode, laid out by the installed init --light-only with a name of its own: it builds as its CI runs it, lints and tests, and its pages carry no theme script. */

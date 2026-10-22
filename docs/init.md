@@ -331,7 +331,13 @@ request. A `modified, kit changed`
 file is merged by hand: `--diff <file>` prints the kit's change alone, from
 the base to the kit's current text, as a unified diff (`git apply` takes it
 where the site's edits sit apart from it), and `--accept <file>` then
-records the kit's current text as the file's base. The text of the base of
+records the kit's current text as the file's base. Where the site reworded
+the lines the kit's change touches — a release that marks a block required
+the site had written its own way — `git apply` answers `patch does not
+apply`: read the diff's hunks and put each one's new lines in where the
+site's version of them is, each required block's words as the kit has them
+([§ What an edit keeps](#what-an-edit-keeps)), then `--check` and
+`--accept <file>`. The text of the base of
 each file the site edited is kept in `.agentic-cms/base/`, under the file's
 path without its leading dot so no agent loads the copies as rules or
 skills, and so is the text of a base no release of the kit holds (a pin
@@ -383,9 +389,13 @@ the end of a list item's or a paragraph's last line: the engines, each
 rule's tier line (its part, its tier and the check that holds it), the
 `pnpm lint` that ends each skill's procedure, and the design skills' copy
 rule (a round starts from the page's file, never with copy in a
-candidate). A site's copy keeps each block's words — re-wrapped,
-re-indented or without the marker, it is kept — and edits the rest as it
-likes. An edit that drops one is `modified, required gone`: `--check`
+candidate). A site's copy keeps each block's words, in their order, and
+edits the rest as it likes: re-wrapped, re-indented, without the marker, in
+another case, under a list marker of its own (`*` for `-`, a number) or
+with the site's own words before or after them, the block is kept. Its
+words reworded, broken up or put in another order, it is gone: a site that
+says the same thing its own way keeps the kit's sentence and adds its own
+beside it. An edit that drops one is `modified, required gone`: `--check`
 exits 1 naming the block, its line in the kit's file and the file
 (`node_modules/agentic-cms/templates/site/rules/<rule>.md`, `…/.claude/skills/<skill>/SKILL.md`),
 so it goes back in as the kit has it. The refresh keeps the edit and says
@@ -405,6 +415,6 @@ permissions, hooks and other plugins pass; a key gone is
 
 Each release's own steps — the lines a site's `AGENTS.md` and its edited
 rules take by hand, the scripts to change, the baselines to recapture — are
-in [upgrading.md](upgrading.md); 0.8.2's, the gates and the baseline of an
-existing site's engine bypasses, in
+in [upgrading.md](upgrading.md); 0.8.2's, the gates and the baseline of
+what an existing site already has, in
 [migrating-to-0.8.2.md](migrating-to-0.8.2.md).

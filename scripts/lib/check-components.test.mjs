@@ -314,6 +314,17 @@ test("preset: the required rules' settings ESLint resolves are the ones componen
   assert.match(missing[0].problem, /^ESLint cannot read the site's config, so the required rules are not set: /);
 });
 
+test("preset: a baselined file's counts reach ESLint, the engines' in its settings and the composition's in the processor that holds them; a list not passed, or a later processor, is a finding", async () => {
+  const baseline = [{ file: "src/components/home/Hero.tsx", rule: "agentic-cms/copy", count: 1, reason: "" }, { file: "src/components/home/Hero.tsx", rule: "react/forbid-elements", count: 2, reason: "" }];
+  const config = { ...PRESET_CONFIG, sections: ["home"], baseline };
+  const options = `{ motion: null, patterns: null, sections: ["home"], owners: { forms: ["src/components/ui/form/Form.tsx"] }, baseline: ${JSON.stringify(baseline)} }`;
+  assert.deepEqual(await preset({ config, options }), []);
+  const untold = await preset({ config, options: options.replace(/, baseline: .*\] \}$/, " }") });
+  assert.deepEqual(untold.map((f) => f.problem), ["the baseline holds 1 of agentic-cms/copy here, and ESLint is told none: the rule fails every one", "the baseline holds 2 of react/forbid-elements here, and ESLint is told none: the rule fails every one"]);
+  const replaced = await preset({ config, options, after: '{ files: ["src/components/home/Hero.tsx"], processor: { preprocess: (text) => [text], postprocess: (lists) => lists.flat() } }' });
+  assert.deepEqual(replaced.map((f) => f.problem), ["the baseline holds 2 of react/forbid-elements here, and no processor holds it: a block after componentRules() sets another processor on the file, so the rule fails every one"]);
+});
+
 test("preset: a preferred rule turned off by a later block, or an allow eslint.config.mjs does not pass, is a warning that fails nothing; the same allow in both is quiet", async () => {
   assert.deepEqual(await presetReport(), { findings: [], warnings: [] });
   const silenced = await presetReport({ after: '{ files: ["src/components/ui/**"], rules: { "agentic-cms/icons": "off" } }' });

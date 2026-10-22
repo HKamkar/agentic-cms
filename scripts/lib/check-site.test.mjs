@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { CONFIG_FILE } from "./check-components.mjs";
-import { baselineSite, checkSite, configAdded, formatBaselineReport, formatSiteReport, LAB_HEADER, machineAddresses, mergeBase, SiteCheckError } from "./check-site.mjs";
+import { baselineSite, checkSite, configAdded, firstBaseline, formatBaselineReport, formatSiteReport, LAB_HEADER, machineAddresses, mergeBase, SiteCheckError } from "./check-site.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "../..");
 
@@ -26,7 +26,7 @@ function memfs(files) {
 }
 
 /** git as a checkout answers it: `refs` resolve, the merge base with any of them is `commit`, `files` is the tree at it. */
-function fakeGit({ refs = ["origin/HEAD"], commit = "b".repeat(40), files = {}, shallow = false, repo = true, head = true } = {}) {
+function fakeGit({ refs = ["origin/HEAD"], commit = "b".repeat(40), files = {}, shallow = false, repo = true, head = true, defaultBranch } = {}) {
   const calls = [];
   const git = (args) => {
     calls.push(args.join(" "));
@@ -35,6 +35,7 @@ function fakeGit({ refs = ["origin/HEAD"], commit = "b".repeat(40), files = {}, 
     const [command, ...rest] = args;
     if (command === "rev-parse" && rest[0] === "--is-inside-work-tree") return repo ? ok("true") : no;
     if (command === "rev-parse" && rest[0] === "--is-shallow-repository") return ok(String(shallow));
+    if (command === "rev-parse" && rest[0] === "--abbrev-ref") return defaultBranch ? ok(`origin/${defaultBranch}`) : no;
     if (command === "rev-parse" && rest[0] === "--verify") { const ref = rest[2].replace(/\^\{commit\}$/, ""); return (ref === "HEAD" ? head : refs.includes(ref)) ? ok("c".repeat(40)) : no; }
     if (command === "merge-base") return refs.includes(rest[1]) && !shallow ? ok(commit) : no;
     if (command === "show") { const file = rest[0].split(":./")[1]; return file in files ? { status: 0, stdout: files[file] } : no; }
@@ -210,6 +211,22 @@ test("ci: a workflow on pull requests runs the lint (or a build that runs it), t
   assert.deepEqual(await site(kit).then((r) => r.findings), [], "the kit's own repository checks its agent files through its hygiene");
 });
 
+test("ci: the workflow that runs the lint warns when its branch filter leaves out a branch the site's pull requests go into; one with no filter, or every target in it, is quiet", async () => {
+  const only = (filter) => VERIFY.replace("  pull_request:\n", `  pull_request:\n${filter}`);
+  const warned = (files, git, env) => site({ ...CLEAN, ...files }, { git, env }).then((r) => [checks(r.findings), r.warnings.map((w) => `${w.file}: ${w.problem}`)]);
+  const repo = fakeGit({ refs: ["origin/HEAD", "origin/develop"], defaultBranch: "main" });
+  const release = { ".github/workflows/verify.yml": only("    branches: [main]\n") };
+  assert.deepEqual(await warned(release, repo), [[], [".github/workflows/verify.yml: the workflow that runs the lint on pull requests (.github/workflows/verify.yml) runs on none into develop, so such a pull request gets none of its checks"]], "the release branch alone: a pull request into develop runs nothing");
+  assert.deepEqual((await warned(release, fakeGit({ repo: false }), { GITHUB_BASE_REF: "develop" }))[1].length, 1, "in CI, the pull request's own base");
+  assert.deepEqual(await warned(release, fakeGit({ repo: false }), { GITHUB_BASE_REF: "main" }), [[], []]);
+  assert.deepEqual(await warned({}, repo), [[], []], "the template's pull_request takes every branch");
+  assert.deepEqual(await warned({ ".github/workflows/verify.yml": only("    branches: [main, develop]\n") }, repo), [[], []]);
+  assert.deepEqual(await warned({ ".github/workflows/verify.yml": only("    branches: ['**', '!develop']\n") }, repo).then(([, w]) => w.length), 1, "a ! pattern takes one back");
+  assert.deepEqual(await warned({ ".github/workflows/verify.yml": only("    branches-ignore: [develop]\n") }, repo).then(([, w]) => w.length), 1);
+  assert.deepEqual(await warned({ ".github/workflows/verify.yml": only("    branches: [main]\n"), ".github/workflows/checks.yml": VERIFY }, repo), [[], []], "another workflow on every pull request runs the lint too");
+  assert.deepEqual(await warned(release, fakeGit({ refs: ["origin/HEAD"], defaultBranch: "main" })), [[], []], "no develop branch here: main is where pull requests go");
+});
+
 test("tools: the site's own Playwright, sharp over public/ and next dev scripts and a machine's address in next.config warn, naming the kit's command; an allow entry with its reason quiets each", async () => {
   const tools = {
     "scripts/shots.mjs": 'import { chromium } from "playwright";\nawait chromium.launch();\n',
@@ -292,13 +309,13 @@ test("baseline against the merge base: the pull request that takes 0.8.2 lists t
   assert.deepEqual(checks(raised.findings), ["exceptions src/app/promo-demo", "exceptions src/components/ui/Footer.tsx"], "a new site's empty list takes nothing");
 });
 
-/** The engines' findings as --baseline reads them from the site's ESLint: each a rule, a file and a line. */
-const engines = (...found) => async () => found.map(([file, rule]) => ({ check: rule, rule, file, problem: `No ${rule.split("/")[1]} of the site's own` }));
+/** The findings --baseline reads from the site's ESLint: each a rule, a file and a line. */
+const linted = (...found) => async () => found.map(([file, rule]) => ({ check: rule, rule, file, problem: `No ${rule.split("/")[1]} of the site's own` }));
 
 test("--baseline: the first time the whole list, the config's other bytes kept; then only ever shrunk, growth refused and each reason kept", async () => {
   const config = '{\n  "motion": null,\n  "patterns": null,\n  "exceptions": { "src/app/feed.xml": "the RSS feed, written from the posts" }\n}\n';
   const files = { ...ADOPTED, "src/components/ui/Footer.tsx": "export function Footer() { return null; }\n", [CONFIG_FILE]: config };
-  const first = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Footer.tsx:44", "agentic-cms/email"]) });
+  const first = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, lint: linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Footer.tsx:44", "agentic-cms/email"]) });
   assert.equal(first.written, true);
   assert.equal(first.first, true);
   assert.deepEqual(first.baseline, [held("content/blog/pages-are-files.md", "example-content", 1), held("src/app/layout.tsx", "agentic-cms/head", 1), held("src/app/promo-demo", "rounds", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 2)]);
@@ -312,7 +329,7 @@ test("--baseline: the first time the whole list, the config's other bytes kept; 
 
   files[CONFIG_FILE] = files[CONFIG_FILE].replace('"reason": "" }\n  ]', '"reason": "the footer, until the address moves to the e-mail engine" }\n  ]');
   delete files["src/app/promo-demo/page.tsx"];
-  const shrunk = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Nav.tsx:3", "agentic-cms/copy"]) });
+  const shrunk = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, lint: linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Nav.tsx:3", "agentic-cms/copy"]) });
   assert.deepEqual(shrunk.baseline, [held("content/blog/pages-are-files.md", "example-content", 1), held("src/app/layout.tsx", "agentic-cms/head", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 1, "the footer, until the address moves to the e-mail engine")]);
   assert.deepEqual(shrunk.removed.map((e) => e.file), ["src/app/promo-demo"]);
   assert.deepEqual(shrunk.shrunk.map((e) => `${e.file} ${e.count}→${e.to}`), ["src/components/ui/Footer.tsx 2→1"]);
@@ -321,14 +338,35 @@ test("--baseline: the first time the whole list, the config's other bytes kept; 
   const said = formatBaselineReport(shrunk).join("\n");
   assert.match(said, /− src\/app\/promo-demo {2}rounds: none left, the entry is gone\n {2}↓ src\/components\/ui\/Footer\.tsx {2}agentic-cms\/email: 2 → 1/);
   assert.match(said, /refused 1 entry: the baseline only shrinks, and takes nothing new\n\n {2}✗ src\/components\/ui\/Nav\.tsx {2}agentic-cms\/copy: 1 here, and the baseline holds 0 \(no entry\)/);
-  const same = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"]) });
+  const same = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, lint: linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"]) });
   assert.equal(same.written, false);
   assert.match(formatBaselineReport(same)[0], /src\/config\/components\.json unchanged — 3 entries, 3 findings/);
 });
 
+test("--baseline: an empty list is the first run when the merge base has none, as the guard's config copied in the same pull request has it; a list the base has, empty too, takes nothing", async () => {
+  const config = '{\n  "motion": null,\n  "patterns": null,\n  "baseline": []\n}\n';
+  const found = linted(["src/app/layout.tsx:12", "agentic-cms/head"]);
+  const copied = { ...ADOPTED, [CONFIG_FILE]: config };
+  const first = await baselineSite({ root: "/site", fs: memfs(copied), git: fakeGit({ files: {} }), components: PASS, lint: found });
+  assert.equal(first.first, true, "the base has no guard's config at all");
+  assert.deepEqual(first.refused, []);
+  assert.deepEqual(JSON.parse(copied[CONFIG_FILE]).baseline.map((e) => `${e.file} ${e.rule}`), ["content/blog/pages-are-files.md example-content", "src/app/layout.tsx agentic-cms/head", "src/app/promo-demo rounds"]);
+  const withoutList = { ...ADOPTED, [CONFIG_FILE]: config };
+  assert.equal((await baselineSite({ root: "/site", fs: memfs(withoutList), git: fakeGit({ files: { [CONFIG_FILE]: '{ "motion": null }' } }), components: PASS, lint: found })).first, true, "the base has the config, without a list");
+  const fresh = { ...ADOPTED, [CONFIG_FILE]: config };
+  const kept = await baselineSite({ root: "/site", fs: memfs(fresh), git: fakeGit({ files: { [CONFIG_FILE]: config } }), components: PASS, lint: found });
+  assert.equal(kept.first, false);
+  assert.deepEqual(kept.refused.map((e) => `${e.file} ${e.rule}`).sort(), ["content/blog/pages-are-files.md example-content", "src/app/layout.tsx agentic-cms/head", "src/app/promo-demo rounds"], "a new site's empty list: nothing goes in");
+  assert.equal(fresh[CONFIG_FILE], config, "and nothing is written");
+  const nowhere = await baselineSite({ root: "/site", fs: memfs({ ...ADOPTED, [CONFIG_FILE]: config }), git: fakeGit({ repo: false }), components: PASS, lint: found });
+  assert.equal(nowhere.first, false);
+  assert.match(formatBaselineReport(nowhere).join("\n"), /refused 3 entries: the baseline only shrinks, and takes nothing new\nsrc\/config\/components\.json's baseline is an empty list, the first one only when the merge base has none, and there is no base here to compare \(not a git checkout\): --base <ref> names the branch/);
+  assert.deepEqual(firstBaseline({ baseline: [{ file: "a.tsx", rule: "agentic-cms/copy", count: 1 }] }, { found: { commit: "b" }, before: null }), { first: false, note: null }, "a list with entries is never a first one");
+});
+
 test("--baseline takes none of the gates' and the config's findings: they stay, named, until fixed", async () => {
   const files = { ...ADOPTED, "package.json": JSON.stringify({ name: "ours", scripts: { lint: "eslint", build: BUILD, test: "node --test" } }) };
-  const result = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, engines: engines() });
+  const result = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, lint: linted() });
   assert.deepEqual(result.baseline.map((e) => e.rule), ["example-content", "rounds"]);
   assert.deepEqual(checks(result.remaining), ["scripts package.json"]);
   assert.match(formatBaselineReport(result).join("\n"), /check-site: 1 problem no baseline takes, which fail until fixed \(docs\/migrating-to-0\.8\.2\.md § 1\)/);

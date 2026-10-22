@@ -393,7 +393,7 @@ test("agentFiles --check tells a site's edit from a kit update and a missing fil
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/styling.md"], "updated");
 });
 
-test("a block the kit marks required is its list item or its paragraph, read with the markers out and the whitespace collapsed; a site's copy keeps it re-wrapped, re-indented or unmarked", () => {
+test("a block the kit marks required is its list item or its paragraph, read with the markers out and the whitespace collapsed; a site's copy keeps its words re-wrapped, re-indented, unmarked, in another case or among its own", () => {
   const kit = [
     "# A rule",
     "",
@@ -417,6 +417,9 @@ test("a block the kit marks required is its list item or its paragraph, read wit
   assert.deepEqual(requiredGone(rewrapped, kit), [], "re-wrapped, re-indented, unmarked: kept");
   assert.deepEqual(requiredGone(rewrapped.replace("everywhere", "in sections"), kit), [{ line: 4, text: "- The engines hold, everywhere." }], "a word changed is the block gone");
   assert.deepEqual(requiredGone(kit.replace(/\n {2}- \*\*copy[^]*?props; .*\n/, "\n"), kit).map((b) => b.line), [5]);
+  const ownWords = "# A rule, the site's\n\n- On this site, the engines hold, everywhere. Our checkout adds its own.\n* **copy:** every word from content, through props; the chrome's from site.ts.\n\n1. A paragraph that wraps across two lines.\n";
+  assert.deepEqual(requiredGone(ownWords, kit), [], "the site's words before and after the kit's, a list marker of its own: kept");
+  assert.deepEqual(requiredGone("- The engines hold. Everywhere.\n", kit).map((b) => b.line), [4, 5, 8], "the kit's words broken up are the block gone");
 });
 
 test("every rule the kit gives a site ends with its tier line, marked required, and every skill ends its procedure with pnpm lint, marked required", () => {

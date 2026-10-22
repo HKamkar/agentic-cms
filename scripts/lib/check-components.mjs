@@ -28,7 +28,8 @@
 //     resolved setting for one sample file per layer is the one
 //     componentRules() makes of the config, so no later block of the site's
 //     replaced one and eslint.config.mjs passes the config's options (the
-//     baseline's counts among them, ./baseline.mjs).
+//     baseline's counts among them, ./baseline.mjs: in each held file's
+//     settings, and the composition rules' in the processor that holds them).
 // What the preferred tier guides is a warning, which fails nothing and stays
 // in the report until it has its reason: an inline disable of any other rule
 // with none, a transition or animation declared in CSS outside the motion
@@ -46,7 +47,7 @@
 // components pass alone.
 import path from "node:path";
 import { suggest } from "./args.mjs";
-import { validBaseline } from "./baseline.mjs";
+import { compositionCounts, eslintCounts, PROCESSOR, validBaseline } from "./baseline.mjs";
 import { ALLOWABLE, checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, preferredConfigs, REQUIRED, requiredConfigs, resolveOptions, SITE_TOOLS } from "./component-lint.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
@@ -86,7 +87,7 @@ export function readConfig(root, fs) {
   if ("exceptions" in config && !isMap(config.exceptions)) throw new GuardConfigError(`${CONFIG_FILE}: exceptions is { "<route folder>": "<reason>" } — each route outside the content engine, with the reason it stays there`);
   if ("owners" in config && !(isMap(config.owners) && Object.entries(config.owners).every(([part, files]) => OWNED.includes(part) && isMap(files)))) throw new GuardConfigError(`${CONFIG_FILE}: owners is { ${OWNED.map((part) => `"${part}": { "<file>": "<reason>" }`).join(", ")} } — the files that own a part, each with the reason it does`);
   if ("allow" in config && !(Array.isArray(config.allow) && config.allow.every(isMap))) throw new GuardConfigError(`${CONFIG_FILE}: allow is a list of { "rule": "agentic-cms/<rule>", "files": ["<glob>", …], "reason": "<why the site keeps its own>" } — the preferred rules a file keeps its own choice of`);
-  if ("baseline" in config && !Array.isArray(config.baseline)) throw new GuardConfigError(`${CONFIG_FILE}: baseline is a list of { "file", "rule", "count", "reason" } — the engine bypasses and the example's leftovers the site had when it took 0.8.2, which agentic-cms check-site --baseline writes`);
+  if ("baseline" in config && !Array.isArray(config.baseline)) throw new GuardConfigError(`${CONFIG_FILE}: baseline is a list of { "file", "rule", "count", "reason" } — what the site already held when it took the kit's rules (its engine bypasses, its sections' composition, the example's leftovers), which agentic-cms check-site --baseline writes`);
   return config;
 }
 
@@ -402,15 +403,23 @@ export async function checkPreset({ root, config, ESLint }) {
   return { findings: [...findings, ...await baselineTold(site, root, options.baseline)], warnings };
 }
 
-/** Each file the baseline holds an engine rule's count for: the count its settings carry (none when eslint.config.mjs does not pass the list), a finding where the two differ. */
+/**
+ * Each file the baseline holds an ESLint rule's count for: the count its
+ * settings carry (none when eslint.config.mjs does not pass the list), and
+ * for a composition rule the count of the processor that holds it (none when
+ * a later block set another processor); a finding where they differ.
+ */
 async function baselineTold(site, root, baseline) {
-  const counts = new Map();
-  for (const { file, rule, count } of baseline.filter((entry) => REQUIRED.includes(entry.rule))) counts.set(file, { ...counts.get(file), [rule]: count });
   const out = [];
-  for (const [file, rules] of counts) {
+  for (const [file, rules] of eslintCounts(baseline)) {
     const actual = await site.calculateConfigForFile(path.join(root, file));
-    const told = actual?.settings?.["agentic-cms"]?.baseline ?? {};
-    for (const [rule, count] of Object.entries(rules).filter(([rule, count]) => actual && told[rule] !== count)) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and ESLint is told ${told[rule] ?? "none"}: the rule fails every one`, BASELINE_FIX));
+    if (!actual) continue;
+    const told = actual.settings?.["agentic-cms"]?.baseline ?? {};
+    const processor = actual.processor?.meta?.name === PROCESSOR ? actual.processor.counts : {};
+    for (const [rule, count] of Object.entries(rules)) {
+      if (told[rule] !== count) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and ESLint is told ${told[rule] ?? "none"}: the rule fails every one`, BASELINE_FIX));
+      else if (rule in compositionCounts(rules) && processor[rule] !== count) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and no processor holds it: a block after componentRules() sets another processor on the file, so the rule fails every one`, `${BASELINE_FIX}; the file's own processor goes before componentRules()`));
+    }
   }
   return out;
 }

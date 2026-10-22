@@ -1,11 +1,15 @@
-// The baseline: the engine bypasses and the kit example's leftovers a site
-// had when it took 0.8.2, kept in src/config/components.json (`baseline`) so
-// its CI stays green while each entry moves onto its engine, one pull
-// request at a time. The list only shrinks (docs/roadmap-0.8.2.md D3 (b),
-// job 7); `agentic-cms check-site --baseline` writes it. An entry is
-// { file, rule, count, reason }: the file, root-relative; the rule, an
-// engine's ESLint rule (agentic-cms/copy, head, forms, tags, email) or one of
-// the site check's (rounds; example-brand and example-content, its
+// The baseline: what a site already held when it took the kit's rules —
+// its engine bypasses, its sections' and patterns' composition, the kit
+// example's leftovers — kept in src/config/components.json (`baseline`) so
+// its CI stays green while each entry is fixed, one pull request at a time,
+// and new code meets the full rules. The list only shrinks
+// (docs/roadmap-0.8.2.md D3 (b), job 7); `agentic-cms check-site --baseline`
+// writes it. An entry is { file, rule, count, reason }: the file,
+// root-relative; the rule, an engine's ESLint rule (agentic-cms/copy, head,
+// forms, tags, email), a composition rule componentRules() sets on a
+// section, a pattern or a layer's imports (no-restricted-syntax,
+// react/forbid-elements, react/no-multi-comp, no-restricted-imports) or one
+// of the site check's (rounds; example-brand and example-content, its
 // leftovers pass's, the first of which the content lint reads too); how many
 // findings of it the file holds; and the owner's reason it is still there,
 // "" until they give one. Who holds what:
@@ -15,6 +19,9 @@
 //     off is left out, as ESLint leaves it out), every finding and one line
 //     on the count when it has more, one line asking for the entry to shrink
 //     when it has fewer;
+//   - the composition rules, ESLint's and the react plugin's, read no
+//     setting: a processor on the file holds them the same way, once ESLint
+//     has run them and its inline directives (baselineProcessor());
 //   - the site check holds its rules the same way (holdFindings()), fails an
 //     entry that does not read, and, against the merge base, one added or
 //     raised (baselineGrowth());
@@ -26,14 +33,18 @@ import { PLUGIN, REQUIRED } from "./engine-rules.mjs";
 
 /** The guard's config, where the list lives (check-components' CONFIG_FILE, which imports this module through the preset). */
 const CONFIG_FILE = "src/config/components.json";
+/** The composition rules a baseline holds: what componentRules() sets on a section and a pattern (one component a file, no raw element, no style, arbitrary value, visual or motion class) and on each layer's imports. */
+export const COMPOSITION_RULES = ["no-restricted-syntax", "react/forbid-elements", "react/no-multi-comp", "no-restricted-imports"];
+/** The rules ESLint holds a baseline's counts for: the engines' and the composition's. */
+export const ESLINT_RULES = [...REQUIRED, ...COMPOSITION_RULES];
 /** The site check's rules a baseline holds: a round made by hand, and the example's leftovers. */
 export const SITE_RULES = ["rounds", "example-brand", "example-content"];
 /** Every rule an entry may name. */
-export const BASELINE_RULES = [...REQUIRED, ...SITE_RULES];
+export const BASELINE_RULES = [...ESLINT_RULES, ...SITE_RULES];
 /** How an entry moves off the list, said once for every message. */
 export const SHRINK = "agentic-cms check-site --baseline shrinks the entry to what is left (it never grows one)";
 /** The comment `--baseline` writes beside the list in a config that has none. */
-export const COMMENT = "The engine bypasses and the kit example's leftovers this site had when it took 0.8.2, as agentic-cms check-site --baseline wrote them: each entry the file, the rule, how many findings of it the file holds, and the owner's reason it is still here. The engines' rules and the site check stay quiet on them while the count holds, and the list only shrinks: an entry leaves, or its count falls, as its findings move onto their engine, one pull request at a time (docs/migrating-to-0.8.2.md). A site from init 0.8.2 or later starts with none and takes none.";
+export const COMMENT = "What this site already held when it took the kit's rules (its engine bypasses, its sections' and patterns' composition, the kit example's leftovers), as agentic-cms check-site --baseline wrote it: each entry the file, the rule, how many findings of it the file holds, and the owner's reason it is still here. ESLint and the site check stay quiet on them while the count holds, and the list only shrinks: an entry leaves, or its count falls, as its findings are fixed, one pull request at a time (docs/migrating-to-0.8.2.md). New code meets the full rules. A site from init 0.8.2 or later starts with none and takes none.";
 
 const key = ({ file, rule }) => `${rule}\0${file}`;
 const isMap = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -62,11 +73,28 @@ export function checkBaseline(baseline) {
 /** A path as a glob that matches it alone: a route folder's brackets and parentheses escaped. */
 export const literalGlob = (file) => file.replace(/[\\*?[\]{}()!+@]/g, "\\$&");
 
-/** The flat configs that tell each baselined file's engine rules their counts: settings["agentic-cms"].baseline = { rule: count }. */
-export function baselineConfigs(baseline) {
+/** Each file's counts of the rules ESLint holds, file → { rule: count }. */
+export function eslintCounts(baseline) {
   const counts = new Map();
-  for (const { file, rule, count } of validBaseline(baseline).filter((entry) => REQUIRED.includes(entry.rule))) counts.set(file, { ...counts.get(file), [rule]: count });
-  return [...counts].map(([file, rules]) => ({ files: [literalGlob(file)], settings: { [PLUGIN]: { baseline: rules } } }));
+  for (const { file, rule, count } of validBaseline(baseline).filter((entry) => ESLINT_RULES.includes(entry.rule))) counts.set(file, { ...counts.get(file), [rule]: count });
+  return counts;
+}
+
+/** The composition rules' share of a file's counts. */
+export const compositionCounts = (rules) => Object.fromEntries(Object.entries(rules).filter(([rule]) => COMPOSITION_RULES.includes(rule)));
+
+/**
+ * The flat configs that tell each baselined file its counts: every rule's in
+ * settings["agentic-cms"].baseline = { rule: count }, which the engines'
+ * rules read (and the guard checks), and the composition rules' in the
+ * processor that holds them. A file the baseline holds a composition count
+ * for takes this processor in place of any other a block before it set.
+ */
+export function baselineConfigs(baseline) {
+  return [...eslintCounts(baseline)].map(([file, rules]) => {
+    const composition = compositionCounts(rules);
+    return { files: [literalGlob(file)], settings: { [PLUGIN]: { baseline: rules } }, ...(Object.keys(composition).length ? { processor: baselineProcessor(composition) } : {}) };
+  });
 }
 
 const DIRECTIVE = /^\s*(eslint-disable-next-line|eslint-disable-line|eslint-disable|eslint-enable)(?:\s+([^]*?))?\s*$/;
@@ -99,16 +127,21 @@ const fewer = (n) => `${n} ${n === 1 ? "is" : "are"} left`;
 /** Where a report points: its loc's start, or its node's. */
 const startOf = (descriptor) => descriptor.loc?.start ?? (descriptor.loc?.line ? descriptor.loc : descriptor.node.loc.start);
 
+/** The line a baselined file's rule ends with when fewer than its count are left. */
+const shrinkMessage = (held, left) => `The baseline (${CONFIG_FILE}) holds ${held} of this rule here and ${fewer(left)}: ${SHRINK}, in this pull request — an entry that holds more than its file has would let a new one in unseen.`;
+/** The line it ends with when more are there, after every finding. */
+const pastMessage = (found, held) => `${found} of this rule here, and the baseline (${CONFIG_FILE}) holds ${held}: the baseline only shrinks, so the file takes no new one. Each of these is fixed as its message says; at the count or under it, the file passes again.`;
+
 /** What a baselined file's rule says at the end: nothing when the count holds, a line asking to shrink when fewer are left, every finding and a line on the count when more. */
 function settle(context, held, pending) {
   const top = { line: 1, column: 0 };
   if (pending.length === held) return;
   if (pending.length < held) {
-    context.report({ loc: top, message: `The baseline (${CONFIG_FILE}) holds ${held} of this rule here and ${fewer(pending.length)}: ${SHRINK}, in this pull request — an entry that holds more than its file has would let a new one in unseen.` });
+    context.report({ loc: top, message: shrinkMessage(held, pending.length) });
     return;
   }
   for (const descriptor of pending) context.report(descriptor);
-  context.report({ loc: top, message: `${pending.length} of this rule here, and the baseline (${CONFIG_FILE}) holds ${held}: the baseline only shrinks, so the file takes no new one. Each of these moves onto its engine as its message says; at the count or under it, the file passes again.` });
+  context.report({ loc: top, message: pastMessage(pending.length, held) });
 }
 
 /**
@@ -134,6 +167,49 @@ export function heldByBaseline(ruleId, rule) {
     },
   };
 }
+
+/** The processor's name, which the guard looks for on a file the baseline holds a composition count for. */
+export const PROCESSOR = `${PLUGIN}/baseline`;
+
+/**
+ * A file's messages with its composition counts ({ rule: count }) held, as
+ * settle() holds an engine rule's: a rule's errors that no inline directive
+ * turned off (ESLint marks those with `suppressions`, and they are left as
+ * they are) drop out while there are at most its count, with a line asking to
+ * shrink when there are fewer; past it, every one stays and a line on the
+ * count comes first. The lines sit at the file's top, sorted as ESLint sorts.
+ */
+export function holdMessages(messages, counts) {
+  const top = { line: 1, column: 1 };
+  const dropped = new Set();
+  const lines = [];
+  for (const [rule, held] of Object.entries(counts)) {
+    const live = messages.filter((message) => message.ruleId === rule && message.severity === 2 && !message.suppressions?.length);
+    if (live.length > held) { lines.push({ ruleId: rule, severity: 2, message: pastMessage(live.length, held), ...top }); continue; }
+    for (const message of live) dropped.add(message);
+    if (live.length < held) lines.push({ ruleId: rule, severity: 2, message: shrinkMessage(held, live.length), ...top });
+  }
+  return [...lines, ...messages.filter((message) => !dropped.has(message))].sort((a, b) => a.line - b.line || a.column - b.column);
+}
+
+/**
+ * The processor that holds a file's composition counts: the file's text
+ * as it is, then its messages through holdMessages(). Its meta names the
+ * counts, so ESLint's cache tells one file's apart from another's; `counts`
+ * is there for the guard to read.
+ */
+export function baselineProcessor(counts) {
+  return {
+    meta: { name: PROCESSOR, version: Object.entries(counts).map(([rule, count]) => `${rule}=${count}`).join(",") },
+    counts,
+    supportsAutofix: true,
+    preprocess: (text) => [text],
+    postprocess: (lists) => holdMessages(lists.flat(), counts),
+  };
+}
+
+/** What `--baseline` lints a held file with in its processor's place: the messages as ESLint made them. */
+const UNHELD = { meta: { name: `${PLUGIN}/unheld`, version: "1" }, supportsAutofix: true, preprocess: (text) => [text], postprocess: (lists) => lists.flat() };
 
 /** The file a finding names, its `:line` left off: what an entry is keyed by. */
 export const findingFile = (file) => String(file).replace(/:\d+$/, "");
@@ -168,7 +244,7 @@ export function holdFindings(findings, baseline, exists = () => true) {
   const grown = new Map();
   const stale = [];
   for (const entry of validBaseline(baseline)) {
-    if (REQUIRED.includes(entry.rule)) { if (!exists(entry.file)) stale.push(staleFinding(entry, 0)); continue; }
+    if (ESLINT_RULES.includes(entry.rule)) { if (!exists(entry.file)) stale.push(staleFinding(entry, 0)); continue; }
     const found = groups.get(key(entry))?.findings ?? [];
     if (found.length <= entry.count) for (const finding of found) held.add(finding);
     if (found.length < entry.count) stale.push(staleFinding(entry, found.length));
@@ -304,14 +380,18 @@ export function baselineCounts(root, rule, fs = nodeFs) {
 }
 
 /**
- * The engines' findings across the site as ESLint reads it, the baseline
- * ignored: [{ check, rule, file, problem }], `file` with its `:line`. ESLint
- * is the site's own (its eslint.config.mjs), told through its settings to
- * report what a baseline would hold. Async; `ESLint` comes in for the tests.
+ * The findings across the site of the rules ESLint holds a baseline for, the
+ * engines' and the composition's, the baseline ignored: [{ check, rule, file,
+ * problem }], `file` with its `:line`, errors alone. ESLint is the site's own
+ * (its eslint.config.mjs), told through its settings to report what the
+ * engines' rules would hold, and the files the current `baseline` holds a
+ * composition count for linted without the processor that holds them.
+ * Async; `ESLint` comes in for the tests.
  */
-export async function engineFindings({ root, ESLint }) {
+export async function lintFindings({ root, ESLint, baseline = [] }) {
   ESLint ??= (await import("eslint")).ESLint;
-  const eslint = new ESLint({ cwd: root, overrideConfig: [{ settings: { [PLUGIN]: { ignoreBaseline: true } } }] });
+  const held = [...eslintCounts(baseline)].filter(([, rules]) => Object.keys(compositionCounts(rules)).length).map(([file]) => literalGlob(file));
+  const eslint = new ESLint({ cwd: root, overrideConfig: [{ settings: { [PLUGIN]: { ignoreBaseline: true } } }, ...(held.length ? [{ files: held, processor: UNHELD }] : [])] });
   const results = await eslint.lintFiles(["."]);
-  return results.flatMap((result) => result.messages.filter((message) => REQUIRED.includes(message.ruleId)).map((message) => ({ check: message.ruleId, rule: message.ruleId, file: `${path.relative(root, result.filePath).split(path.sep).join("/")}:${message.line}`, problem: message.message })));
+  return results.flatMap((result) => result.messages.filter((message) => ESLINT_RULES.includes(message.ruleId) && message.severity === 2).map((message) => ({ check: message.ruleId, rule: message.ruleId, file: `${path.relative(root, result.filePath).split(path.sep).join("/")}:${message.line}`, problem: message.message })));
 }
