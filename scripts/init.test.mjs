@@ -336,7 +336,7 @@ test("the kit's own lines in the example's code stay in the kit: siteCode leaves
     const text = read(KIT, file);
     assert.ok(text.includes(lines), `${file} carries the kit's own lines where init expects them`);
     assert.equal(siteCode(file, text), text.replace(lines, ""));
-    assert.throws(() => siteCode(file, text.replace(lines, "")), (error) => error instanceof StarterError && new RegExp(`^${file.replace(/[./]/g, "\\$&")}: the kit's ignore of src/lib is not where init expects it`).test(error.message));
+    assert.throws(() => siteCode(file, text.replace(lines, "")), (error) => error instanceof StarterError && error.message.startsWith(`${file}: the kit's ignore of src/lib is not where init expects it`));
   }
   assert.doesNotThrow(() => JSON.parse(siteCode("src/config/components.json", read(KIT, "src/config/components.json"))), "the guard's config still reads");
   assert.equal(siteCode("src/app/layout.tsx", "x"), "x", "every other file as it is");
