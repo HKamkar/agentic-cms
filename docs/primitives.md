@@ -121,11 +121,17 @@ names the engine to use and its doc.
     `aria-valuetext`, `aria-placeholder`, `placeholder`, `label`,
     `heading`, `eyebrow`, `text`, `body`, `description`, `caption`,
     `subtitle`, `summary`, `quote`; a field of that name in data (an array
-    at the top of the file, an inline object) and a prop's default too;
+    at the top of the file, an inline object) and a prop's default too,
+    unless its value is a name or a class string (a class map's
+    `text: "text-steel"`, `label: "font-label uppercase"`);
   - any other prop of a component whose string reads as words: a space, a
     capital or a letter outside ASCII in it (`note="Since 2019"`). A token
     reads as no words (`variant="primary"`, `ratio="aspect-video"`,
-    `icon="arrow-right"`) and passes;
+    `icon="arrow-right"`) and passes, and so do a camelCase name
+    (`effect="fadeIn"`) and a string of utility classes in any prop
+    (`padding="flex flex-col gap-6 lg:p-8"`: every class a Tailwind
+    utility, at least one with a value or a variant, so lowercase prose is
+    never one);
   - on a native element, `value` when it reads as words, and HTML handed
     to `dangerouslySetInnerHTML` outside a `<script>` or a `<style>`.
 
@@ -140,7 +146,9 @@ names the engine to use and its doc.
   `stroke`; by their shape, `data-*`, the `aria-*` attributes that are not
   copy (ids, states), event handlers (`on…`), and a name ending in
   `ClassName`, `Id`, `Href`, `Src`, `Url` or `As` (`headingClassName`,
-  `ctaHref`, `headingAs`); and `copy.skip`, a site's own.
+  `ctaHref`, `headingAs`); `preset` on the play-once layer's components
+  (imported from `agentic-cms/ix`: `preset="slideInLeft"`); and
+  `copy.skip`, a site's own.
 
   What passes: a symbol (`→`, `·`), which has no letter; the text and the
   props of an `aria-hidden` element and everything under it; the props
@@ -309,7 +317,7 @@ prints no warning.
 | `copy` | `{ props: [the copy props above], skip: [], decorations: ["Placeholder", "TypeTag"], tools: ["agentic-cms/lab"] }` | the props whose strings are copy (replacing the list); the site's own props whose strings never are (added to the rule's); the primitives that draw their props and children `aria-hidden`; the design tools' modules. Required: `false` throws |
 | `owners` | `{}` | `{ forms, tags, images, icons, motion }`: the files that own a `<form>`, a tag, an eager `<img>`, an `<svg>` or motion, as `{ "<file>": "<reason>" }` or a list of globs |
 | `allow` | `[]` | a list of `{ rule, files, reason }`: a preferred rule a site keeps its own choice of, in those files, with its reason; a required rule, an unknown one or an entry with no reason throws |
-| `baseline` | `[]` | `src/config/components.json`'s list of `{ file, rule, count, reason }`, the engine bypasses a site had when it took 0.8.2: each engine rule stays quiet in a listed file while it holds no more than the count ([§ The whole site](#the-whole-site-agentic-cms-check-site)); an entry that does not read throws |
+| `baseline` | `[]` | `src/config/components.json`'s list of `{ file, rule, count, reason }`, what a site already had when it took the rules (its engine bypasses, its sections' composition findings): each engine or composition rule stays quiet in a listed file while it holds no more than the count ([§ The whole site](#the-whole-site-agentic-cms-check-site)); an entry that does not read throws |
 | `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
 | `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban and the engines cover, and the tsconfig alias for it |
@@ -509,8 +517,10 @@ its own:
   content). Each names the fix: the site's own, or delete it, a live URL
   retired with `/editorial:retire-content`. The kit's own repository,
   whose example is the example, is exempt.
-- **`baseline`**: the engine bypasses and the leftovers a site had when it
-  took 0.8.2, which `check-site --baseline` writes into the config:
+- **`baseline`**: what a site already had when it took the rules — its
+  engine bypasses, what its sections and patterns break of the composition
+  rules, the example's leftovers — which `check-site --baseline` writes
+  into the config:
 
   ```json
   "baseline": [
@@ -518,21 +528,28 @@ its own:
   ]
   ```
 
-  An entry's rule is an engine's ESLint rule, `rounds`, `example-brand` or
+  An entry's rule is an engine's ESLint rule, a composition rule
+  (`no-restricted-syntax`, `react/forbid-elements`, `react/no-multi-comp`,
+  `no-restricted-imports`), `rounds`, `example-brand` or
   `example-content`; never a preferred rule, whose warning stays until it
-  has its reason, and never a gate or the config's own. The engines' rules
-  hold their entries in ESLint (`componentRules({ baseline })`, which
-  `eslint.config.mjs` passes from the config as it passes `allow`), the
-  site check the rest, and the content lint its `example-brand`: quiet
+  has its reason, a warning of any rule, a gate or the config's own.
+  ESLint holds the engines' and the composition rules' entries
+  (`componentRules({ baseline })`, which `eslint.config.mjs` passes from
+  the config as it passes `allow`: the engines' rules read their counts
+  from the file's settings, and a processor on the file holds the
+  composition rules', which read none), the site check the rest, and the
+  content lint its `example-brand`: quiet
   while the file holds no more than the count, every finding and a line on
   the count past it, and under it a line asking for the entry to shrink, so
-  a fixed bypass makes no room for a new one. An entry that does not read
-  is a finding, one with no reason a warning, and the guard's `preset`
-  fails a file whose count ESLint is not told. `--baseline` writes the
-  whole list where the config has none (each reason empty, for the owner),
-  and from then on only shrinks it: an entry gone or lowered, growth
-  refused. A site from `init` 0.8.2 starts with `"baseline": []`, and takes
-  nothing ([migrating-to-0.8.2.md](migrating-to-0.8.2.md)).
+  a fixed bypass makes no room for a new one. A file it does not list
+  meets every rule. An entry that does not read is a finding, one with no
+  reason a warning, and the guard's `preset` fails a file whose count
+  ESLint is not told (a later block that set another processor on it among
+  them). `--baseline` writes the whole list the first time — the config has
+  none, or an empty one the merge base has none of — each reason empty, for
+  the owner, and from then on only shrinks it: an entry gone or lowered,
+  growth refused. A site from `init` 0.8.2 starts with `"baseline": []`
+  committed, and takes nothing ([migrating-to-0.8.2.md](migrating-to-0.8.2.md)).
 
 Each finding names its file, the pass and the fix; exit 1 on any, the
 components pass's included, and 2 when the config is missing or does not

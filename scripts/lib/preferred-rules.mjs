@@ -20,7 +20,9 @@
 //     the patterns, which fail these already).
 // The required tier, the engines, is ./engine-rules.mjs.
 
-import { attribute, elementName, PLUGIN, staticValue, strings } from "./engine-rules.mjs";
+import { attribute, elementName, parseClasses, PLUGIN, staticValue, strings } from "./engine-rules.mjs";
+
+export { parseClasses };
 
 /** The preferred rules, by their full names. */
 export const PREFERRED = ["motion", "graphics", "images", "icons", "styling"].map((rule) => `${PLUGIN}/${rule}`);
@@ -69,22 +71,6 @@ function imports(check) {
     ImportExpression(node) { if (literal(node.source)) check(node, node.source.value); },
     "CallExpression[callee.name='require']"(node) { if (literal(node.arguments[0])) check(node, node.arguments[0].value); },
   };
-}
-
-/** A class list's classes, each as { text, variants, utility }: split on whitespace, then on the colons outside brackets and parentheses; the utility without its `!` and its leading `-`. */
-export function parseClasses(text) {
-  return text.split(/\s+/).filter(Boolean).map((cls) => {
-    const parts = [];
-    let depth = 0;
-    let start = 0;
-    for (let i = 0; i < cls.length; i++) {
-      if ("[(".includes(cls[i])) depth++;
-      else if ("])".includes(cls[i])) depth = Math.max(0, depth - 1);
-      else if (cls[i] === ":" && depth === 0) { parts.push(cls.slice(start, i)); start = i + 1; }
-    }
-    const utility = cls.slice(start).replace(/^!|!$/g, "").replace(/^-/, "");
-    return { text: cls, variants: parts, utility };
-  });
 }
 
 /** Visitors that hand every class list — a className's strings, a cx() or variants() call's — to `check(node, text)`, each string once. */

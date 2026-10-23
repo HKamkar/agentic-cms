@@ -27,8 +27,46 @@ export const REQUIRED = ["copy", "head", "forms", "tags", "email"].map((rule) =>
 const WORDS = /[\p{L}\p{N}]/u;
 /** A token, never words: printable ASCII without a space or a capital (a variant, a size, a key, a path, a number). */
 const TOKEN = /^[!-@[-~]*$/;
+/** A camelCase name, never words: a preset, a key, an identifier (`slideInLeft`, `fadeIn`). */
+const CAMEL = /^[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)+$/;
+/** A kebab-case name, never words: a class, a variant, a key (`text-steel`, `arrow-right`). */
+const KEBAB = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;
+/** The utilities Tailwind writes with no value, which a class string may hold beside the valued ones. */
+const BARE_UTILITIES = new Set(["flex", "grid", "block", "inline", "inline-block", "inline-flex", "inline-grid", "contents", "hidden", "table", "flow-root", "relative", "absolute", "fixed", "sticky", "static", "isolate", "italic", "underline", "overline", "line-through", "no-underline", "uppercase", "lowercase", "capitalize", "normal-case", "truncate", "container", "grow", "shrink", "border", "rounded", "shadow", "outline", "ring", "invisible", "visible", "collapse", "antialiased", "sr-only", "not-sr-only", "group", "peer", "prose", "transform", "filter", "blur", "transition"]);
 const reads = (text) => WORDS.test(text);
-const readsAsWords = (text) => reads(text) && !TOKEN.test(text);
+const readsAsWords = (text) => reads(text) && !TOKEN.test(text) && !CAMEL.test(text) && !classString(text);
+/** A field named like copy, in data, judged by its value: copy unless the value is a name (kebab or camel case) or a class string. */
+const readsAsCopy = (text) => reads(text) && !KEBAB.test(text) && !CAMEL.test(text) && !classString(text);
+
+/** A class list's classes, each as { text, variants, utility }: split on whitespace, then on the colons outside brackets and parentheses; the utility without its `!` and its leading `-`. */
+export function parseClasses(text) {
+  return text.split(/\s+/).filter(Boolean).map((cls) => {
+    const parts = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < cls.length; i++) {
+      if ("[(".includes(cls[i])) depth++;
+      else if ("])".includes(cls[i])) depth = Math.max(0, depth - 1);
+      else if (cls[i] === ":" && depth === 0) { parts.push(cls.slice(start, i)); start = i + 1; }
+    }
+    const utility = cls.slice(start).replace(/^!|!$/g, "").replace(/^-/, "");
+    return { text: cls, variants: parts, utility };
+  });
+}
+
+/**
+ * A string of utility classes, which holds no words: every class printable
+ * ASCII with no capital outside its brackets, its utility a bare one
+ * (BARE_UTILITIES) or one with a value (`gap-6`, `p-[3px]`, `w-1/2`,
+ * `[mask-type:alpha]`), and at least one class with a value or a variant, so
+ * lowercase prose (`free shipping`) never reads as one.
+ */
+export function classString(text) {
+  const classes = parseClasses(text);
+  const valued = (utility) => /^[a-z][a-z0-9]*(?:-\S|\[)/.test(utility) || /^\[[^\]]+\]$/.test(utility);
+  const utility = ({ text: cls, utility: name }) => /^[!-~]+$/.test(cls) && !/[A-Z]/.test(cls.replace(/\[[^\]]*\]|\([^)]*\)/g, "")) && (BARE_UTILITIES.has(name) || valued(name));
+  return classes.length > 0 && classes.every(utility) && classes.some(({ variants, utility: name }) => variants.length > 0 || valued(name));
+}
 
 /** The props whose strings are copy whenever they have a letter or a digit in them, on any element. */
 export const COPY_PROPS = ["children", "title", "alt", "aria-label", "aria-description", "aria-roledescription", "aria-valuetext", "aria-placeholder", "placeholder", "label", "heading", "eyebrow", "text", "body", "description", "caption", "subtitle", "summary", "quote"];
@@ -137,33 +175,42 @@ const copySchema = [{
 
 /** The modules whose components are the kit's design tools, which never ship: their props name a block for review (a study, a timeline) and are no copy. */
 export const TOOLS = ["agentic-cms/lab"];
+/** The kit's play-once layer, whose components' `preset` names an effect (`slideInLeft`), never copy. */
+const MOTION_LAYER = "agentic-cms/ix";
 
 /**
  * Copy: text with a letter or a digit in it, where a reader sees it. JSX
- * text; a copy prop's string (COPY_PROPS, or `props`) on any element, and
- * a data field of that name; on a component, any other prop's string that
- * reads as words (a space or a capital in it, or a letter outside ASCII) —
- * but the props SKIPPED_PROPS and SKIPPED_PATTERN name, and `skip`; on a
- * native element, `value` when it reads as words, and HTML handed to
+ * text; a copy prop's string (COPY_PROPS, or `props`) on any element; a
+ * data field of that name unless its value is a name or a class string
+ * (`text: "text-steel"` in a class map); on a component, any other prop's
+ * string that reads as words (a space or a capital in it, or a letter
+ * outside ASCII) — but the props SKIPPED_PROPS and SKIPPED_PATTERN name,
+ * `skip`, and `preset` on the play-once layer's components; on a native
+ * element, `value` when it reads as words, and HTML handed to
  * dangerouslySetInnerHTML outside a <script> or a <style>. A symbol (→, ·)
- * has no letter; a token (`primary`, `aspect-video`, `24/7`) reads as no
- * words; anything under or among the props of an aria-hidden element or a
- * decoration (`decorations`) is a decoration; the props of a component
- * imported from a design tool's module (`tools`) are the tool's words, what
- * it wraps still copy. The message says where the copy goes from this
- * `place` (`route`).
+ * has no letter; a token (`primary`, `aspect-video`, `24/7`), a camelCase
+ * name (`slideInLeft`) and a string of utility classes (`flex flex-col
+ * gap-6`) read as no words; anything under or among the props of an
+ * aria-hidden element or a decoration (`decorations`) is a decoration; the
+ * props of a component imported from a design tool's module (`tools`) are
+ * the tool's words, what it wraps still copy. The message says where the
+ * copy goes from this `place` (`route`).
  */
 const copy = {
   meta: { type: "problem", docs: { description: "Every word a reader sees comes from content/ or site.ts's chrome, through props (the content engine)." }, schema: copySchema },
   create(context) {
     const { props = COPY_PROPS, skip = [], decorations = [], tools = TOOLS, place = "code", route = "every word a reader sees comes from content/ or the chrome in src/config/site.ts, through props." } = context.options[0] ?? {};
     const toolNames = new Set();
+    const motionNames = new Set();
     const pass = `Symbols pass, and decorations: aria-hidden text${decorations.length ? ` and the props and children of ${decorations.join(", ")}` : ""}.${tail(`the content engine; the copy rule is ${docs("docs/primitives.md § Enforced")}`)}`;
     const report = (node, what) => context.report({ node, message: `No copy ${what}in ${place}: ${route} ${pass}` });
     const skipped = (name) => SKIPPED_PROPS.includes(name) || skip.includes(name) || SKIPPED_PATTERN.test(name);
     const each = (node, test, what) => { for (const piece of strings(node)) if (test(piece.text)) report(piece.node, what); };
     return {
-      ImportDeclaration(node) { if (tools.includes(node.source.value)) for (const spec of node.specifiers) toolNames.add(spec.local.name); },
+      ImportDeclaration(node) {
+        if (tools.includes(node.source.value)) for (const spec of node.specifiers) toolNames.add(spec.local.name);
+        if (node.source.value === MOTION_LAYER) for (const spec of node.specifiers) motionNames.add(spec.local.name);
+      },
       JSXText(node) { if (reads(node.value) && !decorated(node, decorations)) report(node, ""); },
       JSXExpressionContainer(node) {
         if (["JSXElement", "JSXFragment"].includes(node.parent.type) && !decorated(node, decorations)) each(node.expression, reads, "");
@@ -175,11 +222,12 @@ const copy = {
         if (!node.value || decorated(node, decorations) || toolNames.has(element.split(".")[0])) return;
         if (props.includes(name)) return each(node.value, reads, `in a prop (${name}) `);
         if (name === "dangerouslySetInnerHTML") return element === "script" || element === "style" ? undefined : html(node.value);
+        if (name === "preset" && motionNames.has(element.split(".")[0])) return;
         if (intrinsic(element) ? name === "value" : !skipped(name)) each(node.value, readsAsWords, `in a prop (${name}) `);
       },
       Property(node) {
         const key = node.key.type === "Identifier" ? node.key.name : node.key.value;
-        if (!node.computed && props.includes(key) && !decorated(node, decorations)) each(node.value, reads, `in data (a ${key} field) `);
+        if (!node.computed && props.includes(key) && !decorated(node, decorations)) each(node.value, readsAsCopy, `in data (a ${key} field) `);
       },
     };
     function html(value) {

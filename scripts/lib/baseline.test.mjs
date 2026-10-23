@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { test } from "node:test";
 import { Linter } from "eslint";
-import { baselineConfigs, baselineCounts, baselineGrowth, BASELINE_RULES, baselineText, checkBaseline, directiveCover, engineFindings, entryFindings, entryProblem, holdFindings, literalGlob, nextBaseline, topLevelValue, validBaseline, withBaseline } from "./baseline.mjs";
+import { baselineConfigs, baselineCounts, baselineGrowth, BASELINE_RULES, baselineText, checkBaseline, directiveCover, entryFindings, entryProblem, holdFindings, holdMessages, lintFindings, literalGlob, nextBaseline, PROCESSOR, topLevelValue, validBaseline, withBaseline } from "./baseline.mjs";
 import { componentRules } from "./component-lint.mjs";
+
+// The react plugin is the one eslint-config-next registers, as a site has it.
+const require = createRequire(import.meta.url);
+const react = createRequire(require.resolve("eslint-config-next"))("eslint-plugin-react");
 
 const entry = (file, rule, count, reason = "") => ({ file, rule, count, reason });
 const BASE = { files: ["**/*.{js,jsx,mjs,ts,tsx}"], languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } } };
@@ -31,6 +36,7 @@ test("an entry is a file, a rule a baseline holds, a count of 1 or more and a re
   assert.equal(entryProblem(entry("src/components/ui/Footer.tsx", "agentic-cms/email", 1)), null);
   assert.equal(entryProblem({ file: "content/blog/a.md", rule: "example-content", count: 2 }), null, "a reason left out is an empty one");
   assert.match(entryProblem(entry("src/x.tsx", "agentic-cms/motion", 1)), /preferred rule, which a baseline never holds/);
+  for (const rule of ["no-restricted-syntax", "react/forbid-elements", "react/no-multi-comp", "no-restricted-imports"]) assert.equal(entryProblem(entry("src/components/home/Hero.tsx", rule, 3)), null, `${rule}, a composition rule`);
   assert.match(entryProblem(entry("src/x.tsx", "no-console", 1)), new RegExp(BASELINE_RULES.join(", ")));
   assert.match(entryProblem(entry("src/x.tsx", "agentic-cms/copy", 0)), /1 or more/);
   assert.match(entryProblem(entry("/abs/x.tsx", "agentic-cms/copy", 1)), /root-relative/);
@@ -44,6 +50,9 @@ test("an entry is a file, a rule a baseline holds, a count of 1 or more and a re
 test("each file's counts reach its engine rules through ESLint's settings, a route folder's brackets escaped", () => {
   assert.equal(literalGlob(ROUTE), "src/app/\\[\\[...slug\\]\\]/page.tsx");
   assert.deepEqual(baselineConfigs([entry(ROUTE, "agentic-cms/copy", 2), entry(ROUTE, "agentic-cms/head", 1), entry("content/a.md", "example-brand", 1)]), [{ files: ["src/app/\\[\\[...slug\\]\\]/page.tsx"], settings: { "agentic-cms": { baseline: { "agentic-cms/copy": 2, "agentic-cms/head": 1 } } } }], "the site check's rules are none of ESLint's");
+  const [held] = baselineConfigs([entry(SECTION, "agentic-cms/copy", 1), entry(SECTION, "react/forbid-elements", 2), entry(SECTION, "no-restricted-syntax", 3)]);
+  assert.deepEqual(held.settings, { "agentic-cms": { baseline: { "agentic-cms/copy": 1, "react/forbid-elements": 2, "no-restricted-syntax": 3 } } }, "every count in the settings, which the guard reads");
+  assert.deepEqual([held.processor.meta, held.processor.counts], [{ name: PROCESSOR, version: "react/forbid-elements=2,no-restricted-syntax=3" }, { "react/forbid-elements": 2, "no-restricted-syntax": 3 }], "the composition rules' in a processor, named by its counts for ESLint's cache");
 });
 
 test("an engine rule holds a baselined file: quiet at its count, every finding and one line past it, one line asking to shrink under it", () => {
@@ -57,6 +66,44 @@ test("an engine rule holds a baselined file: quiet at its count, every finding a
   assert.equal(lint(PAGE, [entry(ROUTE, "agentic-cms/copy", 2)], { settings: { ignoreBaseline: true } }).length, 2, "--baseline's run sees every finding");
   assert.equal(lint(PAGE, [entry("src/app/other/page.tsx", "agentic-cms/copy", 2)]).length, 2, "another file's entry holds nothing here");
   assert.equal(lint(PAGE, [entry(ROUTE, "agentic-cms/head", 2)]).filter((m) => / agentic-cms\/copy /.test(m)).length, 2, "another rule's entry holds nothing of this one");
+});
+
+const SECTION = "src/components/home/Hero.tsx";
+/** A registered section from before the rules: a raw link and heading, a style, an arbitrary value, a second component, and one raw element kept with ESLint's own directive. */
+const HERO = [
+  "function Badge({ label }) {",
+  '  return <span className="p-[3px]">{label}</span>;',
+  "}",
+  "export function Hero({ heading, href, label }) {",
+  "  return (",
+  '    <div style={{ gap: 12 }}>',
+  "      <h2>{heading}</h2>",
+  "      <a href={href}><Badge label={label} /></a>",
+  "      {/* eslint-disable-next-line react/forbid-elements -- the legacy anchor, until the CTA primitive takes an icon */}",
+  "      <a href={href}>{label}</a>",
+  "    </div>",
+  "  );",
+  "}",
+  "",
+].join("\n");
+/** The composition errors of a section under componentRules() with a baseline, by rule: "line rule message". */
+function composition(code, baseline) {
+  const configs = [{ ...BASE, plugins: { react }, settings: { react: { version: "19" } } }, ...componentRules({ motion: null, patterns: null, sections: ["home"], baseline })];
+  return new Linter({ cwd: "/site" }).verify(code, configs, { filename: `/site/${SECTION}` }).filter((m) => m.severity === 2 && !m.ruleId?.startsWith("agentic-cms/")).map((m) => `${m.line} ${m.ruleId} ${m.message}`);
+}
+const COUNTS = { "no-restricted-syntax": 2, "react/forbid-elements": 2, "react/no-multi-comp": 1 };
+const asEntries = (counts, file = SECTION) => Object.entries(counts).map(([rule, count]) => entry(file, rule, count));
+
+test("the composition rules hold a baselined section as the engines' do: quiet at its counts, every finding and one line past one, one line asking to shrink under one; new files meet the full rules", () => {
+  const all = composition(HERO, []);
+  assert.deepEqual(Object.fromEntries(Object.keys(COUNTS).map((rule) => [rule, all.filter((m) => m.split(" ")[1] === rule).length])), COUNTS, all.join("\n"));
+  assert.deepEqual(composition(HERO, asEntries(COUNTS)), [], "at the counts: quiet (the anchor ESLint's own directive turns off is no finding)");
+  const past = composition(HERO, asEntries({ ...COUNTS, "react/forbid-elements": 1 }));
+  assert.deepEqual(past.filter((m) => / react\/forbid-elements /.test(m)).map((m) => m.replace(/(forbid-elements) (\d+ of this rule here|<\w+> is forbidden).*/, "$1 $2")), ["1 react/forbid-elements 2 of this rule here", "7 react/forbid-elements <h2> is forbidden", "8 react/forbid-elements <a> is forbidden"], "the count's line first, then every finding but the one ESLint's directive turns off");
+  assert.equal(past.length, 3, "the other rules stay held");
+  assert.deepEqual(composition(HERO, asEntries({ ...COUNTS, "react/no-multi-comp": 2 })).map((m) => m.replace(/ — .*/, "")), ["1 react/no-multi-comp The baseline (src/config/components.json) holds 2 of this rule here and 1 is left: agentic-cms check-site --baseline shrinks the entry to what is left (it never grows one), in this pull request"]);
+  assert.equal(composition(HERO, asEntries(COUNTS, "src/components/home/Other.tsx")).length, 5, "another file's entries hold nothing here");
+  assert.deepEqual(holdMessages([{ ruleId: "no-restricted-syntax", severity: 1, line: 3, column: 1, message: "a warning" }], { "no-restricted-syntax": 1 }).map((m) => m.message.slice(0, 40)), ["The baseline (src/config/components.json", "a warning"], "a warning is never held, nor counted");
 });
 
 test("ESLint's own directives count as ESLint counts them: a line, the next line, a block until its enable, the rules each names", () => {
@@ -120,7 +167,7 @@ test("--baseline's list: the whole of it the first time, then only ever shrunk, 
 test("the list is written into the config's text: the value replaced where the key is, else added last with its comment, every other byte kept", () => {
   const config = '{\n  "$comment": "a, \\"quoted\\" [note]",\n  "sections": ["home"],\n  "inherited": []\n}\n';
   const first = withBaseline(config, [entry("src/app/[[...slug]]/page.tsx", "agentic-cms/copy", 2)]);
-  assert.ok(first.startsWith('{\n  "$comment": "a, \\"quoted\\" [note]",\n  "sections": ["home"],\n  "inherited": [],\n  "$baseline": "The engine bypasses'));
+  assert.ok(first.startsWith('{\n  "$comment": "a, \\"quoted\\" [note]",\n  "sections": ["home"],\n  "inherited": [],\n  "$baseline": "What this site already held'));
   assert.ok(first.endsWith('  "baseline": [\n    { "file": "src/app/[[...slug]]/page.tsx", "rule": "agentic-cms/copy", "count": 2, "reason": "" }\n  ]\n}\n'), first);
   const again = withBaseline(first, []);
   assert.equal(again, first.replace(/"baseline": \[[^]*\]\n\}/, '"baseline": []\n}'));
@@ -136,12 +183,19 @@ test("the content lint reads one rule's counts from a site's config, none where 
   assert.deepEqual(baselineCounts("/site", "example-brand", fs("{}")), new Map());
 });
 
-test("the engines' findings are read from the site's ESLint with the baseline ignored, its required rules alone, each by file and line", async () => {
+test("the findings --baseline counts are read from the site's ESLint with the baseline ignored: the engines' and the composition's errors alone, each by file and line", async () => {
   let options;
   class ESLint {
     constructor(given) { options = given; }
-    async lintFiles() { return [{ filePath: "/site/src/a.tsx", messages: [{ ruleId: "agentic-cms/copy", line: 3, message: "No copy" }, { ruleId: "agentic-cms/motion", line: 4, message: "a warning" }, { ruleId: null, line: 1, message: "Parsing error" }] }]; }
+    async lintFiles() { return [{ filePath: "/site/src/a.tsx", messages: [{ ruleId: "agentic-cms/copy", severity: 2, line: 3, message: "No copy" }, { ruleId: "react/forbid-elements", severity: 2, line: 5, message: "Links are TextLink" }, { ruleId: "no-restricted-syntax", severity: 1, line: 6, message: "a site's own warning" }, { ruleId: "agentic-cms/motion", severity: 1, line: 4, message: "a warning" }, { ruleId: "no-console", severity: 2, line: 7, message: "not the kit's" }, { ruleId: null, severity: 2, line: 1, message: "Parsing error" }] }]; }
   }
-  assert.deepEqual(await engineFindings({ root: "/site", ESLint }), [{ check: "agentic-cms/copy", rule: "agentic-cms/copy", file: "src/a.tsx:3", problem: "No copy" }]);
+  assert.deepEqual(await lintFindings({ root: "/site", ESLint }), [{ check: "agentic-cms/copy", rule: "agentic-cms/copy", file: "src/a.tsx:3", problem: "No copy" }, { check: "react/forbid-elements", rule: "react/forbid-elements", file: "src/a.tsx:5", problem: "Links are TextLink" }]);
   assert.deepEqual(options.overrideConfig, [{ settings: { "agentic-cms": { ignoreBaseline: true } } }]);
+  await lintFindings({ root: "/site", ESLint, baseline: [entry(ROUTE, "agentic-cms/copy", 1), entry(SECTION, "react/forbid-elements", 2)] });
+  assert.deepEqual(options.overrideConfig[1].files, [SECTION], "a file held by a processor is linted without it");
+  const [unheld] = [options.overrideConfig[1].processor];
+  assert.deepEqual(unheld.postprocess([[{ ruleId: "react/forbid-elements", severity: 2, line: 5, column: 1, message: "Links" }]]).length, 1);
+  assert.equal(composition(HERO, asEntries(COUNTS)).length, 0);
+  const configs = [{ ...BASE, plugins: { react }, settings: { react: { version: "19" } } }, ...componentRules({ motion: null, patterns: null, sections: ["home"], baseline: asEntries(COUNTS) }), ...options.overrideConfig];
+  assert.equal(new Linter({ cwd: "/site" }).verify(HERO, configs, { filename: `/site/${SECTION}` }).filter((m) => m.severity === 2 && !m.ruleId?.startsWith("agentic-cms/")).length, 5, "with its override, every finding again");
 });

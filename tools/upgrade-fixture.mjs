@@ -18,6 +18,20 @@
 // edits: the gates in package.json, ESLint told the owners, the allow list
 // and the baseline, the guard's config the owners. `EXPECTED` is what
 // `check-site --baseline` must write, by rule: at least one entry of each.
+//
+// `UNGUARDED` is the guide's other start, a site that never took 0.8.0's
+// § 3.7: no guard's config, an ESLint config of Next's rules alone and no
+// ignore of the agent worktrees (one of which holds a copy ESLint cannot
+// parse), and a registered section from before the composition rules — raw
+// headings and a raw link, a style, an arbitrary value, a second component
+// in its file — that builds as it is. `PATHS` are the two the guide works
+// through on it: a site already on the content engine, and one whose page
+// is a route written by hand, its copy and its head in it. Each takes § 1
+// with § 3.7 inside it: the guard's config and the ESLint config as the
+// package gives a site (the fresh site's own, put back: `"baseline": []`
+// and the worktrees' ignore among them), the gates, the path's route
+// exceptions; `expected` is what its baseline must hold, file → rule →
+// count.
 
 /** package.json's scripts as init wrote them at 0.8.1. */
 const LEGACY_SCRIPTS = { lint: "eslint; s=$?; agentic-cms check-components || s=1; exit $s", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo" };
@@ -164,4 +178,123 @@ export const EXPECTED = {
 export function unexpected(baseline) {
   const held = new Set(baseline.map(({ file, rule }) => `${rule} ${file}`));
   return Object.entries(EXPECTED).flatMap(([rule, files]) => files.filter((file) => !held.has(`${rule} ${file}`)).map((file) => `no ${rule} entry for ${file}`));
+}
+
+/** eslint.config.mjs as a site that never took 0.8.0's § 3.7 has it: Next's rules alone, and no ignore of the agent worktrees. */
+const UNGUARDED_ESLINT = `import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+export default defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  {
+    rules: {
+      // Images are unoptimized plain <img> on purpose.
+      "@next/next/no-img-element": "off",
+    },
+  },
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".open-next/**", ".wrangler/**", "dist/**"]),
+]);
+`;
+
+/** The home page's service section as a site wrote it before the composition rules: raw headings and a raw link, a style, an arbitrary value, a second component in the file. */
+export const SECTION_BEFORE = `import type { SectionProps } from "@/components/sections/schemas";
+import { Media } from "@/components/ui/Media";
+import { Panel } from "@/components/ui/Panel";
+import { Section } from "@/components/ui/Section";
+import { site } from "@/config/site";
+
+function Card({ title, text }: { title: string; text: string }) {
+  return (
+    <Panel className="flex flex-col gap-2 p-[18px]">
+      <h3 className="text-h5">{title}</h3>
+      <p>{text}</p>
+    </Panel>
+  );
+}
+
+export function Service({ eyebrow, heading, text, feature, cta, dashboard }: SectionProps<"home-service">) {
+  return (
+    <Section type="home-service" eyebrow={eyebrow} heading={heading}>
+      <p className="mb-6 max-w-prose">{text}</p>
+      <div className="grid gap-4 lg:grid-cols-2" style={{ alignItems: "start" }}>
+        <Panel className="grid gap-2 p-4">
+          <h3 className="text-h5">{dashboard.title}</h3>
+          <p>{dashboard.text}</p>
+          <Media src={dashboard.image} width={1200} height={750} alt={dashboard.imageAlt} />
+        </Panel>
+        <div>
+          <Card title={feature.title} text={feature.text} />
+          <a href={site.links.contact} className="mt-4 inline-block underline">
+            {cta}
+          </a>
+        </div>
+      </div>
+    </Section>
+  );
+}
+`;
+const SECTION_FILE = "src/components/home/Service.tsx";
+
+/** A route written by hand, as a site had one before its pages were content files: its copy in JSX and in its metadata, its head and its breadcrumb its own — complete, so the SEO audit passes it. */
+const HAND_PAGE = `import type { Metadata } from "next";
+import { site } from "@/config/site";
+
+export const metadata: Metadata = {
+  title: "Our story",
+  description: "How the studio began, who works in it today and what it makes for the people who come back to it every week.",
+  alternates: { canonical: "/our-story" },
+  openGraph: { type: "website", url: "/our-story", title: "Our story", description: "How the studio began, who works in it today and what it makes for the people who come back to it every week.", images: [{ url: "/images/our-story-og.jpg", width: 1200, height: 630 }] },
+  twitter: { card: "summary_large_image" },
+};
+
+const crumbs = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: \`\${site.url}/\` },
+    { "@type": "ListItem", position: 2, name: "Our story", item: \`\${site.url}/our-story\` },
+  ],
+};
+
+export default function Page() {
+  return (
+    <main className="mx-auto max-w-prose p-8">
+      <h1 className="text-h1">Our story</h1>
+      <p>The studio began in a single room, with two people and one press.</p>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbs) }} />
+    </main>
+  );
+}
+`;
+
+export const UNGUARDED = {
+  scripts: { lint: "eslint", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo" },
+  files: { "eslint.config.mjs": UNGUARDED_ESLINT, [SECTION_FILE]: SECTION_BEFORE },
+  remove: ["src/config/components.json"],
+  // An agent's worktree inside the repo, gitignored: a copy of the site, one file of it mid-edit.
+  worktree: { ".claude/worktrees/stale-copy/src/components/home/Draft.tsx": "export function Draft( {\n" },
+};
+
+/** The composition findings SECTION_BEFORE holds, as --baseline must write them. */
+const SECTION_HELD = { "react/forbid-elements": 3, "no-restricted-syntax": 2, "react/no-multi-comp": 1 };
+
+export const PATHS = [
+  { name: "a site on the content engine that never took 0.8.0's § 3.7", files: {}, edit: {}, copies: {}, exceptions: {}, expected: { [SECTION_FILE]: SECTION_HELD } },
+  {
+    name: "a site whose page is a route written by hand",
+    files: { "src/app/our-story/page.tsx": HAND_PAGE },
+    // The route listed by hand, as such a site lists it: the SEO audit fails an indexable page the sitemap leaves out.
+    edit: { "src/app/sitemap.ts": (text) => swap("src/app/sitemap.ts", "  return kit.seo.sitemap();", "  return [...kit.seo.sitemap(), { url: `${site.url}/our-story`, changeFrequency: \"yearly\", priority: 0.5 }];")(swap("src/app/sitemap.ts", 'import { kit } from "@/kit";', 'import { site } from "@/config/site";\nimport { kit } from "@/kit";')(text)) },
+    copies: { "public/images/our-story-og.jpg": "public/images/home-og.jpg" },
+    exceptions: { "src/app/our-story": "a hand-written page, until it is a content file" },
+    expected: { [SECTION_FILE]: SECTION_HELD, "src/app/our-story/page.tsx": { "agentic-cms/head": 2, "agentic-cms/copy": 6 } },
+  },
+];
+
+/** What a written baseline lacks of a path's `expected`, or holds otherwise: one line per file and rule whose count differs. */
+export function heldOtherwise(baseline, expected) {
+  const held = new Map(baseline.map(({ file, rule, count }) => [`${file} ${rule}`, count]));
+  return Object.entries(expected).flatMap(([file, rules]) => Object.entries(rules).filter(([rule, count]) => held.get(`${file} ${rule}`) !== count).map(([rule, count]) => `${file} ${rule}: ${held.get(`${file} ${rule}`) ?? "no entry"}, expected ${count}`));
 }

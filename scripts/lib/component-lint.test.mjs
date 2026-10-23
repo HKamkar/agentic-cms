@@ -189,6 +189,22 @@ test("any other prop of a component is copy when its string reads as words — a
   assert.match(section('<Badge href="/x" tone="Loud" />', { ...EVERY_LAYER, copy: { skip: ["tone2"] } }).join("\n"), /\(tone\)/, "the skip list adds, never replaces");
 });
 
+test("a value's shape says it holds no words: a string of utility classes in any prop, a camelCase name, the play-once layer's presets, a class map's fields; real copy in the same places still fails", () => {
+  const classes = ['<Panel padding="flex flex-col gap-6 lg:p-8" />', '<Stack gap="grid grid-cols-1 md:grid-cols-[2fr_1fr] [&>*]:min-w-0" />', '<Panel tone="bg-fill text-on-ink" />', "<Panel inset={`px-4 ${wide ? \"lg:px-12\" : \"\"}`} />"];
+  for (const jsx of classes) assert.deepEqual(section(jsx), [], jsx);
+  assert.deepEqual(section('<Card effect="fadeIn" order="slideInLeft" />'), [], "a camelCase name");
+  const ix = (jsx) => lint("src/components/home/Hero.tsx", `import { Reveal, RevealGroup } from "agentic-cms/ix";\nexport function Hero() { return ${jsx}; }`, EXAMPLE);
+  assert.deepEqual(ix('<RevealGroup preset="fadeIn"><Reveal preset="slideInLeft" /></RevealGroup>'), [], "the kit's play-once presets");
+  assert.deepEqual(ix('<Reveal preset="Slide In" />'), [], "preset on the play-once layer is the layer's name for an effect");
+  assert.deepEqual(lint("src/components/home/Hero.tsx", 'const TONES = { steel: { text: "text-steel", label: "font-label uppercase tracking-label" }, ink: { text: "text-ink", title: "headingTitle" } };\nexport function Hero({ tone }) { return <p className={TONES[tone].text} />; }'), [], "a class map's copy-named fields hold class names");
+  const copy = ['<Badge note="free shipping" />', '<Badge note="Fast" />', '<Fx preset="Slide in from the left" />', '<Panel padding="Room to breathe" />'];
+  for (const jsx of copy) assert.match(section(jsx).join("\n"), /^agentic-cms\/copy: No copy in a prop/, jsx);
+  const data = lint("src/components/home/Hero.tsx", 'const CARDS = [{ text: "Welcome back" }, { title: "home" }, { label: "Shipping, free" }];\nexport function Hero() { return <ul>{CARDS.map((c) => <li key={c.text}>{c.title}</li>)}</ul>; }');
+  assert.equal(data.length, 3, data.join("\n"));
+  assert.ok(data.every((m) => COPY_DATA.test(m)), data.join("\n"));
+  assert.deepEqual(section('<Media alt="hero-image" />').length, 1, "a copy prop on an element stays copy whatever its shape: a reader hears an alt");
+});
+
 test("on a native element only the copy props are read, `value` when it reads as words, and HTML handed to dangerouslySetInnerHTML outside a script or a style", () => {
   assert.deepEqual(ui('<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet"><path d="M12 2L2 7" fill="none" strokeLinecap="round" /></svg>'), []);
   assert.deepEqual(ui('<input type="hidden" value="de" name="Lang" />'), []);

@@ -315,7 +315,7 @@ the first site on the package. Its design — the sections, the chrome, the
 CSS modules, the images, the reveals and sequences on `agentic-cms/ix`, the
 icons drawn in design rounds, the loop on its Platform page — its content
 and its config live in its own repo; the engines, the libraries and the
-command line come from here by tag (`github:HKamkar/agentic-cms#v0.8.2`),
+command line come from here by tag (`github:HKamkar/agentic-cms#v0.8.3`),
 composed once in its `src/kit.ts`, and it runs as a Node server from the
 standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
@@ -329,7 +329,7 @@ and replace it piece by piece. **Install** the package when your site is its
 own repo, as deeplit's above is, and let it lay the site out:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.2 init my-site --name "My Site"
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.8.3 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
@@ -454,10 +454,12 @@ marks every change to what a capture writes.
 From 0.8.1, [docs/migrating-to-0.8.2.md](docs/migrating-to-0.8.2.md) is
 the guide: the upgrade in one pull request, with a baseline
 (`check-site --baseline`) that holds what the site has now, so CI stays
-green and nothing a reader sees changes; then, a pull request at a time,
-the copy written in code moved into content files, the example's
-leftovers replaced, a reason for each preferred-tier warning, and the
-e-mail key. The baseline only shrinks.
+green and nothing a reader sees changes, its engine bypasses, its
+sections' composition findings and the example's leftovers held while new
+code meets the full rules; then, a pull request at a time, the copy
+written in code moved into content files, the sections rebuilt from the
+library, the example's leftovers replaced, a reason for each
+preferred-tier warning, and the e-mail key. The baseline only shrinks.
 
 ## Commands
 
@@ -495,7 +497,7 @@ pnpm kit serve       # next dev and the lab for a look: every demo route waited 
 pnpm dev             # next dev on :8000
 pnpm lint            # a gate: ESLint with the component rules, then the site check (agentic-cms check-site, the placement guard check-components first)
 pnpm build           # a gate: pnpm lint → content lint --production → docs check → next build → SEO audit → e-mail guard; every page prerendered
-pnpm kit check-site  # the site check alone; --baseline writes an existing site's engine bypasses and leftovers once, when it takes 0.8.2
+pnpm kit check-site  # the site check alone; --baseline writes what an existing site already has (engine bypasses, its sections' composition findings, the example's leftovers) once, when it takes the rules
 pnpm kit seo         # the SEO audit of every prerendered page, after next build
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text; the build's last step with guardEmail: true
 pnpm kit critical-css   # a step a site adds: each prerendered page paints from its own inlined rules, its stylesheets no longer block

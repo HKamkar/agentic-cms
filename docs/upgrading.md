@@ -24,6 +24,53 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.8.2 → 0.8.3
+
+An upgrade by [migrating-to-0.8.2.md](migrating-to-0.8.2.md) builds green
+on its first day on either of its paths, 0.8.0's § 3.7 taken inside its
+§ 1 included: what a site already has is recorded with its reason and
+only shrinks, and new code meets the full rules. A site on 0.8.1 follows
+that guide as before; a site on 0.8.2 moves the pin, runs `pnpm install`
+and `init . --agent-files --check`, and takes what it reports. Then, in
+the same pull request:
+
+- **`pnpm exec agentic-cms check-site --baseline`, once.** The copy rule
+  no longer reads a string of utility classes in a prop (`flex flex-col
+  gap-6`), a camelCase name (`slideInLeft`), `preset` on the play-once
+  layer's components or a class map's copy-named field (`text:
+  "text-steel"`) as words, so a baseline that held such findings holds
+  more than its file has, and the lint asks for the entry to shrink. The
+  command shrinks it; a site with no baseline has nothing to do.
+- **The composition rules join the baseline.** A section's raw element, a
+  style, an arbitrary value, a second component in its file and an import
+  against the layers (`react/forbid-elements`, `no-restricted-syntax`,
+  `react/no-multi-comp`, `no-restricted-imports`) are what an existing
+  site that takes 0.8.0's § 3.7 already has: `--baseline` writes them with
+  the rest, and a processor on each listed file holds them in ESLint. A
+  site that took 0.8.2 green has none to take, and its list stays as it is.
+- **An empty `"baseline": []`** the merge base does not have, as a config
+  copied from the package brings, is a first run: `--baseline` writes the
+  whole list. A new site's list, committed, still takes nothing.
+- **`eslint.config.mjs`** takes the template's `".claude/worktrees/**"` in
+  its `globalIgnores` if it lacks it: ESLint otherwise lints every agent
+  worktree's copy of the site.
+- **CI:** `check-site` warns when the workflow that runs the lint on pull
+  requests leaves out, in its `on.pull_request.branches`, a branch the
+  site's pull requests go into (`develop` beside `main`): those pull
+  requests get no checks. A build step that also deploys keeps the
+  production build; `AGENTIC_CMS_PLACEHOLDERS: warn` goes on its
+  pull-request runs alone, if anywhere.
+- **The agent files.** The styling rule's tier line and the components
+  rule's loosening line, both required, say the same now: in a section or
+  a pattern no reason quiets a composition error, an inline disable there
+  is loosening a rule, and the baseline holds what the site already had. A
+  site that edited either rule merges the kit's line. The required check
+  reads a block's words in any case, under a list marker of the site's own
+  and among its own words; a `--diff` patch that does not apply is merged
+  by hand ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+
+Nothing a reader sees changes, and nothing needs recapturing.
+
 ## 0.8.1 → 0.8.2
 
 The engines are required, and none of the example's brand or sample
