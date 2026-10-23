@@ -5,7 +5,11 @@ one call where an agent used to write a Playwright script: **a picture of a
 section or an element** (`shot`), **the numbers behind a screenshot claim**
 (`probe`), and **a sheet of candidates for the owner to pick from** (`sheet`).
 The flags and exit codes are in [commands.md](commands.md); this page is the
-recipes.
+recipes. They are the kit's parts for a measurement and a static candidate,
+preferred, not required ([parts.md § Design tools](parts.md#design-tools)):
+a Playwright script the site keeps under `scripts/` warns in `pnpm lint`
+(`check-site`'s `tools`), naming these, until an `allow` entry gives its
+reason.
 
 All three run against the site in the current directory: the production
 build under `.next` is served by the harness's own server (`pnpm build`

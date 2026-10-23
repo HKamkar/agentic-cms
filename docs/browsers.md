@@ -54,8 +54,10 @@ whether both engines are installed and WebKit launches, changing nothing.
 ## The same check in both engines
 
 A throwaway script in a scratch directory or under `.parity/` (both outside
-what a commit takes), one loop over the two engines, one line printed per
-engine:
+what a commit takes; a script the site keeps under `scripts/` that drives
+Playwright is a tool of its own, which `pnpm lint` warns about until an
+`allow` entry gives its reason), one loop over the two engines, one line
+printed per engine:
 
 ```js
 import { chromium, webkit } from "playwright-core";

@@ -1,9 +1,11 @@
+import { EmailLink } from "agentic-cms/components";
+import { encodeEmail } from "agentic-cms/email";
 import { Container } from "./Container";
 import { CookieSettingsButton } from "./CookieSettingsButton";
 import { NavLink } from "./NavLink";
 import { Panel } from "./Panel";
 import { analytics } from "@/config/analytics";
-import { chrome, site } from "@/config/site";
+import { chrome, consentBanner, site } from "@/config/site";
 
 const columnTitle = "font-label uppercase";
 
@@ -27,7 +29,7 @@ export function Footer() {
   return (
     <footer className="py-section">
       <Container>
-        <Panel className="grid gap-6 p-6 lg:grid-cols-[2fr_1fr_1fr]">
+        <Panel className="grid gap-6 p-6 lg:grid-cols-2-1-1">
           <div className="flex flex-col gap-2">
             <NavLink href="/" label={site.shortName} className="self-start font-semibold no-underline" />
             <p>{site.tagline}</p>
@@ -39,16 +41,14 @@ export function Footer() {
                 </span>
               ))}
             </address>
-            <a href={`mailto:${site.email}`} className="self-start">
-              {site.email}
-            </a>
+            <EmailLink token={encodeEmail(site.email)} className="self-start" />
           </div>
           <LinkColumn title={chrome.footer.quickLinks} links={site.footer.quickLinks} />
           <LinkColumn title={chrome.footer.social} links={site.footer.social} />
           <p className="text-muted lg:col-span-3">
             © {new Date().getFullYear()} {site.name}
           </p>
-          {analytics.tagId && <CookieSettingsButton className="justify-self-start underline lg:col-span-3" />}
+          {analytics.tagId && <CookieSettingsButton label={consentBanner.settings} className="justify-self-start underline lg:col-span-3" />}
         </Panel>
       </Container>
     </footer>

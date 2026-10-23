@@ -24,6 +24,137 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.8.1 → 0.8.2
+
+The engines are required, and none of the example's brand or sample
+content stays in a site. [migrating-to-0.8.2.md](migrating-to-0.8.2.md) is
+the guide. Its § 1 is the upgrade: the pin, the agent files, the gates,
+ESLint reading the guard's config, and `agentic-cms check-site --baseline`,
+which writes what the site holds now of the engines' findings and the
+example's leftovers into `src/config/components.json`. Its CI stays green
+on that list, which only shrinks after that, one pull request at a time.
+The lines below are what changed.
+
+A new site starts from a starter of its own name instead of the example
+([init.md § The starter](init.md#the-starter)), and `init` lays a new site
+out only with that name: `--name "<Site>"` is required, and without it
+`init` exits 2 and writes nothing. Nothing changes for an existing site:
+`init` on a site that has `content/` asks no name, and `--agent-files`
+takes none. For an existing site nothing of its content changes either: `init` lays the starter's content and pictures out
+only in a folder with no `content/` yet, and never rewrites a site's
+`content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`,
+`--force` included. Two things the content lint now reads, which a site
+sees on its first build after the upgrade:
+
+- **The kit example's brand fails** in a site at any time (`example-brand`):
+  `Acme` as a word, `acme.example`, the example's author `acme-editorial`,
+  in any file under `content/` and `src/config/` (but the guard's config),
+  in an SVG's text and in a picture's name under `public/`. A site that kept
+  the example's posts, its author, its logo or a line of its copy sees each
+  named: replace it with the site's own, or delete it. A site whose own name
+  is Acme keeps it; the example's domain and author still fail. Until each
+  is replaced, the baseline the guide's § 1 writes holds them: the brand
+  lines of a file it lists pass while the file has no more than its count
+  ([migrating-to-0.8.2.md § 3](migrating-to-0.8.2.md#3-the-examples-leftovers)).
+- **Placeholders** (`placeholder`): a string marked `(placeholder)`, or an
+  address on a domain reserved for examples (`.example`, `.test`,
+  `.invalid`, `localhost`, example.com), warns, and fails a production
+  build: the build's content lint runs with `--production` once the site
+  takes the gates (below). A CI `pnpm build` step that deploys nothing
+  takes `env: { AGENTIC_CMS_PLACEHOLDERS: warn }`. `agentic-cms assemble`
+  packages nothing while one remains.
+
+The CI workflow `init` writes pins newer actions, the commits the kit's own
+CI runs: `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and
+`pnpm/action-setup` v6.1.0, the first to state support for pnpm 12, the
+version a site's `packageManager` names. `init` never rewrites a site's
+`.github/workflows/verify.yml`, so an existing site copies the three
+`uses:` lines from `node_modules/agentic-cms/templates/site/verify.yml`;
+its steps and their inputs stay as they are. The actions now run on Node 24
+(a self-hosted runner needs v2.327.1 or later), and checkout v7 refuses to
+check out a fork's pull request under `pull_request_target` or
+`workflow_run` unless `allow-unsafe-pr-checkout: true`, triggers the
+template does not use.
+
+**The gates are on by default** ([init.md § The gates](init.md#the-gates)).
+A new site's `pnpm lint` runs ESLint, then `agentic-cms check-site`, which
+runs the component guard's passes and then holds the site as a whole: a
+`*-demo` route `demo new` did not write, a round's pictures left after
+`demo clean`, every exception added since the merge base (listed with its
+reason; a file added to `inherited` fails), the gates in `package.json` and
+in CI, and, as warnings, the site's own Playwright, `sharp` or `next dev`
+script and a machine's address in `next.config.*`
+([primitives.md § The whole site](primitives.md#the-whole-site-agentic-cms-check-site)).
+Its `pnpm build` runs `pnpm lint` first, and `guard-email` last when its
+`site.ts` turns `guardEmail` on (below). An existing site's `package.json`
+is its own, so it moves to them by hand:
+
+```json
+"lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s",
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo"
+```
+
+with its own steps kept where they are (0.8.1's `agentic-cms lint` step
+becomes `agentic-cms lint --production`; `agentic-cms init .` merges them
+the same way, or refuses naming what to add, and also writes any file of
+the example the site removed). Then `pnpm lint` and read what `check-site`
+reports: a warning fails nothing and goes quiet with an `allow` entry of
+`agentic-cms/site-tools` and its reason in `src/config/components.json`.
+In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
+`with:` gives the check the history it compares the exceptions against;
+without it CI says it compared nothing.
+
+**The site's `AGENTS.md`** takes the template's new lines by hand, from
+`node_modules/agentic-cms/templates/site/AGENTS.md`: the engines rule,
+first among the rules (every word from `content/` or `site.ts`, heads from
+`kit.seo`, forms from the form engine, tags through consent, and the rest
+from `docs/parts.md` or with its reason); the sentence on `(placeholder)`
+copy in the content bullet; and the verify bullet, with the gates and the
+agent-file check's required lines. `--agent-files` brings the rules' tier
+lines and the skills' closing `pnpm lint`
+([init.md § What an edit keeps](init.md#what-an-edit-keeps)).
+
+**The e-mail engine, behind a key** ([email.md](email.md)). A new site's
+`src/config/site.ts` has `guardEmail: true`: no structured data carries its
+address as text (a `ContactPoint` with the contact page's URL in its
+place), no client component imports `site.ts`, the form's message and
+recipient are tokens, and the build ends with `agentic-cms guard-email`.
+Nothing changes for an existing site unless it adds the key: without it,
+its structured data, its pages and its bundles are what they were, byte
+for byte, and nothing asks it for the guard. To add it:
+
+1. `guardEmail: true` in `site.ts`, beside `email`. The Organization blocks
+   change at once: `email` gives way to a contact point
+   ([the SEO contract](../src/lib/seo/README.md)), and a ContactPage's
+   contact points carry its URL, so a contact's `email` in its page file
+   can go.
+2. No `"use client"` module imports `site.ts`
+   (`grep -l '"use client"' -r src | xargs grep -l config/site` lists
+   them): each takes what it shows as props from the server component that
+   renders it. The kit's example passes the navbar its brand, links and
+   words from the layout, the theme switch as its child, the consent
+   banner its copy and the Cookie settings button its label.
+3. A form's messages write `{email}` with `messages.email: site.email`, and
+   the server component that renders the form passes
+   `withEmailToken(definition)`; every other place the address shows is an
+   `EmailLink` (`pnpm lint` already fails a `mailto:` built in code).
+4. `&& agentic-cms guard-email` last in the `build` (`agentic-cms init .`
+   merges it; `check-site` names it while it is missing), then
+   `pnpm build`: the guard names each served file that still carries the
+   address, and the fix. Prove the change with `visual-parity`: only the
+   structured data and the bundles move, not a pixel.
+
+A site whose address is public on purpose says so instead:
+`guardEmail: { off: "<why>" }`, which `check-site` lists with its reason
+once it is added. `false` alone fails `check-site`.
+
+**Dependabot for the CI's actions.** `init` now writes
+`.github/dependabot.yml`: the GitHub Actions alone, one grouped pull
+request a month to the default branch, so the pins in `verify.yml` stay
+current without a kit release. An existing site may copy
+`node_modules/agentic-cms/templates/site/dependabot.yml` there as it is;
+`init` never rewrites the site's copy.
+
 ## 0.8.0 → 0.8.1
 
 The fixes from running the migration guide on two sites. Move the pin to

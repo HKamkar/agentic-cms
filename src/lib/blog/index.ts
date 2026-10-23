@@ -1,6 +1,6 @@
-// The public surface of the blog engine: the post pipeline over a site's
-// registry (createBlog), the body renderer, the FAQ extractor and the two
-// rehype plugins. The contract is README.md.
+// The public surface of the post pipeline, a layer of the content engine:
+// the posts over a site's registry (createBlog), the body renderer, the FAQ
+// extractor and the two rehype plugins. The contract is README.md.
 export { createBlog, formatDate, type Author, type Blog, type Category, type Post, type PostMeta } from "./posts.ts";
 export { renderPostBody, type PostBodyOptions } from "./markdown.tsx";
 // The type of the element overrides a site passes in, re-exported so the site needs no @types/mdx of its own.

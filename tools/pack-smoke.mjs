@@ -4,17 +4,33 @@
 // and in a scratch folder that holds what the old install docs left there
 // (`pnpm init`'s package.json and the workspace snippet without
 // unrs-resolver), runs the install line of docs/init.md as it is written,
-// the tarball standing in for the git spec. Then it installs the site's
-// dependencies and runs its build — the content lint, the field-table check,
-// next build and the SEO audit — its lint (ESLint, then the component
-// guard, which a planted stray section file fails) and its tests through the
-// installed command line; then checks the agent files are as shipped, the
+// the tarball standing in for the git spec. The site is the starter: none of
+// the example's brand, content or pictures in it. Then it installs the site's
+// dependencies and runs its build as its own CI does, the starter's
+// placeholders warnings — the content lint, the field-table check, next build
+// and the SEO audit — then a production build, which fails on them, then,
+// with the copy replaced as a site writes its own, the production build
+// clean, guard-email last finding its address in no served file (and one
+// planted in a bundle); its lint (ESLint, then the site check, whose
+// component guard a planted stray section file fails), with no warning, and
+// its Dependabot config; then, the site committed to git, the bypass fixture
+// (tools/bypass-fixture.mjs: one example of each way around the kit the
+// 0.8.2 plan found) laid over it for one run of its checks — each required
+// bypass failing with its message, each preferred one warning — and taken
+// back; then the site as 0.8.1 left it (tools/upgrade-fixture.mjs: 0.8.1's
+// scripts and configs, a head written by hand, a mailto: of its own, a round
+// made by hand, the example's posts, author, logo and reviews) upgraded as
+// docs/migrating-to-0.8.2.md § 1 says, its CI build green on the baseline
+// `check-site --baseline` writes, a new bypass failing and a fixed one
+// shrinking the list, and the fresh site put back; its tests through the
+// installed command line;
+// then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
 // layer, the form endpoint's server half, the consent entries, the class
 // helpers and the component lint in plain Node) and the tarball's size;
-// last, a second site laid out by the installed `init --light-only` builds,
-// lints and tests too, with no theme script in its pages. Exit 1 on the
-// first failure.
+// last, a second site laid out by the installed `init --light-only --name`
+// builds, lints and tests too, with no theme script in its pages. Exit 1 on
+// the first failure.
 //
 //   pnpm test:pack           (a few minutes: two installs and a build)
 //   pnpm test:pack --keep    leaves the scratch site behind and prints where
@@ -23,6 +39,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { LEGACY, unexpected, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
 const MAX_TARBALL = 1024 * 1024;
@@ -44,11 +62,11 @@ export async function installWithRetry(args, run, log = console.error) {
   return run(args.filter((arg) => arg !== "--prefer-offline"));
 }
 
-/** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site`) as pnpm's arguments, with the package spec and the folder swapped; null when the doc has no such line. */
+/** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site --name "My Site"`) as pnpm's arguments, a quoted one unquoted, with the package spec and the folder swapped; null when the doc has no such line. */
 export function documentedInstall(doc, { spec, dir }) {
-  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site$/m)?.[0];
+  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site --name "[^"\n]+"$/m)?.[0];
   if (!line) return null;
-  return line.split(/\s+/).slice(1).map((arg) => (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
+  return [...line.matchAll(/"([^"]*)"|(\S+)/g)].slice(1).map(([, quoted, arg]) => quoted ?? (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
 }
 
 /** What `pnpm init` writes, at the pnpm running the smoke (a newer one would be downloaded through devEngines). */
@@ -56,9 +74,12 @@ export const pnpmInitPackage = (name, pnpm) => ({ name, version: "1.0.0", descri
 /** The workspace docs/init.md had a site write by hand up to 0.7.6: without unrs-resolver, which stopped the install after init at ERR_PNPM_IGNORED_BUILDS. */
 export const OLD_WORKSPACE = 'allowBuilds:\n  "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true\n  sharp: true\n';
 
+/** The environment of the site's own CI build (templates/site/verify.yml): the starter's placeholders stay warnings in a run that deploys nothing. */
+const CI_BUILD = { AGENTIC_CMS_PLACEHOLDERS: "warn" };
+
 const fail = (message) => { console.error(`pack-smoke: ${message}`); process.exit(1); };
-const run = (command, args, cwd) => {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: ENV });
+const run = (command, args, cwd, env = {}) => {
+  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: { ...ENV, ...env } });
   if (result.status !== 0) fail(`${command} ${args.join(" ")} failed in ${cwd}`);
 };
 /** Runs a command with its output shown as it comes and kept for the caller. */
@@ -90,7 +111,7 @@ function layOut(scratch, site, tarball) {
   fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pnpmInitPackage("agentic-cms-smoke", pnpm), null, 2));
   fs.writeFileSync(path.join(site, "pnpm-workspace.yaml"), OLD_WORKSPACE);
   const dlx = documentedInstall(fs.readFileSync(path.join(ROOT, "docs/init.md"), "utf8"), { spec: `file:${tarball}`, dir: path.basename(site) });
-  if (!dlx) fail("docs/init.md has no `pnpm dlx … init my-site` install line to run");
+  if (!dlx) fail('docs/init.md has no `pnpm dlx … init my-site --name "My Site"` install line to run');
   run("pnpm", dlx, scratch);
   const pkg = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8"));
   if (pkg.scripts.test.includes("no test specified") || "main" in pkg) fail("init kept pnpm init's placeholder test or its main");
@@ -99,23 +120,95 @@ function layOut(scratch, site, tarball) {
   fs.writeFileSync(path.join(site, "package.json"), JSON.stringify(pkg, null, 2));
 }
 
-/** 3. The site's dependencies (no lockfile yet), the files the tarball must ship, then the build, the lint, the tests and the agent files through the installed command line. */
+/** 3. The site's dependencies (no lockfile yet), the files the tarball must ship and none of the example's, then the starter's builds, the lint, the tests and the agent files through the installed command line. */
 async function build(site) {
   await install(["--prefer-offline", "--no-frozen-lockfile"], site);
-  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "scripts/lib/agent-file-releases.json", "content/pages/home.yaml", "docs/commands.md"]) {
-    if (!fs.existsSync(path.join(site, "node_modules/agentic-cms", shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
+  const kit = path.join(site, "node_modules/agentic-cms");
+  for (const shipped of ["templates/site/AGENTS.md", "templates/site/verify.yml", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", "scripts/lib/agent-file-releases.json", "templates/starter/content/pages/home.yaml", "content/_templates/page.yaml", "docs/commands.md"]) {
+    if (!fs.existsSync(path.join(kit, shipped))) fail(`the tarball lacks ${shipped} (package.json files)`);
   }
-  run("pnpm", ["build"], site);
-  run("pnpm", ["lint"], site);
+  for (const example of ["content/pages/home.yaml", "content/blog/pages-are-files.md", "content/reviews.yaml", "public/images/authors"]) {
+    if (fs.existsSync(path.join(kit, example))) fail(`the tarball ships the example's ${example}, which stays in the kit's repository`);
+  }
+  noExample(site);
+  starterBuilds(site);
+  emailGuarded(site);
+  lintsClean(site);
   guardFails(site);
+  dependabot(site);
+  bypasses(site);
+  upgrade(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
 }
 
-/** The site's lint runs the installed guard after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
+/** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */
+function noExample(site) {
+  const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (["node_modules", ".next", ".git"].includes(e.name) ? [] : e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
+  const left = files(site).filter((file) => /acme/i.test(path.basename(file)) || (!/\.(?:jpe?g|png|webp|ico)$/.test(file) && /acme/i.test(fs.readFileSync(file, "utf8"))));
+  if (left.length) fail(`the fresh site holds the example's brand: ${left.map((file) => path.relative(site, file)).join(", ")}`);
+}
+
+/**
+ * The starter's three builds: as the site's CI runs it, its placeholders
+ * warnings; a production build, which fails at the content lint naming each
+ * placeholder by file and field before next build starts; and, the copy
+ * replaced as a site writes its own (the marker gone with each string, an
+ * address of its own for each stand-in), the production build clean.
+ */
+function starterBuilds(site) {
+  run("pnpm", ["build"], site, CI_BUILD);
+  const production = spawnSync("pnpm", ["build"], { cwd: site, encoding: "utf8", env: ENV });
+  const output = `${production.stdout}${production.stderr}`;
+  if (production.status === 0 || !/^FAIL content\/pages\/home\.yaml placeholder: sections\[0\]\.heading is placeholder copy, which a production build never ships/m.test(output) || !/^FAIL src\/config\/site\.ts placeholder: line \d+ \(url\) "https:\/\/[\w-]+\.example"/m.test(output) || /Creating an optimized production build/.test(output)) {
+    fail(`a production build of the starter answered ${production.status}, and should fail at the content lint on its placeholders: ${output.trim().slice(-800)}`);
+  }
+  for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) {
+    const full = path.join(site, file);
+    fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
+  }
+  run("pnpm", ["build"], site);
+}
+
+/**
+ * The starter keeps its address out of every served file (guardEmail, D5):
+ * the builds above ran guard-email last; run again, it scans the clean build
+ * and finds the address nowhere, the blog's publisher carries a contact point
+ * in its place, and an address planted in a bundle fails it, naming the
+ * client-component fix — the guard watches the site's own domain.
+ */
+function emailGuarded(site) {
+  const config = fs.readFileSync(path.join(site, "src/config/site.ts"), "utf8");
+  const [address, origin] = [/^ {2}email: "([^"]+)",$/m, /^ {2}url: "([^"]+)",$/m].map((re) => config.match(re)?.[1]);
+  if (!address || !origin || !/^ {2}guardEmail: true,$/m.test(config)) fail("the starter's site.ts does not turn guardEmail on for its address");
+  const guard = () => spawnSync("pnpm", ["exec", "agentic-cms", "guard-email", "--json"], { cwd: site, encoding: "utf8", env: ENV });
+  const clean = guard();
+  const scan = (() => { try { return JSON.parse(clean.stdout); } catch { return null; } })();
+  if (clean.status !== 0 || !scan?.scanned || scan.hits.length) fail(`guard-email over the starter's build answered ${clean.status}: ${`${clean.stdout}${clean.stderr}`.trim().slice(-600)}`);
+  const blog = fs.readFileSync(path.join(site, ".next/server/app/blog.html"), "utf8");
+  if (blog.includes(address) || !blog.includes(`"contactPoint":{"@type":"ContactPoint","url":"${origin}/#contact-form"}`)) fail("the blog's structured data carries the address, or no contact point in its place");
+  const leak = path.join(site, ".next/static/chunks/pack-smoke-leak.js");
+  fs.writeFileSync(leak, `const to = ${JSON.stringify(address)};\n`);
+  const caught = guard();
+  fs.rmSync(leak);
+  if (caught.status !== 1 || !caught.stderr.includes(".next/static/chunks/pack-smoke-leak.js") || !caught.stderr.includes("a client component imports the module that holds the address")) fail(`guard-email with the address planted in a bundle answered ${caught.status}: ${caught.stderr.trim().slice(-600)}`);
+}
+
+/** The site's lint passes with no warning: what the starter keeps of its own that the preferred tier guides (the placeholder's crossed box, the honeypot's offset) carries its reason in "allow". */
+function lintsClean(site) {
+  const result = spawnSync("pnpm", ["lint"], { cwd: site, encoding: "utf8", env: ENV });
+  const output = `${result.stdout}${result.stderr}`;
+  process.stdout.write(output);
+  if (result.status !== 0) fail(`pnpm lint failed in ${site}`);
+  if (/\bwarnings?\b|⚠/.test(output)) fail(`pnpm lint warns in the fresh site, which keeps nothing the preferred tier guides without its reason: ${output.trim().slice(-800)}`);
+}
+
+/** The site's lint runs the installed site check after ESLint: the components rule came with the guard's config, and a section file the registry does not import fails the lint though ESLint passes it. */
 function guardFails(site) {
-  const { lint } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
-  if (!/; agentic-cms check-components \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the guard after ESLint: ${lint}`);
+  const { lint, build } = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
+  if (!/; agentic-cms check-site \|\| s=1; exit \$s$/.test(lint)) fail(`the site's lint does not run the site check after ESLint: ${lint}`);
+  // The builds above ran the lint first: the gates init writes, the e-mail guard last (the starter turns guardEmail on).
+  if (!/^pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email$/.test(build)) fail(`the site's build does not hold the gates in their order: ${build}`);
   if (!fs.existsSync(path.join(site, "src/config/components.json")) || !fs.existsSync(path.join(site, ".claude/rules/components.md"))) fail("init wrote the guard's config without the components rule, or neither");
   const stray = path.join(site, "src/components/sections/Stray.tsx");
   fs.writeFileSync(stray, "export function Stray() {\n  return null;\n}\n");
@@ -125,17 +218,139 @@ function guardFails(site) {
   if (result.status !== 1 || !/✗ src\/components\/sections\/Stray\.tsx {2}\[registry\]/.test(output)) fail(`pnpm lint with a stray section file answered ${result.status}: ${output.trim().slice(-600)}`);
 }
 
-/** 5. A site without dark mode, laid out by the installed init --light-only: it builds, lints and tests, and its pages carry no theme script. */
+/** The fresh site keeps its CI's actions current: init wrote the kit's Dependabot config for them. */
+function dependabot(site) {
+  const file = path.join(site, ".github/dependabot.yml");
+  if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== fs.readFileSync(path.join(ROOT, "templates/site/dependabot.yml"), "utf8")) fail("init did not write .github/dependabot.yml from the kit's template");
+}
+
+/** git in the site, as a person who commits nothing anywhere else: no signing, the identity the commit needs and no more. */
+const git = (site, ...args) => run("git", ["-c", "user.name=pack-smoke", "-c", "user.email=pack-smoke@localhost", "-c", "commit.gpgsign=false", ...args], site);
+
+/** The fixture's writes, applied — each edit on the file as the edits before it left it: the files it adds and the text each file it edits had, to take them back. */
+function layBypasses(site) {
+  const added = [];
+  const before = new Map();
+  const current = (file) => { const text = fs.readFileSync(path.join(site, file), "utf8"); if (!before.has(file)) before.set(file, text); return text; };
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
+  for (const bypass of BYPASSES) {
+    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(file, text); }
+    for (const [file, text] of Object.entries(bypass.append ?? {})) write(file, `${current(file)}${text}`);
+    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(file, change(current(file)));
+    for (const [file, change] of Object.entries(bypass.json ?? {})) write(file, `${JSON.stringify(change(JSON.parse(current(file))), null, 2)}\n`);
+  }
+  write("src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
+  return { added, before };
+}
+
+/**
+ * The bypass fixture over the fresh site, committed to git first so the site
+ * check compares the exceptions with it: one run each of the lint, the
+ * content lint and the agent-file check, every bypass answered as its tier
+ * says (tools/bypass-fixture.mjs), then everything taken back, which git
+ * confirms.
+ */
+function bypasses(site) {
+  git(site, "init", "-q", "-b", "main");
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the fresh site");
+  const { added, before } = layBypasses(site);
+  // The site's own history is the base: a pull request's base branch in the kit's CI names none here.
+  const env = Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== "GITHUB_BASE_REF"));
+  const answer = (...args) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
+  const lint = answer("lint");
+  const content = answer("content:lint");
+  const agentFiles = answer("exec", "agentic-cms", "init", ".", "--agent-files", "--check");
+  for (const file of added) fs.rmSync(path.join(site, file));
+  fs.rmSync(path.join(site, "src/app/promo-demo"), { recursive: true, force: true });
+  for (const [file, text] of before) fs.writeFileSync(path.join(site, file), text);
+  const missing = unanswered({ lint: lint.output, content: content.output, agentFiles: agentFiles.output, entries: eslintEntries(lint.output, fs.realpathSync(site)) });
+  for (const [name, { status }] of Object.entries({ "pnpm lint": lint, "pnpm content:lint": content, "init --agent-files --check": agentFiles })) if (status !== 1) missing.push(`${name} answered ${status}, and should fail on the fixture`);
+  if (missing.length) fail(`the bypass fixture was not answered as its tiers say:\n  ${missing.join("\n  ")}\n${lint.output.trim().slice(-3000)}`);
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`the bypass fixture was not taken back: ${left}`);
+  console.log(`pack-smoke: the bypass fixture answered — ${BYPASSES.filter((b) => b.tier === "required").length} required bypasses fail their checks with their messages, ${BYPASSES.filter((b) => b.tier === "preferred").length} preferred ones warn`);
+}
+
+/** The site's own history is the base of the site check's comparisons: a pull request's base branch in the kit's CI names none here. */
+const ownBase = () => Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== "GITHUB_BASE_REF"));
+/** A command in the site, its exit and its output kept, run as its own CI runs it. */
+const answer = (site, args, env = {}) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env: { ...ownBase(), ...env } }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
+const edit = (site, file, change) => { const full = path.join(site, file); fs.writeFileSync(full, change(fs.readFileSync(full, "utf8"))); };
+const setScripts = (site, scripts) => edit(site, "package.json", (text) => `${JSON.stringify({ ...JSON.parse(text), scripts: { ...JSON.parse(text).scripts, ...scripts } }, null, 2)}\n`);
+
+/** The fresh site made the site 0.8.1 left (tools/upgrade-fixture.mjs), the example's files copied from the kit's checkout. */
+function layLegacy(site) {
+  setScripts(site, LEGACY.scripts);
+  for (const [file, text] of Object.entries(LEGACY.files)) { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); }
+  for (const [file, change] of Object.entries(LEGACY.edit)) edit(site, file, change);
+  for (const file of LEGACY.example) fs.cpSync(path.join(ROOT, file), path.join(site, file), { recursive: true });
+  edit(site, "src/components/README.md", (text) => `${text}\n${LEGACY.catalogued.map((name) => `\`${name}\``).join(", ")}: the site's own, from before 0.8.2.\n`);
+}
+
+/** docs/migrating-to-0.8.2.md § 1 on the site: the gates, ESLint reading the guard's config, the owners. */
+function layUpgrade(site) {
+  setScripts(site, UPGRADE.scripts);
+  for (const [file, change] of Object.entries(UPGRADE.edit)) edit(site, file, change);
+  for (const [file, change] of Object.entries(UPGRADE.json)) edit(site, file, (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`);
+}
+
+/**
+ * 3b. The site as 0.8.1 left it, committed, then upgraded by § 1 of the
+ * guide: on 0.8.2 its 0.8.1 lint fails on the engines; with § 1's edits,
+ * `check-site --baseline` writes each engine bypass and each of the
+ * example's leftovers into the baseline and the site's CI build passes on
+ * it. A new mailto: in a baselined file then fails the lint; the hand-written
+ * head put back on kit.seo asks for its entry to shrink, `--baseline` takes
+ * it out, and the lint passes. Last, the fresh site is put back, which git
+ * confirms.
+ */
+function upgrade(site) {
+  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const layout = fs.readFileSync(path.join(site, "src/app/layout.tsx"), "utf8");
+  layLegacy(site);
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site as 0.8.1 left it");
+  const old = answer(site, ["lint"]);
+  if (old.status !== 1 || !/agentic-cms\/head/.test(old.output) || !/agentic-cms\/email/.test(old.output)) fail(`the site as 0.8.1 left it answered ${old.status} to its own lint, which should fail on 0.8.2's engines: ${old.output.trim().slice(-1200)}`);
+  layUpgrade(site);
+  const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const missing = unexpected(baseline);
+  if (taken.status !== 0 || missing.length) fail(`check-site --baseline answered ${taken.status}${missing.length ? `, and wrote ${missing.join(", ")}` : ""}: ${taken.output.trim().slice(-2000)}`);
+  const build = answer(site, ["build"], CI_BUILD);
+  if (build.status !== 0) fail(`the upgraded site's CI build failed on its baseline: ${build.output.trim().slice(-3000)}`);
+  const mailLink = fs.readFileSync(path.join(site, "src/components/ui/MailLink.tsx"), "utf8");
+  edit(site, "src/components/ui/MailLink.tsx", (text) => text.replace("className={className}>", "className={className} data-copy={`mailto:${address}`}>"));
+  const grown = answer(site, ["lint"]);
+  fs.writeFileSync(path.join(site, "src/components/ui/MailLink.tsx"), mailLink);
+  if (grown.status !== 1 || !/2 of this rule here, and the baseline \(src\/config\/components\.json\) holds 1: the baseline only shrinks/.test(grown.output)) fail(`a second mailto: in a baselined file answered ${grown.status}, and should fail the lint naming the count: ${grown.output.trim().slice(-1500)}`);
+  fs.writeFileSync(path.join(site, "src/app/layout.tsx"), layout);
+  const fixed = answer(site, ["lint"]);
+  if (fixed.status !== 1 || !/The baseline \(src\/config\/components\.json\) holds 1 of this rule here and 0 are left/.test(fixed.output)) fail(`the head put back on kit.seo answered ${fixed.status}, and should ask for its entry to shrink: ${fixed.output.trim().slice(-1500)}`);
+  const shrunk = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
+  if (shrunk.status !== 0 || !/− src\/app\/layout\.tsx {2}agentic-cms\/head: none left, the entry is gone/.test(shrunk.output)) fail(`check-site --baseline answered ${shrunk.status}, and should take the head's entry out: ${shrunk.output.trim().slice(-1500)}`);
+  const clean = answer(site, ["lint"]);
+  if (clean.status !== 0) fail(`the lint after the baseline shrank answered ${clean.status}: ${clean.output.trim().slice(-1500)}`);
+  git(site, "reset", "-q", "--hard", fresh);
+  git(site, "clean", "-fdq");
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`the fresh site was not put back after the upgrade: ${left}`);
+  console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
+}
+
+/** 5. A site without dark mode, laid out by the installed init --light-only with a name of its own: it builds as its CI runs it, lints and tests, and its pages carry no theme script. */
 async function lightOnly(site, tarball) {
   const light = path.join(path.dirname(site), "light");
-  run("pnpm", ["exec", "agentic-cms", "init", light, "--light-only"], site);
+  run("pnpm", ["exec", "agentic-cms", "init", light, "--light-only", "--name", "Light & Co."], site);
   if (fs.existsSync(path.join(light, "src/components/ui/ThemeToggle.tsx"))) fail("init --light-only wrote the theme toggle");
+  if (!fs.readFileSync(path.join(light, "src/config/site.ts"), "utf8").includes('name: "Light & Co.",') || !fs.existsSync(path.join(light, "public/images/brand/light-co-logo.svg"))) fail("init --name did not name the site in src/config/site.ts and its logo");
   const pkg = JSON.parse(fs.readFileSync(path.join(light, "package.json"), "utf8"));
   pkg.dependencies["agentic-cms"] = `file:${tarball}`;
   fs.writeFileSync(path.join(light, "package.json"), JSON.stringify(pkg, null, 2));
   await install(["--prefer-offline", "--no-frozen-lockfile"], light);
-  run("pnpm", ["build"], light);
-  run("pnpm", ["lint"], light);
+  run("pnpm", ["build"], light, CI_BUILD);
+  lintsClean(light);
   run("pnpm", ["test"], light);
   const home = fs.readFileSync(path.join(light, ".next/server/app/index.html"), "utf8");
   if (/data-theme|localStorage\.getItem\(['"]theme/.test(home)) fail("the light-only site's home page still carries the theme script");
@@ -205,7 +420,7 @@ console.log(response.status, received.length, received[0]?.version);`;
 const CONSENT_SMOKE = `const consent = await import("agentic-cms/consent");
 const google = await import("agentic-cms/consent/google");
 const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
-const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date().toISOString(), version: 1 }) }, policy);
+const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date(Date.now() - 1000).toISOString(), version: 1 }) }, policy); // a second old: a choice stamped after readChoice reads its clock is from the future and refused
 console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
@@ -216,7 +431,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   await build(site);
   entries(site);
   await lightOnly(site, tarball);
-  console.log(`pack-smoke: the package builds a site, and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+  console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
   if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
   else fs.rmSync(scratch, { recursive: true, force: true });
 }

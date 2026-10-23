@@ -4,8 +4,11 @@ Every script here is a command of `agentic-cms`, the package's `bin`
 (`bin/agentic-cms.mjs` dispatches to them): `pnpm kit <command>` in
 this checkout, `agentic-cms <command>` on a site that installs the
 package (its `package.json` names them: `content:lint`, `content:check`,
-`content:status`, `content:docs`, and `build` runs `lint`, `docs --check`,
-`next build` and `seo` in that order). Each runs against the site in the
+`content:status`, `content:docs`; `lint` runs ESLint, then `check-site`, and
+`build` runs `pnpm lint`, `lint --production`, `docs --check`, `next build`
+and `seo` in that order, then `guard-email` on a site whose
+`src/config/site.ts` turns `guardEmail` on: the gates of `lib/gates.mjs`).
+Each runs against the site in the
 current directory: its registry and config through `src/kit.ts`, its
 `content/`, `public/`, `.next` and `.parity`. The flags, defaults and exit
 codes of every command are `docs/commands.md`, generated from
@@ -13,8 +16,10 @@ codes of every command are `docs/commands.md`, generated from
 (`lib/args.mjs`; an unknown flag is an error that names the nearest one,
 a value outside a flag's `choices` lists them, `--help` prints the spec
 with its `examples`; a spec's `group` is its family in the map the bin
-prints, `site: true` marks one that reads the site's registry and is
-refused outside a site's root).
+prints, the families in the order of the kit's layers, `FAMILIES`: the
+content engine, the design tools, the site's commands with its default
+gates and opt-in steps (`docs/parts.md`); `site: true` marks one that reads
+the site's registry and is refused outside a site's root).
 `lib/browser.mjs` is the Chromium (and the WebKit beside it,
 `launch({ engine })`), the static server and the waits the harness and the
 page commands share; `browser/` holds their tests, run against `fixtures/`
@@ -54,8 +59,9 @@ by `pnpm test:browser`.
   row per collection and a summary; a bad file prints its `ContentError`
   lines and exits 1. `--root` points it at another content tree. The
   sub-second schema loop; the build runs the lint below instead.
-- `lint` — `pnpm kit lint [--root <dir>] [--strict] [--report]` (`pnpm
-  content:lint`; the first step of `pnpm build`; `content-lint.mjs`) reads every collection like `content-check` (an engine error is
+- `lint` — `pnpm kit lint [--root <dir>] [--strict] [--production]
+  [--report]` (`pnpm content:lint`; in `pnpm build` after `pnpm lint`, as
+  `lint --production`; `content-lint.mjs`) reads every collection like `content-check` (an engine error is
   one `FAIL` line per issue, verbatim), then applies the rules a schema
   cannot carry: the voice and claim block of `content/VOICE.md` (banned
   words and patterns, claim words near a regulation name, model names,
@@ -66,8 +72,11 @@ by `pnpm test:browser`.
   holds `###` questions with answers, images carry real alts and live under
   the post's folder), the images on disk (existence, weight over 250 KB,
   orphans under `public/images/blog/`), stray files the loader ignores,
-  the shape of `content/editorial/workshop.yaml` when it exists, and dates
-  that parse but are not days. One line per finding in
+  the shape of `content/editorial/workshop.yaml` when it exists, dates
+  that parse but are not days, the starter's placeholder copy and address
+  (`placeholder`: a `WARN`, a `FAIL` with `--production`) and, in a site,
+  the kit example's brand (`example-brand`, a `FAIL` at any time;
+  `lib/placeholders.mjs`). One line per finding in
   `check-seo`'s grammar, `LEVEL file rule: path problem`; exit 1 on any
   `FAIL`; `--strict` promotes every `WARN`; `--report` also writes
   `.parity/content-lint-report.txt`. The exact rules `FAIL`; the two
@@ -103,22 +112,46 @@ by `pnpm test:browser`.
 - `lib/component-lint.mjs` — `componentRules(options)`, the component
   library's ESLint configs (the package exports it as `./eslint`): the
   layers' one-way imports, animation libraries only in the motion layer,
-  and what a section or a pattern may contain. Not a command: a site's
-  `eslint.config.mjs` spreads it, and `pnpm lint` runs it
+  what a section or a pattern may contain, and the `agentic-cms` plugin's
+  rules across `src/` — the engines' (`lib/engine-rules.mjs`: `copy`,
+  `head`, `forms`, `tags`, `email`), which fail, and the preferred tier's
+  (`lib/preferred-rules.mjs`: `motion`, `graphics`, `images`, `icons`,
+  `styling`), which warn, naming the kit's part, and go quiet with an
+  `allow` entry or an inline disable that gives its reason. Not a command:
+  a site's `eslint.config.mjs` spreads it, and `pnpm lint` runs it
   (`docs/primitives.md` § Enforced).
 - `check-components` — `pnpm kit check-components [--json]`
   (`check-components.mjs`; the work in `lib/check-components.mjs`, the file
-  system passed in) is the component library's placement guard, the second
-  half of `pnpm lint` (`eslint; s=$?; … check-components || s=1; exit $s`):
+  system passed in) is the component library's placement guard, the first
+  pass of `check-site` (below), alone:
   the layers there and every file under `src/components` in one, every
   component the library exports named in its catalogue, every component in
   a section folder imported by the registry, route files only in
   `src/app`'s known route folders, no component elsewhere in `src/`, CSS
-  modules and `@keyframes` only where the library keeps them. Its config is
+  modules and `@keyframes` only where the library keeps them, every owner
+  and `allow` entry with its reason, every inline disable of a required
+  rule with its reason, and the required rules as ESLint resolves them for
+  a sample file per layer (no later block replacing one); a transition
+  declared in CSS outside the motion layer warns. Its config is
   `src/config/components.json` (the layer keys are `componentRules()`'s);
   the config's frozen `inherited` list and a running round's candidates
   pass. Exit 1 on a finding, each with its fix (`docs/primitives.md`
   § Placed).
+- `check-site` — `pnpm kit check-site [--baseline] [--base <ref>] [--json]`
+  (`check-site.mjs`; the work in `lib/check-site.mjs`, the file system, git
+  and the components pass passed in) is the second half of `pnpm lint`
+  (`eslint; s=$?; … check-site || s=1; exit $s`): the placement guard's
+  passes, then a `*-demo` route only `demo new`'s or the lab's, a round's
+  pictures only with its route, every exception added since the merge base
+  listed with its reason and `inherited` only shrinking, the gates of
+  `lib/gates.mjs` in `package.json`'s `lint` and `build` (which `init`
+  writes and merges too), CI running them, what is left of the kit's
+  example (`lib/leftovers.mjs`) and the baseline only shrinking
+  (`lib/baseline.mjs`), and, as warnings, the site's own Playwright,
+  `sharp` or `next dev` script and a machine's address in `next.config.*`
+  (`docs/primitives.md` § The whole site). `--baseline` writes an existing
+  site's engine bypasses and leftovers into the config's `baseline`, once,
+  as it takes 0.8.2 (`docs/migrating-to-0.8.2.md`).
 - `parity` — `pnpm kit parity <label>` (`parity.mjs`) builds and stores every prerendered page with scripts stripped, its JSON-LD blocks beside it (`<page>.jsonld`, keys sorted, one block per line) and the non-HTML routes (`sitemap.xml`, `feed.xml`, `robots.txt`, the icons) under `.parity/<label>/`; `diff -r` two captures to prove a refactor changed no markup, structured data or sitemap. React's `useId` values change with the component tree; compare with them normalised (`sed -E 's/_R_[a-z0-9]+_/_R_x_/g'`) when a page moves between trees.
 - `shot`, `probe`, `sheet` — `pnpm kit shot <route|url> [--select <css> |
   --heading <regex>] [--transparent --trim --resize <w>] [--json]` is one
@@ -134,9 +167,9 @@ by `pnpm test:browser`.
 - `guard-email` — `pnpm kit guard-email [--domain <host>]… [--json]`
   scans every served file of the build (pages, RSC payloads, the `.body`
   routes, the static chunks) for an address at the site's domain (the host
-  of `site.url`) and exits 1 naming each file; the last step of a build on
-  a site that renders its address through `EmailLink` and tokens
-  (`docs/email.md`).
+  of `site.url`) and exits 1 naming each file; the last step of the build
+  on a site whose `src/config/site.ts` turns `guardEmail` on, as `init`
+  writes it for a new site (`docs/email.md`).
 - `critical-css` — `pnpm kit critical-css [--check] [--json]`
   (`critical-css.mjs`, `lib/critical-css.mjs`) inlines into each
   prerendered page the rules its own HTML uses, with every `@font-face` of
@@ -181,6 +214,16 @@ by `pnpm test:browser`.
   own icons, graphics and short 2D loops, opened when a drawing is needed
   and gone once its files are rendered (`docs/lab.md`; `lib/lab.mjs`,
   `lib/lab-page.mjs`, `lib/lab-server.mjs`).
+- `init` — `pnpm kit init [dir] --name <Site> [--url <origin>] [--email
+  <address>] [--light-only]` (`init.mjs`, `lib/init.mjs`) lays a site out
+  from the package: the example's code, a starter of the site's own in
+  place of the example's content (`lib/starter.mjs`, `templates/starter/`:
+  a home page and the blog index whose copy is marked `(placeholder)`,
+  empty collections, neutral pictures), the agent files, the config with
+  `guardEmail: true`, the gates in `package.json`, a CI workflow and
+  `.github/dependabot.yml` (`templates/site/`). A new site needs `--name`.
+  `init . --agent-files [--check | --diff <file> | --accept <file>]`
+  refreshes or checks an existing site's rules and skills (`docs/init.md`).
 - `setup` — `pnpm kit setup [--check] [--build] [--no-browsers]
   [--engines chromium,webkit] [--deps] [--no-public]` (`setup.mjs`) makes a
   clone ready to work on, after a site's `scripts/setup.sh` (the kit's

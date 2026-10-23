@@ -69,6 +69,10 @@ skill; the component catalogue is `src/components/README.md`.
 setup --check`), and a page opened on the URL handed over hydrates: a
 menu opens, a button answers.
 
+End the procedure with `pnpm lint`, 0 failures (`agentic-cms setup` runs it
+with the tests): a clone that fails it is not set up, and a failure is
+fixed at its source, never by loosening a rule. <!-- required -->
+
 ## Stop for the user
 
 - **sudo**, for WebKit's system libraries on Linux: setup prints the line

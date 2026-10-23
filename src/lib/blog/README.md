@@ -1,9 +1,11 @@
-# Blog engine
+# The post pipeline
 
 Turns markdown files in `content/blog/` into the blog index, the post pages,
-the RSS feed and the sitemap — all at build time. This document is the
-complete contract; read it before changing anything in `src/lib/blog/`,
-`content/`, `src/components/blog/` or the blog routes.
+the RSS feed and the sitemap — all at build time. It is a layer of the
+content engine (`agentic-cms/blog`, read as `kit.blog`), and required like
+it (`docs/parts.md`). This document is the complete contract; read it
+before changing anything in `src/lib/blog/`, `content/`,
+`src/components/blog/` or the blog routes.
 
 ## Rules that must not break
 
@@ -109,7 +111,7 @@ for the FAQPage JSON-LD from the raw markdown.
 
 ### Body rules the lint enforces
 
-`agentic-cms lint` (first in `pnpm build`; `pnpm content:lint`)
+`agentic-cms lint` (in `pnpm build` after `pnpm lint`; `pnpm content:lint`)
 reads every post's body and fails the build when: a heading is `#` (the
 title is the H1) or jumps a level (`##` to `####`); the FAQ `##` has no
 `###` question under it, holds a heading that is not `###`, or has a `###`

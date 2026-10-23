@@ -671,7 +671,7 @@ the imports.
      "sections": ["sections"],
      "routes": ["src/app", "src/app/[[...slug]]"],
      "exceptions": {
-       "src/app/blog-post/[slug]": "the blog engine: a post is content/blog/<slug>.md, rendered by the post template",
+       "src/app/blog-post/[slug]": "the post pipeline: a post is content/blog/<slug>.md, rendered by the post template",
        "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
        "src/app/feed.xml": "the RSS feed, written from the posts"
      },

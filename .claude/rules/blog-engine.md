@@ -7,7 +7,7 @@ paths:
   - "src/app/feed.xml/**"
 ---
 
-# Blog engine — read `src/lib/blog/README.md` before editing
+# The post pipeline — read `src/lib/blog/README.md` before editing
 
 - Build time only: the content engine reads `content/blog` with `node:fs` at build time and `posts.ts` derives from it; every consumer prerendered. Never read `content/` at request time.
 - The filename is the indexed URL (`/blog-post/<slug>`); files starting with `_` are ignored; `draft: true` hides a post from production only.
@@ -17,3 +17,4 @@ paths:
 - Posts are files and nothing else: no CMS, no importer. A new post starts from `content/blog/_template.md`; the index is a page file (`content/pages/blog.yaml`, a `blog-index` section), not a route of its own.
 - Any rendering change: prove existing posts unchanged with `agentic-cms parity` (markup) or `agentic-cms visual-parity` (pixels). Block styling lives in `src/components/blog/PostBody.tsx` + its module; `rehype-post-blocks.ts` takes the class names as options and knows none itself.
 - SEO of a post: `seoTitle` ≤ 60 characters (the `<title>`; falls back to `title | <site.name>`), `seoDescription` 70–160 (falls back to the excerpt), `imageAlt` that describes the hero, `ogImage` defaults to the hero; the head comes from `postMetadata()`, `agentic-cms lint` checks these limits at the source (with the body's structure, the alts, the images on disk and the voice rules of `content/VOICE.md`) and `pnpm build` audits the rendered post (`src/lib/seo/README.md`). The procedures are the `editorial` plugin's `write-post`, `new-post`, `update-post` and `retire-content` (`plugin/skills/`).
+- **Tier:** the post pipeline, a layer of the content engine (`agentic-cms/blog`) — required: `next build` fails a post its schema refuses, `agentic-cms lint --production` (in `pnpm build`, after the lint) a body or a field out of line (`heading-level`, `faq-structure`, `body-image`, `excerpt-words`, `keywords-count`, `date-order`) and `agentic-cms seo` a rendered post.

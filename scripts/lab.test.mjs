@@ -22,10 +22,10 @@ test("lab route writes the template once (--force again); lab clean removes the 
     assert.deepEqual(JSON.parse(first.stdout), { file: ROUTE, path: "/lab-demo", urls: [], ready: false, status: null }, "no dev server (no package.json here): nothing asked");
     assert.match(run(root, ["route", "--force"]).stdout, /no dev server answers \(package\.json's scripts\.dev names no port; --url names a server\): pnpm kit serve starts it, waits for \/lab-demo and prints the URLs to hand over/);
     const page = fs.readFileSync(path.join(root, ROUTE), "utf8");
-    assert.match(page, /import \{ LabScenes, type Ground \} from "agentic-cms\/lab";/);
-    assert.match(page, /robots: \{ index: false \}/);
+    assert.match(page, /import \{ LabScenes \} from "agentic-cms\/lab";/);
+    assert.match(page, /export const metadata = kit\.seo\.unlistedMetadata\(\);/, "noindex, from kit.seo as every route's head");
     assert.doesNotMatch(page, /force-dynamic/, "a static route, so the build's SEO audit sees it — the guard");
-    assert.match(page, /label: "the page"[\s\S]*label: "white card"/);
+    assert.match(page, /<LabScenes \/>/, "on LabScenes' own grounds (LAB_GROUNDS: the page, a white card) until the site passes its own");
     const again = run(root, ["route"]);
     assert.equal(again.status, 2);
     assert.match(again.stderr, /src\/app\/lab-demo\/page\.tsx exists; edit it, or pass --force/);

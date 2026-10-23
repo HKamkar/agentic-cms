@@ -1,12 +1,20 @@
 # This site: the rules for any agent working on it
 
 The site is built on `agentic-cms` (the package under `node_modules/`,
-pinned by tag in `package.json`): the content, blog, SEO and form engines,
-the reveal library, the command line and the skills come from it; this
-repo holds what is the site's — the design, the content, the config, the
-docs. An engine change is a kit pull request, then a bumped tag here; never
-a patch under `node_modules`.
+pinned by tag in `package.json`): the content engine and its layers
+(pages, the post pipeline, SEO; forms beside it), the browser libraries,
+the design tools and the command line come from it; this repo holds what
+is the site's — the design, the content, the config, the docs. An engine
+change is a kit pull request, then a bumped tag here; never a patch under
+`node_modules`.
 
+- **The engines are required:** every word a reader sees comes from
+  `content/` or `site.ts`, in pages, sections, components and design rounds
+  alike; heads come from `kit.seo`, forms from the form engine, tags
+  through consent, an address through `EmailLink`. For everything else,
+  find the kit's part in `node_modules/agentic-cms/docs/parts.md` and
+  prefer it; if you use your own, write its reason in one line. Never
+  weaken a check to pass it.
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
   motion, the page recipe, and §8, the register of decisions that look like
@@ -24,12 +32,14 @@ a patch under `node_modules`.
   `content/pages/<slug>.yaml` (its `seo` block, its structured data, its
   sections in order). The door for editing is `content/README.md`; the
   templates are `content/_templates/`; the voice and claim rules are
-  `content/VOICE.md`, enforced by `agentic-cms lint` first in `pnpm build`.
-  The content jobs are the `editorial` plugin (`/editorial:write-post`,
-  `new-post`, `update-post`, `new-page`, `review-voice`, `content-status`,
-  `retire-content`), enabled by `.claude/settings.json` from the kit's
-  marketplace. Never read `content/` at request time: every page is
-  prerendered.
+  `content/VOICE.md`, enforced by `agentic-cms lint` in `pnpm build`.
+  A string marked `(placeholder)` is the starter's: the site's own copy
+  replaces it (`/editorial:new-page`) before any design, and a production
+  build fails while one remains. The content jobs are the `editorial`
+  plugin (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
+  `review-voice`, `critic`, `content-status`, `retire-content`), enabled by
+  `.claude/settings.json` from the kit's marketplace. Never read `content/`
+  at request time: every page is prerendered.
 - **Every page is a content file.** It is `content/pages/<slug>.yaml`,
   rendered by the catch-all route through the section registry; a new page
   is `/editorial:new-page` (or the page template), a new section type a
@@ -41,7 +51,8 @@ a patch under `node_modules`.
   exception with its reason, in `src/config/components.json` where the
   site runs the guard. The pages rule has the rest.
 - The engines' contracts are `node_modules/agentic-cms/src/lib/*/README.md`
-  (`content`, `blog`, `seo`, `forms`); the command line is
+  (`content`; on it `blog`, the post pipeline, and `seo`; beside it
+  `forms`); the command line is
   `node_modules/agentic-cms/docs/commands.md`, the screenshot harness
   `docs/visual-parity.md`, the one-shot page commands
   `docs/shot-probe-sheet.md`, the design loop `docs/design.md`.
@@ -69,27 +80,30 @@ a patch under `node_modules`.
   the head, its `jsonld` block the structured data; `pnpm build` audits every
   prerendered page (`agentic-cms seo`) and fails on a missing field. Never
   hand-write head tags.
-- Verify = `pnpm lint` + `pnpm test` + `pnpm content:lint` + `pnpm build`
-  (the content lint first, the SEO audit last), 0 failures, before calling
-  a change done; `pnpm kit visual-parity` before a merge that touches
-  `src/`, styles or images. CI (`.github/workflows/verify.yml`) runs the
-  same, and `agentic-cms init . --agent-files --check`, on every pull
-  request.
+- Verify = `pnpm lint` (ESLint, then `agentic-cms check-site`) +
+  `pnpm test` + `pnpm content:lint` + `pnpm build` (the lint first; the
+  SEO audit, then `guard-email` with `guardEmail: true` in `site.ts`), 0
+  failures, before calling a change done; `pnpm kit visual-parity` before
+  a merge that touches `src/`, styles or images. CI
+  (`.github/workflows/verify.yml`) runs the same, and `agentic-cms init .
+  --agent-files --check` (which fails an edit of a rule or a skill that
+  dropped a line marked `<!-- required -->`), on every pull request. Never
+  drop a gate from `lint` or `build`.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex
 
 Before editing or reviewing a file, read and follow **every** rule below
 whose paths match it: `**` spans directories, and matches add up (a post
-needs its content, blog and SEO rules). Claude Code loads these files
-itself through their `paths` frontmatter; Codex does not, so open each
+needs its content, post pipeline and SEO rules). Claude Code loads these
+files itself through their `paths` frontmatter; Codex does not, so open each
 matching file before the edit, and again when the task reaches other
 paths. The table is written from the rules' frontmatter by
 `agentic-cms init --agent-files`: a scope changes in its rule, never here.
 
 | Paths | Read and follow |
 | --- | --- |
-| `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog](.claude/rules/blog-engine.md) |
+| `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [The post pipeline](.claude/rules/blog-engine.md) |
 | `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/kit.ts`, `src/kit.test.ts`, `src/components/sections/schemas.ts`, `src/components/sections/render.tsx` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |

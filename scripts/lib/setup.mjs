@@ -13,6 +13,7 @@
 import path from "node:path";
 import { ENGINES } from "./browser.mjs";
 import { ENV_FILE, devPort, urlsReport } from "./hosts.mjs";
+import { PLACEHOLDERS_ENV } from "./placeholders.mjs";
 
 /** The Node the kit needs, as .nvmrc and package.json's engines say. */
 export const MIN_NODE = [22, 18];
@@ -36,7 +37,7 @@ export function parseEngines(value) {
  * Runs (or with `check`, reports) every step; resolves to { ready, check,
  * steps, todo, urls, exit }. A step is { step, status, detail, command? }:
  * ok (already there), done (done now), skipped, gap (--check: missing),
- * todo (left for the owner), failed. `exec(cmd, args, { capture })` returns
+ * todo (left for the owner), failed. `exec(cmd, args, { capture, env })` returns
  * { status, stdout }; `browsers` is { path(engine), launches(engine), cli };
  * `net` is what urlsReport takes (interfaces, fetch, up, kill).
  */
@@ -70,7 +71,8 @@ export async function setup({ root, flags, exec, fs, browsers, net = {}, version
   }
 
   for (const script of ["lint", "test", ...(flags.build ? ["build"] : [])]) {
-    if (exec("pnpm", [script]).status !== 0) { step("verify", "failed", `pnpm ${script} failed: its output is above; fix the cause, then run setup again`, `pnpm ${script}`); return result(1, urls); }
+    // the build here proves the clone builds and deploys nothing: a new site's placeholders stay warnings, as in its CI
+    if (exec("pnpm", [script], script === "build" ? { env: { [PLACEHOLDERS_ENV]: "warn" } } : {}).status !== 0) { step("verify", "failed", `pnpm ${script} failed: its output is above; fix the cause, then run setup again`, `pnpm ${script}`); return result(1, urls); }
     step("verify", "done", `pnpm ${script}`);
   }
   if (!flags.build) step("verify", "skipped", "pnpm build is the full gate (setup --build), about a minute");

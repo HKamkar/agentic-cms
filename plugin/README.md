@@ -25,23 +25,24 @@ cannot find; the plugin has no defaults for any of them.
 | `content/editorial/workshop.yaml` | optional: where the marketing workshop lives outside the repo and what may be read there, by role (below) |
 | the engine's docs — `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` in a checkout of agentic-cms, or under `node_modules/agentic-cms/` on a site that installs the package | the content engine's contract, the post body conventions, the head and structured-data contract |
 | `src/config/site.ts` | `name` (the title suffix through the layout template), `postPrefix`, `cta`, `email`, `url`, the nav and footer lists |
-| `package.json` scripts | `content:lint`, `content:status`, `content:check`, `content:docs`, `kit` (the `agentic-cms` command line: `placeholder`, `optimize-webp`, `parity`, `visual-parity`, …), `lint`, `test`, `build`, `preview`, `dev` |
+| `package.json` scripts | `content:lint`, `content:status`, `content:check`, `content:docs`, `kit` (the `agentic-cms` command line: `placeholder`, `optimize-webp`, `parity`, `visual-parity`, …), `lint`, `test`, `build`, `preview` (or `start` on a site without it), `dev` |
 | `scripts/README.md` (the package's, next to the engine's docs) | the image tools (stand-ins, optimisers) and the parity proofs, as `pnpm kit` commands |
 
 ## Skills
 
 Each is short, names the files it reads, ends with the site's verify block
-(`pnpm lint && pnpm test && pnpm content:lint && pnpm build`, `pnpm
-preview`) and stops for the user at the points that matter: the slug, the
-route, anything that changes `site.ts`, publishing, the push. The repo is
-the current directory; commits go on the repo's working branch.
+(`pnpm lint && pnpm test && pnpm content:lint && pnpm build`, then `pnpm
+preview`, or `pnpm start` on a site without it) and stops for the user at
+the points that matter: the slug, the route, anything that changes
+`site.ts`, publishing, the push. The repo is the current directory;
+commits go on the repo's working branch.
 
 | Skill | Use it to | It ends with |
 |---|---|---|
 | `write-post` | write a post from a brief (the workshop's, or one asked of the user) in four stages: outline, body, critique by the two agents, SEO fields; or rewrite one the same way | a `draft: true` file under `content/blog/`, lint-clean, handed to `new-post` for images and the commit |
-| `new-post` | add a post as a draft from a brief, a draft file or the workshop's drafts, with its images and frontmatter | the lint clean on the new file, the build, `pnpm preview`, a commit; the user flips `draft` |
+| `new-post` | add a post as a draft from a brief, a draft file or the workshop's drafts, with its images and frontmatter | the lint clean on the new file, the build, a look at the built post, a commit; the user flips `draft` |
 | `update-post` | change a post's copy, fields or images, `updatedAt` set, the two dates and the URL intact | the lint, the build, the route's audit lines, a commit |
-| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image | the lint, the build, a capture of the page at the site's widths, a commit |
+| `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image; or write the real copy of a page that still holds placeholder copy (a starter's home page and blog index), the marker removed with it | the lint with no placeholder left, the build, a capture of the page at the site's widths, a commit |
 | `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge, after quoting the lint's own lines | a HIGH / MEDIUM / LOW report with a verdict, then the fixes the user approves |
 | `critic` | read a post as the senior editor and fact-checker who did not watch it being written: the prose cuts, and every external claim checked against primary sources in two passes | one report with a verdict, a confidence and an action per claim, then the cuts the user approves |

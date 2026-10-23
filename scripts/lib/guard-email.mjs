@@ -15,6 +15,15 @@ export const domainPattern = (domains) => new RegExp(`[A-Za-z0-9._%+-]+@(?:${dom
 
 const walk = (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)])) : []);
 
+/** What closes each way the hits let the address in (docs/email.md): a page or its payload, a bundle. */
+export function remedies(hits) {
+  const bundle = (hit) => hit.file.startsWith(".next/static/");
+  return [
+    hits.some((hit) => !bundle(hit)) && "in a page or its payload: render the address through EmailLink and a form's through withEmailToken (agentic-cms/email); guardEmail: true in src/config/site.ts keeps it out of the structured data",
+    hits.some(bundle) && "in a bundle: a client component imports the module that holds the address (src/config/site.ts) — a server component passes it what it shows as props",
+  ].filter(Boolean);
+}
+
 /** { scanned, hits: [{ file, addresses }] } over the served files under root. */
 export function scanServed(root, domains) {
   const pattern = domainPattern(domains);

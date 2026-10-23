@@ -24,6 +24,19 @@ static` block, the only place a token lives) and `src/styles/base.css`;
 Then look, not guess: `pnpm build` and `pnpm kit shot / --width 1440`,
 `--width 390`, one shot per page the job touches (`.parity/shots/`).
 
+## The copy first
+
+A design is drawn around the site's own words, so the copy comes before
+any round. `pnpm content:lint` says whether it is there: a `placeholder`
+line is the starter's copy (a site from `agentic-cms init` starts with its
+home page, its blog index and the tagline in `src/config/site.ts` marked
+`(placeholder)`), an `example-brand` line is the kit example's brand (its
+name, its domain, its author). Get the copy first — from the owner, or
+`/editorial:new-page`, which writes a page's real copy and removes the
+marker — and never design around a placeholder, the example's brand or its
+sample content. `pnpm kit demo new` says so too, naming the fields, before
+it writes a round on such a page: stop there and get the copy. <!-- required -->
+
 ## The order
 
 Design lands in this order, each step its own branch, its own look on the
@@ -103,8 +116,18 @@ dev server and its own commit; never all at once.
 - A demo route never merges (it has no `seo` block; the build fails on it,
   on purpose). The design's throwaway files go with the branch.
 - Public URLs never change for a look.
+- A round starts from the page's content file and never writes copy into
+  a candidate: the candidates take the page's copy from its file (`demo
+  new --section` reads it on every render), and copy the page lacks goes
+  into the page file and its schema first; `agentic-cms/copy` fails copy
+  in code, a round's route and its candidates included. <!-- required -->
 
 ## Verify
+
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build    # 0 failures
@@ -114,5 +137,6 @@ pnpm kit serve                                                # the owner's look
 
 ## Stop for the user
 
-Every pick (step 2); the dev-server look before a merge; any change to a
-public URL, to the content or to the SEO fields — those are not design.
+The copy, when a page still holds placeholders (§ The copy first); every
+pick (step 2); the dev-server look before a merge; any change to a public
+URL, to the content or to the SEO fields — those are not design.

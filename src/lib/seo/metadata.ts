@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { Post } from "../blog/posts.ts";
-import type { Urls } from "../site.ts";
+import type { SiteConfig, Urls } from "../site.ts";
 import type { PageSeo } from "./types.ts";
 
 /**
@@ -22,6 +22,37 @@ export function pageMetadata(seo: PageSeo): Metadata {
       images: [{ url: seo.ogImage, width: 1200, height: 630 }],
     },
     twitter: { card: "summary_large_image", title: seo.title, description: seo.description, images: [seo.ogImage] },
+  };
+}
+
+/**
+ * The head of a route no search engine lists — a design round's, a
+ * showcase, the lab's: `noindex`, and nothing else of its own (the root
+ * layout's template still names it).
+ */
+export function unlistedMetadata(): Metadata {
+  return { robots: { index: false } };
+}
+
+/**
+ * The head every page starts from, the root layout's `metadata`: the
+ * metadataBase (the site's origin, so a page's paths become absolute), the
+ * title template (`%s | <site.name>`) with the home page's title as its
+ * default, the home page's description, the site's Open Graph name and
+ * locale, the Twitter card, and the link to the feed. `home` reads the home
+ * page's seo block when the layout is rendered, not when the kit is made.
+ */
+export function createRootMetadata(site: SiteConfig, home: () => PageSeo) {
+  return function rootMetadata(): Metadata {
+    const { title, description } = home();
+    return {
+      metadataBase: new URL(site.url),
+      title: { default: title, template: `%s | ${site.name}` },
+      description,
+      openGraph: { type: "website", siteName: site.name, ...(site.ogLocale ? { locale: site.ogLocale } : {}) },
+      twitter: { card: "summary_large_image" },
+      alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
+    };
   };
 }
 
@@ -57,5 +88,5 @@ export function createMetadata({ postUrl }: Urls) {
     };
   }
 
-  return { pageMetadata, postMetadata };
+  return { pageMetadata, postMetadata, unlistedMetadata };
 }

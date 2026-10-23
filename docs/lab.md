@@ -8,6 +8,14 @@ reader's browser. The lab is a tool an agent opens when a drawing is needed
 and removes when its files are rendered: nothing of it lives under `src/`,
 in `package.json` or in a route. The flags are in
 [commands.md](commands.md); the procedure is the `design-graphics` skill.
+Graphics are the preferred tier ([parts.md](parts.md#design-tools)): a
+rendering library or a `<canvas>` under `src/` warns in `pnpm lint`
+(`agentic-cms/graphics`), naming the lab, and fails nothing; a site that
+keeps its own says why in one line, an `allow` entry in
+`src/config/components.json` or an inline disable with its description
+([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
+An `<svg>` written in a section fails (`react/forbid-elements`, the message
+naming the lab).
 
 ## Open, draw, look
 
@@ -97,10 +105,19 @@ scene's size and, for an icon-sized one, at `sizes` (24 / 40 / 64 by
 default). `currentColor` is each ground's ink and the `var()` tokens are
 the site's, because the drawing is inline in the site's own document; the
 site's theme toggle flips the page ground and leaves a white card white,
-which is the point. The template starts with two grounds every site has —
-the page and a white card — and the site adds its own (a card, a panel, a
-dark band): keep them in a file of your own that the route imports, since
-`lab clean` deletes the route. The files are read on every render, so a
+which is the point. With no `grounds` it shows the two every site has,
+`LAB_GROUNDS` — the page and a white card — and the site adds its own (a
+card, a panel, a dark band) as `grounds={[...LAB_GROUNDS, …]}`: keep them in
+a file of your own that the route imports, since `lab clean` deletes the
+route. A ground's `label` names a surface for the review, which the copy
+rule reads as copy in data (`agentic-cms/copy`, `docs/primitives.md` §
+Enforced): that file says so once, `/* eslint-disable agentic-cms/copy --
+the lab's ground labels name surfaces for review, and the lab never ships
+*/`, and `pnpm lint` lists the reason (the guard's `disables` pass). The
+copy rule is required in the route as everywhere: the labels the lab's own
+components take (`LabStudy`, `LabTimeline`) are the tool's, and pass. The
+route's head is `kit.seo.unlistedMetadata()`. The files are read on every
+render, so a
 save in the lab is a refresh here. Every copy's ids are its own, and an
 animated scene gets a timeline of its own (§ Inspecting motion) — its
 controls, its cycle, one timeline for all its copies.

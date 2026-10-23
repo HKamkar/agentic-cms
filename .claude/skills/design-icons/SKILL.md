@@ -73,6 +73,11 @@ render (`src/components/`, the `icon` fields of `content/pages/*.yaml`).
 
 ## Verify
 
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
+
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build
 pnpm kit icons family src/config/icon-family.yaml --check   # when the site has a family

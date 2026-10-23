@@ -10,6 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # agentic-cms: project rules
 
+- **The engines are required:** every word a reader sees comes from
+  `content/` or `site.ts`, in pages, sections, components and design rounds
+  alike; heads come from `kit.seo`, forms from the form engine, tags
+  through consent, an address through `EmailLink`. For everything else,
+  find the kit's part in `docs/parts.md` and prefer it; if you use your
+  own, write its reason in one line. Never weaken a check to pass it.
 - `STANDARD.md` is the design system and the way pages are built on it:
   tokens, type, spacing, markup, images, components, the section anatomy,
   the page recipe. Read it before writing any markup or CSS; the component
@@ -28,9 +34,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
   the pages in `content/pages/`; the door for editing is `content/README.md`,
   the templates are `content/_templates/`. The voice and claim rules are
-  `content/VOICE.md`; `agentic-cms lint` enforces its fenced block
-  first in `pnpm build` (a FAIL stops the build, a WARN is read, `--strict`
-  promotes them). Never read `content/` at request time: pages are
+  `content/VOICE.md`; `agentic-cms lint` enforces its fenced block in
+  `pnpm build`, right after `pnpm lint` (a FAIL stops the build, a WARN is
+  read, `--strict` promotes them). Never read `content/` at request time: pages are
   prerendered, the Worker has no filesystem.
 - The procedures for content jobs are the `editorial` plugin in `plugin/`
   (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
@@ -60,7 +66,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   content engine (the API, the feed, the post template, a design round's
   `*-demo`, `lab-demo`) is a named exception with its reason
   (`exceptions` in `src/config/components.json`); `pnpm lint` fails any
-  other, and copy in a section or a pattern. The pages rule has the rest.
+  other, and copy anywhere in `src/`. The pages rule has the rest.
 - SEO is a contract, not a checklist: `src/lib/seo/README.md`. The page
   file's `seo` block feeds `kit.seo.pageMetadata()` / `pageBreadcrumb()`,
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
@@ -68,8 +74,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   hand-write head tags.
 - Verify with `pnpm test` (the content engine, the post pipeline and the
   lint), `pnpm content:lint` (the content rules, in a second), `pnpm build`
-  (prerenders everything) and `pnpm preview` (the real Worker) before calling
-  a change done.
+  (the lint first, then prerenders everything) and `pnpm preview` (the real
+  Worker) before calling a change done.
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
@@ -78,16 +84,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Before editing or reviewing a file, read and follow **every** rule below
 whose paths match it: `**` spans directories, and matches add up (a post
-needs its content, blog and SEO rules). Claude Code loads these files
-itself through their `paths` frontmatter; Codex does not, so open each
+needs its content, post pipeline and SEO rules). Claude Code loads these
+files itself through their `paths` frontmatter; Codex does not, so open each
 matching file before the edit, and again when the task reaches other
 paths. The table is written from the rules' frontmatter by
 `pnpm docs:rules`: a scope changes in its rule, never here.
 
 | Paths | Read and follow |
 | --- | --- |
-| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [Blog engine](.claude/rules/blog-engine.md) |
-| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/check-components.mjs` | [Components](.claude/rules/components.md) |
+| `src/lib/blog/**`, `content/blog/**`, `src/components/blog/**`, `src/app/blog-post/**`, `src/app/feed.xml/**` | [The post pipeline](.claude/rules/blog-engine.md) |
+| `src/components/**`, `src/app/**/*.tsx`, `eslint.config.mjs`, `src/config/components.json`, `scripts/lib/component-lint.mjs`, `scripts/lib/engine-rules.mjs`, `scripts/lib/preferred-rules.mjs`, `scripts/lib/check-components.mjs`, `scripts/lib/check-site.mjs`, `scripts/lib/gates.mjs` | [Components](.claude/rules/components.md) |
 | `content/**`, `src/lib/content/**`, `src/lib/index.ts`, `src/lib/site.ts`, `src/kit.ts`, `bin/**`, `scripts/content-*.mjs`, `scripts/lib/load-ts.mjs`, `scripts/lib/content-lint.mjs`, `plugin/**` | [Content engine](.claude/rules/content-engine.md) |
 | `src/**/*.tsx`, `src/**/*.css`, `public/images/**` | [Design](.claude/rules/design.md) |
 | `src/lib/forms/**`, `src/components/ui/form/**`, `src/config/forms.ts`, `src/config/form-delivery.ts`, `src/app/api/forms/**` | [Form engine](.claude/rules/form-engine.md) |
@@ -229,8 +235,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `footer.quickLinks` in `src/config/site.ts` together if it belongs there
   (they are separate lists). A new section type is a schema + a component +
   a registry entry.
-- Verify = `pnpm lint` (ESLint, then the component guard) + `pnpm build`
-  (which starts with the content lint and ends with the SEO audit) +
+- Verify = `pnpm lint` (ESLint, then `check-site`: the component guard,
+  the rounds, the exceptions added since the merge base, the gates in
+  `package.json` and CI) + `pnpm build` (`pnpm lint` first, then the
+  content lint and the docs check; after `next build` the SEO audit, and
+  `guard-email` last, which `guardEmail: true` in `site.ts` asks for) +
   `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
@@ -242,7 +251,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   request (`tools/hygiene.mjs`: no one site's name outside the README's
   showcase, no machine paths or addresses, no captures, pictures or scratch
   files committed, the two skills trees identical, the changelog,
-  `docs/commands.md`, the scoped-rules tables and the agent files' record
+  `docs/commands.md`, `docs/parts.md` naming every part, the scoped-rules
+  tables and both AGENTS.md within their budgets, and the agent files' record
   of every release, which `init` reads (`pnpm agent-files:releases`, from
   the tags; a release commit rewrites it), current). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
@@ -258,7 +268,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   a script that calls `parseOrExit(SPECS.<name>, process.argv.slice(2))`, a
   test, its `docs/` page and a changelog line, in one pull request. Exit
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
-- `docs/` holds the guides (`docs/README.md` is the index): the command
+- `docs/` holds the guides (`docs/README.md` is the index): the map of
+  every part (`parts.md`, which `pnpm hygiene` holds complete), the command
   line, the screenshot harness, the one-shot page commands, designing, the
   skills, starting a site, setting up a clone (`setup.md`), serving
   previews to the owner's devices (`dev-server.md`), Chrome and Safari
@@ -271,10 +282,18 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   assert the trees identical); design work on the example starts with the
   `design` skill like on any site. `templates/site/` is what `agentic-cms
   init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`); the
+  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
+  `templates/starter/` the content it starts from in the example's place
+  (a home page and the blog index marked `(placeholder)`, empty
+  collections, neutral pictures; `scripts/lib/starter.mjs`): nothing of
+  the example's content or brand reaches a site. The
   kit's own `AGENTS.md` and
   `.claude/rules/` describe this repo and are not what a site gets. A
-  change to a rule of the kit that a site shares goes to both.
+  change to a rule of the kit that a site shares goes to both. What a
+  site's edited copy must keep ends with `<!-- required -->` in the site's
+  rules and the skills (each rule's tier line, the engines, each skill's
+  closing `pnpm lint`), and `init --agent-files --check` holds it there,
+  with `.claude/settings.json`'s editorial plugin.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own
@@ -407,12 +426,17 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   `src/config/`. Cards are the exception: a card's frame is `ui/Panel`, and
   what goes inside it is each section's own design, from its own copy
   fields; do not build a generic Card.
-- Four engines carry their full contract next to the code: `src/lib/blog/README.md`
-  (posts, frontmatter, body conventions), `src/lib/content/README.md`
-  (collections — posts, authors, categories, reviews, faqs, use cases, pages —
-  schemas, validation, the generated field tables), `src/lib/forms/README.md` (forms as
-  config, field primitives, backend factory) and `src/lib/seo/README.md`
-  (page blocks, head and structured data, the build-time audit); the design
+- One content engine, and its layers, carry their full contract next to the
+  code: `src/lib/content/README.md` (collections — posts, authors,
+  categories, reviews, faqs, use cases, pages — schemas, validation, the
+  generated field tables); on it the post pipeline, `src/lib/blog/README.md`
+  (posts, frontmatter, body conventions), and SEO, `src/lib/seo/README.md`
+  (page blocks, head and structured data, the build-time audit); beside it
+  the form engine, `src/lib/forms/README.md` (forms as config, field
+  primitives, backend factory). `docs/parts.md` maps every part of the kit
+  in four layers (the content engine, the browser libraries, the design
+  tools, the site's commands): the need it meets, its tier, the check that
+  holds it; the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
   loads their invariants in Claude Code when those paths are edited, and the
   scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it

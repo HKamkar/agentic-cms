@@ -5,7 +5,11 @@ moved exactly the pixels it meant to. It renders every prerendered page of
 the production build at the site's widths, makes the rendering deterministic,
 and diffs two captures pixel by pixel. The flags and exit codes are in
 [commands.md](commands.md#visual-parity); this page is what the captures
-contain, how to read a compare, and the traps a long run meets.
+contain, how to read a compare, and the traps a long run meets. It is the
+kit's part for a screenshot or a proof, a design tool of the preferred
+tier ([parts.md § Design tools](parts.md#design-tools)): a script of the
+site's own that drives Playwright warns in `pnpm lint` (`check-site`'s
+`tools`), naming these commands, until an `allow` entry gives its reason.
 
 ```bash
 pnpm kit visual-parity capture before --ref develop   # the baseline: that commit built in a sibling directory and captured
@@ -102,7 +106,7 @@ together are refused.
 
 A site without dark mode says `schemes: ["light"]` and is never proved in a
 scheme it does not have; `init --light-only` writes that profile with a
-light-only example ([init.md](init.md)). A site whose widths change
+light-only site ([init.md](init.md)). A site whose widths change
 recaptures its baselines: a capture at the old widths and one at the new
 compare as `MISSING` files. A site that writes into its profile the widths
 it used to pass as a flag keeps its shot cache: the first proof after it
@@ -195,6 +199,12 @@ of the file, never its values — one whose build failed, or that read another
 the demo routes it removed go into `meta.json`).
 The one command replaces the worktree, install, build, port and kill dance a
 baseline used to be.
+
+Both builds are the site's production build (`pnpm build`), so on a site
+whose copy is still the starter's placeholder
+([init.md § The starter](init.md#the-starter)) they fail at the content
+lint, naming each placeholder: a proof is of a design, and a design is
+drawn around the site's real copy, so the copy comes first.
 
 The build (a snapshot or a `--ref` sibling) is served the way Next's own
 server serves it: the pages, their RSC payloads and the per-segment prefetch

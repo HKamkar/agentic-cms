@@ -21,6 +21,11 @@ pnpm run deploy    # build and deploy; `deploy` alone is a pnpm built-in
 pnpm upload        # build and upload a version without deploying it
 ```
 
+- **No placeholder deploys.** `opennextjs-cloudflare build` runs the
+  site's `pnpm build`, whose content lint (`--production`) fails while the
+  starter's placeholder copy or address remains
+  ([init.md § The starter](init.md#the-starter)), so `pnpm run deploy` and
+  `pnpm upload` stop there, naming each.
 - **Static-only.** The Worker serves the prerendered pages from its
   static-assets cache and has no filesystem at request time; the form
   endpoint is the one route that runs per request. `revalidate`,
@@ -52,14 +57,25 @@ copies them in. `agentic-cms assemble` does that copy and then proves the
 package complete, as the last step of the build:
 
 ```json
-"build": "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms critical-css && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
+"build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms critical-css && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble",
 "preview": "pnpm build && HOSTNAME=0.0.0.0 PORT=8000 node .next/standalone/server.js"
 ```
 
-(`guard-email` belongs there only on a site that keeps its address out of
-the HTML; [email.md](email.md); `critical-css` is the next section.) What
+The default gates are the steps `init` writes and `check-site` holds
+([commands.md § default gates](commands.md#default-gates)): `pnpm lint`
+first, then `lint --production` and `docs --check` before `next build`,
+`seo` after it, and `guard-email` on a site whose `site.ts` turns
+`guardEmail` on, as a new site's does ([email.md](email.md)).
+`critical-css` (the next section) and `assemble` are opt-in steps
+([commands.md § opt-in steps](commands.md#opt-in-steps)), there for this
+host: a site keeps them anywhere after `next build`, `assemble` last. What
 deploys is the `.next/standalone` folder, whose start command is
 `node server.js`.
+Nothing of the starter's placeholders deploys: the content lint fails on
+them before `next build` (`lint --production`), and `assemble`
+packages nothing while one remains, naming each by line — unless the run's
+environment says `AGENTIC_CMS_PLACEHOLDERS=warn`, which only a CI build
+that deploys nothing sets ([init.md § The starter](init.md#the-starter)).
 
 ## Critical CSS
 

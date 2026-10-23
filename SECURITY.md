@@ -16,6 +16,7 @@ by tag, so it takes a fix by moving its pin to that release.
 
 The package (`src/lib/`, the `agentic-cms` command line in `bin/` and
 `scripts/`), the files `agentic-cms init` writes into a site
-(`templates/site/`), and the example site in this repository. A
+(`templates/site/`, `templates/starter/`), and the example site in this
+repository. A
 vulnerability in a dependency is in scope when the package or the example
 reaches the vulnerable code; otherwise report it upstream.

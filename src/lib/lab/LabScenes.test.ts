@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LabScenes } from "./LabScenes.ts";
+import { LAB_GROUNDS, LabScenes } from "./LabScenes.ts";
 import { LAB_DIR } from "./scenes.ts";
 
 const TICK = `<!-- agentic-cms lab: icon on the Icon component's contract -->\n<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12l5 5 11-11"/></svg>`;
@@ -70,4 +70,13 @@ test("LabScenes: no scrubber without an animated scene, no intro when asked, the
   const empty = renderToStaticMarkup(h(LabScenes, { root: path.join(root, "nowhere"), grounds: GROUNDS }));
   assert.match(empty, /No scenes yet: <code>pnpm kit lab new/);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("LabScenes without grounds of the site's own: LAB_GROUNDS, the page and a white card — so the route the kit writes holds no labels of its own", () => {
+  const root = fixture({ "tick.svg": TICK });
+  const html = renderToStaticMarkup(h(LabScenes, { root }));
+  assert.deepEqual(LAB_GROUNDS.map((ground) => ground.label), ["the page", "white card"]);
+  assert.equal(count(html, /data-ground="/g), 2, "one copy of the scene on each ground");
+  assert.match(html, /<div style="border:1px solid currentColor;padding:2rem">/);
+  assert.match(html, /<div style="background:#ffffff;color:#000000;border:1px solid #000000;padding:2rem">/);
 });

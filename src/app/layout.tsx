@@ -1,10 +1,11 @@
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { GoogleTag, consentDefaultScript } from "agentic-cms/consent/google";
 import { ConsentBanner } from "@/components/ui/ConsentBanner";
 import { Footer } from "@/components/ui/Footer";
 import { Navbar } from "@/components/ui/Navbar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { analytics } from "@/config/analytics";
-import { chrome, site } from "@/config/site";
+import { chrome, consentBanner, site } from "@/config/site";
 import { kit } from "@/kit";
 import "./globals.css";
 
@@ -13,16 +14,8 @@ import "./globals.css";
 // runs before hydration — hence suppressHydrationWarning on <html>.
 const THEME_SCRIPT = "try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}";
 
-const home = () => kit.content.getPage("home");
-
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: { default: home().seo.title, template: `%s | ${site.name}` },
-  description: home().seo.description,
-  openGraph: { type: "website", siteName: site.name, locale: "en_US" },
-  twitter: { card: "summary_large_image" },
-  alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
-};
+// The head every page starts from: the origin, the title template and the home page's title and description, Open Graph's name and locale, the feed (src/lib/seo/README.md).
+export const metadata = kit.seo.rootMetadata();
 
 export const viewport: Viewport = { colorScheme: "light dark" };
 
@@ -37,8 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:border focus:border-line focus:bg-panel focus:px-3 focus:py-2">
           {chrome.skipLink}
         </a>
-        {analytics.tagId && <ConsentBanner />}
-        <Navbar />
+        {/* The chrome's client components get what they show as props: none imports site.ts, which would ship all of it, the address included, in a bundle (docs/email.md). */}
+        {analytics.tagId && <ConsentBanner copy={consentBanner} />}
+        <Navbar brand={site.shortName} links={site.nav} signIn={site.signIn} cta={site.cta} copy={chrome.navbar}>
+          <ThemeToggle labels={chrome.themeToggle} />
+        </Navbar>
         {/* The one outline-none on the site: <main> is focused by the skip link, not reached by tabbing. */}
         <main id="main" tabIndex={-1} className="outline-none">
           {children}

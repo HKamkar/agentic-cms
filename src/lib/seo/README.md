@@ -1,11 +1,15 @@
 # SEO contract
 
 Every page and post ships with a complete, correct search and social surface,
-and the build proves it. This document is the contract; the enforcement is
-the types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`, and
-`agentic-cms seo`, which `pnpm build` runs after `next build` and
-which fails the build (and therefore `pnpm preview` and `pnpm run deploy`)
-on a structural problem.
+and the build proves it. SEO is a layer of the content engine
+(`agentic-cms/seo`, `kit.seo`) and one of the engines a site must use
+(`docs/parts.md`). This document is the contract; the enforcement is the
+types in `types.ts`, the helpers in `metadata.ts` / `jsonld.ts`,
+`agentic-cms/head` in `pnpm lint` (a head of the site's own), the content
+lint's `seo-title` and `seo-description` at the source, and
+`agentic-cms seo`, which `pnpm build` runs after `next build` and which
+fails the build (and therefore `pnpm preview` and `pnpm run deploy`) on a
+structural problem.
 
 ## Rules that must not break
 
@@ -20,9 +24,17 @@ on a structural problem.
    from `kit.seo.pageMetadata(page.seo)`, nothing hand-written: that is
    the exact title, the description, the canonical, Open Graph with the
    1200×630 image, the Twitter card. Posts get `kit.seo.postMetadata(post)`
-   from the post page; never build these by hand. `kit.seo` is
-   `createSeo({ site, urls, content, blog })`, composed once by
-   `createKit()` in the site's `src/kit.ts`; nothing here imports the site.
+   from the post page; the root layout's `metadata` is
+   `kit.seo.rootMetadata()` (the origin, the title template with the home
+   page's title, its description, Open Graph's name and `site.ogLocale`,
+   the feed); a design round's or the lab's route is
+   `kit.seo.unlistedMetadata()` (`noindex`). Never build these by hand:
+   `pnpm lint` fails any other `metadata` or `generateMetadata`, and a
+   `<head>`, `<title>`, `<meta>`, canonical `<link>` or JSON-LD `<script>`
+   of the site's own (`agentic-cms/head`, `docs/primitives.md` §
+   Enforced). `kit.seo` is `createSeo({ site, urls, content, blog })`,
+   composed once by `createKit()` in the site's `src/kit.ts`; nothing here
+   imports the site.
 3. **Structured data**: the same route emits `kit.seo.pageBreadcrumb(page.seo)`
    for every inner page (posts `postBreadcrumb(post)`) and the page-type
    block from `pageJsonLd(page)` (`WebPage`, `AboutPage`, `ContactPage`,
@@ -39,11 +51,31 @@ on a structural problem.
    Mark up only what is on the page; never reviews, ratings or offers that
    are not real, and no ratings of the brand by the brand (Google ignores
    self-serving ones).
-   The organisation's `email` is optional: a site that keeps its address
-   out of the HTML (assembled by script, against harvesters) leaves
-   `site.email` out and the blocks carry none; a `ContactPoint` without an
-   `email` carries the contact page's `url` instead. Google needs no e-mail
-   for any rich result.
+   The organisation's address follows `site.guardEmail`
+   (`docs/email.md`). Without the key, or with `{ off: "<why>" }`, every
+   Organization block — `organizationLd()` (the provider, the publisher of
+   a page and of the Blog), the AboutPage's `about`, the ContactPage's
+   organisation — carries `site.email` as `email`, and a ContactPage's
+   contact point its contact's `email`:
+
+   ```json
+   { "@type": "Organization", "name": "My Site", "logo": { … }, "email": "hello@my-site.com", "sameAs": [ … ] }
+   ```
+
+   With `guardEmail: true` no block carries an address as text: in
+   `organizationLd()` and the AboutPage's `about` a `ContactPoint` with the
+   contact page's URL (`site.links.contact`) takes the `email`'s place; a
+   ContactPage's organisation drops its `email`, and every one of its
+   contact points carries that page's `url`, a contact's own `email` left
+   out:
+
+   ```json
+   { "@type": "Organization", "name": "My Site", "logo": { … }, "contactPoint": { "@type": "ContactPoint", "url": "https://my-site.com/#contact-form" }, "sameAs": [ … ] }
+   ```
+
+   A site without `site.email` gets neither. Google needs no e-mail for any
+   rich result. With the key on, the build ends with `agentic-cms
+   guard-email`, which fails a served file that still carries the address.
 4. **The sitemap follows from the page files and the published posts**;
    nothing is added by hand. `updated` is the page's last-modified date —
    bump it when the content changes, not on refactors.
@@ -104,7 +136,7 @@ on a structural problem.
 |---|---|
 | `src/lib/seo/index.ts` | `createSeo({ site, urls, content, blog })`: everything below, composed for one site (`kit.seo`) |
 | `src/lib/seo/types.ts` | `PageSeo` (the `seo` block's type, from the schema) |
-| `src/lib/seo/metadata.ts` | `pageMetadata()` (needs no site), `createMetadata(urls)` → `postMetadata()` |
+| `src/lib/seo/metadata.ts` | `pageMetadata()` and `unlistedMetadata()` (need no site), `createMetadata(urls)` → `postMetadata()`, `createRootMetadata(site, home)` → `rootMetadata()` |
 | `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
 | `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
 | `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |
@@ -130,5 +162,5 @@ in `src/components/sections/render.tsx`.
 
 **Change a page's copy.** Edit the page file, bump `seo.updated`, `pnpm build`.
 
-**Add a post.** `content/blog/_template.md`; the blog engine validates the
+**Add a post.** `content/blog/_template.md`; the post pipeline validates the
 frontmatter and the audit checks the rendered post.

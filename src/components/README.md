@@ -21,16 +21,33 @@ Before building anything (a section, a card, a button):
 
 `pnpm lint` enforces it, and so does CI on every pull request: ESLint runs
 `componentRules()` from `agentic-cms/eslint` (configured in
-`eslint.config.mjs`). In a section's file it fails a raw `<button>`, `<a>`,
-`<img>`, `<picture>`, `<video>`, form field, `<h1>`–`<h6>` or `<svg>`, a
-`style` attribute, an arbitrary value (`[…]`, `(…)`), a fill, border,
-radius, ring, outline, shadow, transition or animation class, a second
-component in the file, each message naming the primitive to use, and copy:
-JSX text, or a string in a `title`, `alt`, `aria-label`, `placeholder`,
-`label` or `children`, which comes from the page's file instead (a symbol,
-an `aria-hidden` decoration and the labels of `Placeholder` and `TypeTag`
-pass). Anywhere
-in `src/`, it fails an import that goes the wrong way between the layers:
+`eslint.config.mjs`). In a section's file (and a pattern's) it fails a raw
+`<button>`, `<a>`, `<img>`, `<picture>`, `<video>`, form field,
+`<h1>`–`<h6>` or `<svg>`, a `style` attribute, an arbitrary value (`[…]`,
+`(…)`), a fill, border, radius, ring, outline, shadow, transition or
+animation class and a second component in the file, each message naming
+the primitive to use.
+
+Across all of `src/` (sections, patterns, `ui/`, layouts, `not-found`, the
+design-round and lab routes) it holds the engines, which are required:
+copy — JSX text, a copy prop (`title`, `alt`, `aria-label`, `placeholder`,
+`label`, `heading`, `text`, `children`, …) or any other prop whose string
+reads as words — comes from the page's file or the chrome in
+`src/config/site.ts` instead (`agentic-cms/copy`; a symbol, an
+`aria-hidden` decoration and the labels of `Placeholder` and `TypeTag`
+pass); no head of a component's own (`agentic-cms/head`), no `<form>`
+outside `Form` (`agentic-cms/forms`), no tag outside its consent adapter
+(`agentic-cms/tags`), no `mailto:` but `EmailLink` (`agentic-cms/email`).
+What the kit only prefers warns and fails nothing: another animation
+library, a `<canvas>` or a rendering library, `next/image` or an eager
+`<img>` in a server component, an `<svg>` outside `Icon`, a value outside
+the tokens in `ui/` and
+`src/app` (`agentic-cms/motion`, `graphics`, `images`, `icons`,
+`styling`). Each warning names the kit's part, and a file that keeps its
+own choice says why in one line: an `allow` entry in
+`src/config/components.json` or an inline disable with its description
+(`docs/primitives.md` § Enforced). Anywhere in `src/`, it fails an import
+that goes the wrong way between the layers:
 
 | Layer | Holds | May import |
 |---|---|---|
@@ -43,8 +60,9 @@ Nothing outside the motion layer imports `motion` or `framer-motion`; a
 site that adds a `motion/` folder wraps `agentic-cms/ix` there too, and the
 lint then keeps it out of the other layers.
 
-Then `pnpm lint` runs `agentic-cms check-components`, the placement guard,
-configured in `src/config/components.json`: every file under
+Then `pnpm lint` runs `agentic-cms check-site`, whose first pass is the
+placement guard (`agentic-cms check-components`), configured in
+`src/config/components.json`: every file under
 `src/components` sits in a layer; every component `ui/` exports is named
 in this file, in backticks, in the same commit that adds it; every
 component in a section folder is a section `sections/render.tsx` imports;
@@ -54,7 +72,11 @@ template, the form endpoint, the feed, each with its reason); no component
 lives elsewhere in `src/`; CSS modules only in `ui/` (and a motion folder),
 `@keyframes` only in `src/styles/motion.css`. The blog's post template,
 which the blog routes render rather than the registry, is on the guard's
-frozen `inherited` list. A rule the library cannot meet yet is a new
+frozen `inherited` list. The site's own passes follow: a design round's
+route that `demo new` did not write, every exception added since the merge
+base listed with its reason, the gates in `package.json` and CI, and what
+is left of the kit's example (`docs/parts.md` § The checks). A rule the
+library cannot meet yet is a new
 primitive or option, never a rule turned off in passing: loosening one —
 a rule, a layer, a route exception, an `inherited` file — is its own pull
 request, said so in its title.
@@ -113,7 +135,9 @@ are in `STANDARD.md`):
   by `data-theme` on `<html>`, decides which side of every `light-dark()`
   pair applies.<!-- dark-mode:end -->
 - Text, links and images come in through props or `src/config/site.ts`,
-  never hard-coded inside a shared component.
+  never hard-coded inside a shared component. A client component takes
+  them as props alone: none imports `site.ts`, whose whole text, the
+  address included, a bundle would carry (`docs/email.md`).
 - The wireframe has no motion: no `Fx`, no `OnView`, no `Reveal`, no
   `Sequence`, no `data-ix` or `data-part`, no transition. The `ix/` library
   below is kept whole for a fork that wants motion.
@@ -193,12 +217,12 @@ meaning. Props: `label`, `className?` (its spacing in the box).
 
 | Component | What it is | Props | Notes |
 |---|---|---|---|
-| `Navbar` | The site header | — | `"use client"`; rendered once in `app/layout.tsx`. `<header>` with a `<nav>` named `chrome.navbar.label` ("Main"); the brand, `site.nav`, `site.signIn`, `site.cta`<!-- dark-mode:start --> and the theme switch<!-- dark-mode:end -->. Below 992 px the links and actions hide (`max-lg:hidden`) behind a menu button labelled `chrome.navbar.menu` (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
+| `Navbar` | The site header | `brand`, `links`, `signIn`, `cta`, `copy` (`{ label, menu }`), `children?` | `"use client"`; rendered once in `app/layout.tsx`, which passes `site.shortName`, `site.nav`, `site.signIn`, `site.cta` and `chrome.navbar`<!-- dark-mode:start -->, and the theme switch as its child<!-- dark-mode:end -->. `<header>` with a `<nav>` named `copy.label` ("Main"); the brand, the links, the sign-in link, the call to action and the children after it. Below 992 px the links and actions hide (`max-lg:hidden`) behind a menu button labelled `copy.menu` (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
 | `NavLink` | A link in the chrome | `href`, `label`, `className?` | `"use client"`. An `http(s)` href renders a plain `<a>`; everything else `next/link`, marked `aria-current="page"` only when the href is exactly the current path — so a section anchor is never "current". |<!-- dark-mode:start -->
-| `ThemeToggle` | The theme switch | — | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`, labelled from `chrome.themeToggle` in `src/config/site.ts`. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |<!-- dark-mode:end -->
+| `ThemeToggle` | The theme switch | `labels` (`{ system, light, dark }`) | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`, labelled from `chrome.themeToggle` in `src/config/site.ts`, which the layout passes. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |<!-- dark-mode:end -->
 | `Footer` | The site footer | — | `<footer>` with one `Panel`: the brand, `site.tagline`, the `<address>`, the e-mail, and the two link columns from `site.footer` under the titles in `chrome.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
-| `ConsentBanner` | The consent banner | — | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
-| `CookieSettingsButton` | Opens the consent banner again | `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`; the footer renders it, and any page may. |
+| `ConsentBanner` | The consent banner | `copy` (`{ title, text, decline, allow }`) | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`, which the layout passes as `copy`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
+| `CookieSettingsButton` | Opens the consent banner again | `label`, `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`, which the footer passes; the footer renders it, and any page may. |
 | `Button` | The call to action, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. Its looks are the `button` map (`variants()`): `solid` is `bg-ink text-on-ink`, `outline` is `bg-panel text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
 | `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`, `OutlineButton` `buttonClass("outline")`. |
 | `OutlineButton` | A choice on the page | `label`, `onClick?`, `pressed?`, `disabled?`, `className?` | A real `<button type="button">` in the outline look: a filter, a toggle, a step, a consent answer, never a call to action (that is `Button`, a link). `pressed` sets `aria-pressed` and makes it a toggle; left out, it is a plain button. Takes `onClick`, so it is used from a client component. |
@@ -477,7 +501,7 @@ in the harness's static captures every part is at rest.
 
 ## Content (`src/components/blog/`)
 
-These belong to the blog engine; its contract (frontmatter, body
+These belong to the post pipeline; its contract (frontmatter, body
 conventions, pipeline) is **`src/lib/blog/README.md`**.
 
 | Component | Props | Notes |

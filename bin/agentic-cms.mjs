@@ -9,27 +9,28 @@
 // site refuses to run outside a site's root.
 import fs from "node:fs";
 import { specAt, subcommandPath, suggest, usageText } from "../scripts/lib/args.mjs";
-import { SPECS } from "../scripts/lib/specs.mjs";
+import { FAMILIES, SPECS } from "../scripts/lib/specs.mjs";
 
 const [command, ...rest] = process.argv.slice(2);
 
-// The families in the order a job runs: the content, the gates a build runs, the images, the proofs, the looks, then the design tools and the site itself.
-const FAMILIES = ["content", "build gates", "images", "proof", "look & measure", "icons", "lab", "demo", "site"];
 const short = (summary) => { const cut = summary.split(/[:;—(]/)[0].trim(); return cut.length > 72 ? `${cut.slice(0, 69).replace(/\s+\S*$/, "")}…` : cut; };
 
-/** The map: every family with its commands, one line each on what it is for. */
+/** The map: every family with its commands, one line each on what it is for, under the layer it belongs to (FAMILIES' order). */
 function table() {
-  const families = new Map(FAMILIES.map((f) => [f, []]));
+  const families = new Map(FAMILIES.map((f) => [f.group, []]));
+  const layers = new Map(FAMILIES.map((f) => [f.group, f.layer]));
   for (const spec of Object.values(SPECS)) { const group = spec.group ?? "other"; if (!families.has(group)) families.set(group, []); families.get(group).push(spec); }
   const width = Math.max(...[...families.keys()].map((g) => g.length)) + 2;
-  const lines = ["usage: agentic-cms <command> [options]        (pnpm kit <command> in a checkout of the kit)", ""];
+  const lines = ["usage: agentic-cms <command> [options]        (pnpm kit <command> in a checkout of the kit)"];
+  let layer;
   for (const [group, specs] of families) {
     if (!specs.length) continue;
+    if (layers.get(group) !== layer) { layer = layers.get(group); lines.push("", layer ?? "other"); }
     const names = specs.map((spec) => (spec.subcommands ? `${spec.command} <${Object.keys(spec.subcommands).join("|")}>` : spec.command)).join(" · ");
     lines.push(`  ${group.padEnd(width)} ${names}`);
     for (const spec of specs) lines.push(`  ${"".padEnd(width)}   ${spec.command.padEnd(22)} ${short(spec.summary)}`);
   }
-  lines.push("", "agentic-cms <command> --help prints its flags, exit codes (0 clean · 1 findings · 2 usage or environment) and examples; docs/commands.md is the contract");
+  lines.push("", "agentic-cms <command> --help prints its flags, exit codes (0 clean · 1 findings · 2 usage or environment) and examples; docs/commands.md is the contract, docs/parts.md the map of every part");
   return lines.join("\n");
 }
 
@@ -48,7 +49,7 @@ if (rest.includes("--help") || rest.includes("-h")) {
 }
 // A command that loads the site's registry (site: true) runs in the site's root: src/kit.ts is its mark.
 if (spec.site && !fs.existsSync("src/kit.ts")) {
-  console.error(`agentic-cms ${command}: no src/kit.ts here — run it in the site's root (where package.json, src/kit.ts and content/ are)${fs.existsSync("package.json") ? "" : "; to start a site here, agentic-cms init ."}`);
+  console.error(`agentic-cms ${command}: no src/kit.ts here — run it in the site's root (where package.json, src/kit.ts and content/ are)${fs.existsSync("package.json") ? "" : "; to start a site here, agentic-cms init . --name \"<Site>\""}`);
   process.exit(2);
 }
 // The scripts print and then process.exit(), which drops whatever a pipe has not

@@ -4,10 +4,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
 const run = (args, cwd = process.cwd()) => spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: "utf8" });
@@ -41,7 +43,7 @@ test("a command that reads the site refuses to run outside a site's root, with t
   try {
     const r = run(["lint"], dir);
     assert.equal(r.status, 2);
-    assert.match(r.stderr, /^agentic-cms lint: no src\/kit\.ts here — run it in the site's root \(where package\.json, src\/kit\.ts and content\/ are\); to start a site here, agentic-cms init \.\n$/);
+    assert.match(r.stderr, /^agentic-cms lint: no src\/kit\.ts here — run it in the site's root \(where package\.json, src\/kit\.ts and content\/ are\); to start a site here, agentic-cms init \. --name "<Site>"\n$/);
     fs.writeFileSync(path.join(dir, "package.json"), "{}");
     assert.doesNotMatch(run(["seo"], dir).stderr, /to start a site here/, "a package.json without src/kit.ts: the root of something else");
     assert.equal(run(["placeholder", "--help"], dir).status, 0);
@@ -66,7 +68,7 @@ test("assemble runs in any folder and, without a standalone build, says how to m
 test("check-components: the kit's example passes; a stray section file is a finding with its fix, in text and JSON; no config is exit 2", () => {
   const ok = run(["check-components"]);
   assert.equal(ok.status, 0, ok.stderr);
-  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited\)\n$/);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited; 2 allowed, each with its reason\)\n$/);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "guard-cli-"));
   const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
   try {
@@ -74,6 +76,10 @@ test("check-components: the kit's example passes; a stray section file is a find
     assert.equal(none.status, 2);
     assert.match(none.stderr, /^check-components: no src\/config\/components\.json here — the guard is not set up in this site/);
     write("src/config/components.json", JSON.stringify({ motion: null, patterns: null }));
+    // The site's ESLint config spreads the preset with the same options: the guard reads the required rules' settings from it.
+    const url = (file) => JSON.stringify(pathToFileURL(file).href);
+    const react = createRequire(createRequire(import.meta.url).resolve("eslint-config-next")).resolve("eslint-plugin-react");
+    write("eslint.config.mjs", `import react from ${url(react)};\nimport { componentRules } from ${url(path.join(import.meta.dirname, "lib/component-lint.mjs"))};\nexport default [{ plugins: { react } }, ...componentRules({ motion: null, patterns: null })];\n`);
     write("src/components/README.md", "## `Button`\n");
     write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
     write("src/components/sections/render.tsx", 'import { Hero } from "@/components/sections/Hero";\n');
@@ -87,9 +93,50 @@ test("check-components: the kit's example passes; a stray section file is a find
     const json = run(["check-components", "--json"], dir);
     assert.equal(json.status, 1);
     assert.deepEqual(JSON.parse(json.stdout).findings.map((f) => [f.check, f.file]), [["registry", "src/components/sections/Promo.tsx"]]);
+    fs.rmSync(path.join(dir, "src/components/sections/Promo.tsx"));
+    write("eslint.config.mjs", fs.readFileSync(path.join(dir, "eslint.config.mjs"), "utf8").replace("})];", '}), { files: ["src/app/**"], rules: { "agentic-cms/head": "off" } }];'));
+    const replaced = run(["check-components", "--json"], dir);
+    assert.equal(replaced.status, 1, "a later block that turns a required rule off fails the guard");
+    assert.deepEqual(JSON.parse(replaced.stdout).findings.map((f) => [f.check, f.file]), [["preset", "src/app/page.tsx"], ["preset", "src/app/sample-demo/page.tsx"]]);
     write("src/config/components.json", JSON.stringify({ sectons: ["sections"] }));
     assert.match(run(["check-components"], dir).stderr, /no option sectons — did you mean sections\?/);
     assert.match(run(["check-components", "--jsn"], dir).stderr, /did you mean --json\?/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("check-site: the kit's example passes; a site without its gates is a finding with its fix, in text and JSON; no config and a --base with no history are exit 2", () => {
+  const ok = run(["check-site", "--base", "HEAD"]);
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.match(ok.stdout, /^check-components: ok \(ui \d+, sections \d+ in 6 folders; 5 inherited; 2 allowed, each with its reason\)\ncheck-site: ok \(package\.json's gates, CI on pull requests; 0 round routes; 0 exceptions added since HEAD \([0-9a-f]{7}\)\)\n$/, "the kit's own scripts are its commands, so no tools clause");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "site-cli-"));
+  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), text); };
+  try {
+    const none = run(["check-site"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^check-site: no src\/config\/components\.json here — the guard is not set up in this site/);
+    write("src/config/components.json", JSON.stringify({ motion: null, patterns: null, sections: [] }));
+    const url = (file) => JSON.stringify(pathToFileURL(file).href);
+    const react = createRequire(createRequire(import.meta.url).resolve("eslint-config-next")).resolve("eslint-plugin-react");
+    write("eslint.config.mjs", `import react from ${url(react)};\nimport { componentRules } from ${url(path.join(import.meta.dirname, "lib/component-lint.mjs"))};\nexport default [{ plugins: { react } }, ...componentRules({ motion: null, patterns: null, sections: [] })];\n`);
+    write("src/components/README.md", "## `Button`\n");
+    write("src/components/ui/Button.tsx", "export function Button() { return null; }\n");
+    write("src/app/layout.tsx", "export default function Layout() { return null; }\n");
+    write("package.json", JSON.stringify({ name: "ours", scripts: { lint: "eslint", build: "next build" } }));
+    write("scripts/shots.mjs", 'import { chromium } from "playwright";\n');
+    const found = run(["check-site"], dir);
+    assert.equal(found.status, 1, found.stdout);
+    assert.match(found.stderr, /^check-components: ok \(ui 1, sections 0 in 0 folders; 0 inherited\)\ncheck-site: 3 problems \(exceptions not compared: not a git checkout, so the exceptions added since the merge base are not compared\)\n\n {2}✗ package\.json {2}\[scripts\]\n {4}"lint" runs no agentic-cms check-site/);
+    assert.match(found.stderr, /✗ \.github\/workflows\/verify\.yml {2}\[ci\]\n {4}no workflow runs on pull requests/);
+    assert.match(found.stderr, /check-site: 1 warning, which fail nothing: the kit's command, or the site's own with its reason\n\n {2}⚠ scripts\/shots\.mjs {2}\[tools\]/);
+    const json = run(["check-site", "--json"], dir);
+    assert.equal(json.status, 1);
+    const report = JSON.parse(json.stdout);
+    assert.deepEqual(report.findings.map((f) => [f.check, f.file]), [["scripts", "package.json"], ["scripts", "package.json"], ["ci", ".github/workflows/verify.yml"]]);
+    assert.deepEqual([report.base, report.added, report.warnings.map((w) => w.check)], [null, [], ["tools"]]);
+    const asked = run(["check-site", "--base", "main"], dir);
+    assert.equal(asked.status, 2);
+    assert.equal(asked.stderr, "check-site: --base main: not a git checkout\n");
+    assert.match(run(["check-site", "--bse", "main"], dir).stderr, /did you mean --base\?/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -125,11 +172,33 @@ test("a family inside a family: icons round lists its three actions, each has it
   assert.match(wrong.stderr, /icons: icons round has no subcommand publsh — did you mean publish\? \(new, publish, retire\)/);
 });
 
+test("init: a new site needs its name — without --name, or with an empty one, it exits 2 and writes nothing; a site that has content/ needs none", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "my-site");
+    const nameless = run(["init", site]);
+    assert.equal(nameless.status, 2);
+    assert.equal(nameless.stderr, 'init: a new site needs its name, as it is spelled: --name "<Site>" (agentic-cms init my-site --name "My Site"); nothing was written\n');
+    assert.ok(!fs.existsSync(site), "nothing written");
+    for (const args of [["--name", "  "], ["--light-only"], ["--url", "https://my-site.com"]]) {
+      const r = run(["init", site, ...args]);
+      assert.equal(r.status, 2, args.join(" "));
+      assert.match(r.stderr, args[0] === "--name" ? /^init: --name is empty: give the site's name, as it is spelled \(agentic-cms init my-site --name "My Site"\); nothing was written$/m : /^init: a new site needs its name/m);
+      assert.ok(!fs.existsSync(site), `${args.join(" ")}: nothing written`);
+    }
+    assert.equal(run(["init", site, "--name", "My Site", "--json"]).status, 0);
+    const again = run(["init", site]);
+    assert.equal(again.status, 0, again.stderr);
+    assert.match(again.stdout, /^init: content\/ was there: the site's own content, pictures, site\.ts and forms\.ts are left as they are \(the starter is for a new site\)$/m);
+    assert.match(run(["init", site, "--name", "Other"]).stdout, /\(the starter is for a new site\), and --name names nothing here$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB is named with its size and exits 1", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
-    assert.equal(run(["init", site, "--json"]).status, 0);
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
     const clean = run(["init", site, "--agent-files", "--check"]);
     assert.equal(clean.status, 0, clean.stderr);
     assert.match(clean.stdout, /agent files as the kit ships them/);
@@ -141,11 +210,32 @@ test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("init --agent-files --check: a site's edit that dropped a required block, or settings without the editorial plugin, fails, naming each and where the kit has it", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
+  try {
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
+    const rule = path.join(site, ".claude/rules/seo.md");
+    fs.writeFileSync(rule, fs.readFileSync(rule, "utf8").split("\n").filter((line) => !line.startsWith("- **Tier:**")).join("\n"));
+    const settings = path.join(site, ".claude/settings.json");
+    fs.writeFileSync(settings, JSON.stringify({ ...JSON.parse(fs.readFileSync(settings, "utf8")), enabledPlugins: {} }));
+    const check = run(["init", site, "--agent-files", "--check"]);
+    assert.equal(check.status, 1);
+    assert.match(check.stderr, /^modified, required gone {2}\.claude\/rules\/seo\.md — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/rules\/seo\.md has it:\n {2}line \d+: - \*\*Tier:\*\* SEO, .{40,}…$/m);
+    assert.match(check.stderr, /^modified, required gone {2}\.claude\/settings\.json — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/settings\.json has it:\n {2}enabledPlugins\["editorial@agentic-cms"\]: true$/m);
+    assert.match(check.stdout, /modified, required gone: the site's edit dropped what the kit marks required/);
+    const refresh = run(["init", site, "--agent-files"]);
+    assert.equal(refresh.status, 0, refresh.stderr);
+    assert.match(refresh.stdout, /\(2 without a block the kit requires\)/);
+    assert.match(refresh.stderr, /^init: \.claude\/rules\/seo\.md is kept as the site edited it, without what the kit marks required/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("init --agent-files: --check fails a site's edit with no base, --diff prints the kit's text against it (exit 1), --accept makes it the site's edit of the kit's text and --check passes; the modes go with --agent-files, one at a time", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
-    assert.equal(run(["init", site, "--json"]).status, 0);
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
     const nothing = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
     assert.equal(nothing.status, 0, nothing.stderr);
     assert.equal(nothing.stdout, "");

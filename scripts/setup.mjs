@@ -27,8 +27,8 @@ try { engines = parseEngines(flags.engines); } catch (error) {
 
 // With --json, stdout carries the report alone: the progress and every command's own output go to stderr.
 const say = flags.json ? console.error : console.log;
-const exec = (command, args, { capture = false } = {}) => {
-  const r = spawnSync(command, args, { cwd: root, encoding: "utf8", shell: process.platform === "win32", stdio: capture ? ["ignore", "pipe", "ignore"] : ["inherit", flags.json ? 2 : "inherit", "inherit"] });
+const exec = (command, args, { capture = false, env = {} } = {}) => {
+  const r = spawnSync(command, args, { cwd: root, encoding: "utf8", env: { ...process.env, ...env }, shell: process.platform === "win32", stdio: capture ? ["ignore", "pipe", "ignore"] : ["inherit", flags.json ? 2 : "inherit", "inherit"] });
   return { status: r.error ? null : r.status, stdout: r.stdout ?? "" };
 };
 

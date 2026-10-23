@@ -4,6 +4,76 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.8.2] — 2026-10-22
+
+- Docs: `docs/roadmap-0.8.2.md` is the plan for 0.8.2. The engines are enforced: content, SEO, forms, consent and e-mail fail the lint when bypassed, design rounds included. The kit's libraries and tools are preferred: a warning names the part, and a reason keeps a site's own. A new site starts without the example's brand or content. Every part goes on one map (`docs/parts.md`), and the README and every doc are swept. `docs/roadmap-0.9.0.md` now follows it.
+- `init --name "<Site>"`, `--url`, `--email`: a new site starts from a starter of its own name instead of the example. It gets one home page and the blog index with copy marked `(placeholder)`, empty collections, the wireframe's neutral pictures and a logo placeholder. It gets none of the example's brand, posts, reviews, use cases, FAQs, author or catalogue pages, and the package no longer ships them.
+- The content lint: `placeholder` WARNs on the starter's marker and on addresses on reserved domains, and FAILs with `--production`, which a new site's `pnpm build` passes (`AGENTIC_CMS_PLACEHOLDERS=warn` keeps them warnings in a build that deploys nothing: the site's CI, `setup --build`). `example-brand` FAILs on the kit example's brand in a site at any time.
+- `agentic-cms assemble` packages nothing while a placeholder remains.
+- `demo new` names a page's placeholder copy and any of the example's brand before it writes a round. The `design` skill gets the copy first, and `/editorial:new-page` writes a page's real copy.
+- `init --force` never overwrites a site's own `content/`, `public/`, `src/config/site.ts` or `src/config/forms.ts`. The starter's content goes only into a site with no `content/`.
+- CI: the kit's workflow moves to `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and `pnpm/action-setup` v6.1.0, each still pinned to a commit (#92).
+- `agentic-cms init` requires `--name "<Site>"` for a new site: without it, or with an empty one, `init` exits 2 and writes nothing. The folder's name is no longer used as the site's. Nothing changes for an existing site: `init` on a site that has `content/` asks for no name and writes none of the site's own files.
+- CI: the workflow `init` writes into a site moves to the kit's pins, `actions/checkout` v7.0.1, `actions/setup-node` v7.1.0 and `pnpm/action-setup` v6.1.0 (the first to state pnpm 12 support). An existing site copies the three `uses:` lines from `node_modules/agentic-cms/templates/site/verify.yml` (`docs/upgrading.md`).
+- Tests: `tools/template-ci.test.mjs` fails when the site template pins an action to another commit than the kit's own workflow does, so a Dependabot bump of the kit's pins fails CI until the template follows.
+- `docs/parts.md`: every part of the kit on one map in four layers (the content engine, the browser libraries, the design tools, the site's commands). Each row gives the need, the part and how to use it, its tier (required for the engines, preferred for the rest), the check that holds it and its exception key, and the page ends with every check the kit runs. `tools/parts-doc.mjs` keeps it complete in `pnpm hygiene` and the tests: every export, command and rule must be on it.
+- The command families follow the layers. `agentic-cms --help` and `docs/commands.md` group them under the content engine, the design tools and the site's commands, from one list in `scripts/lib/specs.mjs`. "build gates" splits into `default gates` (`seo`, `check-components`) and `opt-in steps` (`guard-email`, `critical-css`, `assemble`).
+- One content engine with its layers: the blog engine is now the post pipeline in its README, its rule and the docs. `docs/primitives.md`, `docs/gotchas.md` and `docs/design.md` point to the map, and `docs/README.md`'s index is grouped by the layers.
+- `agentic-cms/eslint`: the engines are required across `src/`, design-round (`*-demo`) and `lab-demo` routes included. `componentRules()` sets five rules of its own ESLint plugin, each message naming the engine and its doc:
+  - `agentic-cms/copy`: JSX text, the copy props (now also `heading`, `eyebrow`, `text`, `body`, `description`, `caption` and the reader-facing `aria-*`) and data fields or defaults of those names, and any other prop of a component whose string reads as words, except the props the rule skips (`docs/primitives.md` § Enforced lists them). Before, only sections and patterns were checked, and only six props.
+  - `agentic-cms/head`: no `<head>`, `<title>`, `<meta>`, canonical `<link>`, JSON-LD `<script>` or `next/head` of a site's own; `metadata` and `generateMetadata` return a `kit.seo` helper.
+  - `agentic-cms/forms`: a `<form>` only in the files `owners.forms` names, no server action, no `fetch()` of another origin in a component.
+  - `agentic-cms/tags`: `next/script` and a `<script src>` of another origin only in the consent adapter `owners.tags` names.
+  - `agentic-cms/email`: no `mailto:` link built in code; `EmailLink` instead.
+  The copy rule is required: `copy: false` throws, and it gains `copy.skip` and `copy.tools` (the design tools' modules, `agentic-cms/lab` by default, whose components' props are no copy).
+- `src/config/components.json` and `componentRules()` take `owners: { forms, tags }`, the files that own a `<form>` or a tag, each with its reason.
+- `agentic-cms check-components` holds the preset:
+  - its new `preset` pass reads ESLint's resolved config for a sample file per layer, and fails a required rule that a later block replaced, or that is off, a warning, unset, ignored, or set with other options than what `componentRules()` makes of `components.json`;
+  - `disables` fails an inline disable of a required rule, or of every rule, with no reason after `--`, and the report lists each reason (`--json`: `disables`);
+  - `owners` fails an owner with no reason or no file.
+- `kit.seo.rootMetadata()`, the root layout's head, and `kit.seo.unlistedMetadata()`, noindex for a design round's or the lab's route (also exported from `agentic-cms/seo`); `SiteConfig.ogLocale` is optional and gives `og:locale`. The example's layout, `demo new`'s routes and the lab route's template use them.
+- The example's footer and contact details render their addresses through `EmailLink`. Pixels are unchanged, and the address leaves the served HTML.
+- `demo new`: a block's chip is `aria-hidden`, and a showcase's copy comes from a content file. `agentic-cms/lab`: `LabScenes`' `grounds` is optional and defaults to `LAB_GROUNDS` (the page, a white card), and the lab route's template passes none.
+- `init` leaves the kit's ignore of `src/lib` out of a site's `eslint.config.mjs` and `components.json`: a site's `src/lib` is its own, and linted.
+- The engines rule in both `AGENTS.md`, always loaded: the engines are required; for everything else, find the kit's part in `docs/parts.md` and prefer it, with one line of reason for a site's own; never weaken a check to pass it.
+- Each scoped rule, the kit's and a site's, ends with its tier line: its part, its tier and the check that holds it, with the rule ids.
+- The design skills and `setup` end their procedures with `pnpm lint`. The design skills start a round from the page's content file and never write copy into a candidate. The editorial skills that change a file end with the same verify line.
+- `init --agent-files --check` fails a site's edit of a rule or a skill that dropped a block the kit marks `<!-- required -->` (`modified, required gone`, naming the block, its line and the kit's file), and a `.claude/settings.json` that no longer names the kit's marketplace or enables the editorial plugin. A refresh writes the settings only when they are missing.
+- Fixed: `pnpm test:pack`'s consent probe no longer fails one run in many. It stored a choice stamped after `readChoice` had read its clock, so a millisecond apart the choice was from the future and refused (`answered 0: undefined …`); it now stores one a second old.
+- `agentic-cms/eslint`: the preferred tier warns across `src/` and never fails the build. `agentic-cms/motion` (another animation library, a `requestAnimationFrame` loop, an `IntersectionObserver`, `el.animate()`, a transition class or style outside the motion layer), `agentic-cms/graphics` (a rendering library, a `<canvas>`), `agentic-cms/images` (`next/image`, an eager `<img>` in a server component), `agentic-cms/icons` (an `<svg>` outside `Icon`) and `agentic-cms/styling` (an arbitrary value or breakpoint, a style colour outside the tokens, outside the sections and patterns) each name the kit's part and its doc. A site keeps its own choice with one reason line: an `allow` entry in `src/config/components.json` or an inline disable with its description.
+- `src/config/components.json` and `componentRules()` take `allow: [{ rule, files, reason }]`; `componentRules()` refuses an entry with a required rule or no reason. `owners` also takes `images`, `icons` and `motion`.
+- `agentic-cms check-components`: an `allow` pass, and warnings that fail nothing: a transition or animation declared in CSS outside the motion layer (`transitions`), an inline disable of a non-required rule with no reason, and a preferred rule a later block turned off. The JSON report has `allowed` and `warnings`.
+- The example: `Placeholder`'s `<svg>` and the honeypot's offset are kept in `allow`, `Media` owns its `<img>`, and the footer's grid is the token `--grid-template-columns-2-1-1` (pixel-identical). A new site lints with no warning.
+- `agentic-cms check-site`: every pass of `check-components`, then the site's own.
+  - `rounds`: a hand-made `*-demo` route, and a round's pictures left after `demo clean`.
+  - `exceptions`: every exception added since the merge base listed with its reason, and `inherited` only shrinking.
+  - `scripts` and `ci`: the gates in `package.json` and in CI.
+  - `tools` (warnings): a site's own Playwright, `sharp` or `next dev` script, or a machine's address in `next.config.*`, each quieted by an `allow` entry of `agentic-cms/site-tools` with its reason.
+- `init` writes the gates: `lint` runs ESLint, then `check-site`, and `build` runs `pnpm lint` first. Into an existing `package.json` they are merged, or `init` refuses before writing anything, naming what to add.
+- `init` writes `.github/dependabot.yml` for the CI's actions (monthly, one grouped pull request), and `verify.yml` checks out the history `check-site` compares against. An existing site may copy both from `node_modules/agentic-cms/templates/site/`.
+- The kit's own `pnpm lint` runs `check-site`, and its `pnpm build` runs `pnpm lint` first.
+- pack-smoke lays a fixture of every bypass in the 0.8.2 survey over the fresh site: required ones fail with their messages, preferred ones warn.
+- `guardEmail` in `src/config/site.ts`:
+  - `true` keeps the site's address out of every served file: no structured data carries it as text (a ContactPoint with the contact page's URL takes its place), and the build ends with `agentic-cms guard-email`, which `check-site` holds;
+  - `{ off: "<why>" }` keeps it public on purpose, an exception `check-site` lists with its reason;
+  - left out, nothing changes for an existing site.
+- `init` writes `guardEmail: true` for a new site and `guard-email` into its build. The starter and the example keep the address out of their structured data, their contact form (`{email}` through `withEmailToken`) and their client bundles: no client component imports `site.ts`, and the chrome's client components (`Navbar`, `ThemeToggle`, `ConsentBanner`, `CookieSettingsButton`) take what they show as props.
+- `guard-email` names the fix for a page and for a bundle, and joins the default gates in `docs/commands.md`.
+- `agentic-cms check-site --baseline`: an existing site's engine bypasses (`agentic-cms/copy`, `head`, `forms`, `tags`, `email`), its hand-made rounds and the kit example's leftovers are written into `src/config/components.json`'s `baseline`, one `{ file, rule, count, reason }` per file and rule. The whole list goes in once, in the pull request that takes 0.8.2. After that it only shrinks, and growth is refused (exit 1).
+  - The engines' rules hold their entries in ESLint (`componentRules({ baseline })`; `eslint.config.mjs` passes it from the config as it passes `allow`), and `check-site` and the content lint's `example-brand` hold theirs.
+  - Each holds while its file has no more than the count. Past it, every finding fails; under it, the entry is asked to shrink.
+  - `check-site` fails an entry added or raised since the merge base, and the guard's `preset` fails a file whose count ESLint is not told.
+  - The preferred tier's warnings and the gates' and the config's own findings are never baselined.
+  - A site from `init` starts with `"baseline": []`.
+- `check-site`'s `leftovers` pass lists what is left of the kit's example in a site: its brand by line (`example-brand`); its posts and catalogue pages by path, any file it shipped by its bytes, and its reviews, use cases, FAQs and author by entry (`example-content`). The source is `scripts/lib/example-files.json`, every release's example up to 0.8.1. The guard's config is no source of the brand rule.
+- `init`'s merge of an existing build turns 0.8.1's bare `agentic-cms lint` into `agentic-cms lint --production` in its place, instead of adding a second content lint.
+- Docs: `docs/migrating-to-0.8.2.md`, the guide for a site on 0.8.1: the upgrade with its baseline (§ 1), hard-coded copy into content files (§ 2), the example's leftovers (§ 3), the preferred tier's reasons (§ 4), the e-mail key (§ 5), the check (§ 6), and two worked paths. `docs/upgrading.md` gets `0.8.1 → 0.8.2`.
+- The docs sweep: every doc follows the map (`docs/parts.md`), with the four layers, the engines required and the rest preferred with a reason.
+  - The README gets The parts, a real build output, the gates, `guardEmail` and Dependabot in Start your own site, a renamed fork's leftovers, `migrating-to-0.8.2.md` in Upgrading, and Commands and Map grouped by the layers.
+  - Both `AGENTS.md`, the rules, the plugin, the contracts and every guide give the same gates: `pnpm lint` is ESLint then `check-site`, and `pnpm build` runs the lint first and ends with `guard-email` on a site with `guardEmail: true`.
+- "The blog engine" goes from the guard's default exception reason and the scoped-rules table's intro.
+- The package READMEs and the e-mail, forms and `guard-email` examples use a neutral site in place of the example's brand.
+
 ## [0.8.1] — 2026-10-17
 
 - Docs: `docs/migrating-to-0.8.0.md` § 3.5's heading loses the job marker the release commit missed.

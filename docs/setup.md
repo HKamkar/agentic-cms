@@ -26,7 +26,7 @@ itself, which has no `scripts/setup.sh`, the same is
 | Flag | What it adds or changes |
 |---|---|
 | `--check` | reports every step and writes, installs and runs nothing (after the install, which `setup.sh` always does); exit 1 on a gap |
-| `--build` | verifies with `pnpm build` too, about a minute |
+| `--build` | verifies with `pnpm build` too, about a minute (the starter's placeholders stay warnings: this build deploys nothing) |
 | `--deps` | on Linux, installs WebKit's system libraries with `sudo` when WebKit does not launch |
 | `--no-browsers` | skips the browsers: a machine that only edits content |
 | `--engines chromium` | installs only the browsers named (default `chromium,webkit`) |
@@ -68,8 +68,12 @@ the kit) is the doctor: Node, pnpm, the browsers, WebKit's libraries,
    ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)).
    They are found now, on this machine, and never go into a tracked file.
 7. **Verify** (`agentic-cms setup`): `pnpm lint` and `pnpm test`; with
-   `--build`, `pnpm build` (the content lint first, the prerender, the SEO
-   audit last).
+   `--build`, `pnpm build` (the lint again, the content lint, the
+   prerender, the SEO audit, and `guard-email` on a site whose `site.ts`
+   turns `guardEmail` on; [init.md § The gates](init.md#the-gates)),
+   with `AGENTIC_CMS_PLACEHOLDERS=warn`: it proves the clone
+   builds and deploys nothing, so a new site's placeholder copy
+   ([init.md § The starter](init.md#the-starter)) warns here as in its CI.
 8. **The URLs** (`agentic-cms setup`, and `pnpm urls` any time after):
    localhost, the LAN and the public address on the dev server's port and
    the lab's, each server said running or not. The dev server is running
@@ -98,7 +102,9 @@ cloud VM's firewall when the owner's devices must reach the dev server.
 | a route you just created answers 404 | the dev server's watcher has not seen it yet: wait a second or two and reload (the first request also compiles it). `demo new` and `lab route` wait for it themselves while a dev server runs |
 | a page on another device renders but nothing on it works | its address is missing from `ALLOWED_DEV_ORIGINS`: `pnpm kit serve --write-origins` (or `pnpm urls --write`, then restart the dev server) ([dev-server.md](dev-server.md#letting-next-dev-serve-that-address)) |
 | `serve: port 8000 answers, but not as this site's next dev`, or `urls`, `setup --check`, `demo new` and `lab route`: `… not as this clone's next dev` | something else holds the port (another checkout's or another project's dev server, `pnpm preview`): stop it if it is yours ([dev-server.md § Stopping a server](dev-server.md#stopping-a-server)), or `pnpm kit serve --port <another>` |
-| `pnpm lint` fails naming the component to use instead | read the message: the library comes first (`src/components/README.md`), so use the primitive it names rather than loosening the rule |
+| `pnpm lint` fails naming the component or the engine to use instead | read the message: the library comes first (`src/components/README.md`) and the engines are required ([parts.md](parts.md)), so use the primitive it names, or move the copy, the head, the form, the tag or the address onto its engine, rather than loosening the rule |
+| `pnpm lint` warns, naming the kit's part | the preferred tier: nothing fails. Take the part it names, or keep your own with one line of reason, an `allow` entry in `src/config/components.json` ([primitives.md § The rest, guided](primitives.md#the-rest-guided-across-src)) |
+| `pnpm build` fails on `placeholder` in a new site | the starter's copy, which a production build refuses: write the site's own (`/editorial:new-page`); a build that deploys nothing runs with `AGENTIC_CMS_PLACEHOLDERS=warn`, as `setup --build` and the site's CI do ([init.md § The starter](init.md#the-starter)) |
 
 ## What to read next
 

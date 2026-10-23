@@ -8,7 +8,7 @@ excerpt: >-                                                     # required unles
   What the reader gets from this post, without repeating the title.
 date: '2026-01-31'                                              # required, YYYY-MM-DD — the editorial date readers see; quote it
 category: guides                                                # required — a key of content/categories.json
-author: acme-editorial                                          # required — a key of content/authors.json
+author: <author-key>                                            # required — a key of content/authors.json
 # A picture that does not exist yet starts as a wireframe placeholder:
 # pnpm kit placeholder <path> <width> <height>
 image: /images/blog/<slug>/<slug>-hero.webp                     # hero image, a WebP of 1600x900; run pnpm kit optimize-webp on the folder
@@ -18,7 +18,7 @@ thumbnailAlt: What the card image shows, in a sentence
 # ogImage: the social image; defaults to the hero, which is already ≥1200 px wide
 # and inside the 1.6-2.0 ratio previews want, so leave it out unless you have a
 # picture made for sharing. A figure inside the body is 1600x900 like the hero.
-seoTitle: Exact <title> for search, 60 characters or fewer; defaults to "title | Acme"
+seoTitle: Exact <title> for search, 60 characters or fewer; defaults to "title | <the brand>"
 seoDescription: Meta description, 70-160 characters; defaults to excerpt
 keywords: [content engine, static site, markdown]
 related: [other-slug, another-slug]                              # 2-3 slugs that must exist; topped up by category, then newest

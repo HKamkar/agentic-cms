@@ -381,6 +381,38 @@ dismissed because that text never reaches HTML.
 `package.json` stayed at 0.7.6 on `develop` until the release commit. The
 next plan, 0.9.0 (the package on npm), is `docs/roadmap-0.9.0.md`.
 
+## Phase 12 — 0.8.1, the fixes from running the guide on two sites (released 2026-10-17)
+
+The owner ran `docs/migrating-to-0.8.0.md` on two sites on 0.7.6, one per
+path, in their own sessions. One run was blocked at § 1 by six findings;
+the other passed with eight. Each finding came back without the site's
+details and became a kit fix, in five pull requests (#122–#127). Four
+sessions ran in parallel, one per area.
+
+**What changed:**
+- **The harness told noise from change:**
+  - a differing static shot or `--motion` frame was retaken once on each
+    side;
+  - a difference that didn't reproduce became `FLAKY`, and one inside a
+    region that differs between two takes of one build became `UNSTABLE`;
+  - `proof --all-pages` proved every page, whatever the profile narrowed.
+- **Agent files without a base** were measured against the kit's text at
+  the version the site came from. The package began carrying every
+  release's agent files (`scripts/lib/agent-file-releases.json`, which a
+  release commit rewrites).
+- **The ESLint preset:** a site's import restrictions extended the kit's
+  (`restrictedImports`) instead of silently replacing them, and a named
+  decoration's children passed the copy rule.
+- **The guide:**
+  - three proofs on every page in § 1 and § 5;
+  - how to read a mid-flight frame moved by the client bundle's re-split;
+  - § 3.5's two shapes of a site's own motion folder;
+  - `restrictedImports` in § 3.7.
+
+The guide now pins `#v0.8.1`. The same reviews set the next plan,
+`docs/roadmap-0.8.2.md`: the engines enforced and the rest only guided,
+and a starter without the example's brand.
+
 ## Verification recipe
 
 ```bash

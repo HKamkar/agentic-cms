@@ -4,7 +4,8 @@
 // the README's "Built on agentic-cms" section shows are the names that may
 // appear nowhere else — no machine paths or addresses, no scratch files,
 // captures or screenshots committed, the two skills trees in step, the
-// CHANGELOG carrying an entry, docs/commands.md current, the scoped-rules
+// CHANGELOG carrying an entry, docs/commands.md current, docs/parts.md naming
+// every export, command and rule (tools/parts-doc.mjs), the scoped-rules
 // tables of AGENTS.md and the site template current and both files within
 // what Codex reads (tools/rules-table.mjs), the record of the agent files at
 // every release current (tools/agent-file-releases.mjs, which needs the
@@ -33,7 +34,7 @@ export function findings(root, files, { brands }) {
   for (const file of files) {
     if (file.startsWith(".parity/")) out.push(`${file}: a capture is tracked; .parity/ is gitignored`);
     if (SCRATCH.test(file)) out.push(`${file}: a scratch file is tracked`);
-    if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ and the app icons`);
+    if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public|templates\/starter\/public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ (the example's, the starter's) and the app icons`);
     // a test needs counterexamples, so the line rules skip test files
     if (!TEXT.test(file) || /\.test\.(mjs|ts)$/.test(file) || !fs.existsSync(path.join(root, file))) continue;
     const text = read(file);
@@ -68,6 +69,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
   const found = findings(root, files, { brands });
   const docs = spawnSync(process.execPath, [path.join(import.meta.dirname, "commands-doc.mjs"), "--check"], { cwd: root, encoding: "utf8" });
   if (docs.status !== 0) found.push(`docs/commands.md: ${docs.stderr.trim() || "out of date"}`);
+  const parts = spawnSync(process.execPath, [path.join(import.meta.dirname, "parts-doc.mjs")], { cwd: root, encoding: "utf8" });
+  if (parts.status !== 0) found.push(...(parts.stderr.trim() || "docs/parts.md: incomplete").split("\n").filter(Boolean));
   const rules = spawnSync(process.execPath, [path.join(import.meta.dirname, "rules-table.mjs"), "--check"], { cwd: root, encoding: "utf8" });
   if (rules.status !== 0) found.push(...rules.stderr.trim().split("\n").filter(Boolean));
   const releases = spawnSync(process.execPath, [path.join(import.meta.dirname, "agent-file-releases.mjs"), "--check"], { cwd: root, encoding: "utf8" });

@@ -1,10 +1,11 @@
+import { EmailLink } from "agentic-cms/components";
+import { encodeEmail } from "agentic-cms/email";
 import { Fragment } from "react";
 import type { SectionProps } from "@/components/sections/schemas";
 import { Heading } from "@/components/ui/Heading";
 import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
-import { TextLink } from "@/components/ui/TextLink";
 
 const card = "flex flex-col gap-2 p-4";
 
@@ -25,7 +26,7 @@ export function Details({ eyebrow, heading, cards }: SectionProps<"contact-detai
                 </Fragment>
               ))}
             </p>
-            {entry.highlight.kind === "email" ? <TextLink href={`mailto:${entry.highlight.value}`}>{entry.highlight.value}</TextLink> : <p className="font-medium">{entry.highlight.value}</p>}
+            {entry.highlight.kind === "email" ? <EmailLink token={encodeEmail(entry.highlight.value)} /> : <p className="font-medium">{entry.highlight.value}</p>}
           </Panel>
         ))}
       </ul>

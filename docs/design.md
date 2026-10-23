@@ -9,23 +9,18 @@ to install.
 
 ## What works by default
 
-A checkout of this repo, or a site laid out by `agentic-cms init`, carries:
+A checkout of this repo, or a site laid out by `agentic-cms init`, carries
+the design tools with nothing to install: the skills, in `.claude/skills/`
+(Claude Code) and `.agents/skills/` (Codex), identical and auto-discovered
+from the checkout, and the commands they call.
+[parts.md § Design tools](parts.md#design-tools) maps each to the need it
+meets, how to use it and its doc; [skills.md](skills.md) says what each
+skill does.
 
-- **The skills**, in `.claude/skills/` (Claude Code) and `.agents/skills/`
-  (Codex), identical, auto-discovered from the checkout — no plugin, no
-  install: `design` (the loop), `design-options` (candidates the owner picks
-  from), `design-measure` (a screenshot claim turned into numbers),
-  `design-icons` (icons as families), `design-graphics` (the site's own
-  drawings, SVG in the lab, shipped pre-rendered), `design-proof` (the pixel
-  proof before a merge). [skills.md](skills.md) says what each does.
-- **The commands** every skill calls: `demo` (the round's route, for a section or a piece of the chrome), `shot`, `probe`, `sheet`
-  ([shot-probe-sheet.md](shot-probe-sheet.md)) and `visual-parity` with
-  `--ref`, `--json` and a compare that says what moved
-  ([visual-parity.md](visual-parity.md)).
-- **The rules**, path-scoped (`.claude/rules/`: Claude Code loads them by
-  path, Codex through `AGENTS.md`'s scoped-rules table), and `AGENTS.md`,
-  which every agent reads; `STANDARD.md`, where the design lives and where §8
-  keeps the decisions that look like bugs on purpose.
+It carries the rules too: path-scoped (`.claude/rules/`: Claude Code loads
+them by path, Codex through `AGENTS.md`'s scoped-rules table), and
+`AGENTS.md`, which every agent reads; `STANDARD.md`, where the design lives
+and where §8 keeps the decisions that look like bugs on purpose.
 
 ## The loop
 
@@ -53,7 +48,13 @@ commit. Per element:
 ## The round
 
 How a section gets its design, as it runs in practice (the
-`design-options` skill is the procedure; `pnpm kit demo` the command):
+`design-options` skill is the procedure; `pnpm kit demo` the command). A
+round designs around the site's real copy. A site laid out by
+`agentic-cms init` starts with its copy marked `(placeholder)`
+([init.md § The starter](init.md#the-starter)): `demo new` names the page's
+placeholder fields, and any of the kit example's brand, before it writes
+the round, and the `design` skill gets the copy first, from the owner or
+`/editorial:new-page`, rather than design around a placeholder.
 
 1. **The ask.** The owner asks for a design or says what looks wrong:
    "this section looks empty", "redesign the closing band".
@@ -64,7 +65,7 @@ How a section gets its design, as it runs in practice (the
    skips the stop.
 3. **The pick of what to build.** "All" is every idea, none trimmed.
 4. **The candidates, real.** `pnpm kit demo new <name> --section <type>`
-   writes `src/app/<name>-demo/page.tsx` (`robots: { index: false }`) and a
+   writes `src/app/<name>-demo/page.tsx` (`kit.seo.unlistedMetadata()`, `noindex`) and a
    candidate per letter — a copy of the section's component beside it,
    `<Name>A.tsx`, `<Name>B.tsx`, edited into its idea. The route reads the
    page's copy from its file on every render and shows each candidate in
@@ -83,8 +84,15 @@ How a section gets its design, as it runs in practice (the
    primitives, the parts of a motion layer — is `--showcase`, with a
    `--component <file>` for each piece it shows (repeat the flag): a block
    per piece inside the site's layout, rendered bare to start from, for the
-   agent to give the props, looks and states under review. `demo clean`
-   removes it and every file only it uses, and keeps the pieces.
+   agent to give the props, looks and states under review — its copy read
+   from a content file (a page's, `kit.content.getPage("<slug>")`, or the
+   chrome in `site.ts`), never typed in. `demo clean` removes it and every
+   file only it uses, and keeps the pieces.
+   The copy rule holds in a round as everywhere in `src/` (`agentic-cms/copy`,
+   `docs/primitives.md` § Enforced): the route and its candidates carry no
+   words of their own, the chip that names a block is `aria-hidden`, and the
+   labels of the lab's components (`LabTimeline`, `LabStudy`) are the
+   tool's, which pass.
    A piece of the **chrome** — a footer, a navbar, a button — is named by
    `--component <file>` instead: its copy comes from `src/config/site.ts`,
    not a page file, so the route renders every candidate with no props.
@@ -127,8 +135,11 @@ when the owner asked for all, the current version last, every one with
 the page's real copy; a "more" is an edit inside the round, and an
 alternative is added beside the candidates already shown, never over one;
 what is generic leaves the section for the library in the same job; the
-route and the losers never merge — the build's SEO audit fails a route
-without a `seo` block, which is the guard.
+route and the losers never merge — the build's SEO audit fails a round's
+route, which carries `noindex` and no `seo` block, and `check-site`'s
+`rounds` fails a `*-demo` route `demo new` did not write and a round's
+pictures left after `demo clean` ([primitives.md § The whole
+site](primitives.md#the-whole-site-agentic-cms-check-site)).
 
 A worked example, on the example's own home page. The owner: "the service
 cards read like a list". Ideas: A a grid with a mark on each card, B a tab
@@ -148,7 +159,8 @@ grows from picks, not from plans.
 
 **Before handing over a URL:**
 
-- the candidates carry the page's real copy, the current version last,
+- the candidates carry the page's real copy (never the starter's
+  placeholder or the example's brand), the current version last,
   each lettered with one line on what differs, and a timeline on anything
   that moves (§ The round);
 - they are measured at the site's widths (the profile's, `widths` in

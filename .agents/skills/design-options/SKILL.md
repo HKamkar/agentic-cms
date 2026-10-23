@@ -29,7 +29,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 1. **The ask.** The owner asks for a design or says what looks wrong
    ("this section looks empty", "redesign the closing band"). Read the
    section and its copy before answering; the copy is what the candidates
-   are for.
+   are for. Copy that is still the starter's placeholder, or the kit
+   example's brand, is no copy to design around (`pnpm content:lint` lists
+   both; `demo new` names them before it writes the round): **stop** and
+   get the real copy first, from the owner or `/editorial:new-page` (the
+   `design` skill § The copy first).
 2. **Ideas, three to five, one message.** Each one line: what it shows,
    what moves and why the motion is the meaning (or that nothing moves),
    what it reuses from the library. No building yet. **Stop for the
@@ -113,6 +117,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
 - Two to four candidates on the route, the current version last; more is
   a survey, not a choice — unless the owner asked for every idea. Every
   candidate carries the page's real copy.
+- A round starts from the page's content file and never writes copy into
+  a candidate: the candidates take the page's copy from its file (`demo
+  new --section` reads it on every render), and copy the page lacks goes
+  into the page file and its schema first; `agentic-cms/copy` fails copy
+  in code, a round's route and its candidates included. <!-- required -->
 - A "more" is an edit inside the round, and alternatives the owner asks
   for are added to the same route, the candidates already shown left as
   they are. The round ends with a pick, not with a set nobody asked for.
@@ -131,6 +140,11 @@ site's motion rules (`AGENTS.md` § Styling) when an idea moves.
   --dry-run` lists what would go and what stays, and why.
 
 ## Verify
+
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build   # no *-demo route left: the SEO audit would fail it

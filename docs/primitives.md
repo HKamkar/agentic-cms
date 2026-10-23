@@ -40,15 +40,13 @@ for a role follows.
 
 ## 2. Provided by the kit: don't build these
 
-| What | Where |
-|---|---|
-| Motion: the play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`, `motionScript()`), the reveals that replay (`Fx`, `OnView`), `ease()`, `useReducedMotionPref`, `useMainBreakpoint`, `InlineAnimation` | `agentic-cms/ix` (`STANDARD.md` §7, [lab.md § Inline](lab.md#inline--a-loop-the-page-runs)); the CSS block and its tokens are the site's `src/styles/motion.css` |
-| Above-the-fold images in server components: `EagerImage` | `agentic-cms/components` (`STANDARD.md` §4) |
-| Structured data: `JsonLd` | `agentic-cms/components` |
-| A primitive's looks as one typed map: `variants()`, `VariantProps` | `agentic-cms/cx`, beside `cx` (the components catalogue) |
-| Behaviour without a look: `FaqAccordion`, `EmailLink` with its token, `Icon` with the generated icon map | `agentic-cms/components` ([email.md](email.md), [icons.md](icons.md)) |
-| The consent store and its hooks | `agentic-cms/consent` ([consent.md](consent.md)) |
-| The form engine: the backend, the field types, the endpoint | `agentic-cms/forms` ([forms.md](forms.md)); the site draws the fields |
+The kit's behaviour without a look is on [parts.md](parts.md), one row per
+need with its import, its doc, its tier and the check that holds it: motion
+(`agentic-cms/ix`), an image above the fold, structured data, a
+primitive's looks as one typed map (`agentic-cms/cx`), the FAQ accordion,
+an e-mail address, an icon, the consent store and the form engine. A site
+builds none of them; it takes the kit's part and draws around it (a form's
+fields, the consent banner).
 
 ## 3. Build on day one: the site's look
 
@@ -93,16 +91,199 @@ site names an exception, in the catalogue, with its reason.
 
 ## Enforced: `agentic-cms/eslint`
 
-The library holds only while nothing else draws UI, and the lint says so.
-`componentRules(options)` from `agentic-cms/eslint` returns flat ESLint
-configs; spread them after `eslint-config-next`, which registers the
-`react` plugin two of the rules come from:
+The engines hold, and the library holds, only while nothing goes around
+them, and the lint says so. `componentRules(options)` from
+`agentic-cms/eslint` returns flat ESLint configs; spread them after
+`eslint-config-next`, which registers the `react` plugin two of the rules
+come from:
 
 ```js
 import { componentRules } from "agentic-cms/eslint";
 
 export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ sections: ["sections"] })]);
 ```
+
+### The engines, required across `src/`
+
+Five rules of the preset's own ESLint plugin, `agentic-cms`, fail the lint
+everywhere under `src/` (and the app folder): sections, patterns, `ui/`,
+layouts, `not-found`, the design-round routes (`*-demo`) and the lab's
+`lab-demo` alike. Test files and `ignores` are left out. Each message
+names the engine to use and its doc.
+
+- **`agentic-cms/copy`:** every word a reader sees comes from `content/`
+  or the chrome in `src/config/site.ts`, through props. Copy is text with a
+  letter or a digit in it, wherever a reader sees it:
+  - JSX text, and a string in `{…}` among the children: written straight,
+    in a template, in a condition or a fallback;
+  - the string of a copy prop on any element: `children`, `title`, `alt`,
+    `aria-label`, `aria-description`, `aria-roledescription`,
+    `aria-valuetext`, `aria-placeholder`, `placeholder`, `label`,
+    `heading`, `eyebrow`, `text`, `body`, `description`, `caption`,
+    `subtitle`, `summary`, `quote`; a field of that name in data (an array
+    at the top of the file, an inline object) and a prop's default too;
+  - any other prop of a component whose string reads as words: a space, a
+    capital or a letter outside ASCII in it (`note="Since 2019"`). A token
+    reads as no words (`variant="primary"`, `ratio="aspect-video"`,
+    `icon="arrow-right"`) and passes;
+  - on a native element, `value` when it reads as words, and HTML handed
+    to `dangerouslySetInnerHTML` outside a `<script>` or a `<style>`.
+
+  The props the rule skips, whatever their strings read like: `className`,
+  `class`, `id`, `key`, `ref`, `style`, `href`, `src`, `srcSet`, `sizes`,
+  `media`, `type`, `role`, `rel`, `target`, `as`, `lang`, `dir`, `name`,
+  `htmlFor`, `form`, `method`, `action`, `accept`, `autoComplete`,
+  `inputMode`, `enterKeyHint`, `pattern`, `loading`, `decoding`,
+  `fetchPriority`, `crossOrigin`, `referrerPolicy`, `integrity`, `nonce`,
+  `width`, `height`, `dateTime`, `tabIndex`, `slot`, an icon's `d`,
+  `viewBox`, `points`, `transform`, `preserveAspectRatio`, `fill` and
+  `stroke`; by their shape, `data-*`, the `aria-*` attributes that are not
+  copy (ids, states), event handlers (`on…`), and a name ending in
+  `ClassName`, `Id`, `Href`, `Src`, `Url` or `As` (`headingClassName`,
+  `ctaHref`, `headingAs`); and `copy.skip`, a site's own.
+
+  What passes: a symbol (`→`, `·`), which has no letter; the text and the
+  props of an `aria-hidden` element and everything under it; the props
+  and children of a primitive that draws them `aria-hidden`, and what its
+  own definition draws (`copy.decorations`: `Placeholder`, `TypeTag`); the
+  props of the design tools' components (`copy.tools`: those imported from
+  `agentic-cms/lab`, whose labels name a block for review and never ship),
+  though what they wrap is still read. The message says where the copy
+  goes from where it was found: a section's page file and schema, a
+  primitive's props or the chrome, a route's page file, a round's page
+  file. A design round's route reads the page's copy from its file, as
+  `demo new --section` writes it, and a showcase from a content file; the
+  chip that names a candidate is `aria-hidden`.
+- **`agentic-cms/head`:** no `<head>`, `<title>` (an svg's is its name, and
+  passes), `<meta>`, canonical `<link>`, `application/ld+json` `<script>`
+  or `next/head` of the site's own. A route's `metadata`, and every return
+  of its `generateMetadata`, is a `kit.seo` helper: a call of `seo.…` or
+  `….seo.…`, of a helper imported from `agentic-cms/seo` or destructured
+  from `kit.seo`, directly or through a const, behind a condition, `await`,
+  `as` or `satisfies` — or `{}`, the page that is not there. The helpers
+  are `rootMetadata()` (the root layout), `pageMetadata()`,
+  `postMetadata()` and `unlistedMetadata()` (a design round's or the lab's
+  route); structured data is `<JsonLd>` (`src/lib/seo/README.md`).
+- **`agentic-cms/forms`:** a `<form>` only in the files `owners.forms`
+  names; no server action (`"use server"`) anywhere; no `fetch()` of
+  another origin (`https://`, `//`) in a component, `.jsx` or `.tsx` — a
+  build-time script elsewhere may (`docs/forms.md`).
+- **`agentic-cms/tags`:** `next/script`, and a `<script src>` of another
+  origin (or one the lint cannot read), only in the consent adapter
+  `owners.tags` names; an inline `<script>` and a file of the site's own
+  (`src="/…"`) pass (`docs/consent.md`).
+- **`agentic-cms/email`:** no `mailto:` in a string or a template:
+  `<EmailLink token={encodeEmail(address)} />` from `agentic-cms/components`
+  and `agentic-cms/email` (`docs/email.md`).
+
+**Owners.** A file that owns an engine's raw element is named, with the
+reason it does, in `owners` in `src/config/components.json`; the same
+files go to `componentRules()` (a list of globs, or the same map). The
+preset turns that part's rule off in those files alone:
+
+```json
+"owners": {
+  "forms": { "src/components/ui/form/Form.tsx": "the form engine's renderer: the one <form>, posting each definition of src/config/forms.ts through its backend" },
+  "tags": { "src/components/ui/AnalyticsTag.tsx": "the consent adapter of the site's analytics: next/script, after a grant" }
+}
+```
+
+**An inline disable carries its reason.** A real need the engines do not
+meet yet is `// eslint-disable-next-line agentic-cms/copy -- <the reason>`
+(or a block comment, or `eslint-disable` for a file): `check-components`
+fails a disable of a required rule, or of every rule, with no description
+after `--`, and lists every other one with its reason. A disable of any
+other rule with no description is a warning, which fails nothing and stays
+in the report until it says why. A workaround is fine; a silent one is not.
+
+### The rest, guided across `src/`
+
+Everything that is not an engine is the kit's preferred way, never the
+only one: a site may animate with a library of its own, draw on a canvas,
+ship a picture through `next/image` or paste an `<svg>`. Five more rules
+of the same plugin warn about each across `src/` (and the app folder; test
+files and `ignores` left out), naming the kit's part and its doc, and the
+lint and the build pass. A site keeps its own choice with one line of
+reason, and the warning goes quiet; a warning without one stays in the
+lint's output, where the review sees it.
+
+- **`agentic-cms/motion`,** outside the motion layer (a motion folder owns
+  its library; `owners.motion` names a file of the site's that owns
+  motion):
+  - an animation library other than `agentic-cms/ix`: `gsap`,
+    `react-spring` and `@react-spring/*`, `animejs`, `lottie-web`,
+    `lottie-react`, `@lottiefiles/*`, `popmotion`, `velocity-animate`,
+    `@formkit/auto-animate`, `react-transition-group`, `@motionone/*`,
+    `@theatre/*`, `@mojs/core`, `aos`, `scrollreveal` (the preset's
+    `ANIMATION_ALTERNATIVES`; `motion` and `framer-motion` fail outside
+    the motion layer already);
+  - a `requestAnimationFrame` call, an `IntersectionObserver`,
+    `el.animate()`;
+  - a transition or animation class (`transition…`, `animate-…`,
+    `duration-…`, `delay-…`, `ease-…`; `transition-none` and `animate-none`
+    rest) in a `className`, a `cx()` or a `variants()` call, and a
+    transition or animation in a `style` (`none` rests).
+
+  The guard's `transitions` pass warns about one declared in CSS outside
+  the motion layer and `src/styles/motion.css`.
+- **`agentic-cms/graphics`:** a library that draws in the reader's browser
+  — `three`, `@react-three/*`, `d3` and `d3-*`, `pixi.js`, `@pixi/*`, `p5`,
+  `react-p5`, `babylonjs`, `@babylonjs/*`, `konva`, `react-konva`,
+  `fabric`, `paper`, `two.js`, `ogl`, `regl`, `chart.js`, `echarts`,
+  `plotly.js`, `@antv/*` (the preset's `RENDERING_LIBRARIES`) — a
+  `<canvas>`, or a canvas made in code. Graphics ship pre-rendered from
+  the lab ([lab.md](lab.md)).
+- **`agentic-cms/images`:** `next/image` (a static host has no image
+  service), and an eager `<img>` in a server component — no `loading`, or
+  one that can be other than `"lazy"` — which becomes a preload hint every
+  page that prefetches a link to it downloads: `EagerImage` above the
+  fold, `Media` (lazy) below it. A client component's `<img>`, a `loading`
+  the lint cannot read and a spread that may carry one pass;
+  `owners.images` names the picture primitive.
+- **`agentic-cms/icons`:** an `<svg>` of the site's own, outside `Icon`
+  ([icons.md](icons.md)); `owners.icons` names a site's own icon
+  component.
+- **`agentic-cms/styling`,** outside the sections and the patterns, which
+  fail these already: an arbitrary value or property in a class
+  (`bg-[#…]`, `rounded-[…]`, `shadow-[…]`, `w-(--…)`, `[mask-type:…]`), an
+  arbitrary breakpoint (`min-[…]:`, `max-[…]:`, `@[…]:`), and a colour
+  outside the tokens in a `style` (a hex, a colour function, a named
+  colour on a colour property; `var(--…)` is a token). A state variant
+  (`has-[…]:`, `data-[…]:`, `[&_p]:`) selects rather than sets a value, and
+  passes.
+
+In a section or a pattern, whose composition already fails a raw
+`<svg>`, a raw `<img>` and a motion class, the warning stands beside the
+error; the error is the one to fix.
+
+**A site keeps its own with its reason.** `allow` in
+`src/config/components.json` keeps a preferred rule's warning quiet in the
+files it names (globs), and nowhere else:
+
+```json
+"allow": [
+  { "rule": "agentic-cms/icons", "files": ["src/components/ui/Placeholder.tsx"], "reason": "the wireframe's crossed box: two lines stretched to any ratio, which no icon draws" }
+]
+```
+
+`componentRules()` takes the same list; the example's `eslint.config.mjs`
+reads it from the config, so each reason is written once. An entry names a
+preferred rule, files that are there and its reason: the guard's `allow`
+pass fails one that does not, and `componentRules()` refuses one with no
+reason. A required rule is never allowed (its owner, or an inline disable
+with its reason). For one line, an inline disable with its description:
+`// eslint-disable-next-line agentic-cms/icons -- <the reason>`. A file
+that owns a part (the picture primitive its `<img>`, a site's own `Icon`
+its `<svg>`, a file of its motion) is named in `owners.images`,
+`owners.icons` or `owners.motion` with its reason, like an engine's owner.
+
+The example keeps two choices of its own, both in `allow`: `Placeholder`'s
+crossed box, an `<svg>` (`agentic-cms/icons`), and the form's honeypot,
+placed far off-screen by an arbitrary offset (`agentic-cms/styling`); and
+`Media` owns its `<img>`. A new site starts with the same, so its lint
+prints no warning.
+
+### The library's shape
 
 - **The layers import one way:** motion ← `ui/` ← `patterns/` ← the
   sections. A primitive imports no pattern and no section, a pattern no
@@ -116,15 +297,6 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
   no arbitrary value (`[…]`, `(…)`); no fill, border, radius, ring, outline,
   divider, shadow, transition or animation class, whether the class string
   is a `className` literal, a template literal or a `cx()` argument.
-- **A section or a pattern holds no copy:** no JSX text with a letter or a
-  digit in it, and no such string in a copy-bearing prop (`title`, `alt`,
-  `aria-label`, `placeholder`, `label`, `children`), written straight, as
-  `{…}`, in a template or a fallback, or as a field of that name in a data
-  array. The copy goes in the page's file, `content/pages/<slug>.yaml`, as
-  a field of the section's schema, and arrives as a prop. A symbol (`→`,
-  `·`) passes, and so does a decoration: the text of an `aria-hidden`
-  element, and the props and children of a primitive that draws them
-  `aria-hidden` (`Placeholder`, `TypeTag`).
 
 | Option | Default | What it is |
 |---|---|---|
@@ -132,11 +304,15 @@ export default defineConfig([...nextVitals, ...nextTs, ...componentRules({ secti
 | `motion`, `ui`, `patterns` | `"motion"`, `"ui"`, `"patterns"` | each layer's folder under `root`; `null` for a layer the site does not have |
 | `sections` | `["sections"]` | the section folders under `root` |
 | `registry` | `"sections/render.tsx"` | the section registry under `root`, left out of the section rules: it imports every section |
+| `app` | `"src/app"` | the routes' folder: a round's routes are its `*-demo` folders |
 | `elements` | the primitives above | `{ element: message }` over the defaults; `false` allows an element |
-| `copy` | `{ props: [the six above], decorations: ["Placeholder", "TypeTag"] }` | the props whose strings are copy, and the primitives that draw their props and children `aria-hidden`; `false` turns the copy rule off |
+| `copy` | `{ props: [the copy props above], skip: [], decorations: ["Placeholder", "TypeTag"], tools: ["agentic-cms/lab"] }` | the props whose strings are copy (replacing the list); the site's own props whose strings never are (added to the rule's); the primitives that draw their props and children `aria-hidden`; the design tools' modules. Required: `false` throws |
+| `owners` | `{}` | `{ forms, tags, images, icons, motion }`: the files that own a `<form>`, a tag, an eager `<img>`, an `<svg>` or motion, as `{ "<file>": "<reason>" }` or a list of globs |
+| `allow` | `[]` | a list of `{ rule, files, reason }`: a preferred rule a site keeps its own choice of, in those files, with its reason; a required rule, an unknown one or an entry with no reason throws |
+| `baseline` | `[]` | `src/config/components.json`'s list of `{ file, rule, count, reason }`, the engine bypasses a site had when it took 0.8.2: each engine rule stays quiet in a listed file while it holds no more than the count ([§ The whole site](#the-whole-site-agentic-cms-check-site)); an entry that does not read throws |
 | `restrictedImports` | `{ paths: [], patterns: [] }` | the site's own restricted imports, in `no-restricted-imports`' object form (each path or pattern with its `message`), added to the kit's in every file the preset covers |
 | `ignores` | `[]` | globs left out of every rule |
-| `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban covers, and the tsconfig alias for it |
+| `src`, `alias` | `"src"`, `"@/"` | the tree the animation ban and the engines cover, and the tsconfig alias for it |
 
 **Extend the preset through its options, never a block that sets one of
 its rules again.** Flat config keeps one setting of a rule per file, the
@@ -145,8 +321,17 @@ last block's: a block of the site's after `...componentRules()` that sets
 setting there, and those files lose the layers' and the animation bans
 without a warning. The same holds for `react/forbid-elements` and
 `no-restricted-syntax` in a section or a pattern file (the second has no
-option to extend it yet). A restriction of the site's own on imports goes
-into `restrictedImports`, a forbidden element into `elements`:
+option to extend it yet), and for every `agentic-cms/*` rule — which
+`check-components` catches: it reads the setting ESLint resolves for one
+sample file per layer (each section folder, a route, a round's route,
+`src/lib`, each owner's file) and fails a required rule that is off, a
+warning, unset, ignored, or set with other options than `componentRules()`
+makes of `src/config/components.json`; a preferred rule set otherwise (a
+block that turns its warning off, an `allow` the config does not name) is
+a warning. So `eslint.config.mjs` passes the config's layers, `copy`,
+`owners`, `allow` and `ignores` alike. A restriction of
+the site's own on imports goes into `restrictedImports`, a forbidden
+element into `elements`:
 
 ```js
 ...componentRules({
@@ -162,9 +347,13 @@ Its restrictions hold wherever the kit's do, every file under `src` but
 `ignores`; a block of your own is still right for files the preset leaves
 alone (outside `src`, or in `ignores`).
 
-The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`
-and its six section folders, the page folders with `sections/` and
-`blog/`. A rule a site cannot meet yet is a new primitive or option, never
+The example's `eslint.config.mjs` passes `motion: null`, `patterns: null`,
+its six section folders (the page folders with `sections/` and `blog/`),
+the form engine's renderer as the owner of `forms` and the picture
+primitive as the owner of `images`, the config's `allow`, and `ignores:
+["src/lib/**"]`, the package's own source — a line `init` leaves out of a
+site, whose `src/lib` is its own and linted. A rule a site cannot meet yet
+is a new primitive or option, or an inline disable with its reason, never
 a rule turned off in passing; loosening one is its own pull request, said
 so in its title.
 
@@ -172,11 +361,13 @@ so in its title.
 
 ESLint judges what a file contains; the placement guard judges where files
 are and what declares them, so a one-off component cannot hide in a page
-folder or a route. `pnpm lint` runs both and fails on either, while both
-report:
+folder or a route. It is the first pass of `agentic-cms check-site`
+([§ The whole site](#the-whole-site-agentic-cms-check-site)), which `pnpm
+lint` runs after ESLint, failing on either while both report;
+`agentic-cms check-components` runs it alone:
 
 ```json
-"lint": "eslint; s=$?; agentic-cms check-components || s=1; exit $s"
+"lint": "eslint; s=$?; agentic-cms check-site || s=1; exit $s"
 ```
 
 It checks that:
@@ -200,7 +391,19 @@ It checks that:
   exception by its name: the SEO audit already keeps it out of a build;
 - **no component (`.tsx`, `.jsx`) outside `src/components` and `src/app`**;
 - **CSS modules only in `ui/` and the motion layer, `@keyframes` only in
-  the motion layer and `src/styles/motion.css`**.
+  the motion layer and `src/styles/motion.css`**;
+- **every owner and every `allow` entry has its reason** and names files
+  that are there; an `allow` entry names a preferred rule (one of
+  `agentic-cms/site-tools` names the site's own tools outside `src/`, whose
+  files the site check looks for).
+
+What the preferred tier guides is a warning, printed after the report: it
+fails nothing, and stays until it has its reason. The guard warns about a
+transition or animation declared in CSS outside the motion layer and
+`src/styles/motion.css` (`transitions`; an `allow` entry of
+`agentic-cms/motion` keeps a file's), an inline disable of any other rule
+with no description (`disables`), and a preferred rule ESLint resolves
+otherwise than the config makes it (`preset`).
 
 A running design round's candidates pass: the files its `demo.json` lists
 under `created`, with their `module.css`, until `demo clean` takes them.
@@ -221,6 +424,7 @@ comment.
 | `app` | `"src/app"` | the app folder |
 | `motionCss` | `"src/styles/motion.css"` | the stylesheet that holds the motion layer's start states and keyframes |
 | `inherited` | `[]` | files the guard leaves alone, frozen |
+| `owners`, `allow` | `{}`, `[]` | as in `componentRules()`: the files that own a part, and the preferred rules a file keeps its own choice of, each with its reason |
 
 `inherited` is how a site adopts the guard without rewriting anything: it
 lists every file that does not fit yet, and the list only shrinks. Nothing
@@ -232,3 +436,107 @@ glob loosens the guard: its own pull request, said so in its title. A config
 from before the exceptions, its route folders all under `routes`, still
 reads: the kit's reasons cover the example's three, and a folder of the
 site's own is a finding until it moves to `exceptions` with its reason.
+
+## The whole site: `agentic-cms check-site`
+
+The placement guard holds `src/`; the site check holds the rest of what
+makes a site the kit's: its design rounds, its exceptions, its gates, its
+tools, what is left of the kit's example, and the baseline an existing
+site took 0.8.2 with. `pnpm lint` runs it after ESLint (above), so `pnpm build`, which
+runs `pnpm lint` first, and CI run it too. It runs every pass of
+`check-components` first, from the same `src/config/components.json`, then
+its own:
+
+- **`rounds`**: a `*-demo` route is one `demo new` wrote, its `demo.json`
+  beside it, or the lab's own `lab-demo` (`lab route`'s). A route made by
+  hand fails: nothing knows its candidates, and its copy is its own. A
+  round's pictures, `public/images/<name>-demo/`, are there only while its
+  route is; `demo clean` takes both.
+- **`exceptions`**: every exception added since the merge base is listed
+  with its reason — a route exception, an owner, an `allow` entry, an
+  `ignores` glob, an inline disable (matched by its rules and its reason,
+  so a moved one is not new) and a `guardEmail` turned off. An `ignores` glob takes its reason from the
+  `$ignores` comment beside it, and an added one without it fails. The
+  frozen `inherited` list only shrinks: a file added since the base fails,
+  and so does a baseline entry added or raised (the pull request that adds
+  the first list, where the base has none, lists it whole as added).
+  The base is git's merge base of HEAD with `--base`, else the pull
+  request's base branch (`GITHUB_BASE_REF` in CI), else `origin/HEAD`,
+  `origin/main` or `main`. A checkout without that history (no git, no
+  commit yet, a shallow clone) compares nothing and says so in its report;
+  `--base` there is exit 2. The site's `verify.yml` checks out with
+  `fetch-depth: 0` for it.
+- **`scripts`**: `package.json`'s `lint` runs ESLint, then `check-site`; its
+  `build` runs `pnpm lint`, `agentic-cms lint --production` and
+  `agentic-cms docs --check` before `next build`, `agentic-cms seo` after
+  it, and `agentic-cms guard-email` too on a site whose
+  `src/config/site.ts` turns `guardEmail` on ([email.md](email.md)); a
+  `guardEmail` turned off says why (`{ off: "<why>" }`, listed under
+  `exceptions` once added), and `false` alone fails. Each gate is a step
+  of the build's `&&` chain, so a failing
+  one stops it; one joined by `;`, a failure turned into a pass (`|| true`,
+  `exit 0`) or a gate on the wrong side of `next build` fails. `init`
+  writes these scripts and merges the gates into a site's own
+  ([init.md § The gates](init.md#the-gates)).
+- **`ci`**: a workflow that runs on pull requests runs the lint (or a build
+  that runs it), the tests, the build and `agentic-cms init . --agent-files
+  --check`, as `init`'s `.github/workflows/verify.yml` does.
+- **`tools`**, the preferred tier's, so warnings that fail nothing: a script
+  of the site's own under `scripts/` that drives Playwright (or another
+  headless browser), runs `sharp` over `public/` or starts `next dev`, and a
+  machine's address in `next.config.*`. Each names the kit's command —
+  `shot`, `probe`, `sheet` and `visual-parity`; `placeholder` and the
+  optimisers; `serve`; `urls --write`, which keeps the addresses in
+  `.env.local` — and an `allow` entry quiets it, with its reason:
+
+  ```json
+  "allow": [
+    { "rule": "agentic-cms/site-tools", "files": ["scripts/og-cards.mjs"], "reason": "renders the OG cards from the posts' titles, which no kit command composes" }
+  ]
+  ```
+
+  An `agentic-cms/site-tools` entry that names no file the pass reads is a
+  finding. In the kit's own repository, whose `scripts/` are the commands
+  themselves, the pass reads nothing.
+- **`leftovers`**: nothing of the kit's example stays in a site. Up to
+  0.8.1 `init` copied the example's content and pictures; the package
+  carries what it shipped at every release (`scripts/lib/example-files.json`).
+  `example-brand` is its name, domain or author in a line, as the content
+  lint's rule of that name finds it (a site named like it keeps its name).
+  `example-content` is one of its posts or catalogue pages at its path, a
+  file it shipped copied under any name (by its bytes), and a review, use
+  case, FAQ or author it shipped among the site's own (by the entry's
+  content). Each names the fix: the site's own, or delete it, a live URL
+  retired with `/editorial:retire-content`. The kit's own repository,
+  whose example is the example, is exempt.
+- **`baseline`**: the engine bypasses and the leftovers a site had when it
+  took 0.8.2, which `check-site --baseline` writes into the config:
+
+  ```json
+  "baseline": [
+    { "file": "src/app/layout.tsx", "rule": "agentic-cms/head", "count": 1, "reason": "the root head, until it is kit.seo.rootMetadata()" }
+  ]
+  ```
+
+  An entry's rule is an engine's ESLint rule, `rounds`, `example-brand` or
+  `example-content`; never a preferred rule, whose warning stays until it
+  has its reason, and never a gate or the config's own. The engines' rules
+  hold their entries in ESLint (`componentRules({ baseline })`, which
+  `eslint.config.mjs` passes from the config as it passes `allow`), the
+  site check the rest, and the content lint its `example-brand`: quiet
+  while the file holds no more than the count, every finding and a line on
+  the count past it, and under it a line asking for the entry to shrink, so
+  a fixed bypass makes no room for a new one. An entry that does not read
+  is a finding, one with no reason a warning, and the guard's `preset`
+  fails a file whose count ESLint is not told. `--baseline` writes the
+  whole list where the config has none (each reason empty, for the owner),
+  and from then on only shrinks it: an entry gone or lowered, growth
+  refused. A site from `init` 0.8.2 starts with `"baseline": []`, and takes
+  nothing ([migrating-to-0.8.2.md](migrating-to-0.8.2.md)).
+
+Each finding names its file, the pass and the fix; exit 1 on any, the
+components pass's included, and 2 when the config is missing or does not
+read or `--base` finds no history; `--json` prints the report, the
+exceptions added under `added` ([commands.md](commands.md#check-site)).
+`--baseline` exits 1 while it refuses growth or something no baseline
+takes is left, each named with its fix.

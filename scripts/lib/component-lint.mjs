@@ -1,15 +1,31 @@
 // The component library's lint, exported as `agentic-cms/eslint`:
 // `componentRules(options)` returns flat configs a site spreads into its
 // eslint.config.mjs, after eslint-config-next (which registers the `react`
-// plugin two of the rules come from). With them nobody adds a one-off
-// component to a page:
-//   - the layers import one way: motion ← ui ← patterns ← sections;
-//   - only the motion layer imports an animation library;
-//   - a section or a pattern composes primitives: one component per file, no
-//     raw buttons, links, pictures, headings or form fields (and no svg in a
-//     section), no inline style, no arbitrary value, no visual or motion
-//     class in its className strings — each message naming what to use;
-//   - and it holds no copy: its words come from the page's content file.
+// plugin two of the rules come from). Two tiers, the rules of one
+// `agentic-cms` plugin:
+//   - required, the engines (./engine-rules.mjs), errors across all of src,
+//     design-round and lab routes included: no copy in code — every word a
+//     reader sees comes from content/ or site.ts's chrome, through props; no
+//     head of the site's own; forms through the form engine; tags through
+//     agentic-cms/consent; no mailto: link. The files that own a form or a
+//     tag are named in `owners`. A site that took 0.8.2 with bypasses keeps
+//     them in `baseline` (./baseline.mjs): each rule stays quiet on a file
+//     while it holds no more than the file's count, and the list only
+//     shrinks;
+//   - preferred, the libraries and the tools (./preferred-rules.mjs),
+//     warnings across all of src: motion through agentic-cms/ix, graphics
+//     from the lab, pictures through Media and EagerImage, icons through
+//     Icon, values from the tokens. A site keeps its own choice with its
+//     reason, in `allow` or an inline disable; the files that own a picture,
+//     an icon or motion are named in `owners`, and the motion folder owns
+//     motion;
+//   - the library's shape, so nobody adds a one-off component to a page: the
+//     layers import one way (motion ← ui ← patterns ← sections); only the
+//     motion layer imports an animation library; a section or a pattern
+//     composes primitives: one component per file, no raw buttons, links,
+//     pictures, headings or form fields (and no svg in a section), no inline
+//     style, no arbitrary value, no visual or motion class in its className
+//     strings — each message naming what to use.
 // The primitives themselves are the site's catalogue, src/components/README.md.
 //
 //   import { componentRules } from "agentic-cms/eslint";
@@ -19,10 +35,19 @@
 // site's that sets one of these rules again replaces the preset's setting for
 // its files, and those files lose the kit's restrictions without a word. A
 // site extends them through the options instead (`elements`,
-// `restrictedImports`).
+// `restrictedImports`, `copy`, `owners`); the guard (check-components) fails
+// a required rule whose resolved setting is not the one these options make.
 //
 // Loosening a rule is its own pull request, said so in its title (the
 // components rule, .claude/rules/components.md).
+
+import { baselineConfigs, checkBaseline, heldByBaseline } from "./baseline.mjs";
+import { COPY_PROPS, ENGINE_RULES, PLUGIN, REQUIRED, TOOLS } from "./engine-rules.mjs";
+import { ALLOWABLE, ANIMATION_ALTERNATIVES, PREFERRED, PREFERRED_RULES, RENDERING_LIBRARIES, SITE_TOOLS } from "./preferred-rules.mjs";
+
+export { ALLOWABLE, ANIMATION_ALTERNATIVES, COPY_PROPS, PREFERRED, REQUIRED, RENDERING_LIBRARIES, SITE_TOOLS, TOOLS };
+/** The plugin, one object for every block that registers it: `plugins: { "agentic-cms": plugin }`, the required rules (each holding a site's baseline, ./baseline.mjs) and the preferred ones. */
+export const plugin = { meta: { name: PLUGIN }, rules: { ...Object.fromEntries(Object.entries(ENGINE_RULES).map(([name, rule]) => [name, heldByBaseline(`${PLUGIN}/${name}`, rule)])), ...PREFERRED_RULES } };
 
 /** The animation libraries: only the motion layer imports them. */
 export const ANIMATION_LIBRARIES = ["motion", "framer-motion"];
@@ -39,14 +64,23 @@ export const DEFAULTS = {
   patterns: "patterns",
   sections: ["sections"],
   registry: "sections/render.tsx",
+  app: "src/app",
   elements: {},
-  copy: { props: ["title", "alt", "aria-label", "placeholder", "label", "children"], decorations: ["Placeholder", "TypeTag"] },
+  copy: { props: COPY_PROPS, skip: [], decorations: ["Placeholder", "TypeTag"], tools: TOOLS },
+  owners: {},
+  allow: [],
+  baseline: [],
   restrictedImports: { paths: [], patterns: [] },
   ignores: [],
 };
+/** The parts a file can own in `owners`: the engines' forms (a <form>, a server action, a fetch of another origin) and tags (next/script, a <script src> of another origin), and the preferred tier's images (an eager <img>), icons (an <svg>) and motion. */
+export const OWNED = ["forms", "tags", "images", "icons", "motion"];
+const tierOf = (part) => (REQUIRED.includes(`${PLUGIN}/${part}`) ? "required" : "preferred");
 
 const SCRIPTS = "**/*.{js,jsx,mjs,ts,tsx,mts}";
 const COMPONENTS = "**/*.{jsx,tsx}";
+const TEST_COMPONENTS = "**/*.test.{jsx,tsx}";
+const TEST_SCRIPTS = "**/*.test.{js,jsx,mjs,ts,tsx,mts}";
 const HEADINGS = ["h1", "h2", "h3", "h4", "h5", "h6"];
 const FORM_FIELDS = ["form", "input", "select", "textarea", "label"];
 
@@ -87,48 +121,43 @@ export function compositionSyntax({ ui, motion }) {
   ];
 }
 
-// Copy: text with a letter or a digit in it. A symbol (→, ·, ×) has neither;
-// the text of an aria-hidden element, and the props and children of a
-// primitive that draws them aria-hidden (`copy.decorations`), are decorations,
-// not something read.
-const WORDS = "/[\\p{L}\\p{N}]/u";
-const HIDDEN = ":has(> JSXAttribute[name.name='aria-hidden'])";
-const WORDED = [`Literal[value=${WORDS}]`, `TemplateLiteral > TemplateElement[value.raw=${WORDS}]`, `:matches(ConditionalExpression, LogicalExpression) > Literal[value=${WORDS}]`];
-
-/** The no-restricted-syntax entries that keep copy out: JSX text, and strings in the copy-bearing props (`copy.props`), written straight, as `{…}` or as a data array's field of that name; none when `copy` is false. */
-export function copySyntax({ copy, registry }) {
-  if (!copy) return [];
-  const { props, decorations } = { ...DEFAULTS.copy, ...copy };
-  const schemas = registry ? `${registry.slice(0, registry.lastIndexOf("/"))}/schemas.ts` : "the sections' schemas";
-  const route = `it goes in the page's file, content/pages/<slug>.yaml → a field of the section (its schema in ${schemas}) → a prop here (a pattern gets it from its section). Symbols pass, and decorations: aria-hidden text${decorations.length ? ` and the props and children of ${decorations.join(", ")}` : ""}.`;
-  // An opening element whose props and children are decoration: aria-hidden, or a primitive named in `decorations`.
-  const decoration = [HIDDEN, ...(decorations.length ? [`[name.name=/^(?:${decorations.join("|")})$/]`] : [])].join(", ");
-  const text = `:matches(JSXElement:not(:has(> JSXOpeningElement:matches(${decoration}))), JSXFragment)`;
-  const names = `/^(?:${props.join("|")})$/`;
-  const prop = props.length ? `JSXOpeningElement:not(${decoration}) > JSXAttribute[name.name=${names}]` : null;
-  const field = props.length ? `Property:matches([key.name=${names}], [key.value=${names}]) > :matches(Literal[value=${WORDS}], TemplateLiteral > TemplateElement[value.raw=${WORDS}])` : null;
-  const expressions = (parent) => WORDED.map((part) => `${parent} > JSXExpressionContainer > ${part}`);
-  const inText = [`${text} > JSXText[value=${WORDS}]`, ...expressions(text)];
-  const inProps = prop ? [`${prop} > Literal[value=${WORDS}]`, ...expressions(prop)] : [];
-  return [
-    ...inText.map((selector) => ({ selector, message: `No copy in a section or a pattern: ${route}` })),
-    ...inProps.map((selector) => ({ selector, message: `No copy in a string prop (${props.join(", ")}): ${route}` })),
-    ...(field ? [{ selector: field, message: `No copy in a section's data (a ${props.join(", ")} field): ${route}` }] : []),
-  ];
-}
-
 /** The options with the defaults filled in, every folder resolved under `root` (a layer the site lacks stays null). */
 export function resolveOptions(options = {}) {
   const merged = { ...DEFAULTS, ...options };
   const under = (folder) => (folder ? `${merged.root}/${folder}` : null);
+  if (!merged.copy || typeof merged.copy !== "object" || Array.isArray(merged.copy)) throw new TypeError("componentRules(): copy is { props, skip, decorations, tools }, and the copy rule is required: a file that needs words of its own says why in an inline disable (// eslint-disable-next-line agentic-cms/copy -- <the reason>).");
+  if (!merged.owners || typeof merged.owners !== "object" || Array.isArray(merged.owners) || Object.keys(merged.owners).some((part) => !OWNED.includes(part))) throw new TypeError(`componentRules(): owners is { ${OWNED.map((part) => `${part}: { "<file>": "<reason>" }`).join(", ")} } — the files that own a part, each with its reason (or a list of the files).`);
+  checkAllow(merged.allow);
+  checkBaseline(merged.baseline);
   return {
     ...merged,
+    copy: { ...DEFAULTS.copy, ...merged.copy },
     motion: under(merged.motion),
     ui: under(merged.ui),
     patterns: under(merged.patterns),
     sections: (merged.sections ?? []).map(under),
     registry: under(merged.registry),
   };
+}
+
+/**
+ * `allow`, the preferred rules a site keeps its own choice of: a list of
+ * { rule, files, reason }, each a preferred rule (PREFERRED, or SITE_TOOLS,
+ * which check-site holds outside ESLint), the files it is kept in (globs)
+ * and the reason, which is never empty. A required rule is never allowed:
+ * its owner, or an inline disable with its reason. Throws naming the entry.
+ */
+export function checkAllow(allow) {
+  const shape = 'allow is a list of { rule: "agentic-cms/<rule>", files: ["<glob>", …], reason: "<why the site keeps its own>" }';
+  if (!Array.isArray(allow)) throw new TypeError(`componentRules(): ${shape}.`);
+  allow.forEach((entry, at) => {
+    const { rule, files, reason } = entry ?? {};
+    const which = `allow[${at}]${typeof rule === "string" ? ` (${rule})` : ""}`;
+    if (REQUIRED.includes(rule)) throw new TypeError(`componentRules(): ${which}: a required rule is never allowed — a file that owns its part is named in owners, and a line that needs its own says why in an inline disable (// eslint-disable-next-line ${rule} -- <the reason>).`);
+    if (!ALLOWABLE.includes(rule)) throw new TypeError(`componentRules(): ${which}: ${shape}, the rule one of ${ALLOWABLE.join(", ")}.`);
+    if (!Array.isArray(files) || !files.length || !files.every((file) => typeof file === "string" && file)) throw new TypeError(`componentRules(): ${which}: its files are a list of globs, the files that keep their own.`);
+    if (typeof reason !== "string" || !reason.trim()) throw new TypeError(`componentRules(): ${which}: no reason — a site keeps its own choice with one line of why, which the review reads.`);
+  });
 }
 
 /** The specifiers that reach a folder: by the tsconfig alias (`@/components/ui`) or relatively from a sibling folder. */
@@ -177,7 +206,7 @@ function layerConfigs(opts) {
   return configs;
 }
 
-/** What a section or a pattern may contain: one component per file, no forbidden element, nothing composition forbids, no copy. */
+/** What a section or a pattern may contain: one component per file, no forbidden element, nothing composition forbids. */
 function compositionConfig(files, opts, elements) {
   const forbid = Object.entries(elements).filter(([, message]) => message).map(([element, message]) => ({ element, message }));
   return {
@@ -186,26 +215,107 @@ function compositionConfig(files, opts, elements) {
     rules: {
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
       "react/forbid-elements": ["error", { forbid }],
-      "no-restricted-syntax": ["error", ...compositionSyntax(opts), ...copySyntax(opts)],
+      "no-restricted-syntax": ["error", ...compositionSyntax(opts)],
     },
   };
+}
+
+/** The files a part's owners name: `owners[part]` as { "<glob>": "<reason>" } (the config's form, each with its reason) or a list of globs. */
+export const ownerFiles = (owners, part) => { const value = owners?.[part]; return Array.isArray(value) ? value : Object.keys(value ?? {}); };
+
+/** Where copy goes from each place the copy rule covers: { place, route } for its message. */
+export function copyPlaces(opts) {
+  const chrome = `the chrome in ${opts.src}/config/site.ts`;
+  const schemas = opts.registry ? `${opts.registry.slice(0, opts.registry.lastIndexOf("/"))}/schemas.ts` : "the sections' schemas";
+  return {
+    code: { place: "code", route: `every word a reader sees comes from content/ or ${chrome}, through props.` },
+    primitive: { place: "a primitive", route: `its words come in as props, from the section that uses it, or from ${chrome}.` },
+    section: { place: "a section or a pattern", route: `it goes in the page's file, content/pages/<slug>.yaml → a field of the section (its schema in ${schemas}) → a prop here (a pattern gets it from its section).` },
+    route: { place: "a route", route: `a page's words are its file, content/pages/<slug>.yaml, which the catch-all renders through the sections; a layout's and not-found's are ${chrome}.` },
+    round: { place: "a design round's route", route: "it reads the page's copy from content/pages/<slug>.yaml and hands it to the candidates as props, as `agentic-cms demo new --section` writes it; a showcase reads its copy from a content file too, and the chip that names a candidate is aria-hidden." },
+  };
+}
+
+/**
+ * The required tier, the engines (./engine-rules.mjs): head, forms, tags and
+ * e-mail over every script under `src` (and the app folder), copy over every
+ * component there with the message of its place — code, a primitive, a
+ * section or a pattern, a route, a design round's route (a `*-demo` folder,
+ * the lab's among them) — test files left out; then each part turned off in
+ * the files its `owners` name.
+ */
+export function requiredConfigs(opts) {
+  const plugins = { [PLUGIN]: plugin };
+  const trees = opts.app === opts.src || opts.app.startsWith(`${opts.src}/`) ? [opts.src] : [opts.src, opts.app];
+  const rounds = `${opts.app}/*-demo`;
+  const places = copyPlaces(opts);
+  const block = (files, rules, ignores = []) => ({ files, ignores: [...opts.ignores, ...ignores], plugins, rules });
+  const { props, skip, decorations, tools } = opts.copy;
+  const copy = (folders, where, ignores = []) => block(folders.filter(Boolean).map((folder) => `${folder}/${COMPONENTS}`), { [`${PLUGIN}/copy`]: ["error", { props, skip, decorations, tools, ...places[where] }] }, [TEST_COMPONENTS, ...ignores]);
+  const configs = [
+    block(trees.map((tree) => `${tree}/${SCRIPTS}`), Object.fromEntries(REQUIRED.filter((rule) => rule !== `${PLUGIN}/copy`).map((rule) => [rule, "error"]))),
+    copy(trees, "code"),
+    copy([opts.motion, opts.ui], "primitive"),
+    copy([opts.patterns, ...opts.sections], "section"),
+    copy([opts.app], "route", [`${rounds}/**`]),
+    copy([rounds], "round"),
+    ...OWNED.filter((part) => tierOf(part) === "required").map((part) => block(ownerFiles(opts.owners, part), { [`${PLUGIN}/${part}`]: "off" })),
+  ];
+  return configs.filter((config) => config.files.length);
+}
+
+/**
+ * The preferred tier (./preferred-rules.mjs), warnings: graphics, images and
+ * icons over every script under `src` (and the app folder), motion there but
+ * in the motion layer, styling there but in the sections and the patterns
+ * (whose composition fails an arbitrary value already) — test files left
+ * out; then each part turned off in the files its `owners` name, and each
+ * `allow` entry's rule in its files (an entry of SITE_TOOLS is check-site's,
+ * which no ESLint block sets).
+ */
+export function preferredConfigs(opts) {
+  const plugins = { [PLUGIN]: plugin };
+  const trees = opts.app === opts.src || opts.app.startsWith(`${opts.src}/`) ? [opts.src] : [opts.src, opts.app];
+  const scripts = trees.map((tree) => `${tree}/${SCRIPTS}`);
+  const block = (files, rules, ignores = []) => ({ files, ignores: [...opts.ignores, ...ignores], plugins, rules });
+  const warn = (...rules) => Object.fromEntries(rules.map((rule) => [`${PLUGIN}/${rule}`, "warn"]));
+  const composed = [opts.patterns, ...opts.sections].filter(Boolean).map((folder) => `${folder}/**`);
+  const configs = [
+    block(scripts, warn("graphics", "images", "icons"), [TEST_SCRIPTS]),
+    block(scripts, warn("motion"), [TEST_SCRIPTS, opts.motion && `${opts.motion}/**`].filter(Boolean)),
+    block(scripts, warn("styling"), [TEST_SCRIPTS, ...composed]),
+    ...OWNED.filter((part) => tierOf(part) === "preferred").map((part) => block(ownerFiles(opts.owners, part), { [`${PLUGIN}/${part}`]: "off" })),
+    ...opts.allow.filter(({ rule }) => rule !== SITE_TOOLS).map(({ rule, files }) => block(files, { [rule]: "off" })),
+  ];
+  return configs.filter((config) => config.files.length);
 }
 
 /**
  * The component library's flat configs. Options (each optional, the
  * defaults in DEFAULTS): `root` (where the layers' folders are), `src` (the
- * tree the animation ban covers), `alias` (the tsconfig alias for `src/`),
- * `motion`, `ui`, `patterns` (a folder under `root`, or null for a layer the
- * site does not have), `sections` (the section folders under `root`),
- * `registry` (the section registry under `root`, left out of the section
- * rules: it imports every section), `elements` ({ element: message } over
- * defaultElements(); false allows one), `copy` ({ props, decorations }: the
- * props whose strings are copy, and the primitives that draw their props and
- * children aria-hidden; false turns the copy rule off), `restrictedImports`
- * ({ paths, patterns } in no-restricted-imports' own form: the site's own
- * restrictions, added to every setting of that rule here, so they hold
- * wherever the kit's do, all of `src` but `ignores`) and `ignores` (globs
- * left out of every rule).
+ * tree the animation ban and the required rules cover), `alias` (the
+ * tsconfig alias for `src/`), `app` (the routes' folder), `motion`, `ui`,
+ * `patterns` (a folder under `root`, or null for a layer the site does not
+ * have), `sections` (the section folders under `root`), `registry` (the
+ * section registry under `root`, left out of the section rules: it imports
+ * every section), `elements` ({ element: message } over defaultElements();
+ * false allows one), `copy` ({ props, skip, decorations, tools }: the props whose
+ * strings are copy, replacing COPY_PROPS; the props of the site's own whose
+ * strings are never copy, added to the rule's own; the primitives that draw
+ * their props and children aria-hidden; the design tools' modules, whose
+ * components' props are no copy), `owners` ({ forms, tags, images, icons,
+ * motion }: the files that own a <form>, a tag, an eager <img>, an <svg> or
+ * motion, as { "<glob>": "<reason>" } or a list of globs), `allow` (a list
+ * of { rule, files, reason }: a preferred rule a site keeps its own choice of
+ * in those files, with the reason — checkAllow()), `baseline` (a list of
+ * { file, rule, count, reason }: an existing site's engine bypasses, each
+ * file's count of an engine rule, which that rule holds there while the
+ * count does — ./baseline.mjs, written by `check-site --baseline`),
+ * `restrictedImports`
+ * ({ paths, patterns } in no-restricted-imports'
+ * own form: the site's own restrictions, added to every setting of that rule
+ * here, so they hold wherever the kit's do, all of `src` but `ignores`) and
+ * `ignores` (globs left out of every rule).
  */
 export function componentRules(options = {}) {
   const opts = resolveOptions(options);
@@ -214,5 +324,5 @@ export function componentRules(options = {}) {
   const sectionFiles = opts.sections.map((folder) => `${folder}/${COMPONENTS}`);
   if (sectionFiles.length) configs.push(compositionConfig(sectionFiles, opts, elements));
   if (opts.patterns) configs.push(compositionConfig([`${opts.patterns}/${COMPONENTS}`], opts, { ...elements, svg: false }));
-  return configs;
+  return [...configs, ...requiredConfigs(opts), ...preferredConfigs(opts), ...baselineConfigs(opts.baseline)];
 }

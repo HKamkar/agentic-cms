@@ -84,8 +84,12 @@ A component uses the role where one exists and a value only where no role
 does: `border-line`, never `border-ink`. The page ground, text, a filled block,
 muted text and the solid button's fill have no role, so they name their value.
 A fork restyles by changing a value, or by pointing a role at another value or
-giving it one of its own. A new value or role is a token first — never a
-literal in a component, never an alpha modifier on one of these.
+giving it one of its own. A new value or role is a token first, not a literal
+in a component or an alpha modifier on one of these. `pnpm lint` fails an
+arbitrary value in a section or a pattern; in `ui/` and `src/app` it warns
+about one, and about a colour outside the tokens in a `style`
+(`agentic-cms/styling`), and a file there that keeps its own says why in
+`allow` (`docs/primitives.md` § Enforced).
 
 <!-- dark-mode:start -->
 ### The theme
@@ -226,7 +230,9 @@ Above the fold in a **server** component, use `EagerImage` (from
 `<img>` there becomes a preload hint in the page's RSC payload that every other
 page executes when it prefetches a link here. Everything else is
 `loading="lazy"` (a post body gets it, and its `width`/`height`, from
-`rehype-post-images`).
+`rehype-post-images`). `pnpm lint` warns about such an `<img>`, and about
+`next/image`, which needs an image service the static host does not have
+(`agentic-cms/images`; `Media` owns its `<img>`).
 
 Placeholder files come from `pnpm kit placeholder <out> <width>
 <height>`: a mid-grey field with a one-pixel border and a corner-to-corner
@@ -245,7 +251,7 @@ the example uses:
 | a card or list icon | 64 square `.svg` |
 
 Where they live: `public/images/<page>/` for one page's, `public/images/ui/` for
-shared ones, `public/images/brand/logo.svg` (the brand mark, always
+shared ones, `public/images/brand/` (the brand mark, always
 `site.logo`), `public/images/blog/<slug>/` for a post's and
 `public/images/blog/ui/` for the body's own furniture, `public/images/authors/`.
 A page's OG image sits at the top level, named for its route with hyphens:
@@ -267,7 +273,10 @@ the families — an icon of the site's own, an illustration, a short loop —
 is designed as SVG in the lab (`pnpm kit lab`, `docs/lab.md`) and ships
 pre-rendered like any other picture: a file here, or inline `Icon` data
 (`icons add file:<name>`, its source under `src/config/icons/`); the lab
-itself leaves nothing in the tree.
+itself leaves nothing in the tree. `pnpm lint` warns about an `<svg>`
+outside `Icon` (`agentic-cms/icons`; `Placeholder` keeps its crossed box in
+`allow`) and about a rendering library or a `<canvas>`
+(`agentic-cms/graphics`).
 
 
 ## 5. Components
@@ -286,11 +295,11 @@ shared component goes into it in the same commit. In short:
 | FAQ | `ui/Faq` | the disclosure list; the section around it is `sections/FaqSection` |
 | Forms | `ui/form/*` | forms are definitions in `src/config/forms.ts` (`src/lib/forms/README.md`); never hand-build one |
 | Motion | play once: `Reveal`, `RevealGroup`, `Sequence`, `part()` (+ `PART_KINDS`, `LOOP_KINDS`), `staggerDelay()`, `useMotionRoot()`, `motionScript()`; replay on re-entry: `Fx`, `OnView`, `useReveal()`; `InlineAnimation` (+ `fillBox`), `ease()` (+ `EASE`), `ix()`, `useMainBreakpoint()`, `useReducedMotionPref()` (`agentic-cms/ix`) | present, rendered by nothing (`Heading`'s `entrance` is a `Reveal`, never passed) — §7 says which to choose |
-| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the blog engine (`src/lib/blog/README.md`) |
-| Engine | `JsonLd`, `EagerImage`, `FaqAccordion` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour |
+| Content | `blog/BlogHero`, `blog/BlogCard`, `blog/BlogIndex`, `blog/PostBody` (+ `postBlocks`), `blog/mdxComponents` | the post pipeline (`src/lib/blog/README.md`) |
+| Engine | `JsonLd`, `EagerImage`, `FaqAccordion`, `EmailLink`, `Icon` (`agentic-cms/components`) | structured data with `<` escaped; the above-the-fold image that stays out of the RSC preload hints; the post body's accordion behaviour; an address as a link that is never text in a served file (`docs/email.md`); an icon from the site's path data (`docs/icons.md`) |
 
 A card's frame is `ui/Panel`, and what goes inside it is each section's own
-design: a section renders its cards from a data array at the top of its file or
+design: a section renders its cards from the list its page file gives it or
 from the collection the registry resolves for it, each a `<Panel as="li">`. Do
 not build a generic `Card`.
 
@@ -362,14 +371,14 @@ export function Benefits({ eyebrow, heading, cards }: SectionProps<"about-benefi
 ```
 
 A server component (nothing here needs the browser); the frame and title block
-from `Section`; cards as `Panel` list items from the section's own array, the
+from `Section`; cards as `Panel` list items from the page file's list, the
 layout inside them the section's own; the card's `<h3>` a `Heading`, after the
 section's `<h2>`; body copy as a bare `<p>`; the icon a `Media` in its `icon`
 box, the file's own size in the attributes. A call to action would be
 `<Button href={site.links.contact} label={cta} />`. No raw element and no box
 of its own: `pnpm lint` fails a section that writes either (the component
 rules, `agentic-cms/eslint`), and a section file the registry does not
-import (the placement guard, `agentic-cms check-components`;
+import (the placement guard, the first pass of `agentic-cms check-site`;
 `src/components/README.md` § Library first).
 `src/components/home/Service.tsx` is the same shape with a `lg:grid-cols-2`
 split and a content image instead of a placeholder.
@@ -459,6 +468,14 @@ rules that come with it:
   set `transform`);
 - a sequence longer than two seconds says so with `settle`.
 
+Motion of a site's own is the site's to choose, and says why: another
+animation library, a `requestAnimationFrame` loop, an `IntersectionObserver`
+reveal, `el.animate()` or a transition or animation class or style outside
+the motion layer warns, naming this one (`agentic-cms/motion`), and so does
+a transition declared in CSS outside it and `motion.css` (the guard's
+`transitions`); a file that keeps its own has an `allow` entry with its
+reason (`docs/primitives.md` § Enforced).
+
 `capture --motion` sees the parts play and records them in the inventory, and
 `probe` lists an armed part whose root has not played among the pending
 reveals.
@@ -475,10 +492,17 @@ reveals.
   `variant: about` or `variant: contact` under its title block. The field is
   real content a fork's design will use; the wireframe has no two ways to draw
   a list.
+<!-- example:start -->
 - **The landing page's nav links are anchors.** `Use cases` is
   `/#use-case-cards` and `Contact` is `/#contact-form`, because a section's id
   is its type and the landing page carries both sections. Only an exact path
   match marks a link `aria-current="page"`, so an anchor never does.
+<!-- example:end -->
+<!-- starter: - **The home page's nav link to the contact form is an anchor.**
+  `Contact` is `/#contact-form`, because a section's id is its type and the
+  home page carries the section. Only an exact path match marks a link
+  `aria-current="page"`, so an anchor never does.
+-->
 - **Every link is underlined** and inherits its colour (`base.css`:
   `a { color: inherit; text-decoration: underline; }`). A wireframe has one
   accent and it is the underline; buttons and cards that are links opt out with
@@ -488,9 +512,9 @@ reveals.
 - **The theme button reads `Theme: system`.** Three states — the reader's system
   setting (no attribute at all), then light, then dark, then back. The attribute
   *is* the state, so the server renders `system`, the first client render agrees
-  with it, and the label is never wrong for a frame.<!-- dark-mode:end -->
+  with it, and the label is never wrong for a frame.<!-- dark-mode:end --><!-- example:start -->
 - **`/sections/*` are in the footer, not the nav.** They are agentic-cms showing its
-  section types to whoever forks it, not pages a visitor is being sent to.
+  section types to whoever forks it, not pages a visitor is being sent to.<!-- example:end -->
 
 A design change is its own commit and says so in the message; it is never folded
 into a refactor.
@@ -501,10 +525,14 @@ A page is a file, `content/pages/<slug>.yaml`: its `seo` block, the copy of its
 structured data (`jsonld`), and its sections in order (`type` plus that type's
 copy), rendered by `src/app/[[...slug]]/page.tsx` through the registry in
 `src/components/sections/render.tsx`. Twenty-five section types exist
-(`src/components/sections/schemas.ts`); the landing page uses nine of them and
+(`src/components/sections/schemas.ts`); <!-- example:start -->the landing page uses nine of them and
 the four `/sections/*` demos show the rest, with slot copy that says what each
-field holds.
+field holds.<!-- example:end --><!-- starter: a site that `agentic-cms init` laid out
+starts with two pages, the home page, with six of them, and the blog index; the
+kit's own repository shows every type in place, on its example's `/sections/*`
+pages. -->
 
+<!-- example:start -->
 | Route | File | Sections |
 |---|---|---|
 | `/` | `pages/home.yaml` | `home-hero`, `home-feature`, `home-service`, `home-about`, `use-case-cards`, `reviews`, `faq`, `contact-form`, `contact-details` |
@@ -515,6 +543,14 @@ field holds.
 | `/blog` | `pages/blog.yaml` | `blog-index` → the hero plus the card grid (`blog-index`, `blog-index-list`) |
 | `/blog-post/<slug>` | `content/blog/<slug>.md` | `post-hero`, `post-body`, `post-related`, `post-author` — the route file's own boxes, not registry types |
 | `/404` | — | `not-found` (`src/app/not-found.tsx`) |
+<!-- example:end -->
+<!-- starter: | Route | File | Sections |
+|---|---|---|
+| `/` | `pages/home.yaml` | `home-hero`, `home-service`, `home-feature`, `home-about`, `contact-form`, `contact-details` |
+| `/blog` | `pages/blog.yaml` | `blog-index` → the hero plus the card grid (`blog-index`, `blog-index-list`) |
+| `/blog-post/<slug>` | `content/blog/<slug>.md` | `post-hero`, `post-body`, `post-related`, `post-author` — the route file's own boxes, not registry types |
+| `/404` | — | `not-found` (`src/app/not-found.tsx`) |
+-->
 
 Public URLs are indexed: never change one without a redirect.
 
@@ -531,8 +567,8 @@ three things: a copy schema in `schemas.ts` (copy only, every field
 `.describe()`d), a component in `src/components/<page>/` built as in §6 inside
 `ui/Section`, and a registry entry in `render.tsx` — `plain()`, or `withData()`
 when the section shows a collection. Verify with `pnpm lint`, `pnpm test`,
-`pnpm content:lint`, `pnpm build` (the content lint runs first, the SEO audit
-last) and `pnpm preview`.
+`pnpm content:lint`, `pnpm build` (the lint and the content lint run first,
+the SEO audit after `next build`) and `pnpm preview`.
 
 **Changing an existing page.** A refactor moves no pixels and proves it:
 
@@ -553,7 +589,7 @@ committed before the next change starts. A refactor that also leaves the markup
 alone proves that with `agentic-cms parity` (prerendered HTML plus JSON-LD,
 `diff -r`).
 
-**What the SEO audit checks.** `agentic-cms seo` runs at the end of
+**What the SEO audit checks.** `agentic-cms seo` runs after `next build` in
 `pnpm build` and fails it on a structural problem, so `preview` and `deploy`
 cannot skip it: per prerendered page, exactly one non-empty unique `<title>` (at
 most 70 characters) and one meta description (50–200), one canonical that is
@@ -570,9 +606,18 @@ hand-write head tags.
 
 ## 10. Content and configuration
 
+- **Every word a reader sees** comes from `content/` or from the chrome's
+  text in `src/config/site.ts`, never from a component, a route or a design
+  round's candidate: `pnpm lint` fails copy written in code anywhere under
+  `src/` (`agentic-cms/copy`). The content, the SEO, the forms, the consent
+  and the e-mail are the engines a site must use; for everything else
+  `docs/parts.md` names the kit's part, and a site's own choice says why
+  (`docs/primitives.md` § Enforced).
 - **Brand data, URLs, navigation, footer**: `src/config/site.ts` — the name, the
   tagline, the address, the e-mail, the logo, `links`, `nav`, `signIn`, `cta`,
-  `footer`. Every page is served by this app, so entries stay relative. The
+  `footer`; `guardEmail: true` keeps the address out of every served file and
+  ends the build with `agentic-cms guard-email` (`docs/email.md`). Every
+  page is served by this app, so entries stay relative. The
   chrome's own words sit beside them: `chrome` (the skip link, the header's,
   the footer's column titles,<!-- dark-mode:start --> the theme switch's,<!-- dark-mode:end -->
   the 404, the post template's) and `consentBanner`.
@@ -584,6 +629,11 @@ hand-write head tags.
   `src/lib/forms/README.md`; where endpoint forms deliver is
   `src/config/form-delivery.ts`, read from the environment
   ([docs/forms.md](docs/forms.md)).
+- **Tags**: the Google tag's id and the consent policy in
+  `src/config/analytics.ts`; a tag that needs consent loads only through
+  `agentic-cms/consent` (`GoogleTag` from `agentic-cms/consent/google`),
+  and `pnpm lint` fails `next/script` or another origin's `<script src>`
+  anywhere else (`agentic-cms/tags`, [docs/consent.md](docs/consent.md)).
 - **Content**: files under `content/`, one collection each, read and validated
   at build time by the content engine (`src/lib/content/README.md`; the door for
   editing is `content/README.md`, the templates are `content/_templates/`):
@@ -599,7 +649,7 @@ hand-write head tags.
 - A section that shows a collection keeps its presentation in code, keyed by
   position; the collection carries only copy.
 - The voice and claim rules are `content/VOICE.md`, enforced by
-  `agentic-cms lint` at the start of `pnpm build`; the procedures for
-  content jobs are the `editorial` plugin in `plugin/`.
+  `agentic-cms lint` in `pnpm build`, after the lint and before `next build`;
+  the procedures for content jobs are the `editorial` plugin in `plugin/`.
 - Everything is read at build time. Nothing reads the filesystem at request
   time — the Worker has none.

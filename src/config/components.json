@@ -8,11 +8,23 @@
   "routes": ["src/app", "src/app/[[...slug]]"],
   "$exceptions": "The routes outside the content engine, each with the reason it stays there; a bare one fails the guard. A *-demo folder (a design round's, the lab's) is one by name and needs no entry.",
   "exceptions": {
-    "src/app/blog-post/[slug]": "the blog engine: a post is content/blog/<slug>.md, rendered by the post template",
+    "src/app/blog-post/[slug]": "the post pipeline: a post is content/blog/<slug>.md, rendered by the post template",
     "src/app/api/forms/[id]": "the form endpoint, POST /api/forms/[id], the one route that runs at request time",
     "src/app/feed.xml": "the RSS feed, written from the posts"
   },
-  "$ignores": "In the kit's own checkout src/lib is the package's source; a site has none.",
+  "$owners": "The files that own a part the lint keeps out of code, each with its reason: the engines' forms (a <form>, a server action, a fetch of another origin) and tags (next/script, a <script src> of another origin); the preferred tier's images (an eager <img>), icons (an <svg>) and motion. eslint.config.mjs passes the same files to componentRules().",
+  "owners": {
+    "forms": { "src/components/ui/form/Form.tsx": "the form engine's renderer: the one <form>, posting each definition of src/config/forms.ts through its backend" },
+    "images": { "src/components/ui/Media.tsx": "the picture primitive: every <img> a section shows, lazy, or eager through EagerImage above the fold" }
+  },
+  "$allow": "The preferred rules a file keeps its own choice of, each with the reason the review reads (an entry with no reason fails the guard). eslint.config.mjs reads this list.",
+  "allow": [
+    { "rule": "agentic-cms/icons", "files": ["src/components/ui/Placeholder.tsx"], "reason": "the wireframe's crossed box: two lines stretched to any ratio, which no icon draws" },
+    { "rule": "agentic-cms/styling", "files": ["src/components/ui/form/Form.tsx"], "reason": "the honeypot sits far off-screen, where a bot fills it and a reader never sees it: an offset no token names" }
+  ],
+  "$baseline": "The engine bypasses and the kit example's leftovers a site had when it took 0.8.2, which agentic-cms check-site --baseline writes here, each to move onto its engine in a pull request of its own: the list only shrinks. A site laid out by init 0.8.2 or later starts with none and takes none (docs/migrating-to-0.8.2.md).",
+  "baseline": [],
+  "$ignores": "In the kit's own checkout src/lib is the package's source: init leaves these two lines out of a site, whose src/lib is its own and linted.",
   "ignores": ["src/lib/**"],
   "$inherited": "Files the guard leaves alone, frozen: here the blog's post template, which the blog routes render themselves rather than the registry (the body with its stylesheet, its element overrides, the card and the hero). Nothing new is added; a file leaves the list when a registered section or a primitive replaces it.",
   "inherited": [

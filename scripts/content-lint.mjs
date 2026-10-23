@@ -10,6 +10,7 @@
 //   node scripts/content-lint.mjs --root <dir>    another tree: <dir>/content and <dir>/public
 //   node scripts/content-lint.mjs --strict        every WARN counts as a FAIL
 //   node scripts/content-lint.mjs --report        also writes .parity/content-lint-report.txt
+//   node scripts/content-lint.mjs --production    placeholder copy FAILs (a site's pnpm build)
 //
 // Prints one row per collection, then one line per finding in the SEO
 // audit's grammar (`LEVEL file rule: path problem`), then the summary; exits
@@ -21,18 +22,22 @@ import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
+import { PLACEHOLDERS_ENV, placeholdersAllowed } from "./lib/placeholders.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { flags } = parseOrExit(SPECS.lint, process.argv.slice(2));
 const root = flags.root ? path.resolve(flags.root) : process.cwd();
 const { strict, report, json } = flags;
 const say = json ? console.error : console.log;
+// A production build fails on a placeholder, unless this run's environment keeps them warnings (a CI build that deploys nothing).
+const production = flags.production && !placeholdersAllowed();
 
 const { format, lint } = await import("./lib/content-lint.mjs");
 const { kit } = await import("@/kit");
 
 say(`content-lint: root ${path.join(root, "content")}`);
-const result = lint({ root, collections: kit.collections, site: kit.site });
+if (flags.production && !production) say(`content-lint: ${PLACEHOLDERS_ENV}=warn — placeholders stay warnings in this build; a build that deploys never sets it`);
+const result = lint({ root, collections: kit.collections, site: kit.site, production });
 for (const row of result.collections) say(`${row.name}: ${row.entries} entries (${row.source})`);
 const findings = result.findings.map((finding) => (strict && finding.level === "WARN" ? { ...finding, level: "FAIL" } : finding));
 const lines = findings.map(format);
@@ -42,7 +47,9 @@ const warns = findings.length - fails;
 const s = (n) => (n === 1 ? "" : "s");
 const summary = `content-lint: ${result.collections.length} collections, ${result.collections.reduce((n, row) => n + row.entries, 0)} entries, ${fails} failure${s(fails)}, ${warns} warning${s(warns)}${strict ? " (strict)" : ""}`;
 say(summary);
-if (json) console.log(JSON.stringify({ root, collections: result.collections, findings, summary: { fails, warns, strict } }, null, 1));
+const placeholders = findings.filter((finding) => finding.rule === "placeholder").length;
+if (placeholders) say(`content-lint: ${placeholders} placeholder${s(placeholders)} left from the starter — /editorial:new-page writes a page's copy, or replace each by hand; a production build (pnpm build) fails while one remains`);
+if (json) console.log(JSON.stringify({ root, collections: result.collections, findings, summary: { fails, warns, strict, production, placeholders } }, null, 1));
 if (report) {
   fs.mkdirSync(path.join(root, ".parity"), { recursive: true });
   fs.writeFileSync(path.join(root, ".parity/content-lint-report.txt"), [...lines, summary, ""].join("\n"));

@@ -59,6 +59,16 @@ The page's section component and its module (`src/components/<page>/`), and
 5. Say what was measured and what it showed, in numbers, before saying what
    changed.
 
+## Verify
+
+The second measurement (step 4) shows the claim gone, and `design-proof`
+shows nothing else moved.
+
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
+
 ## Stop for the user
 
 A claim the numbers contradict (the element is where the design says; the

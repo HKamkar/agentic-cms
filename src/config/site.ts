@@ -1,10 +1,15 @@
-// Single place for everything brand- and site-specific. The blog engine reads
+// Single place for everything brand- and site-specific. The post pipeline reads
 // from here; swapping the brand means editing this file and the tokens in
 // src/app/globals.css.
 //
 // Every page is a file, content/pages/<slug>.yaml (the SEO contract,
 // src/lib/seo/README.md): its seo block is the sitemap entry, the breadcrumb
 // name and what the build-time SEO audit expects to exist.
+//
+// The address is the server's alone (guardEmail, docs/email.md): no client
+// component imports this file, whose whole text a bundle would carry. The
+// layout and the footer, server components, hand the chrome's client
+// components what they show as props.
 
 import type { SiteConfig } from "agentic-cms";
 
@@ -13,9 +18,14 @@ export const site = {
   shortName: "Acme",
   url: "https://acme.example",
   locale: "en",
+  ogLocale: "en_US",
   tagline: "A CMS whose editor is an AI agent. Pages, posts and copy are files the build checks.",
   description: "Notes from the Acme team on running a site whose content lives in files: pages as YAML, posts as markdown, and the checks that read them on every build.",
   email: "hello@acme.example",
+  // No structured data carries the address as text (a ContactPoint with the
+  // contact page's URL in its place) and the build runs guard-email; an
+  // address public on purpose is { off: "<why>" }.
+  guardEmail: true,
   logo: "/images/brand/logo.svg",
   address: ["1 Example Street", "Example City"],
 

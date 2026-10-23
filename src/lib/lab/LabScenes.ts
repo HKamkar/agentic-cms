@@ -22,8 +22,8 @@ import { LAB_DIR, listScenes } from "./scenes.ts";
 export type { Ground };
 
 export type LabScenesProps = {
-  /** The surfaces to show every scene on, in order: the page, a card, a panel… */
-  grounds: Ground[];
+  /** The surfaces to show every scene on, in order: the page, a card, a panel… (default: LAB_GROUNDS, the two every site has). */
+  grounds?: Ground[];
   /** The sizes an icon-sized scene (up to 96 px wide) is also shown at. */
   sizes?: number[];
   /** More scenes: files or folders under the site, like `lab serve --scenes`. */
@@ -35,6 +35,16 @@ export type LabScenesProps = {
   /** The site's own note, after the procedure. */
   children?: ReactNode;
 };
+
+/**
+ * The two grounds every site has, what the route shows with none of the
+ * site's own: its page (a hairline in its ink) and a white card. Inline
+ * styles on purpose — they render on any site's tokens without knowing them.
+ */
+export const LAB_GROUNDS: Ground[] = [
+  { label: "the page", Frame: ({ children }: { children: ReactNode }) => h("div", { style: { border: "1px solid currentColor", padding: "2rem" } }, children) },
+  { label: "white card", Frame: ({ children }: { children: ReactNode }) => h("div", { style: { background: "#ffffff", color: "#000000", border: "1px solid #000000", padding: "2rem" } }, children) },
+];
 
 const ICON_SIZED = 96;
 const label = (text: string) => h("p", { style: { fontSize: ".75rem", letterSpacing: ".08em", textTransform: "uppercase", opacity: 0.7, margin: "0 0 .5rem" } }, text);
@@ -78,7 +88,7 @@ function SceneRow({ scene, grounds, sizes }: { scene: Study & { id: string }; gr
 }
 
 /** The scenes on the site's grounds, with the procedure; each animated scene under a timeline of its own. */
-export function LabScenes({ grounds, sizes = [24, 40, 64], folders = [], root = process.cwd(), intro = true, children }: LabScenesProps) {
+export function LabScenes({ grounds = LAB_GROUNDS, sizes = [24, 40, 64], folders = [], root = process.cwd(), intro = true, children }: LabScenesProps) {
   const scenes = read(root, folders);
   return h("div", { "data-lab": "" },
     intro ? h(Intro, { count: scenes.length }) : null,

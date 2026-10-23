@@ -7,9 +7,12 @@ import path from "node:path";
 import { test } from "node:test";
 import { parse as parseYaml } from "yaml";
 import { checkComponents, formatReport } from "./lib/check-components.mjs";
+import { checkSite, formatSiteReport } from "./lib/check-site.mjs";
 import { recordOf, recordText } from "../tools/agent-file-releases.mjs";
-import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, sha, siteVersion } from "./lib/init.mjs";
+import { REQUIRED, requiredBlocks, requiredGone, settingsGone } from "./lib/agent-required.mjs";
+import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, GatesError, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, SETTINGS, sha, siteVersion } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
+import { KIT_ONLY, SHARED_CONTENT, siteCode, STARTER, StarterError } from "./lib/starter.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "..");
@@ -17,10 +20,10 @@ const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "init-"));
 const read = (root, file) => fs.readFileSync(path.join(root, file), "utf8");
 const quiet = { log: () => {} };
 
-test("scaffold lays out a site from the package: the example, the agent files, the config, a manifest", () => {
+test("scaffold lays out a site from the package: the example's code, the starter, the agent files, the config, a manifest", () => {
   const target = path.join(tmp(), "my-site");
-  const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/VOICE.md", "public/images/brand/logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/rules/components.md", ".claude/rules/pages.md", "src/config/components.json", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
+  const result = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
+  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/pages/blog.yaml", "content/VOICE.md", "public/images/brand/my-site-logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", ".github/dependabot.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/rules/components.md", ".claude/rules/pages.md", "src/config/components.json", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
     assert.ok(fs.existsSync(path.join(target, file)), file);
   }
   assert.ok(!fs.existsSync(path.join(target, "src/lib")), "nothing of the package's source");
@@ -31,13 +34,18 @@ test("scaffold lays out a site from the package: the example, the agent files, t
   assert.equal(pkg.name, "my-site");
   assert.equal(pkg.private, true);
   assert.equal(pkg.dependencies["agentic-cms"], "github:HKamkar/agentic-cms#v0.4.0");
-  assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo");
+  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "the build runs the lint first, and the e-mail guard last: the starter's site.ts turns guardEmail on (D5)");
+  assert.match(read(target, "src/config/site.ts"), /^ {2}email: "hello@my-site\.example",\n(?: {2}\/\/[^\n]*\n)+ {2}guardEmail: true,$/m, "a new site keeps its address out of every served file");
   assert.equal(pkg.scripts.kit, "agentic-cms");
   assert.equal(pkg.scripts.urls, "agentic-cms urls");
-  assert.equal(pkg.scripts.lint, "eslint; s=$?; agentic-cms check-components || s=1; exit $s", "the lint runs ESLint, then the guard, failing on either");
+  assert.equal(pkg.scripts.lint, "eslint; s=$?; agentic-cms check-site || s=1; exit $s", "the lint runs ESLint, then the site check, failing on either");
   assert.equal(pkg.scripts.lint, LINT);
   const guard = checkComponents({ root: target, fs });
   assert.deepEqual(guard.findings, [], formatReport(guard).join("\n"));
+  assert.doesNotMatch(read(target, "eslint.config.mjs"), /src\/lib/, "a site's src/lib is its own, and linted: the kit's ignore of its package source stays in the kit");
+  const components = JSON.parse(read(target, "src/config/components.json"));
+  assert.ok(!("ignores" in components) && !("$ignores" in components), "nor in the guard's config");
+  assert.deepEqual(Object.keys(components.owners.forms), ["src/components/ui/form/Form.tsx"], "the form engine's renderer owns the one <form>");
   assert.ok(!("setup" in pkg.scripts), "no script named setup: pnpm setup is pnpm's own");
   assert.ok(pkg.devDependencies["playwright-core"] && pkg.devDependencies.tailwindcss && pkg.dependencies.next && pkg.dependencies.zod);
   assert.ok(!("@opennextjs/cloudflare" in pkg.devDependencies) && !("wrangler" in pkg.devDependencies));
@@ -59,23 +67,97 @@ test("scaffold lays out a site from the package: the example, the agent files, t
   assert.ok(manifest.files[".claude/rules/styling.md"]);
 });
 
+test("init --name: a new site needs its name, which goes where the example says its own; --url and --email its address, else stand-ins on a reserved domain", () => {
+  const plain = path.join(tmp(), "folder-name-unused");
+  assert.throws(() => scaffold(plain, { kitRoot: KIT, version: "0.8.2", ...quiet }), (e) => e instanceof StarterError && e.message === 'a new site needs its name, as it is spelled: --name "<Site>" (agentic-cms init my-site --name "My Site")');
+  assert.ok(!fs.existsSync(plain), "nothing written: the folder's name is never taken for the site's");
+  const result = scaffold(plain, { kitRoot: KIT, version: "0.8.2", name: "My Site", now: new Date("2026-10-17T09:00:00Z"), ...quiet });
+  assert.deepEqual(result.site, { name: "My Site", url: "https://my-site.example", email: "hello@my-site.example", starter: true }, "the slug from the name, not the folder");
+  const config = read(plain, "src/config/site.ts");
+  assert.match(config, /^ {2}name: "My Site",\n {2}shortName: "My Site",\n {2}url: "https:\/\/my-site\.example",$/m);
+  assert.match(config, /^ {2}email: "hello@my-site\.example",\n(?: {2}\/\/[^\n]*\n)+ {2}guardEmail: true,\n {2}logo: "\/images\/brand\/my-site-logo\.svg",$/m);
+  assert.match(config, /^ {2}tagline: "\(placeholder\) What My Site does, in one sentence/m);
+  const logo = read(plain, "public/images/brand/my-site-logo.svg");
+  for (const where of [/aria-label="My Site"/, /<title>My Site<\/title>/, />My Site<\/text>/]) assert.match(logo, where, "the logo placeholder names the site");
+  const voice = read(plain, "content/VOICE.md");
+  assert.match(voice, /^How My Site writes, on every page/m);
+  assert.doesNotMatch(voice, /<the brand>|Copy this file to content\/VOICE\.md/, "the blank filled in, its opening note replaced");
+  const home = parseYaml(read(plain, "content/pages/home.yaml"));
+  assert.equal(home.seo.updated, "2026-10-17", "dated the day init ran");
+  assert.equal(home.sections[0].heading, "(placeholder) The promise of My Site, in one line.");
+  assert.equal(home.sections.at(-1).cards[1].highlight.value, "hello@my-site.example");
+
+  const odd = 'Café "Ünï" & Co.';
+  const named = path.join(tmp(), "x");
+  const given = scaffold(named, { kitRoot: KIT, version: "0.8.2", name: odd, url: "https://www.cafe-unico.com/", email: "hi@cafe-unico.com", ...quiet });
+  assert.deepEqual(given.site, { name: odd, url: "https://www.cafe-unico.com", email: "hi@cafe-unico.com", starter: true }, "the origin without its trailing slash");
+  const typed = read(named, "src/config/site.ts");
+  assert.match(typed, /^ {2}name: "Café \\"Ünï\\" & Co\.",$/m, "escaped for the string it sits in");
+  assert.match(typed, /^ {2}url: "https:\/\/www\.cafe-unico\.com",\n/m);
+  assert.ok(fs.existsSync(path.join(named, "public/images/brand/cafe-uni-co-logo.svg")), "the logo's file is named by the name's slug");
+  assert.match(read(named, "public/images/brand/cafe-uni-co-logo.svg"), /<title>Café &quot;Ünï&quot; &amp; Co\.<\/title>/);
+  assert.equal(parseYaml(read(named, "content/pages/home.yaml")).sections.at(-1).cards[2].highlight.value, "www.cafe-unico.com/blog");
+  const block = parseYaml(read(named, "content/VOICE.md").match(/```yaml\n([\s\S]*?)```/)[1]);
+  assert.equal(block.brand.name, odd, "the voice block's brand, as YAML");
+  assert.ok(new RegExp(block.claims.subject).test(`${odd} is certified`) && !new RegExp(block.claims.subject).test("Cafe Uni Co"), "and escaped inside its regular expressions");
+
+  for (const [options, error] of [[{ name: "  " }, /--name is empty/], [{ name: "X", url: "https://x.com/blog" }, /--url https:\/\/x\.com\/blog: give the site's origin alone/], [{ name: "X", url: "x.com" }, /--url x\.com: not a URL/], [{ name: "X", email: "hello" }, /--email hello: not an e-mail address/], [{ url: "https://x.com" }, /a new site needs its name/]]) {
+    const never = path.join(tmp(), "never");
+    assert.throws(() => scaffold(never, { kitRoot: KIT, version: "0.8.2", ...options, ...quiet }), (e) => e instanceof StarterError && error.test(e.message));
+    assert.ok(!fs.existsSync(never), "nothing written");
+  }
+});
+
+test("a fresh site holds none of the example's brand, content or pictures: no Acme, no acme.example, no post, review, use case, FAQ, author or catalogue page; its collections empty", () => {
+  const target = path.join(tmp(), "fresh");
+  scaffold(target, { kitRoot: KIT, version: "0.8.2", name: "Fresh", ...quiet });
+  const written = filesUnder(target).map((file) => file.split(path.sep).join("/"));
+  for (const file of written.filter((f) => !/\.(?:jpe?g|png|webp|ico)$/.test(f))) assert.doesNotMatch(read(target, file), /acme/i, `${file}: the example's brand`);
+  const starter = new Set(walkFiles(path.join(KIT, STARTER)));
+  const shared = new Set(SHARED_CONTENT.flatMap((entry) => (fs.statSync(path.join(KIT, entry)).isFile() ? [entry] : walkFiles(path.join(KIT, entry)).map((rel) => `${entry}/${rel}`))));
+  for (const file of ["content", "public"].flatMap((dir) => walkFiles(path.join(KIT, dir)).map((rel) => `${dir}/${rel}`))) {
+    if (shared.has(file)) continue;
+    if (!starter.has(file) && file !== "content/VOICE.md") assert.ok(!fs.existsSync(path.join(target, file)), `${file}: the example's own, not a new site's`);
+    else if (/\.(?:ya?ml|json|md)$/.test(file)) assert.notEqual(read(target, file), read(KIT, file), `${file}: the starter's, not the example's`);
+  }
+  const pictures = written.filter((f) => f.startsWith("public/"));
+  assert.deepEqual(pictures.filter((f) => !starter.has(f)), ["public/images/brand/fresh-logo.svg"], "every picture the starter's neutral placeholders, and the logo written for the name");
+  assert.deepEqual(parseYaml(read(target, "content/reviews.yaml")), []);
+  assert.deepEqual(parseYaml(read(target, "content/use-cases.yaml")), []);
+  assert.deepEqual(JSON.parse(read(target, "content/authors.json")), {});
+  assert.deepEqual(JSON.parse(read(target, "content/categories.json")), {});
+  assert.deepEqual(fs.readdirSync(path.join(target, "content/blog")), ["_template.md"], "no post");
+  assert.deepEqual(fs.readdirSync(path.join(target, "content/faqs")), ["_README.md"], "no FAQ set, the folder kept");
+  assert.deepEqual(fs.readdirSync(path.join(target, "content/pages")).sort(), ["blog.yaml", "home.yaml"], "the home page and the blog index, no catalogue page");
+  assert.doesNotMatch(read(target, "src/config/site.ts"), /\/sections\//, "no link to a catalogue page");
+  const standard = read(target, "STANDARD.md");
+  assert.match(standard, /^\| `\/` \| `pages\/home\.yaml` \| `home-hero`, `home-service`, `home-feature`, `home-about`, `contact-form`, `contact-details` \|$/m, "the standard's page table is the starter's");
+  assert.doesNotMatch(standard, /`\/sections\/home`|landing page uses nine|example:start|<!-- starter:/, "none of the example's pages, no marker");
+});
+
 test("scaffold never overwrites without --force, and merges an existing package.json", () => {
   const target = tmp();
   fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "kept-name", scripts: { dev: "next dev -p 4000", test: "node --test" }, dependencies: { "agentic-cms": "github:HKamkar/agentic-cms#v0.3.3" } }, null, 2));
   fs.mkdirSync(path.join(target, "src/config"), { recursive: true });
   fs.writeFileSync(path.join(target, "src/config/site.ts"), "export const site = {} as const;\n");
-  const result = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
+  const result = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
   assert.ok(result.kept.includes("src/config/site.ts"));
   assert.equal(read(target, "src/config/site.ts"), "export const site = {} as const;\n");
   const pkg = JSON.parse(read(target, "package.json"));
   assert.equal(pkg.name, "kept-name");
   assert.equal(pkg.scripts.dev, "next dev -p 4000", "an existing script is kept");
   assert.equal(pkg.scripts.test, "node --test", "a real test script of the site's is kept");
-  assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", "a missing script is added");
+  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo", "a missing script is added");
   assert.equal(pkg.dependencies["agentic-cms"], "github:HKamkar/agentic-cms#v0.3.3", "an existing dependency is kept");
-  const forced = scaffold(target, { kitRoot: KIT, version: "0.4.0", force: true, ...quiet });
-  assert.ok(forced.updated.includes("src/config/site.ts"));
-  assert.notEqual(read(target, "src/config/site.ts"), "export const site = {} as const;\n");
+  fs.writeFileSync(path.join(target, "src/components/ui/Button.tsx"), "// the site's edit\n");
+  fs.writeFileSync(path.join(target, "content/pages/home.yaml"), "# the site's own\n");
+  const forced = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: true, ...quiet });
+  assert.ok(forced.updated.includes("src/components/ui/Button.tsx"), "--force rewrites the kit's files");
+  assert.notEqual(read(target, "src/components/ui/Button.tsx"), "// the site's edit\n");
+  assert.ok(![...forced.created, ...forced.updated, ...forced.kept].includes("src/config/site.ts"), "and never a site's own config: a site that has content/ gets none of its own files");
+  assert.equal(read(target, "src/config/site.ts"), "export const site = {} as const;\n");
+  assert.equal(read(target, "content/pages/home.yaml"), "# the site's own\n", "nor its content");
+  assert.deepEqual(forced.site, { starter: false }, "content/ was there: no starter, and no name asked");
 });
 
 // What docs/init.md had a site write before init (0.7.6 and earlier): `pnpm init`'s package.json and the workspace snippet without unrs-resolver.
@@ -86,18 +168,18 @@ test("an existing workspace is merged, not kept: the kit's missing keys added, t
   const target = tmp();
   fs.writeFileSync(path.join(target, "pnpm-workspace.yaml"), OLD_SNIPPET);
   const logged = [];
-  const first = scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
+  const first = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
   assert.ok(first.updated.includes("pnpm-workspace.yaml"));
   assert.ok(logged.includes("merged   pnpm-workspace.yaml (allowBuilds: unrs-resolver)"), logged.join("\n"));
   const merged = read(target, "pnpm-workspace.yaml");
   assert.equal(merged, `${OLD_SNIPPET.replace("nodeLinker", "  unrs-resolver: true\nnodeLinker")}`, "one line added, the rest byte for byte");
   assert.deepEqual(Object.keys(parseYaml(merged).allowBuilds), ALLOW_BUILDS);
-  const second = scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  const second = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
   assert.ok(second.kept.includes("pnpm-workspace.yaml"));
   assert.equal(read(target, "pnpm-workspace.yaml"), merged);
   // --force merges too: the site's settings and its own value for a kit key are never replaced
   fs.writeFileSync(path.join(target, "pnpm-workspace.yaml"), "allowBuilds:\n  sharp: false\n");
-  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: true, ...quiet });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: true, ...quiet });
   assert.deepEqual(parseYaml(read(target, "pnpm-workspace.yaml")).allowBuilds, { sharp: false, "agentic-cms@git+https://github.com/HKamkar/agentic-cms.git": true, "unrs-resolver": true });
   assert.match(read(target, "pnpm-workspace.yaml"), /^ {2}"agentic-cms@git\+https:\/\/github\.com\/HKamkar\/agentic-cms\.git": true$/m, "the git spec quoted, as the kit writes it");
 });
@@ -118,7 +200,7 @@ test("pnpm init's package.json: its failing test gives way to the kit's, its mai
   const target = tmp();
   fs.writeFileSync(path.join(target, "package.json"), JSON.stringify(PNPM_INIT, null, 2));
   const logged = [];
-  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, log: (line) => logged.push(line) });
   const pkg = JSON.parse(read(target, "package.json"));
   assert.equal(pkg.scripts.test, 'node --import agentic-cms/loader --test "src/**/*.test.ts"');
   assert.ok(!("main" in pkg));
@@ -126,32 +208,95 @@ test("pnpm init's package.json: its failing test gives way to the kit's, its mai
   assert.equal(pkg.version, "1.0.0");
   assert.deepEqual(pkg.devEngines, PNPM_INIT.devEngines);
   assert.equal(pkg.packageManager, "pnpm@12.11.2");
-  assert.equal(pkg.scripts.build, "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo");
+  assert.equal(pkg.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email");
   assert.ok(logged.includes('merged   package.json (the kit\'s test script in place of pnpm init\'s placeholder; pnpm init\'s main: "index.js" dropped)'), logged.join("\n"));
   // a main that names a file the site has is the site's
   const own = tmp();
   fs.writeFileSync(path.join(own, "package.json"), JSON.stringify({ ...PNPM_INIT, scripts: {} }));
   fs.writeFileSync(path.join(own, "index.js"), "export {};\n");
-  scaffold(own, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  scaffold(own, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
   assert.equal(JSON.parse(read(own, "package.json")).main, "index.js");
+});
+
+test("the site's own lint and build take the gates in, its own steps kept where they are: the old kit's, create-next-app's, a site's chain", () => {
+  const merged = (scripts, { siteTs } = {}) => {
+    const target = tmp();
+    fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "ours", scripts }));
+    if (siteTs !== undefined) { fs.mkdirSync(path.join(target, "src/config"), { recursive: true }); fs.writeFileSync(path.join(target, "src/config/site.ts"), siteTs); }
+    const logged = [];
+    scaffold(target, { name: "Ours", kitRoot: KIT, version: "0.8.2", force: false, log: (line) => logged.push(line) });
+    return { scripts: JSON.parse(read(target, "package.json")).scripts, logged };
+  };
+  const older = merged({ lint: "eslint; s=$?; agentic-cms check-components || s=1; exit $s", build: "agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo" });
+  assert.equal(older.scripts.lint, LINT, "the old kit's lint: check-site in place of check-components");
+  assert.equal(older.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "the lint first, and the e-mail guard the starter's site.ts asks for");
+  assert.ok(older.logged.includes("merged   package.json (lint: check-site in place of check-components; build: pnpm lint, agentic-cms guard-email added)"), older.logged.join("\n"));
+  const nextApp = merged({ lint: "eslint --max-warnings 50", build: "next build --turbopack" }, { siteTs: "export const site = { name: \"Ours\" };\n" });
+  assert.equal(nextApp.scripts.lint, "eslint --max-warnings 50; s=$?; agentic-cms check-site || s=1; exit $s", "the site's ESLint command kept, the check after it");
+  assert.equal(nextApp.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build --turbopack && agentic-cms seo", "the gates around the site's next build; its own site.ts, without guardEmail, asks for no guard");
+  const guarded = merged({ build: "next build" }, { siteTs: "export const site = {\n  email: \"hello@ours.dev\",\n  guardEmail: true,\n};\n" });
+  assert.equal(guarded.scripts.build, "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email", "its own site.ts turning guardEmail on: the guard after the audit");
+  const chain = merged({ build: "pnpm lint && agentic-cms lint --production && node scripts/og.mjs && next build && agentic-cms assemble" });
+  assert.equal(chain.scripts.build, "pnpm lint && agentic-cms lint --production && node scripts/og.mjs && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email && agentic-cms assemble", "the site's own steps where they were, each gate in its place");
+  const held = merged({ lint: LINT, build: "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email && agentic-cms critical-css" });
+  assert.ok(!held.logged.some((line) => /lint:|build:/.test(line)), "a site that holds the gates is left as it is");
+});
+
+test("a lint or a build the gates cannot go into is refused, naming what to add, before anything is written", () => {
+  for (const [scripts, why] of [
+    [{ lint: "biome lint ." }, /package\.json's lint \("biome lint \."\) runs no ESLint: make it ESLint, then the site check — "lint": "eslint; s=\$\?; agentic-cms check-site \|\| s=1; exit \$s"/],
+    [{ lint: "eslint || true" }, /lint \("eslint \|\| true"\) turns a failure into a pass/],
+    [{ lint: "eslint; exit 0" }, /lint \("eslint; exit 0"\) turns a failure into a pass/],
+    [{ build: "vite build" }, /package\.json's build \("vite build"\) runs no next build as a step of its && chain: make it the gates joined by && — "build": "pnpm lint && agentic-cms lint --production && agentic-cms docs --check && next build && agentic-cms seo && agentic-cms guard-email"/],
+    [{ build: "next build; agentic-cms seo" }, /runs no next build as a step of its && chain/],
+    [{ build: "next build && agentic-cms seo || true" }, /turns a failure into a pass/],
+    [{ build: "agentic-cms seo && next build" }, /runs agentic-cms seo on the wrong side of next build/],
+  ]) {
+    const target = path.join(tmp(), "site");
+    fs.mkdirSync(target);
+    fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "ours", scripts }));
+    assert.throws(() => scaffold(target, { name: "Ours", kitRoot: KIT, version: "0.8.2", force: false, ...quiet }), (error) => error instanceof GatesError && why.test(error.message), JSON.stringify(scripts));
+    assert.deepEqual(fs.readdirSync(target), ["package.json"], "nothing written");
+  }
+});
+
+test("a fresh site passes the site check: its gates in package.json and CI, no round, no tool of its own", async () => {
+  const target = path.join(tmp(), "fresh");
+  scaffold(target, { name: "Fresh", kitRoot: KIT, version: "0.8.2", ...quiet });
+  const report = await checkSite({ root: target, fs, git: () => ({ status: 128, stdout: "" }), components: async ({ root, config }) => checkComponents({ root, fs, config }) });
+  assert.deepEqual([...report.findings, ...report.warnings], [], formatSiteReport(report).join("\n"));
+  assert.equal(report.history, "not a git checkout, so the exceptions added since the merge base are not compared");
+});
+
+test("the Dependabot config is written once, for the actions alone, then kept as the site has it", () => {
+  const target = tmp();
+  const file = ".github/dependabot.yml";
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes(file));
+  assert.equal(read(target, file), read(KIT, "templates/site/dependabot.yml"));
+  assert.deepEqual(parseYaml(read(target, file)).updates.map((u) => [u["package-ecosystem"], u.schedule.interval, "target-branch" in u]), [["github-actions", "monthly", false]]);
+  fs.writeFileSync(path.join(target, file), "version: 2\nupdates: []\n");
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes(file));
+  assert.equal(read(target, file), "version: 2\nupdates: []\n");
 });
 
 test("the setup script is written once, then kept as the site has it, and hands over to agentic-cms setup", () => {
   const target = tmp();
-  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes("scripts/setup.sh"));
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes("scripts/setup.sh"));
   assert.equal(read(target, "scripts/setup.sh"), read(KIT, "templates/site/setup.sh"));
   assert.match(read(target, "scripts/setup.sh"), /\nexec pnpm exec agentic-cms setup "\$@"\n$/);
   fs.writeFileSync(path.join(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
-  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes("scripts/setup.sh"));
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes("scripts/setup.sh"));
   assert.equal(read(target, "scripts/setup.sh"), "#!/usr/bin/env bash\n# ours\n");
 });
 
 /** Every file under a directory, relative to it. */
+/** Every file under a folder, its path relative to it with forward slashes. */
+const walkFiles = (dir) => filesUnder(dir).map((file) => file.split(path.sep).join("/"));
 const filesUnder = (root, dir = root) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? filesUnder(root, path.join(dir, e.name)) : [path.relative(root, path.join(dir, e.name))]));
 
 test("--light-only lays out a site without dark mode: one scheme in the profile, single colours under color-scheme light, no theme script, no toggle, no dark lines in the docs", async () => {
   const target = path.join(tmp(), "light");
-  const result = scaffold(target, { kitRoot: KIT, version: "0.8.0", lightOnly: true, ...quiet });
+  const result = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", lightOnly: true, ...quiet });
   assert.equal(result.lightOnly, true);
   assert.ok(!fs.existsSync(path.join(target, "src/components/ui/ThemeToggle.tsx")), "no toggle component");
   const layout = read(target, "src/app/layout.tsx");
@@ -167,53 +312,68 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.deepEqual((await readSiteProfile(target)).schemes, ["light"], "the profile names one scheme");
   for (const file of filesUnder(path.join(target, "src")).filter((f) => /\.(tsx?|css|md)$/.test(f))) assert.doesNotMatch(read(target, `src/${file}`), /ThemeToggle|THEME_SCRIPT|data-theme|light-dark\(/, `src/${file}: nothing of the theme`);
   const standard = read(target, "STANDARD.md");
-  assert.doesNotMatch(standard, /dark-mode:|light-only:|\| Dark \||ThemeToggle|data-theme|light-dark\(/, "STANDARD without its dark lines or the markers");
+  assert.doesNotMatch(standard, /dark-mode:|light-only:|example:|starter:|\| Dark \||ThemeToggle|data-theme|light-dark\(/, "STANDARD without its dark lines or the markers");
   assert.match(standard, /^### The scheme$/m);
   assert.match(standard, /^\| Value \| Colour \| What it is \|$/m);
   assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
   assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
-  assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{site\.cta\.href\}/, "the navbar keeps everything else");
+  assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{cta\.href\}/, "the navbar keeps everything else");
+  assert.match(layout, /^ {8}<Navbar brand=\{site\.shortName\} [^\n]*copy=\{chrome\.navbar\} \/>$/m, "the layout's navbar closes itself, the toggle it held gone");
   const config = read(target, "src/config/site.ts");
   assert.doesNotMatch(config, /themeToggle|ThemeToggle/, "no labels for a toggle the site does not have");
   assert.match(config, /^ {2}navbar: \{ label: "Main", menu: "Menu" \},\n {2}\/\*\* ui\/Footer's/m, "the chrome's other words stay, and so does the comment above the next");
   assert.deepEqual(checkComponents({ root: target, fs }).findings, [], "the guard passes without the toggle and its entry");
 
   const both = path.join(tmp(), "both");
-  scaffold(both, { kitRoot: KIT, version: "0.8.0", ...quiet });
+  scaffold(both, { name: "My Site", kitRoot: KIT, version: "0.8.0", ...quiet });
   assert.ok(fs.existsSync(path.join(both, "src/components/ui/ThemeToggle.tsx")), "without the flag the example keeps its theme");
   assert.match(read(both, "src/app/layout.tsx"), /THEME_SCRIPT/);
   assert.deepEqual((await readSiteProfile(both)).schemes, ["light", "dark"]);
 });
 
+test("the kit's own lines in the example's code stay in the kit: siteCode leaves them out, and a kit that moved them fails before anything is written", () => {
+  for (const [file, lines] of Object.entries(KIT_ONLY)) {
+    const text = read(KIT, file);
+    assert.ok(text.includes(lines), `${file} carries the kit's own lines where init expects them`);
+    assert.equal(siteCode(file, text), text.replace(lines, ""));
+    assert.throws(() => siteCode(file, text.replace(lines, "")), (error) => error instanceof StarterError && error.message.startsWith(`${file}: the kit's ignore of src/lib is not where init expects it`));
+  }
+  assert.doesNotThrow(() => JSON.parse(siteCode("src/config/components.json", read(KIT, "src/config/components.json"))), "the guard's config still reads");
+  assert.equal(siteCode("src/app/layout.tsx", "x"), "x", "every other file as it is");
+});
+
 test("a light-only edit that misses its place in the example fails before anything is written", () => {
   const kit = tmp();
+  for (const entry of [STARTER, ...SHARED_CONTENT]) fs.cpSync(path.join(KIT, entry), path.join(kit, entry), { recursive: true });
   for (const entry of EXAMPLE) {
     const full = path.join(kit, entry);
     if (/\.[a-z]+$|^\.[a-z]+$/.test(path.basename(entry))) { fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, ""); } else fs.mkdirSync(full, { recursive: true });
   }
   fs.writeFileSync(path.join(kit, "src/app/layout.tsx"), "export const viewport = { colorScheme: \"light dark\" };\n");
-  fs.writeFileSync(path.join(kit, "STANDARD.md"), "# Standard\n\nFour values<!-- dark-mode:start -->, each a pair<!-- dark-mode:end -->.\n");
+  for (const [file, lines] of Object.entries(KIT_ONLY)) fs.writeFileSync(path.join(kit, file), lines);
+  fs.writeFileSync(path.join(kit, "STANDARD.md"), "# Standard\n\nFour values<!-- dark-mode:start -->, each a pair<!-- dark-mode:end -->.<!-- example:start --> Nine pages.<!-- example:end -->\n");
   const target = path.join(tmp(), "never");
-  assert.throws(() => scaffold(target, { kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/app\/layout\.tsx: the theme script and the comment above it not found/.test(error.message));
+  assert.throws(() => scaffold(target, { name: "My Site", kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/app\/layout\.tsx: the theme script and the comment above it not found/.test(error.message));
   assert.ok(!fs.existsSync(target), "nothing written");
 });
 
 test("the site's CI workflow is written once, then kept as the site has it", () => {
   const target = tmp();
   const workflow = ".github/workflows/verify.yml";
-  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes(workflow));
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).created.includes(workflow));
   const steps = parseYaml(read(target, workflow)).jobs.test.steps;
   assert.deepEqual(steps.filter((s) => s.run).map((s) => s.run), ["pnpm install --frozen-lockfile", "pnpm lint", "pnpm test", "pnpm build", "pnpm exec agentic-cms init . --agent-files --check"]);
+  assert.equal(steps[0].with["fetch-depth"], 0, "the history, which check-site compares the exceptions against");
   for (const { uses } of steps.filter((s) => s.uses)) assert.match(uses, /@[0-9a-f]{40}$/, `${uses}: pinned to a commit`);
   assert.equal(steps.find((s) => s.uses?.startsWith("actions/setup-node@")).with["node-version-file"], ".nvmrc");
   fs.writeFileSync(path.join(target, workflow), "name: ours\n");
-  assert.ok(scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes(workflow));
+  assert.ok(scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet }).kept.includes(workflow));
   assert.equal(read(target, workflow), "name: ours\n");
 });
 
 test("agentFiles --check tells a site's edit from a kit update and a missing file", () => {
   const target = tmp();
-  scaffold(target, { kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
   assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.4.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
   fs.appendFileSync(path.join(target, ".claude/skills/design/SKILL.md"), "\nlocal note\n");
   fs.rmSync(path.join(target, ".claude/rules/design.md"));
@@ -231,6 +391,97 @@ test("agentFiles --check tells a site's edit from a kit update and a missing fil
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/skills/design/SKILL.md"], "kept", "a site's edit is never clobbered");
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/design.md"], "created");
   assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/styling.md"], "updated");
+});
+
+test("a block the kit marks required is its list item or its paragraph, read with the markers out and the whitespace collapsed; a site's copy keeps it re-wrapped, re-indented or unmarked", () => {
+  const kit = [
+    "# A rule",
+    "",
+    "- A line the site may edit.",
+    `- The engines hold, everywhere. ${REQUIRED}`,
+    "  - **copy:** every word from content,",
+    `    through props; ${REQUIRED}`,
+    "",
+    "A paragraph that wraps",
+    `across two lines. ${REQUIRED}`,
+    "```bash",
+    "pnpm lint",
+    "```",
+  ].join("\n");
+  assert.deepEqual(requiredBlocks(kit), [
+    { line: 4, text: "- The engines hold, everywhere." },
+    { line: 5, text: "- **copy:** every word from content, through props;" },
+    { line: 8, text: "A paragraph that wraps across two lines." },
+  ]);
+  const rewrapped = "# A rule, the site's\n\n- The engines hold,\n  everywhere.\n- **copy:** every word from content, through props;\n\nA paragraph that wraps across two lines.\n\n- The site's own line.\n";
+  assert.deepEqual(requiredGone(rewrapped, kit), [], "re-wrapped, re-indented, unmarked: kept");
+  assert.deepEqual(requiredGone(rewrapped.replace("everywhere", "in sections"), kit), [{ line: 4, text: "- The engines hold, everywhere." }], "a word changed is the block gone");
+  assert.deepEqual(requiredGone(kit.replace(/\n {2}- \*\*copy[^]*?props; .*\n/, "\n"), kit).map((b) => b.line), [5]);
+});
+
+test("every rule the kit gives a site ends with its tier line, marked required, and every skill ends its procedure with pnpm lint, marked required", () => {
+  const files = renderAgentFiles(KIT).filter(({ file }) => file.endsWith(".md") && !file.includes("/references/"));
+  for (const { file, text } of files.filter(({ file }) => file.startsWith(".claude/rules/"))) {
+    assert.match(text.trimEnd().split("\n").at(-1), new RegExp(`^- \\*\\*Tier:\\*\\* .*(?:required|preferred).* ${REQUIRED}$`), `${file}: its part, its tier and its check, last`);
+  }
+  for (const { file, text } of files.filter(({ file }) => file.endsWith("/SKILL.md"))) {
+    const verify = text.slice(text.indexOf("\n## Verify\n"));
+    assert.ok(text.includes("\n## Verify\n"), `${file}: a Verify section`);
+    assert.ok(requiredBlocks(verify).some((b) => b.text.startsWith("End the procedure with `pnpm lint`")), `${file}: its procedure ends with pnpm lint, marked required`);
+  }
+  for (const name of ["design", "design-options"]) {
+    assert.ok(requiredBlocks(read(KIT, `.claude/skills/${name}/SKILL.md`)).some((b) => /never writes copy into a candidate/.test(b.text)), `${name}: a round starts from the page's file`);
+  }
+});
+
+test("--check fails a site's edit that dropped a block the kit marks required, naming it; the refresh keeps the edit and says so, --accept reports it, --force takes the kit's text", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
+  const RULE = ".claude/rules/pages.md";
+  const kit = read(KIT, "templates/site/rules/pages.md");
+  const [gone] = requiredBlocks(kit);
+  const lines = kit.split("\n");
+  const at = lines.findIndex((line) => line.endsWith(REQUIRED));
+  const entry = (report) => report.find((f) => f.file === RULE);
+  // an edit that keeps every required block, re-wrapped and unmarked: modified, and --check passes
+  const rewrapped = [...lines.slice(0, at), lines[at].replace(` ${REQUIRED}`, "").replace("; its URL", ";\n  its URL"), ...lines.slice(at + 1), "- The site's own line."].join("\n");
+  fs.writeFileSync(path.join(target, RULE), rewrapped);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified" });
+  // the same edit without that block: the check names it, with where the kit has it
+  fs.writeFileSync(path.join(target, RULE), [...lines.slice(0, at), ...lines.slice(at + 1), "- The site's own line."].join("\n"));
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified, required gone", required: [gone] });
+  assert.equal(gone.line, at + 1);
+  const edited = read(target, RULE);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet })), { file: RULE, status: "kept, required gone", required: [gone] });
+  assert.equal(read(target, RULE), edited, "a site's edit is never clobbered");
+  assert.deepEqual(acceptAgentFiles(target, [RULE], { kitRoot: KIT }), [{ file: RULE, status: "modified, required gone", required: [gone] }]);
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet })).status, "updated");
+  assert.equal(read(target, RULE), kit);
+});
+
+test("--check holds .claude/settings.json to the editorial plugin: the kit's marketplace and the plugin enabled; the site's own keys pass, and a refresh writes it only when it is missing", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
+  const settings = () => agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet }).find((f) => f.file === SETTINGS);
+  const write = (value) => fs.writeFileSync(path.join(target, SETTINGS), typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  const kit = JSON.parse(read(KIT, "templates/site/settings.json"));
+  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" });
+  write({ ...kit, permissions: { allow: ["Bash(pnpm lint)"] }, hooks: {}, enabledPlugins: { ...kit.enabledPlugins, "other@elsewhere": true } });
+  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" }, "the site's own settings beside the kit's");
+  write({ ...kit, enabledPlugins: { "editorial@agentic-cms": false } });
+  assert.deepEqual(settings(), { file: SETTINGS, status: "modified, required gone", required: [{ text: 'enabledPlugins["editorial@agentic-cms"]: true' }] });
+  write({ permissions: kit.permissions });
+  assert.deepEqual(settings().required, [{ text: 'extraKnownMarketplaces["agentic-cms"]' }, { text: 'enabledPlugins["editorial@agentic-cms"]: true' }]);
+  const own = read(target, SETTINGS);
+  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet }).find((f) => f.file === SETTINGS).status, "kept, required gone");
+  assert.equal(read(target, SETTINGS), own, "never rewritten, forced or not");
+  write("{ not json");
+  assert.deepEqual(settings(), { file: SETTINGS, status: "unreadable" });
+  fs.rmSync(path.join(target, SETTINGS));
+  assert.deepEqual(settings(), { file: SETTINGS, status: "missing" });
+  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet }).find((f) => f.file === SETTINGS).status, "created");
+  assert.equal(read(target, SETTINGS), read(KIT, "templates/site/settings.json"));
+  assert.deepEqual(settingsGone({}, {}), [], "a template that names no plugin requires none");
 });
 
 test("a site's own rule that predates the manifest is kept on the first --agent-files run, not overwritten, and is a gap until the site accepts the kit's text", () => {
@@ -255,7 +506,7 @@ test("a site's own rule that predates the manifest is kept on the first --agent-
 
 test("--agent-files keeps AGENTS.md's scoped-rules table as the site's rules read; --check flags it stale or missing, and an AGENTS.md past what Codex reads", () => {
   const target = tmp();
-  scaffold(target, { kitRoot: KIT, version: "0.5.5", force: false, ...quiet });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.5.5", force: false, ...quiet });
   const status = (report) => Object.fromEntries(report.map((f) => [f.file, f.status]));
   const check = () => status(agentFiles(target, { kitRoot: KIT, version: "0.5.5", check: true, ...quiet }));
   assert.equal(check()["AGENTS.md (rules table)"], "ok", "a new site's AGENTS.md carries the table");
@@ -285,7 +536,7 @@ test("--agent-files keeps AGENTS.md's scoped-rules table as the site's rules rea
 
 test("the components rule follows the guard: a site without src/config/components.json is neither given it nor told it is missing; adopting the guard brings it", () => {
   const target = tmp();
-  scaffold(target, { kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.0", force: false, ...quiet });
   const status = (report) => Object.fromEntries(report.map((f) => [f.file, f.status]));
   const rule = path.join(target, ".claude/rules/components.md");
   // a site as 0.7.6 left it: no guard config, no components rule, nothing of either in the manifest or the table

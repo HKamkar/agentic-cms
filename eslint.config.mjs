@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import { componentRules } from "agentic-cms/eslint";
+
+// The preferred rules a file keeps its own choice of, each with its reason, and the baseline an existing site took 0.8.2 with, are written once: in the guard's config.
+const { allow, baseline } = JSON.parse(readFileSync(new URL("./src/config/components.json", import.meta.url), "utf8"));
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -12,14 +16,18 @@ const eslintConfig = defineConfig([
       "@next/next/no-img-element": "off",
     },
   },
-  // The component library: the layers' imports, and what a section may contain.
+  // The engines (copy, head, forms, tags, e-mail) across src, the component library (the layers' imports, and what a section may contain), and the preferred tier's warnings.
   ...componentRules({
     // No motion folder: agentic-cms/ix is the motion layer. No patterns yet.
     motion: null,
     patterns: null,
     // The sections live in the folder of the page they belong to.
     sections: ["home", "about", "use-cases", "contact", "sections", "blog"],
-    // In the kit's own checkout src/lib is the package's source, the motion library's included; a site has none.
+    // The form engine's renderer owns the one <form>, the picture primitive the <img>; their reasons are in src/config/components.json.
+    owners: { forms: ["src/components/ui/form/Form.tsx"], images: ["src/components/ui/Media.tsx"] },
+    allow,
+    baseline,
+    // In the kit's own checkout src/lib is the package's source, the motion library's included: init leaves this line out of a site, whose src/lib is its own and linted.
     ignores: ["src/lib/**"],
   }),
   // Override default ignores of eslint-config-next.

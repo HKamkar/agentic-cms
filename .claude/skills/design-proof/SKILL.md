@@ -141,6 +141,16 @@ whether `--motion` or `--states` is part of the proof.
 - A baseline built for the wrong sha proves nothing: the sha is in
   `meta.json` and on the compare's first line.
 
+## Verify
+
+The compare's report, read as step 4 says, on the exact tree the branch
+commits.
+
+End the procedure with `pnpm lint`, 0 failures, after the last edit: it
+holds the engines in every file (copy, head, forms, tags, e-mail) and the
+library's placement, and a failure is fixed at its source, never by
+loosening a rule. <!-- required -->
+
 ## Stop for the user
 
 A `reflow` or a difference outside the change's pages that the report does

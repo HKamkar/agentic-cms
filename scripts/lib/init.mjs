@@ -1,15 +1,26 @@
 // The scaffold behind `agentic-cms init`: a site laid out from the package's
-// own files — the wireframe example (its app, components, config, styles,
-// content and images), the agent files (a site's path-scoped rules from
+// own files — the wireframe example's code (its app, components, config and
+// styles), the starter in place of the example's content (lib/starter.mjs: one
+// home page and the blog index with their copy marked as placeholder, empty
+// collections, the wireframe's neutral pictures, the site's name — required,
+// the owner's — where the example says its own), the agent files (a site's path-scoped rules from
 // templates/site/rules/, the design skills for Claude Code and Codex), the
 // site templates (AGENTS.md, CLAUDE.md, README, PLAN, the Next
 // config, the Claude settings, .gitignore, the CI workflow, the setup
 // script that installs what a package cannot install for itself) and the
 // generated config (package.json, tsconfig.json, pnpm-workspace.yaml).
-// Nothing of the package's source. Existing files are kept unless forced;
+// Nothing of the package's source, and nothing of the example's content. Existing
+// files are kept unless forced, and a site's own (its content, its pictures,
+// its brand and forms config) even then: the starter and a site's own files
+// go only into a new site, one with no content/ yet;
 // package.json and pnpm-workspace.yaml are merged, forced or not, so what
 // `pnpm init` or an older install left there cannot stop the first install
-// or the first test. A manifest (.agentic-cms.json) records each agent file's
+// or the first test; the gates (lib/gates.mjs) go into the site's own `lint`
+// and `build` — the lint ESLint then `check-site`, the build `pnpm lint`
+// first and the SEO audit after `next build` (the e-mail guard joins them
+// once lib/gates.mjs turns it on) — or init
+// refuses, before anything is written, naming what to add: they are never
+// dropped. A manifest (.agentic-cms.json) records each agent file's
 // base — the hash of the kit's text the site last took, written or accepted
 // after a hand merge — with the kit's version and, for a pin between
 // releases, its commit; so `init --agent-files --check` can tell a site's own
@@ -23,27 +34,34 @@
 // the manifest records no base for (the site wrote it first) takes its base
 // from the kit's releases (RELEASES, every release's text of every agent
 // file): the release whose text it is, else the kit's text at the version
-// the site was on. A rule for a
+// the site was on. A block the kit marks required in a rule or a skill
+// (lib/agent-required.mjs) stays in a site's edit of it, and the site's
+// .claude/settings.json keeps the editorial plugin enabled: `--check` fails
+// either, naming what is gone, and a refresh writes the settings when they
+// are missing but never rewrites a site's own. A rule for a
 // tool a site adopts (the components rule, for the component guard) is
 // written and checked only where the site has that tool's config. The site's
 // AGENTS.md is its own, but for one block: the scoped-rules table Codex
 // needs to find .claude/rules/ (lib/rules-table.mjs), written from the
 // site's rules as they stand, and measured against Codex's 32 KiB. With
-// lightOnly the example is laid out as a site without dark mode
-// (lib/light-only.mjs), every edit made before the first file is written.
+// lightOnly the site is laid out without dark mode (lib/light-only.mjs),
+// every edit made before the first file is written.
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { isMap, parseDocument, Scalar } from "yaml";
+import { requiredGone, settingsGone } from "./agent-required.mjs";
+import { buildScript, GatesError, guardsEmail, LINT, mergeBuild, mergeLint } from "./gates.mjs";
 import { editsText, lightOnlyFile } from "./light-only.mjs";
 import { codexSize, placeBlock, readRules, rulesBlock } from "./rules-table.mjs";
+import { isSiteOwn, KIT_ONLY, siteCode, siteIdentity, starterFiles, starterMarkdown } from "./starter.mjs";
 import { unifiedDiff } from "./unified-diff.mjs";
 
-/** The example, copied as it is. */
-export const EXAMPLE = ["content", "public", "src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
+/** The example's code, copied as it is but where the starter has a file of its own (lib/starter.mjs): the content and the pictures are the starter's. */
+export const EXAMPLE = ["src/app", "src/components", "src/config", "src/styles", "src/kit.ts", "postcss.config.mjs", "eslint.config.mjs", ".env.example", ".nvmrc"];
 /** The templates under templates/site/, and where each lands. */
-export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "setup.sh": "scripts/setup.sh" };
+export const TEMPLATES = { "AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "README.md": "README.md", "PLAN.md": "PLAN.md", "next.config.ts": "next.config.ts", "settings.json": ".claude/settings.json", "gitignore": ".gitignore", "verify.yml": ".github/workflows/verify.yml", "dependabot.yml": ".github/dependabot.yml", "setup.sh": "scripts/setup.sh" };
 /** The agent files the manifest tracks: the site's rules (templates/site/rules/) and the two skills trees. */
 export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/skills": ".claude/skills", ".agents/skills": ".agents/skills" };
 /**
@@ -53,9 +71,10 @@ export const AGENT_DIRS = { "templates/site/rules": ".claude/rules", ".claude/sk
  * from 0.7.6 is neither given the components rule nor told it is missing).
  */
 export const ADOPTED_BY = { ".claude/rules/components.md": "src/config/components.json" };
-/** The lint a new site runs: ESLint, then the component guard, failing on either while both report. */
-export const LINT = "eslint; s=$?; agentic-cms check-components || s=1; exit $s";
+export { GatesError, LINT };
 export const MANIFEST = ".agentic-cms.json";
+/** The site's Claude Code settings: the site's own file, which must keep the editorial plugin its template enables. */
+export const SETTINGS = TEMPLATES["settings.json"];
 /** The base copies: for each agent file the site edited, the kit's text it was last taken from, kept beside the manifest for `--diff`. */
 export const BASES = ".agentic-cms/base";
 /** A file's base copy: its path under BASES without the leading dot, so no agent takes the copies for the site's own rules and skills. */
@@ -98,24 +117,31 @@ function put(target, file, text, { force, result, log }) {
 /** The example's files under one entry: the entry itself when it is a file. */
 const filesOf = (kitRoot, entry) => (fs.statSync(path.join(kitRoot, entry)).isFile() ? [entry] : walk(path.join(kitRoot, entry)).map((rel) => `${entry}/${rel}`));
 
-/** Copies an entry of the example; a file `changed` names is written as its text there, or not at all for null. */
-function copyTree(kitRoot, target, entry, opts, changed = new Map()) {
-  for (const file of filesOf(kitRoot, entry)) {
-    if (!changed.has(file)) put(target, file, fs.readFileSync(path.join(kitRoot, file)), opts);
-    else if (changed.get(file) !== null) put(target, file, changed.get(file), opts);
-  }
+/**
+ * Every file the scaffold lays out from the kit, by the path it lands at: the
+ * example's code (but the kit's own lines, KIT_ONLY), then, for a new site
+ * (its `identity`), the starter over it —
+ * a site that has content/ gets none of it and none of a site's own files —
+ * then STANDARD.md, its passages on the example's own pages in the starter's
+ * words.
+ */
+function sitePlan(kitRoot, identity, { standard }) {
+  const plan = new Map(EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter((file) => identity || !isSiteOwn(file)).map((file) => [file, fs.readFileSync(path.join(kitRoot, file))]));
+  for (const file of Object.keys(KIT_ONLY)) if (plan.has(file)) plan.set(file, siteCode(file, plan.get(file).toString("utf8")));
+  if (identity) for (const [file, text] of starterFiles(kitRoot, identity)) plan.set(file, text);
+  plan.set("STANDARD.md", starterMarkdown(standard, "STANDARD.md"));
+  return plan;
 }
 
-/** The files --light-only writes otherwise than the example has them: each to its text, or to null for one it leaves out. Throws a LightOnlyError, before anything is written, when an edit misses. */
-function lightOnlyExample(kitRoot, standard) {
-  const changed = new Map();
-  for (const file of EXAMPLE.flatMap((entry) => filesOf(kitRoot, entry)).filter(editsText)) {
-    const text = fs.readFileSync(path.join(kitRoot, file), "utf8");
-    const out = lightOnlyFile(file, text);
-    if (out !== text) changed.set(file, out);
+/** The plan without dark mode: each text file edited, a file a light-only site does not get left out. Throws a LightOnlyError, before anything is written, when an edit misses. */
+function lightOnlyPlan(plan) {
+  for (const [file, text] of plan) {
+    if (!editsText(file)) continue;
+    const out = lightOnlyFile(file, text.toString("utf8"));
+    if (out === null) plan.delete(file);
+    else plan.set(file, out);
   }
-  changed.set("STANDARD.md", lightOnlyFile("STANDARD.md", standard));
-  return changed;
+  return plan;
 }
 
 const kitPackage = (kitRoot) => JSON.parse(fs.readFileSync(path.join(kitRoot, "package.json"), "utf8"));
@@ -125,8 +151,8 @@ const kitVersion = (kitRoot) => { try { return kitPackage(kitRoot).version; } ca
 /** What `pnpm init` (and `npm init`) write as the test script: a test run that always fails. */
 const PLACEHOLDER_TEST = 'echo "Error: no test specified" && exit 1';
 
-/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win, but for `pnpm init`'s placeholders); `notes` says which placeholder went. */
-function sitePackage(target, { kitRoot, version }) {
+/** The site's package.json: written, or merged into an existing one (its name, scripts and dependencies win, but for `pnpm init`'s placeholders and the gates its lint and build take in); `notes` says what changed. Throws a GatesError for a lint or a build the gates cannot go into. */
+function sitePackage(target, { kitRoot, version, guard }) {
   const kit = kitPackage(kitRoot);
   const dev = kit.devDependencies;
   const wanted = {
@@ -135,7 +161,7 @@ function sitePackage(target, { kitRoot, version }) {
     type: "module",
     engines: kit.engines,
     packageManager: kit.packageManager,
-    scripts: { dev: "next dev -p 8000", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo", start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
+    scripts: { dev: "next dev -p 8000", build: buildScript({ guard }), start: "next start -p 8000", lint: LINT, test: 'node --import agentic-cms/loader --test "src/**/*.test.ts"', "content:check": "agentic-cms check", "content:lint": "agentic-cms lint", "content:status": "agentic-cms status", "content:docs": "agentic-cms docs", urls: "agentic-cms urls", kit: "agentic-cms" },
     dependencies: { "agentic-cms": `github:HKamkar/agentic-cms#v${version}`, motion: dev.motion, next: dev.next, react: dev.react, "react-dom": dev["react-dom"], zod: dev.zod },
     devDependencies: { "@tailwindcss/postcss": dev["@tailwindcss/postcss"], "@types/node": dev["@types/node"], "@types/react": dev["@types/react"], "@types/react-dom": dev["@types/react-dom"], eslint: dev.eslint, "eslint-config-next": dev["eslint-config-next"], "playwright-core": dev["playwright-core"], postcss: dev.postcss, tailwindcss: dev.tailwindcss, typescript: dev.typescript },
   };
@@ -143,9 +169,21 @@ function sitePackage(target, { kitRoot, version }) {
   if (!fs.existsSync(file)) return { text: JSON.stringify(wanted, null, 2) + "\n", merged: false };
   const existing = JSON.parse(fs.readFileSync(file, "utf8"));
   const merged = { ...wanted, ...existing, scripts: { ...wanted.scripts, ...existing.scripts }, dependencies: { ...wanted.dependencies, ...existing.dependencies }, devDependencies: { ...wanted.devDependencies, ...existing.devDependencies } };
-  const notes = dropPlaceholders(merged, { target, test: wanted.scripts.test });
+  const notes = [...dropPlaceholders(merged, { target, test: wanted.scripts.test }), ...mergeGates(merged.scripts, existing.scripts ?? {}, { guard })];
   return { text: JSON.stringify(merged, null, 2) + "\n", merged: true, notes };
 }
+
+/** The gates into the site's own lint and build (lib/gates.mjs), in place; the notes say what went in. Throws a GatesError naming what to add. */
+function mergeGates(scripts, own, { guard }) {
+  const lint = mergeLint(own.lint);
+  const build = mergeBuild(own.build, { guard });
+  scripts.lint = lint.script;
+  scripts.build = build.script;
+  return [lint.note, build.note].filter(Boolean);
+}
+
+/** The text src/config/site.ts will have once the site is laid out: the site's own where it has one (never overwritten), else the starter's. */
+const siteConfigText = (target, plan) => readText(path.join(target, "src/config/site.ts")) ?? plan.get("src/config/site.ts")?.toString("utf8") ?? "";
 
 /** `pnpm init`'s two placeholders lose to the kit: its failing test script, and `main` naming an index.js that is not there. Its license, version, devEngines and packageManager stay. */
 function dropPlaceholders(merged, { target, test }) {
@@ -211,17 +249,29 @@ function putWorkspace(target, { result, log }) {
   return "merged";
 }
 
-/** Lays the site out under target — with lightOnly, as a site without dark mode; { created, updated, kept, lightOnly }. */
-export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, log = console.log }) {
-  const result = { created: [], updated: [], kept: [], lightOnly };
+/**
+ * Lays the site out under target — a new site (no content/ yet) named `name`,
+ * which it requires, at `url` with `email` (default: stand-ins on a reserved
+ * domain); a site that has content/ without the starter, its own files left
+ * alone and no name asked — with lightOnly as a site without dark mode;
+ * { created, updated, kept, lightOnly, site: { name, url, email, starter:
+ * true } | { starter: false } }. Throws a StarterError (a new site without
+ * its name, a name, a URL or an address it cannot use), a LightOnlyError or
+ * a GatesError (a site's own lint or build the gates cannot go into) before
+ * anything is written.
+ */
+export function scaffold(target, { kitRoot, version, force = false, lightOnly = false, name, url, email, now, log = console.log }) {
+  const fresh = !fs.existsSync(path.join(target, "content"));
+  const identity = fresh ? siteIdentity(target, { name, url, email, now }) : null;
+  const result = { created: [], updated: [], kept: [], lightOnly, site: identity ? { name: identity.name, url: identity.url, email: identity.email, starter: true } : { starter: false } };
   const opts = { force, result, log };
   const standard = fs.readFileSync(path.join(kitRoot, "STANDARD.md"), "utf8").replace(/^(# .*\n)/, `$1\n${STANDARD_NOTE}`);
-  const changed = lightOnly ? lightOnlyExample(kitRoot, standard) : new Map();
+  const plan = sitePlan(kitRoot, identity, { standard });
+  if (lightOnly) lightOnlyPlan(plan);
+  const pkg = sitePackage(target, { kitRoot, version, guard: guardsEmail(siteConfigText(target, plan)) });
   fs.mkdirSync(target, { recursive: true });
-  for (const entry of EXAMPLE) copyTree(kitRoot, target, entry, opts, changed);
-  put(target, "STANDARD.md", changed.get("STANDARD.md") ?? standard, opts);
+  for (const [file, text] of plan) put(target, file, text, { ...opts, force: force && !isSiteOwn(file) });
   for (const [from, to] of Object.entries(TEMPLATES)) put(target, to, fs.readFileSync(path.join(kitRoot, "templates/site", from), "utf8"), opts);
-  const pkg = sitePackage(target, { kitRoot, version });
   if (pkg.merged) { fs.writeFileSync(path.join(target, "package.json"), pkg.text); result.updated.push("package.json"); log(`merged   package.json${pkg.notes.length ? ` (${pkg.notes.join("; ")})` : ""}`); } else put(target, "package.json", pkg.text, opts);
   put(target, "tsconfig.json", siteTsconfig(kitRoot), opts);
   putWorkspace(target, opts);
@@ -259,13 +309,14 @@ export function agentFiles(target, { kitRoot, version, check = false, force = fa
   const bases = {};
   for (const [file, text] of siteAgentFiles(target, kitRoot)) {
     const onDisk = readText(path.join(target, file));
-    const { status, base, note } = measure(onDisk, sha(text), baseFor(file, onDisk));
-    const entry = (shown) => ({ file, status: shown, ...(note && { note }) });
+    const { status, base, note, required } = withRequired(measure(onDisk, sha(text), baseFor(file, onDisk)), onDisk, text);
+    const entry = (shown) => ({ file, status: shown, ...(note && { note }), ...(required && { required }) });
     if (check) { report.push(entry(status)); continue; }
     if (status.startsWith("modified") && !force) { report.push(entry(status.replace("modified", "kept"))); result.kept.push(file); if (base) bases[file] = base; continue; }
     bases[file] = sha(text);
     report.push(entry(status === "ok" ? "ok" : put(target, file, text, { force: true, result, log })));
   }
+  report.push(...settingsFile(target, kitRoot, { check, log, result }));
   report.push(...agentsMd(target, { check, log, result }));
   if (!check) { writeManifest(target, { version, commit: kitCommit(target, kitRoot), files: bases }); keepBaseCopies(target, bases, releases); }
   return report;
@@ -304,6 +355,36 @@ function measure(onDisk, current, { base, release, exact, recorded }) {
   if (!base) return { status, base, note: "no base, and no release of the kit found as its source: --diff is the site's whole file" };
   if (exact) return { status, base, note: `no base: the kit's text at ${release}` };
   return { status, base, note: status === "modified" ? `no base: kit unchanged since ${release}` : `no base: from the kit's text at ${release}, the version the site was on` };
+}
+
+/**
+ * A site's edit of the kit's current text (modified) that lost a block the
+ * kit marks required: "modified, required gone", with the blocks. A file the
+ * kit changed since its base is left as it is: the merge brings the kit's
+ * text, and the check reads the blocks once the site accepts it.
+ */
+function withRequired(measured, onDisk, kitText) {
+  if (measured.status !== "modified") return measured;
+  const required = requiredGone(onDisk, kitText);
+  return required.length ? { ...measured, status: "modified, required gone", required } : measured;
+}
+
+/**
+ * The site's .claude/settings.json against the kit's template: missing (a
+ * refresh writes the template), unreadable, "modified, required gone" (a
+ * refresh keeps it: "kept, required gone"), else ok; none for a kit without
+ * the template. A site's own settings are never rewritten.
+ */
+function settingsFile(target, kitRoot, { check, log, result }) {
+  const kitText = readText(path.join(kitRoot, "templates/site/settings.json"));
+  if (kitText === null) return [];
+  const onDisk = readText(path.join(target, SETTINGS));
+  if (onDisk === null) return [{ file: SETTINGS, status: check ? "missing" : put(target, SETTINGS, kitText, { force: false, result, log }) }];
+  let settings;
+  try { settings = JSON.parse(onDisk); } catch { return [{ file: SETTINGS, status: "unreadable" }]; }
+  const required = settingsGone(settings, JSON.parse(kitText));
+  if (!required.length) return [{ file: SETTINGS, status: "ok" }];
+  return [{ file: SETTINGS, status: check ? "modified, required gone" : "kept, required gone", required }];
 }
 
 /**
@@ -398,8 +479,13 @@ function agentFileName(target, given, kit) {
   return file;
 }
 
-/** Where the kit keeps an agent file, for the person merging by hand. */
-const kitPath = (file) => { const [from, to] = Object.entries(AGENT_DIRS).find(([, dir]) => file.startsWith(`${dir}/`)); return `node_modules/agentic-cms/${from}${file.slice(to.length)}`; };
+/** Where the kit keeps an agent file (or the template of the site's settings), for the person merging by hand. */
+export const kitPath = (file) => {
+  const template = Object.keys(TEMPLATES).find((from) => TEMPLATES[from] === file);
+  if (template) return `node_modules/agentic-cms/templates/site/${template}`;
+  const [from, to] = Object.entries(AGENT_DIRS).find(([, dir]) => file.startsWith(`${dir}/`));
+  return `node_modules/agentic-cms/${from}${file.slice(to.length)}`;
+};
 
 /**
  * Records the kit's current text as the base of each file the site merged by
@@ -420,7 +506,8 @@ export function acceptAgentFiles(target, files, { kitRoot }) {
     manifest.files[file] = base;
     if (keepsCopy(onDisk, base, releases)) writeBaseCopy(target, file, kit.get(file));
     else fs.rmSync(path.join(target, basePath(file)), { force: true });
-    return { file, status: statusOf(onDisk, base, base) };
+    const { status, required } = withRequired({ status: statusOf(onDisk, base, base) }, onDisk, kit.get(file));
+    return { file, status, ...(required && { required }) };
   });
   writeManifest(target, manifest);
   removeEmptyDirs(path.join(target, path.dirname(BASES)));

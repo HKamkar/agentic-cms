@@ -12,7 +12,7 @@ import type { ZodType } from "zod";
 import type { Blog } from "../blog/posts.ts";
 import type { Content, Page, PageJsonLd, SectionLike } from "../content/index.ts";
 import type { SiteConfig, Urls } from "../site.ts";
-import type { createJsonLd } from "./jsonld.ts";
+import { guardsEmail, organizationEmailLd, type createJsonLd } from "./jsonld.ts";
 
 type FaqSection = SectionLike & { type: "faq"; set: string };
 type GroupSection = SectionLike & { type: "group"; sections: SectionLike[] };
@@ -106,7 +106,7 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
         foundingLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: organization.foundingLocation.locality, addressCountry: organization.foundingLocation.country } },
         slogan: organization.slogan,
         logo: { "@type": "ImageObject", url: absoluteUrl(site.logo) },
-        ...(site.email ? { email: site.email } : {}),
+        ...organizationEmailLd(site, absoluteUrl),
         sameAs: site.footer.social.map((s) => s.href),
         url: site.url,
         knowsAbout: organization.knowsAbout,
@@ -115,8 +115,10 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
     };
   }
 
+  /** The contact page's organisation: its contact points carry the page's URL where no address is given, and always when the site guards its address (no `email` as text then, the organisation's or a contact's). */
   function contactPage(page: SitePage, jsonld: Extract<PageJsonLd, { type: "ContactPage" }>) {
     const { office, contacts } = jsonld;
+    const asText = (email?: string) => (guardsEmail(site) ? undefined : email);
     return {
       "@context": "https://schema.org",
       "@type": "ContactPage",
@@ -127,11 +129,11 @@ export function createPageJsonLd<S extends ZodType<SectionLike>>({ site, urls, c
       about: {
         "@type": "Organization",
         name: site.shortName,
-        ...(site.email ? { email: site.email } : {}),
+        ...(asText(site.email) ? { email: site.email } : {}),
         address: { "@type": "PostalAddress", streetAddress: office.streetAddress, addressLocality: office.locality, postalCode: office.postalCode, addressCountry: office.country },
         logo: { "@type": "ImageObject", url: absoluteUrl(site.logo) },
         sameAs: site.footer.social.map((s) => s.href),
-        contactPoint: contacts.map((contact) => ({ "@type": "ContactPoint", contactType: contact.type, ...(contact.email ? { email: contact.email } : { url: absoluteUrl(page.seo.path) }) })),
+        contactPoint: contacts.map((contact) => ({ "@type": "ContactPoint", contactType: contact.type, ...(asText(contact.email) ? { email: contact.email } : { url: absoluteUrl(page.seo.path) }) })),
       },
       mainEntity: faqPage(page),
     };

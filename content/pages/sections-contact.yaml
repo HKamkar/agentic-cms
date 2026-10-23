@@ -21,7 +21,6 @@ jsonld:
     country: Exampleland
   contacts:
     - type: customer service
-      email: hello@acme.example
 sections:
   - type: contact-hero
     eyebrow: Section gallery
