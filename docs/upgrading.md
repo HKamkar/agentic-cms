@@ -24,6 +24,17 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.8.3 → 0.8.4 (unreleased)
+
+A site whose baseline has merged has nothing to do: its list only shrinks,
+as before. A site still on the pull request that takes
+[migrating-to-0.8.2.md](migrating-to-0.8.2.md)'s § 1, with a list an
+earlier `check-site --baseline` wrote, moves the pin and runs
+`--baseline` again: while the merge base has no list, it writes the list
+from what the site holds now and keeps each entry's reason. A list emptied
+by hand to get a new entry in, and its reasons put back, is no longer
+needed.
+
 ## 0.8.2 → 0.8.3
 
 An upgrade by [migrating-to-0.8.2.md](migrating-to-0.8.2.md) builds green
