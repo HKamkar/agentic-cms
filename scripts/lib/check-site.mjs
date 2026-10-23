@@ -408,17 +408,18 @@ export function formatSiteReport(report) {
 }
 
 /**
- * Whether `--baseline` writes the first list: the config has none, or an
- * empty one that the merge base does not have — the pull request that takes
- * the rules copied the guard's config with its `"baseline": []` — as the
- * exceptions pass reads it (baselineGrowth()). An empty list the base has
- * too, a new site's, takes nothing; so does one with no base to compare,
- * which `note` says. { first, note }.
+ * Whether `--baseline` writes the first list: the config has none, or the
+ * merge base has none — the pull request that takes the rules, whose list
+ * is its own until it merges, however many times it is written (an empty
+ * `"baseline": []` copied with the guard's config, or one an earlier run
+ * wrote) — as the exceptions pass reads it (baselineGrowth()). A list the
+ * base has, a new site's empty one too, only shrinks; so does one with no
+ * base to compare, which `note` says. { first, note }.
  */
 export function firstBaseline(config, { found, before }) {
   if (!Object.hasOwn(config, "baseline")) return { first: true, note: null };
-  if (!Array.isArray(config.baseline) || config.baseline.length) return { first: false, note: null };
-  if (!found.commit) return { first: false, note: `${CONFIG_FILE}'s baseline is an empty list, the first one only when the merge base has none, and there is no base here to compare (${found.note.split(", so ")[0]}): --base <ref> names the branch the pull request goes into` };
+  if (!Array.isArray(config.baseline)) return { first: false, note: null };
+  if (!found.commit) return { first: false, note: `${CONFIG_FILE}'s baseline takes new entries only while the merge base has no list, and there is no base here to compare (${found.note.split(", so ")[0]}): --base <ref> names the branch the pull request goes into` };
   return { first: !Array.isArray(before?.baseline), note: null };
 }
 
@@ -427,15 +428,16 @@ export function firstBaseline(config, { found, before }) {
  * holds — the findings of the engines' and the composition's rules as its
  * ESLint reads them, the baseline ignored (`lint`, ./baseline.mjs
  * lintFindings()), and the site check's own (rounds, the leftovers) —
- * written into the config's `baseline`: the whole list, each reason empty,
- * the first time (firstBaseline()); else the list shrunk to it (an entry
- * gone or lowered), growth refused. The config's other bytes stay as they
- * are. Then the site check again, as the lint will run it (`recheck`: the
- * CLI runs it in a process of its own, which reads eslint.config.mjs afresh
- * — this one's import of it holds the list as it was). { config, written,
- * first, note, baseline, found, shrunk, removed, refused, remaining,
- * warnings } — `remaining` the findings no baseline takes (the gates, the
- * config's own), which fail until they are fixed.
+ * written into the config's `baseline`: the whole list on the first run
+ * (firstBaseline()), each entry keeping the reason the pull request's own
+ * list gave it; else the list shrunk to it (an entry gone or lowered),
+ * growth refused. The config's other bytes stay as they are. Then the site
+ * check again, as the lint will run it (`recheck`: the CLI runs it in a
+ * process of its own, which reads eslint.config.mjs afresh — this one's
+ * import of it holds the list as it was). { config, written, first, rerun,
+ * note, baseline, found, added, raised, shrunk, removed, refused,
+ * remaining, warnings } — `remaining` the findings no baseline takes (the
+ * gates, the config's own), which fail until they are fixed.
  */
 export async function baselineSite({ root, fs, git, env = {}, base, components = componentsReport, lint = lintFindings, recheck = () => checkSite({ root, fs, git, env, base, components }) }) {
   const config = readConfig(root, fs);
@@ -444,26 +446,48 @@ export async function baselineSite({ root, fs, git, env = {}, base, components =
   const raw = await checkSite({ root, fs, git, env, base, components, hold: false });
   const found = [...countable([...raw.findings, ...await lint({ root, baseline: config.baseline })]).values()].map(({ file: at, rule, findings }) => ({ file: at, rule, count: findings.length, findings: findings.map((entry) => ({ at: entry.file, problem: entry.problem })) }));
   const { first, note } = firstBaseline(config, atBase({ git, env, base }));
-  const next = nextBaseline(first ? undefined : config.baseline, found);
+  const next = nextBaseline(config.baseline, found, { first });
   const out = withBaseline(text, next.baseline);
   if (out !== text) fs.writeFileSync(file, out);
   const after = await recheck();
-  return { config: CONFIG_FILE, written: out !== text, first: next.first, note, baseline: next.baseline, found, shrunk: next.shrunk, removed: next.removed, refused: next.refused, remaining: after.findings, warnings: after.warnings };
+  return { config: CONFIG_FILE, written: out !== text, note, found, ...next, remaining: after.findings, warnings: after.warnings };
 }
 
-/** What `--baseline` did, as lines: what it wrote (each entry with its findings, the first time), what it shrank, what it refused, and what no baseline takes. */
-export function formatBaselineReport(result) {
+/** An entry's findings as `--baseline` found them, one line each, under the entry's own line. */
+const foundLines = (result, { file, rule }) => (result.found.find((entry) => entry.file === file && entry.rule === rule)?.findings ?? []).map(({ at, problem }) => `    ${at}  ${problem}`);
+
+/** The entries an entry list lost or lowered, one line each. */
+const shrinkLines = (result) => [...result.removed.map((entry) => `  − ${entry.file}  ${entry.rule}: none left, the entry is gone`), ...result.shrunk.map((entry) => `  ↓ ${entry.file}  ${entry.rule}: ${entry.count} → ${entry.to}`)];
+
+/** The pull request's own list written again: what came in or rose, with its findings, what went or fell, and how many reasons it kept. */
+function rerunLines(result, size) {
+  const said = result.baseline.filter((entry) => String(entry.reason).trim()).length;
+  const silent = result.baseline.length - said;
+  return [
+    `check-site --baseline: wrote ${result.config} again from what the site holds — ${size}: the merge base has no list, so this pull request's follows the site until it merges, and from then on only shrinks`,
+    ...result.added.flatMap((entry) => [`  + ${entry.file}  ${entry.rule} ×${entry.count}`, ...foundLines(result, entry)]),
+    ...result.raised.flatMap((entry) => [`  ↑ ${entry.file}  ${entry.rule}: ${entry.count} → ${entry.to}`, ...foundLines(result, entry)]),
+    ...shrinkLines(result),
+    `${entryCount(said)} kept ${said === 1 ? "its" : "their"} reason${silent ? `; ${entryCount(silent)} ${silent === 1 ? "says" : "say"} none yet, for the owner to fill: why it is still here` : ""}.`,
+  ];
+}
+
+/** What `--baseline` wrote, as lines: the first list with each entry's findings, the pull request's own written again, or the list shrunk. */
+function writtenLines(result) {
   const total = (entries) => entries.reduce((n, entry) => n + entry.count, 0);
   const size = `${entryCount(result.baseline.length)}, ${plural(total(result.baseline), "finding")}`;
-  const lines = [];
-  if (result.first) {
-    lines.push(`check-site --baseline: wrote the first baseline into ${result.config}: ${size}, each to be fixed in a pull request of its own; the list only shrinks`);
-    for (const entry of result.found) lines.push(`  ${entry.file}  ${entry.rule} ×${entry.count}`, ...entry.findings.map(({ at, problem }) => `    ${at}  ${problem}`));
-    if (result.baseline.length) lines.push(`Each entry's "reason" is empty for the owner to fill: why it is still here.`);
-  } else {
-    lines.push(`check-site --baseline: ${result.written ? `wrote ${result.config}` : `${result.config} unchanged`} — ${size}`);
-    lines.push(...result.removed.map((entry) => `  − ${entry.file}  ${entry.rule}: none left, the entry is gone`), ...result.shrunk.map((entry) => `  ↓ ${entry.file}  ${entry.rule}: ${entry.count} → ${entry.to}`));
-  }
+  if (!result.written) return [`check-site --baseline: ${result.config} unchanged — ${size}`];
+  if (result.first && result.rerun) return rerunLines(result, size);
+  if (!result.first) return [`check-site --baseline: wrote ${result.config} — ${size}`, ...shrinkLines(result)];
+  const lines = [`check-site --baseline: wrote the first baseline into ${result.config}: ${size}, each to be fixed in a pull request of its own; the list only shrinks`];
+  for (const entry of result.found) lines.push(`  ${entry.file}  ${entry.rule} ×${entry.count}`, ...entry.findings.map(({ at, problem }) => `    ${at}  ${problem}`));
+  if (result.baseline.length) lines.push(`Each entry's "reason" is empty for the owner to fill: why it is still here.`);
+  return lines;
+}
+
+/** What `--baseline` did, as lines: what it wrote (writtenLines()), what it refused, and what no baseline takes. */
+export function formatBaselineReport(result) {
+  const lines = writtenLines(result);
   if (result.refused.length) lines.push("", `check-site --baseline: refused ${entryCount(result.refused.length)}: the baseline only shrinks, and takes nothing new`, ...(result.note ? [result.note] : []), "", ...result.refused.map((entry) => `  ✗ ${entry.file}  ${entry.rule}: ${entry.found} here, and the baseline holds ${entry.count}${entry.count ? "" : " (no entry)"}\n    → fix ${entry.found - entry.count === 1 ? "it" : `${entry.found - entry.count} of them`} as the lint's message says`));
   if (result.remaining.length) lines.push("", `check-site: ${plural(result.remaining.length, "problem")} no baseline takes, which fail until fixed (docs/migrating-to-0.8.2.md § 1):`, "", ...entryLines(result.remaining, "✗"));
   if (result.warnings.length) lines.push("", `check-site: ${plural(result.warnings.length, "warning")}, which fail nothing and no baseline takes: each goes quiet with its reason (docs/migrating-to-0.8.2.md § 4)`);

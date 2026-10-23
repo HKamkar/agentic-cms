@@ -153,7 +153,8 @@ test("against the merge base the list only shrinks: the first one is listed whol
 
 test("--baseline's list: the whole of it the first time, then only ever shrunk, growth refused and each reason kept", () => {
   const found = [{ file: "b.tsx", rule: "agentic-cms/copy", count: 2 }, { file: "a.md", rule: "example-content", count: 1 }];
-  assert.deepEqual(nextBaseline(undefined, found), { baseline: [entry("a.md", "example-content", 1), entry("b.tsx", "agentic-cms/copy", 2)], first: true, shrunk: [], removed: [], refused: [] });
+  const written = [entry("a.md", "example-content", 1), entry("b.tsx", "agentic-cms/copy", 2)];
+  assert.deepEqual(nextBaseline(undefined, found), { baseline: written, first: true, rerun: false, added: written, raised: [], shrunk: [], removed: [], refused: [] });
   const current = [entry("a.md", "example-content", 1, "the launch post, until the new one is written"), entry("b.tsx", "agentic-cms/copy", 3), entry("c.tsx", "agentic-cms/email", 1)];
   const shrunk = nextBaseline(current, found);
   assert.deepEqual(shrunk.baseline, [entry("a.md", "example-content", 1, "the launch post, until the new one is written"), entry("b.tsx", "agentic-cms/copy", 2)]);
@@ -162,6 +163,19 @@ test("--baseline's list: the whole of it the first time, then only ever shrunk, 
   assert.deepEqual(grown.baseline, [entry("b.tsx", "agentic-cms/copy", 1)], "the entry keeps its count; nothing new goes in");
   assert.deepEqual(grown.refused.map(({ file, count, found: n }) => `${file} ${count}→${n}`), ["b.tsx 1→2", "a.md 0→1", "d.tsx 0→1"]);
   assert.deepEqual(nextBaseline([], found).baseline, [], "a list that is there, even empty, takes nothing new");
+});
+
+test("--baseline's list on a first run over the pull request's own: the whole of it again, each reason kept, and what changed named", () => {
+  const current = [entry("a.md", "example-content", 1, "the launch post, until the new one is written"), entry("b.tsx", "agentic-cms/copy", 1, "the hero, until its copy moves to the page"), entry("c.tsx", "agentic-cms/email", 2, "the footer"), entry("e.tsx", "agentic-cms/head", 1, "the layout")];
+  const found = [{ file: "a.md", rule: "example-content", count: 1 }, { file: "b.tsx", rule: "agentic-cms/copy", count: 3 }, { file: "c.tsx", rule: "agentic-cms/email", count: 1 }, { file: "d.tsx", rule: "react/forbid-elements", count: 2 }];
+  const again = nextBaseline(current, found, { first: true });
+  assert.deepEqual(again.baseline, [entry("a.md", "example-content", 1, "the launch post, until the new one is written"), entry("b.tsx", "agentic-cms/copy", 3, "the hero, until its copy moves to the page"), entry("c.tsx", "agentic-cms/email", 1, "the footer"), entry("d.tsx", "react/forbid-elements", 2)]);
+  assert.deepEqual([again.first, again.rerun, again.refused], [true, true, []], "nothing refused: the merge base has no list");
+  assert.deepEqual(again.added, [entry("d.tsx", "react/forbid-elements", 2)]);
+  assert.deepEqual(again.raised, [{ ...entry("b.tsx", "agentic-cms/copy", 1, "the hero, until its copy moves to the page"), to: 3 }]);
+  assert.deepEqual(again.shrunk, [{ ...entry("c.tsx", "agentic-cms/email", 2, "the footer"), to: 1 }]);
+  assert.deepEqual(again.removed, [entry("e.tsx", "agentic-cms/head", 1, "the layout")]);
+  assert.equal(nextBaseline([], found, { first: true }).rerun, false, "an empty list copied with the config is the first list, not a rerun");
 });
 
 test("the list is written into the config's text: the value replaced where the key is, else added last with its comment, every other byte kept", () => {

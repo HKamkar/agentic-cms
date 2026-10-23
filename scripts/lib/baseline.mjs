@@ -287,18 +287,39 @@ const sortEntries = (entries) => [...entries].sort((a, b) => a.file.localeCompar
 const entryOf = ({ file, rule, count, reason = "" }) => ({ file, rule, count, reason });
 
 /**
- * The list `--baseline` writes from what the site holds now (`found`: [{ file,
- * rule, count }]): every entry with an empty reason when the config has none
- * (`current` undefined), else the current one shrunk — an entry whose file
- * holds none is removed, one whose file holds fewer takes that count, and
- * growth, an entry's or a new one's, is refused (the entry keeps its count).
- * { baseline, first, shrunk, removed, refused }.
+ * The first list from what the site holds now, each entry keeping the reason
+ * `was` gives its file and rule (the pull request's own list, written again
+ * while the merge base has none), and what changed against `was`: an entry
+ * added, raised, lowered or gone. `rerun` when `was` had entries.
  */
-export function nextBaseline(current, found) {
-  if (current === undefined) return { baseline: sortEntries(found.map(entryOf)), first: true, shrunk: [], removed: [], refused: [] };
+function firstList(was, found) {
+  const before = new Map(was.map((entry) => [key(entry), entry]));
+  const now = new Set(found.map(key));
+  const baseline = sortEntries(found.map((entry) => entryOf({ ...entry, reason: before.get(key(entry))?.reason ?? "" })));
+  const out = { baseline, first: true, rerun: was.length > 0, added: [], raised: [], shrunk: [], removed: was.filter((entry) => !now.has(key(entry))).map(entryOf), refused: [] };
+  for (const entry of baseline) {
+    const old = before.get(key(entry));
+    if (!old) out.added.push(entry);
+    else if (entry.count > old.count) out.raised.push({ ...entryOf(old), to: entry.count });
+    else if (entry.count < old.count) out.shrunk.push({ ...entryOf(old), to: entry.count });
+  }
+  return out;
+}
+
+/**
+ * The list `--baseline` writes from what the site holds now (`found`: [{ file,
+ * rule, count }]): on the first run (`first`, by default when the config has
+ * none) the whole of it, each entry keeping its reason from `current`
+ * (firstList()); else `current` shrunk — an entry whose file holds none is
+ * removed, one whose file holds fewer takes that count, and growth, an
+ * entry's or a new one's, is refused (the entry keeps its count).
+ * { baseline, first, rerun, added, raised, shrunk, removed, refused }.
+ */
+export function nextBaseline(current, found, { first = current === undefined } = {}) {
+  if (first) return firstList(validBaseline(current), found);
   const now = new Map(found.map((entry) => [key(entry), entry.count]));
   const was = validBaseline(current);
-  const out = { baseline: [], first: false, shrunk: [], removed: [], refused: [] };
+  const out = { baseline: [], first: false, rerun: false, added: [], raised: [], shrunk: [], removed: [], refused: [] };
   for (const entry of was) {
     const n = now.get(key(entry)) ?? 0;
     if (!n) { out.removed.push(entryOf(entry)); continue; }
