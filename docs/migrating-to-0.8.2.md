@@ -45,14 +45,17 @@ only shrinks.
 ## 1. Upgrade, and the baseline (required)
 
 ```bash
-# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.2"
+# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.3"
 pnpm install
 pnpm exec agentic-cms init . --agent-files --check   # what will change, writes nothing
 pnpm exec agentic-cms init . --agent-files           # the rules, the skills, the rules table
 ```
 
-**Pin.** Pin the release tag. Until 0.8.2 is tagged, a site that runs this
-guide as the release's gate pins the release commit instead,
+**Pin.** Pin `#v0.8.3`, the first release this guide builds green on
+either of its paths: 0.8.2's baseline left out the composition rules, so
+a site that takes § 3.7 inside § 1 failed its lint there
+([upgrading.md § 0.8.2 → 0.8.3](upgrading.md#082--083)). A site that
+runs this guide as a release's gate pins the release commit instead,
 `github:HKamkar/agentic-cms#<sha>`, and moves to the tag once it exists.
 
 **The agent files.** `--agent-files` brings each rule's tier line, the

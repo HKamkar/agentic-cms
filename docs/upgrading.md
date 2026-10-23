@@ -24,7 +24,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.8.2 → 0.8.3 (unreleased)
+## 0.8.2 → 0.8.3
 
 An upgrade by [migrating-to-0.8.2.md](migrating-to-0.8.2.md) builds green
 on its first day on either of its paths, 0.8.0's § 3.7 taken inside its
