@@ -83,8 +83,8 @@ leaves out, gets what it always got:
 | the home page's menu, opened and shot | — | each of `widths` where the menu button shows | 767 and 390, where it shows |
 | one command's scheme (`capture`, `shot`, `probe`, `sheet`, `icons audit`, `icons round publish`, `lab render`) | `--scheme` | the first of `schemes` | light |
 | `proof`'s schemes | `--scheme` (one) | a pass in each of `schemes` | light |
-| `proof`'s pages, on every capture and compare | `--pages` (or `--sample`; `--all-pages` for every page) | `proof.pages` | every page |
-| `proof`'s sample, the first n pages of each template on the static pass | `--sample` (or `--pages`; `--all-pages` for every page) | `proof.sample` | every page |
+| `proof`'s pages, on each capture and compare the proof runs | `proof --pages` (or `--sample`; `--all-pages` for every page) | `proof.pages` | every page |
+| `proof`'s sample, the first n pages of each template on the static pass | `proof --sample` (or `--pages`; `--all-pages` for every page) | `proof.sample` | every page |
 | `proof`'s baseline | `--ref` | `proof.ref` | `develop` |
 | `lab serve`'s grounds | — | a box per scheme in `schemes` | light and dark |
 
@@ -99,7 +99,10 @@ like the flags: a profile sets one, and either flag sets aside the
 profile's choice. `--all-pages` sets it aside for every page of the build,
 which neither flag can say: the proof of a change that reaches every
 template and what each page renders from its own content, such as a kit
-upgrade. It is refused beside `--pages` or `--sample`. A key of the wrong shape exits 2 naming it: widths are
+upgrade. It is refused beside `--pages` or `--sample`. The profile narrows
+`proof` alone: a `capture` or a `compare` run on its own takes every page
+unless its own `--pages` or `--sample` says otherwise, so neither takes
+`--all-pages`. A key of the wrong shape exits 2 naming it: widths are
 whole pixels, schemes are `light` and `dark` (each once), pages are routes
 starting with `/`, a sample is a whole number from 1, and pages and sample
 together are refused.

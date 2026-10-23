@@ -47,7 +47,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { CONFIG_FILE, componentsReport, DEMO_FOLDER, disablesIn, entryLines, formatReport, globRegex, isSource, plural, readConfig, resolveGuard, validAllow } from "./check-components.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
-import { baselineGrowth, countable, engineFindings, entryFindings, holdFindings, nextBaseline, validBaseline, withBaseline } from "./baseline.mjs";
+import { baselineGrowth, countable, entryFindings, holdFindings, lintFindings, nextBaseline, validBaseline, withBaseline } from "./baseline.mjs";
 import { buildGaps, buildScript, emailGuard, LINT, lintGaps } from "./gates.mjs";
 import { exampleLeftovers } from "./leftovers.mjs";
 import { KIT_NAME } from "./placeholders.mjs";
@@ -177,13 +177,19 @@ function emailGuardAdded(site, show) {
   return now.off && !emailGuard(show(SITE_CONFIG) ?? "").off ? [{ kind: "guardEmail off", name: SITE_CONFIG, reason: now.off }] : [];
 }
 
-/** The exceptions pass: the merge base, what was added since it, and its findings; with no base, the note why and nothing compared. */
-function checkExceptions({ git, env, base }, g, site, config) {
+/** The merge base and the guard's config there: { found, show, before } — `found` mergeBase()'s answer, `show(file)` a file's text at the base, `before` the config (null when the base has none, or no base was found). */
+function atBase({ git, env, base }) {
   const found = mergeBase({ git, env, base });
-  if (!found.commit) return { base: null, note: found.note, added: [], findings: [] };
+  if (!found.commit) return { found, show: () => null, before: null };
   const show = (file) => { const r = git(["show", `${found.commit}:./${file}`]); return r.status === 0 ? r.stdout : null; };
   const text = show(CONFIG_FILE);
-  const before = text === null ? null : readJson(text);
+  return { found, show, before: text === null ? null : readJson(text) };
+}
+
+/** The exceptions pass: the merge base, what was added since it, and its findings; with no base, the note why and nothing compared. */
+function checkExceptions({ git, env, base }, g, site, config) {
+  const { found, show, before } = atBase({ git, env, base });
+  if (!found.commit) return { base: null, note: found.note, added: [], findings: [] };
   const added = [...configAdded(before ?? {}, config), ...baselineAdded(before, config), ...disablesAdded(g, site, show), ...emailGuardAdded(site, show)];
   return { base: { ref: found.ref, commit: found.commit }, note: null, added, findings: [...exceptionFindings(found, before, config, added), ...baselineFindings(found, before, config)] };
 }
@@ -215,16 +221,47 @@ function checkScripts(site, pkg) {
 function workflowCommands(site) {
   const files = site.walk(WORKFLOWS).filter((file) => /\.ya?ml$/.test(file)).sort();
   const onPullRequests = (on) => on === "pull_request" || (Array.isArray(on) && on.includes("pull_request")) || (Boolean(on) && typeof on === "object" && "pull_request" in on);
-  const out = { files: [], commands: [], unreadable: [] };
+  const out = { files: [], commands: [], unreadable: [], flows: [] };
   for (const file of files) {
     let flow;
     try { flow = parseYaml(site.read(file)); } catch { out.unreadable.push(file); continue; }
     if (!onPullRequests(flow?.on)) continue;
-    out.files.push(file);
+    const trigger = isPlainObject(flow.on) ? flow.on.pull_request : null;
     const runs = Object.values(flow.jobs ?? {}).flatMap((job) => (Array.isArray(job?.steps) ? job.steps : [])).map((step) => step?.run).filter((run) => typeof run === "string");
-    out.commands.push(...runs.flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean));
+    const commands = runs.flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean);
+    out.files.push(file);
+    out.commands.push(...commands);
+    out.flows.push({ file, commands, branches: listOf(trigger?.branches), ignore: listOf(trigger?.["branches-ignore"]) });
   }
   return out;
+}
+
+const isPlainObject = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+/** A trigger's branch filter as a list of patterns (null when it sets none). */
+const listOf = (value) => (Array.isArray(value) ? value.map(String) : typeof value === "string" ? [value] : null);
+
+/** Whether a pull request into `branch` runs a workflow its filter is: `branches` matched in order (a `!` pattern taking one back, the last match winning), `branches-ignore` leaving out each it matches, as GitHub reads them. */
+export function runsInto(branch, { branches, ignore }) {
+  if (ignore?.some((pattern) => globRegex(pattern).test(branch))) return false;
+  if (!branches) return true;
+  let runs = false;
+  for (const pattern of branches) if (globRegex(pattern.replace(/^!/, "")).test(branch)) runs = !pattern.startsWith("!");
+  return runs;
+}
+
+/**
+ * The branches a site's pull requests go into, which its workflow on pull
+ * requests must run for: in CI the pull request's own base (GITHUB_BASE_REF);
+ * else the default branch (origin/HEAD's, else main) and develop where the
+ * site has one, as the kit's git workflow has it.
+ */
+export function pullRequestTargets({ git, env = {} }) {
+  if (env.GITHUB_BASE_REF) return [env.GITHUB_BASE_REF];
+  const { out, resolves } = gitOf(git);
+  if (out("rev-parse", "--is-inside-work-tree") !== "true") return [];
+  const origin = out("rev-parse", "--abbrev-ref", "origin/HEAD");
+  const main = origin && origin !== "origin/HEAD" ? origin.replace(/^origin\//, "") : ["main", "master"].find((name) => resolves(name) || resolves(`origin/${name}`));
+  return [main, (resolves("develop") || resolves("origin/develop")) && "develop"].filter(Boolean).filter((name, at, all) => all.indexOf(name) === at);
 }
 
 /** The steps CI must run: the lint (or a build that runs it), the tests, the build, the agent-file check (in the kit's repository, its hygiene). */
@@ -235,9 +272,22 @@ const CI_STEPS = [
   { what: "the agent-file check", test: /^(?:pnpm (?:exec )?|npx )?agentic-cms init \S+ --agent-files --check(?:\s|$)/, kit: /^pnpm (?:run )?hygiene(?:\s|$)/ },
 ];
 
+/**
+ * A workflow on pull requests runs the gates; a warning when the one that
+ * runs the lint leaves out, in its branch filter, a branch the site's pull
+ * requests go into (`targets`), whose pull requests then get none of its
+ * checks. { findings, warnings }.
+ */
+function checkCi(site, pkg, kit, targets = []) {
+  const workflows = workflowCommands(site);
+  const linting = workflows.flows.filter((flow) => flow.commands.some((command) => CI_STEPS[0].test.test(command) || CI_STEPS[2].test.test(command)));
+  const left = linting.length ? targets.filter((branch) => !linting.some((flow) => runsInto(branch, flow))) : [];
+  const warnings = left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : [];
+  return { findings: ciGates(site, pkg, kit, workflows), warnings };
+}
+
 /** A workflow on pull requests runs the gates. */
-function checkCi(site, pkg, kit) {
-  const { files, commands, unreadable } = workflowCommands(site);
+function ciGates(site, pkg, kit, { files, commands, unreadable }) {
   const template = "node_modules/agentic-cms/templates/site/verify.yml";
   const out = unreadable.map((file) => finding("ci", file, "a workflow that does not read as YAML", "fix its YAML: GitHub runs none of it"));
   if (!files.length) return [...out, finding("ci", `${WORKFLOWS}/verify.yml`, "no workflow runs on pull requests, so nothing holds the gates before a merge", `agentic-cms init writes ${WORKFLOWS}/verify.yml; a site from before it copies ${template}`)];
@@ -326,10 +376,11 @@ export async function checkSite({ root, fs, git, env = {}, base, components = co
   const kit = pkg?.name === KIT_NAME;
   const exceptions = checkExceptions({ git, env, base }, g, site, config);
   const tools = checkTools(site, config, kit);
-  const own = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...checkCi(site, pkg, kit), ...tools.findings, ...checkLeftovers({ root, fs }, site, kit)];
+  const ci = checkCi(site, pkg, kit, pullRequestTargets({ git, env }));
+  const own = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...ci.findings, ...tools.findings, ...checkLeftovers({ root, fs }, site, kit)];
   const baseline = hold ? baselinePass(config, [...componentFindings, ...own], site) : { findings: [...componentFindings, ...own], held: [], warnings: [] };
   const rounds = folders(site, g.app).filter((name) => DEMO_FOLDER.test(name)).length;
-  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...tools.warnings, ...baseline.warnings] };
+  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...ci.warnings, ...tools.warnings, ...baseline.warnings] };
 }
 
 /** Each exception added since the base, with its reason. */
@@ -357,30 +408,47 @@ export function formatSiteReport(report) {
 }
 
 /**
- * `check-site --baseline`: what the site holds now of the rules a baseline
- * holds — the engines' findings as its ESLint reads them, the baseline
- * ignored (`engines`, ./baseline.mjs engineFindings()), and the site check's
- * own (rounds, the leftovers) — written into the config's `baseline`: the
- * whole list, each reason empty, when the config has none; else the list
- * shrunk to it (an entry gone or lowered), growth refused. The config's
- * other bytes stay as they are. Then the site check again, as the lint will
- * run it (`recheck`: the CLI runs it in a process of its own, which reads
- * eslint.config.mjs afresh — this one's import of it holds the list as it
- * was). { config, written, first, baseline, found, shrunk, removed,
- * refused, remaining, warnings } — `remaining` the findings no baseline
- * takes (the gates, the config's own), which fail until they are fixed.
+ * Whether `--baseline` writes the first list: the config has none, or an
+ * empty one that the merge base does not have — the pull request that takes
+ * the rules copied the guard's config with its `"baseline": []` — as the
+ * exceptions pass reads it (baselineGrowth()). An empty list the base has
+ * too, a new site's, takes nothing; so does one with no base to compare,
+ * which `note` says. { first, note }.
  */
-export async function baselineSite({ root, fs, git, env = {}, base, components = componentsReport, engines = engineFindings, recheck = () => checkSite({ root, fs, git, env, base, components }) }) {
+export function firstBaseline(config, { found, before }) {
+  if (!Object.hasOwn(config, "baseline")) return { first: true, note: null };
+  if (!Array.isArray(config.baseline) || config.baseline.length) return { first: false, note: null };
+  if (!found.commit) return { first: false, note: `${CONFIG_FILE}'s baseline is an empty list, the first one only when the merge base has none, and there is no base here to compare (${found.note.split(", so ")[0]}): --base <ref> names the branch the pull request goes into` };
+  return { first: !Array.isArray(before?.baseline), note: null };
+}
+
+/**
+ * `check-site --baseline`: what the site holds now of the rules a baseline
+ * holds — the findings of the engines' and the composition's rules as its
+ * ESLint reads them, the baseline ignored (`lint`, ./baseline.mjs
+ * lintFindings()), and the site check's own (rounds, the leftovers) —
+ * written into the config's `baseline`: the whole list, each reason empty,
+ * the first time (firstBaseline()); else the list shrunk to it (an entry
+ * gone or lowered), growth refused. The config's other bytes stay as they
+ * are. Then the site check again, as the lint will run it (`recheck`: the
+ * CLI runs it in a process of its own, which reads eslint.config.mjs afresh
+ * — this one's import of it holds the list as it was). { config, written,
+ * first, note, baseline, found, shrunk, removed, refused, remaining,
+ * warnings } — `remaining` the findings no baseline takes (the gates, the
+ * config's own), which fail until they are fixed.
+ */
+export async function baselineSite({ root, fs, git, env = {}, base, components = componentsReport, lint = lintFindings, recheck = () => checkSite({ root, fs, git, env, base, components }) }) {
   const config = readConfig(root, fs);
   const file = path.join(root, CONFIG_FILE);
   const text = fs.readFileSync(file, "utf8");
   const raw = await checkSite({ root, fs, git, env, base, components, hold: false });
-  const found = [...countable([...raw.findings, ...await engines({ root })]).values()].map(({ file: at, rule, findings }) => ({ file: at, rule, count: findings.length, findings: findings.map((entry) => ({ at: entry.file, problem: entry.problem })) }));
-  const next = nextBaseline(Object.hasOwn(config, "baseline") ? config.baseline : undefined, found);
+  const found = [...countable([...raw.findings, ...await lint({ root, baseline: config.baseline })]).values()].map(({ file: at, rule, findings }) => ({ file: at, rule, count: findings.length, findings: findings.map((entry) => ({ at: entry.file, problem: entry.problem })) }));
+  const { first, note } = firstBaseline(config, atBase({ git, env, base }));
+  const next = nextBaseline(first ? undefined : config.baseline, found);
   const out = withBaseline(text, next.baseline);
   if (out !== text) fs.writeFileSync(file, out);
   const after = await recheck();
-  return { config: CONFIG_FILE, written: out !== text, first: next.first, baseline: next.baseline, found, shrunk: next.shrunk, removed: next.removed, refused: next.refused, remaining: after.findings, warnings: after.warnings };
+  return { config: CONFIG_FILE, written: out !== text, first: next.first, note, baseline: next.baseline, found, shrunk: next.shrunk, removed: next.removed, refused: next.refused, remaining: after.findings, warnings: after.warnings };
 }
 
 /** What `--baseline` did, as lines: what it wrote (each entry with its findings, the first time), what it shrank, what it refused, and what no baseline takes. */
@@ -389,14 +457,14 @@ export function formatBaselineReport(result) {
   const size = `${entryCount(result.baseline.length)}, ${plural(total(result.baseline), "finding")}`;
   const lines = [];
   if (result.first) {
-    lines.push(`check-site --baseline: wrote the first baseline into ${result.config}: ${size}, each to move onto its engine in a pull request of its own; the list only shrinks`);
+    lines.push(`check-site --baseline: wrote the first baseline into ${result.config}: ${size}, each to be fixed in a pull request of its own; the list only shrinks`);
     for (const entry of result.found) lines.push(`  ${entry.file}  ${entry.rule} ×${entry.count}`, ...entry.findings.map(({ at, problem }) => `    ${at}  ${problem}`));
     if (result.baseline.length) lines.push(`Each entry's "reason" is empty for the owner to fill: why it is still here.`);
   } else {
     lines.push(`check-site --baseline: ${result.written ? `wrote ${result.config}` : `${result.config} unchanged`} — ${size}`);
     lines.push(...result.removed.map((entry) => `  − ${entry.file}  ${entry.rule}: none left, the entry is gone`), ...result.shrunk.map((entry) => `  ↓ ${entry.file}  ${entry.rule}: ${entry.count} → ${entry.to}`));
   }
-  if (result.refused.length) lines.push("", `check-site --baseline: refused ${entryCount(result.refused.length)}: the baseline only shrinks, and takes nothing new`, "", ...result.refused.map((entry) => `  ✗ ${entry.file}  ${entry.rule}: ${entry.found} here, and the baseline holds ${entry.count}${entry.count ? "" : " (no entry)"}\n    → move ${entry.found - entry.count === 1 ? "it" : `${entry.found - entry.count} of them`} onto the engine, as the lint's message says`));
+  if (result.refused.length) lines.push("", `check-site --baseline: refused ${entryCount(result.refused.length)}: the baseline only shrinks, and takes nothing new`, ...(result.note ? [result.note] : []), "", ...result.refused.map((entry) => `  ✗ ${entry.file}  ${entry.rule}: ${entry.found} here, and the baseline holds ${entry.count}${entry.count ? "" : " (no entry)"}\n    → fix ${entry.found - entry.count === 1 ? "it" : `${entry.found - entry.count} of them`} as the lint's message says`));
   if (result.remaining.length) lines.push("", `check-site: ${plural(result.remaining.length, "problem")} no baseline takes, which fail until fixed (docs/migrating-to-0.8.2.md § 1):`, "", ...entryLines(result.remaining, "✗"));
   if (result.warnings.length) lines.push("", `check-site: ${plural(result.warnings.length, "warning")}, which fail nothing and no baseline takes: each goes quiet with its reason (docs/migrating-to-0.8.2.md § 4)`);
   return lines;

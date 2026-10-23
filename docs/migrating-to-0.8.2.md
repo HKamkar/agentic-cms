@@ -18,7 +18,7 @@ only shrinks.
 | § | Step | Who | Effort |
 |---|---|---|---|
 | 1 | Upgrade, and the baseline | every site | an hour |
-| 2 | Hard-coded copy into content files | a site whose baseline holds engine entries | an hour per page |
+| 2 | Hard-coded copy into content files, sections onto the library | a site whose baseline holds engine or composition entries | an hour per page |
 | 3 | The example's leftovers | a site that kept any of the example | minutes per file |
 | 4 | The preferred tier's reasons | a site whose lint warns | minutes per warning |
 | 5 | The e-mail key | a site with an address in `site.ts` | an hour |
@@ -33,7 +33,11 @@ only shrinks.
   Does `eslint.config.mjs` spread `componentRules()`? A site that never
   took [0.8.0's § 3.7](migrating-to-0.8.0.md#37-the-component-library-enforced)
   has neither. Its lint never sees the engines, so it takes § 3.7 inside
-  § 1 below, before the baseline.
+  § 1 below, before the baseline: the guard's config copied from
+  `node_modules/agentic-cms/src/config/components.json` and set to the
+  site's layers, `componentRules()` in `eslint.config.mjs`. Its sections
+  then meet the composition rules for the first time, and what they break
+  goes into the baseline with the rest, so the upgrade stays green.
 - **Read § 1 through once.** Its steps go in one pull request, the one
   that takes 0.8.2. That pull request is the only one that may add a
   baseline.
@@ -77,16 +81,28 @@ merges the two scripts the same way, but it also writes back every file of
 the example's code that the site removed. Run it only if you then read
 `git status` and delete what it brought back.
 
-In `.github/workflows/verify.yml`, `fetch-depth: 0` under the checkout's
-`with:` gives the site check the history it compares the exceptions and
-the baseline against. Without it, CI says it compared nothing. The three
-new action pins, and `env: { AGENTIC_CMS_PLACEHOLDERS: warn }` on a build
-step that deploys nothing, are in [upgrading.md](upgrading.md).
+In the workflow that runs the lint on pull requests (`.github/workflows/verify.yml`
+in a site from `init`; a site's own may also deploy), `fetch-depth: 0`
+under the checkout's `with:` gives the site check the history it compares
+the exceptions and the baseline against. Without it, CI says it compared
+nothing. Its `on.pull_request` takes every branch, as the template's does,
+or names each one the site's pull requests go into, `develop` as well as
+`main`: a branch it leaves out gets no checks on its pull requests, the
+gate's among them, and `check-site` warns of it. The three new action pins
+are in [upgrading.md](upgrading.md).
+
+`env: { AGENTIC_CMS_PLACEHOLDERS: warn }` goes on a build step that deploys
+nothing. A step that builds and deploys takes none: what it deploys is a
+production build, which fails while a placeholder remains, as it should.
+An existing site seldom holds one (the content lint names each, § 1's
+check below) and replaces it in this pull request. Where its pull requests
+must build while one remains, the step sets the variable on those runs
+alone: `AGENTIC_CMS_PLACEHOLDERS: ${{ github.event_name == 'pull_request' && 'warn' || '' }}`.
 
 **ESLint reads the guard's config.** The allow list and the baseline are
 written once, in `src/config/components.json`. The file that owns a part
 the engines keep out of code is named in both files. `eslint.config.mjs`
-gets three changes:
+gets four changes:
 
 ```js
 import { readFileSync } from "node:fs";
@@ -100,7 +116,17 @@ const { allow = [], baseline = [] } = JSON.parse(readFileSync(new URL("./src/con
     allow,
     baseline,
   }),
+// …
+  globalIgnores([
+    // … the site's own
+    // Agent worktrees checked out inside the repo (gitignored): each is a copy of the site.
+    ".claude/worktrees/**",
+  ]),
 ```
+
+The last is the template's own. Without it, ESLint lints every agent
+worktree's copy of the site as well, and with `componentRules()` that runs
+for minutes where the site alone takes seconds.
 
 `src/config/components.json` names the same owners, each with its reason:
 
@@ -125,12 +151,17 @@ pnpm exec agentic-cms check-site --baseline
 ```
 
 It lints the site as `pnpm lint` does, with no baseline. It writes what
-the site holds into the guard's config as `baseline`:
+the site holds into the guard's config as `baseline`. The first time, the
+whole list: the config has none, or an empty `"baseline": []` the merge
+base does not have (a config copied from the package for § 3.7 brings
+one). A list the base has, even an empty one, is never written again from
+scratch: it only shrinks.
 
 ```json
 "baseline": [
   { "file": "src/app/layout.tsx", "rule": "agentic-cms/head", "count": 1, "reason": "" },
   { "file": "src/components/ui/Footer.tsx", "rule": "agentic-cms/email", "count": 1, "reason": "" },
+  { "file": "src/components/home/Hero.tsx", "rule": "react/forbid-elements", "count": 2, "reason": "" },
   { "file": "content/blog/pages-are-files.md", "rule": "example-content", "count": 1, "reason": "" }
 ]
 ```
@@ -144,6 +175,7 @@ and an empty one is a warning that fails nothing.
 | The baseline takes | It never takes |
 |---|---|
 | the engines' findings: `agentic-cms/copy`, `head`, `forms`, `tags`, `email` | the preferred tier's warnings (§ 4): they stay warnings until each gets a reason or is replaced |
+| the composition rules' on a section, a pattern and the layers' imports: `no-restricted-syntax` (a style, an arbitrary value, a visual or motion class), `react/forbid-elements` (a raw element), `react/no-multi-comp` (two components in one file), `no-restricted-imports` (an import against the layers) | a warning of any rule: a baseline holds errors alone |
 | `rounds`: a `*-demo` route `demo new` did not write, a round's pictures left behind | the gates (`scripts`, `ci`), the config's own passes (`preset`, `owners`, `allow`, `routes`' reasons, `inherited`), an inline disable of a required rule without its reason (`disables`): each is fixed in this pull request |
 | the example's leftovers: `example-brand` (its name, domain or author in a line) and `example-content` (its posts, catalogue pages, pictures and collection entries) | a placeholder (`(placeholder)`, or an address on a domain reserved for examples): a production build fails on it, so the site writes its own |
 
@@ -162,12 +194,14 @@ already written.
   lists each entry as added since the merge base.
 - **Later pull requests** can't add an entry or raise a count: the site
   check fails either against the merge base.
-- **In a baselined file**, an engine rule stays quiet while the file
-  holds no more than its count. One more, and every finding in the file
-  fails, with a line on the count. Fewer, and the rule asks for the
-  entry to shrink, so a fixed bypass can't make room for a new one.
-  `check-site --baseline` shrinks the list to what is left, and never
-  grows it.
+- **In a baselined file**, an engine or a composition rule stays quiet
+  while the file holds no more than its count. One more, and every
+  finding of that rule in the file fails, with a line on the count.
+  Fewer, and the rule asks for the entry to shrink, so a fixed finding
+  can't make room for a new one. `check-site --baseline` shrinks the list
+  to what is left, and never grows it.
+- **A file the baseline does not list**, a new one above all, meets every
+  rule in full.
 - **A site laid out by `init` 0.8.2** starts with `"baseline": []` and
   takes nothing.
 
@@ -192,7 +226,7 @@ next:
 1. **See what the entry holds.** Take the entry out of `baseline`, or
    lower its count, and run `pnpm lint`. ESLint names each finding with
    the place it goes.
-2. **Move each finding onto its engine:**
+2. **Move each finding onto its engine, or the library:**
    - **Copy in a section** goes to a field of the page's file,
      `content/pages/<slug>.yaml`, with its schema in
      `src/components/sections/schemas.ts`, and reaches the component as
@@ -213,6 +247,12 @@ next:
      Google's ([consent.md](consent.md)).
    - **An address** is `<EmailLink token={encodeEmail(address)} />`
      ([email.md](email.md)).
+   - **A section the composition rules fail** is rebuilt from the
+     library: `Heading`, `TextLink`, `Button` and `Media` for its raw
+     elements, a token in `globals.css` for a value the scale lacks, a
+     variant of a primitive for a look of its own, and a second component
+     in the file moved to `ui/` with its catalogue entry
+     ([the components rule](../templates/site/rules/components.md)).
 3. **Shrink the list** with `pnpm exec agentic-cms check-site --baseline`:
    the entry is gone, or holds what is left.
 4. **Prove the page against the commit before,** then commit the move
@@ -376,18 +416,23 @@ work.
     and each hand-written route folder under `exceptions` with its reason
     ("a hand-written page, until it is a content file"). Then the
     baseline: an `agentic-cms/copy` and an `agentic-cms/head` entry per
-    route, an `example-content` entry for anything kept from the example.
+    route, the composition rules' entries for each section they fail, an
+    `example-content` entry for anything kept from the example.
   - *§ 2:* one page per pull request, by 0.8.0's § 3.9. The route's
     folder leaves `src/app/`, its exception leaves `exceptions`, its
     entries leave the baseline, and its proof is identical.
   - *Then:* § 3 for the example's leftovers, § 4, § 5 when the owner wants
     it, and § 6.
 - **A site already on the content engine.** Its pages are files.
-  - *§ 1:* the baseline is short. Typically it holds the root layout's
-    hand-written head, a `mailto:` in the footer, a line of copy in a
-    primitive, and whatever the site kept of the example.
+  - *§ 1:* the engines' entries are few. Typically the baseline holds the
+    root layout's hand-written head, a `mailto:` in the footer, a line of
+    copy in a primitive, and whatever the site kept of the example. A site
+    that takes 0.8.0's § 3.7 inside § 1 adds what its sections break of
+    the composition rules: a raw element, a style, an arbitrary value, two
+    components in a file, often the longest part of the list.
   - *§ 2:* the head becomes `kit.seo.rootMetadata()`, the link
-    `EmailLink`, and the copy `site.ts`'s chrome or a prop, each proven
+    `EmailLink`, the copy `site.ts`'s chrome or a prop, and each section
+    the composition rules fail is rebuilt from the library, each proven
     identical.
   - *Then:* § 3, which is most of the work for such a site, § 4, § 5 and
     § 6.
@@ -397,11 +442,17 @@ work.
 | Symptom | Do this |
 |---|---|
 | `check-site: no src/config/components.json here` | The site never took 0.8.0's § 3.7: take it first (§ 1, "Know what the site runs") |
-| `pnpm lint` fails on every finding of a baselined file, and the guard's `preset` says ESLint is told none | `eslint.config.mjs` doesn't pass `baseline` to `componentRules()`: § 1's three changes |
+| `pnpm lint` fails on every finding of a baselined file, and the guard's `preset` says ESLint is told none | `eslint.config.mjs` doesn't pass `baseline` to `componentRules()`: § 1's four changes |
+| After § 3.7, `pnpm lint` fails hundreds of `no-restricted-syntax`, `react/forbid-elements`, `react/no-multi-comp` or `no-restricted-imports` errors in sections | The composition findings a site already had: `check-site --baseline` writes them with the rest. Never an `ignores` glob, which turns the engines off in those files too, nor an inline disable in each |
+| The guard's `preset` says no processor holds a composition rule's count | A block after `componentRules()` sets a processor of its own on the file: move it before the preset |
+| `--baseline` refuses every entry, each `the baseline holds 0 (no entry)` | The list is empty and the merge base has one too (a site from `init`), or there is no base to compare: the report says which. `--base <branch>` names the branch the pull request goes into |
+| ESLint runs for minutes | It lints the agent worktrees' copies of the site: `.claude/worktrees/**` in `globalIgnores` (§ 1) |
+| `check-site` warns the workflow that runs the lint runs on none into a branch | Its `on.pull_request.branches` leaves out a branch the site's pull requests go into: add it, or drop the filter (§ 1) |
 | `agentic-cms/forms` on `ui/form/Form.tsx`, or `--baseline` writes an entry for it | Name the owners (§ 1) before the baseline: the form renderer is the engine itself. Then `--baseline` again; the entry goes |
 | `N of this rule here, and the baseline … holds M` | A new finding in a baselined file: move it onto its engine (§ 2). The baseline never takes a new one |
 | `The baseline … holds M of this rule here and N are left` | A bypass was fixed: `check-site --baseline` shrinks the entry, in the same pull request |
 | `added to the baseline (…) since <base>: the baseline only shrinks` | An entry was added or raised after the pull request that took 0.8.2: take it back out and move the finding onto its engine |
 | `--baseline` refuses an entry | Same: the list only shrinks. It wrote the rest |
-| A production build fails on `placeholder` | An address on a domain reserved for examples (`.example`, `.test`, …), or a `(placeholder)` string: write the site's own. A build that deploys nothing may run with `AGENTIC_CMS_PLACEHOLDERS=warn` |
+| A production build fails on `placeholder` | An address on a domain reserved for examples (`.example`, `.test`, …), or a `(placeholder)` string: write the site's own. A build that deploys nothing may run with `AGENTIC_CMS_PLACEHOLDERS=warn`; one that deploys, on its pull-request runs alone (§ 1) |
+| `init --agent-files --diff <file> \| git apply` answers `patch does not apply` | The site reworded lines the kit's change touches: merge the hunks by hand, keeping each required block's words, then `--accept <file>` ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)) |
 | The proof differs after § 1 | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |
