@@ -504,6 +504,32 @@
    ".claude/skills/design-proof/SKILL.md": "sha256:8fa2d97e5bc54e6bc8767d487d27b1675382cfae981410afa2c36066959a252f",
    ".claude/skills/design/SKILL.md": "sha256:06832559059f56e42cbd7d7b7096064bffce8359b05d9b6dd08efe82bea4db49",
    ".claude/skills/setup/SKILL.md": "sha256:b2097bd46eed3c32ff10168fd6fd61233d689883a9290a1f7e81ecc6511d8449"
+  },
+  "0.8.4": {
+   ".agents/skills/design-graphics/SKILL.md": "sha256:e0ab0459a2b8f40b8db29b73c77af5fe9a84701d86543e66003f4e8be5ec2a29",
+   ".agents/skills/design-graphics/references/svg-motion.md": "sha256:6221f0aeb83de41ee26f5e3896b561616f9e325de1a8555475a16215e3659d4b",
+   ".agents/skills/design-icons/SKILL.md": "sha256:4fa1e1e50ffd49b2210bbd1820565112d695775e36ec4e36a513cd3b3b357f26",
+   ".agents/skills/design-measure/SKILL.md": "sha256:71472a40e5cb9eee5810bdc4778b888a6b5d1b86fa013c2d5bff500b1e841d32",
+   ".agents/skills/design-options/SKILL.md": "sha256:8c9ea621835d00966fa4f75822e9f13272e847c0ef00f481277ed1703b1be83c",
+   ".agents/skills/design-proof/SKILL.md": "sha256:8fa2d97e5bc54e6bc8767d487d27b1675382cfae981410afa2c36066959a252f",
+   ".agents/skills/design/SKILL.md": "sha256:06832559059f56e42cbd7d7b7096064bffce8359b05d9b6dd08efe82bea4db49",
+   ".agents/skills/setup/SKILL.md": "sha256:b2097bd46eed3c32ff10168fd6fd61233d689883a9290a1f7e81ecc6511d8449",
+   ".claude/rules/blog-engine.md": "sha256:fad5dd394bf8cf4f0541f6c4a2666dd99e236adf0967ba74e8fe0c9fc7e803d1",
+   ".claude/rules/components.md": "sha256:4bb4344e35c3179f7f392bab3f683f0a424208d5c344abdf5bb333fb5d5bce4b",
+   ".claude/rules/content-engine.md": "sha256:5b432eab3bb388e7af26a63cc3cd1d22755a09405beb3a4a7ce356734148ec9a",
+   ".claude/rules/design.md": "sha256:e9274c106133e0b1d49337c9dcfa48bf0cb7f0718bbe38fdcd870bccf8c35fd2",
+   ".claude/rules/form-engine.md": "sha256:724222c85e3b934bbe4aca7dafe83d9d231004c16debdaded0bef7d5fc8a170e",
+   ".claude/rules/pages.md": "sha256:732f285909e8fa4c4d90290385934bfe5a76f79e5704f66c71635d44c222fd4c",
+   ".claude/rules/seo.md": "sha256:3cf6e45ac4918b517846b21512e4752d46f709b37652748a7384894d0757f854",
+   ".claude/rules/styling.md": "sha256:b2c6ee2af1c3b9056a159599029b75ebb11d0a87369f83ed3373739c32272348",
+   ".claude/skills/design-graphics/SKILL.md": "sha256:e0ab0459a2b8f40b8db29b73c77af5fe9a84701d86543e66003f4e8be5ec2a29",
+   ".claude/skills/design-graphics/references/svg-motion.md": "sha256:6221f0aeb83de41ee26f5e3896b561616f9e325de1a8555475a16215e3659d4b",
+   ".claude/skills/design-icons/SKILL.md": "sha256:4fa1e1e50ffd49b2210bbd1820565112d695775e36ec4e36a513cd3b3b357f26",
+   ".claude/skills/design-measure/SKILL.md": "sha256:71472a40e5cb9eee5810bdc4778b888a6b5d1b86fa013c2d5bff500b1e841d32",
+   ".claude/skills/design-options/SKILL.md": "sha256:8c9ea621835d00966fa4f75822e9f13272e847c0ef00f481277ed1703b1be83c",
+   ".claude/skills/design-proof/SKILL.md": "sha256:8fa2d97e5bc54e6bc8767d487d27b1675382cfae981410afa2c36066959a252f",
+   ".claude/skills/design/SKILL.md": "sha256:06832559059f56e42cbd7d7b7096064bffce8359b05d9b6dd08efe82bea4db49",
+   ".claude/skills/setup/SKILL.md": "sha256:b2097bd46eed3c32ff10168fd6fd61233d689883a9290a1f7e81ecc6511d8449"
   }
  },
  "texts": {

@@ -24,7 +24,7 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.8.3 → 0.8.4 (unreleased)
+## 0.8.3 → 0.8.4
 
 A site whose baseline has merged has nothing to do: its list only shrinks,
 as before. A site still on the pull request that takes

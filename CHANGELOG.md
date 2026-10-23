@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.8.4] — 2026-10-23
 
 - Fixed: `check-site --baseline` refused every new entry once the pull request that takes 0.8.2 had written its list, though the merge base had none and the site check takes any list the base lacks. Each run on that pull request now writes the list again from what the site holds, an entry coming, rising, falling or going with its findings and each keeping its reason, and the report names what changed and how many reasons it kept. A list the base has, a new site's empty one too, still only shrinks, and with no base to compare the report names `--base` whatever the list holds. `docs/upgrading.md` gets `0.8.3 → 0.8.4 (unreleased)`.
 
