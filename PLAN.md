@@ -413,6 +413,73 @@ The guide now pins `#v0.8.1`. The same reviews set the next plan,
 `docs/roadmap-0.8.2.md`: the engines enforced and the rest only guided,
 and a starter without the example's brand.
 
+## Phase 13 — 0.8.2, the engines hold and the rest stays open (released 2026-10-23)
+
+`docs/roadmap-0.8.2.md` was the plan and is now the record. Its jobs ran
+as pull requests into `develop` (#130–#140, with #92's CI pins), each in
+its own session.
+
+**What changed:**
+- **One map:** `docs/parts.md` puts every part of the kit in four layers,
+  each with its tier, the check that holds it and its exception key, and
+  `pnpm hygiene` keeps it complete.
+- **The engines are required** across `src/`: `agentic-cms/copy`,
+  `head`, `forms`, `tags` and `email` fail the lint, and the guard's
+  `preset` pass fails a config that turned one off.
+- **The rest is preferred:** `motion`, `graphics`, `images`, `icons` and
+  `styling` warn and name the kit's part, and one line of reason keeps a
+  site's own choice.
+- **`check-site`** runs the guard and then the site's own passes;
+  `--baseline` records what an existing site already has, once, and the
+  list only shrinks.
+- **The e-mail key:** `guardEmail: true` keeps the address out of every
+  served file.
+- **A new site without the example:** `init --name` lays out a starter of
+  its own, and a production build refuses its placeholders.
+- **Agents get the same rules:** both `AGENTS.md` files carry the
+  engines, and `init --agent-files --check` fails an edit that dropped a
+  required block.
+
+**The gate.** The owner ran `docs/migrating-to-0.8.2.md` § 1 on two sites
+against the release commit, in their own sessions. A site that never took
+0.8.0's § 3.7 met the composition rules inside § 1 with nothing to hold
+them, so its lint and build failed. That finding and five more became
+0.8.3 (phase 14), and 0.8.2 shipped as gated.
+
+**The release.** CodeQL raised two alerts on the release PR (#141). One
+was fixed (ca4d8ad): a test made a pattern of a file path but escaped only
+its dots and slashes. The other, on the copy lint stripping a string's
+tags to read its words, was dismissed, because that text never reaches
+HTML.
+
+## Phase 14 — 0.8.3, an upgrade stays green (released 2026-10-23)
+
+0.8.2's gate found that an existing site could follow
+`docs/migrating-to-0.8.2.md` and still end with a red build. The rule
+became: an upgrade never breaks a site's build. What the site already
+holds is recorded with its reason and can only shrink, new code meets the
+full rules, and no rule is loosened to get there. The six findings were
+fixed in one pull request (#142), which the owner gated at its head
+(ad59bc5) before the release.
+
+**What changed:**
+- **The composition rules joined the baseline.** `check-site --baseline`
+  writes their findings in sections and patterns too, and an ESLint
+  processor on each listed file holds them, since those rules read no
+  setting.
+- **An empty `"baseline": []`** the merge base lacks is a first run.
+- **The copy rule judges a value by its shape:** class strings, camelCase
+  names, the play-once layer's presets and a class map's fields hold no
+  words.
+- **`check-site`'s `ci` pass** warns on a lint workflow whose branch
+  filter leaves out a branch the site's pull requests go into.
+- **The agent files' required check** reads a block's words in any case,
+  under the site's own list marker and among its own words.
+- **The guide** pins `#v0.8.3`, and pack-smoke upgrades a site on each of
+  its paths to a green lint and build.
+
+**The release.** #143; `v0.8.3` is on main's merge commit, 1af1a18.
+
 ## Verification recipe
 
 ```bash
