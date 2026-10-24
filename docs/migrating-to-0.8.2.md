@@ -45,16 +45,18 @@ only shrinks.
 ## 1. Upgrade, and the baseline (required)
 
 ```bash
-# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.3"
+# package.json: "agentic-cms": "github:HKamkar/agentic-cms#v0.8.4"
 pnpm install
 pnpm exec agentic-cms init . --agent-files --check   # what will change, writes nothing
 pnpm exec agentic-cms init . --agent-files           # the rules, the skills, the rules table
 ```
 
-**Pin.** Pin `#v0.8.3`, the first release this guide builds green on
-either of its paths: 0.8.2's baseline left out the composition rules, so
-a site that takes § 3.7 inside § 1 failed its lint there
-([upgrading.md § 0.8.2 → 0.8.3](upgrading.md#082--083)). A site that
+**Pin.** Pin `#v0.8.4`. 0.8.3 is the first release this guide builds
+green on either of its paths: 0.8.2's baseline left out the composition
+rules, so a site that takes § 3.7 inside § 1 failed its lint there
+([upgrading.md § 0.8.2 → 0.8.3](upgrading.md#082--083)). 0.8.4 lets
+`--baseline` run again on this pull request, each reason kept
+([upgrading.md § 0.8.3 → 0.8.4](upgrading.md#083--084)). A site that
 runs this guide as a release's gate pins the release commit instead,
 `github:HKamkar/agentic-cms#<sha>`, and moves to the tag once it exists.
 
@@ -154,11 +156,13 @@ pnpm exec agentic-cms check-site --baseline
 ```
 
 It lints the site as `pnpm lint` does, with no baseline. It writes what
-the site holds into the guard's config as `baseline`. The first time, the
-whole list: the config has none, or an empty `"baseline": []` the merge
-base does not have (a config copied from the package for § 3.7 brings
-one). A list the base has, even an empty one, is never written again from
-scratch: it only shrinks.
+the site holds into the guard's config as `baseline`: the whole list,
+while the merge base has none. The config may have no list yet, an empty
+`"baseline": []` (a config copied from the package for § 3.7 brings one),
+or the one an earlier run on this branch wrote. Until this pull request
+merges, each run writes the list again from what the site holds, and each
+entry keeps its reason. A list the base has, even an empty one, is never
+written again from scratch: it only shrinks.
 
 ```json
 "baseline": [
@@ -189,12 +193,14 @@ each one with its fix. The usual ones:
   after `--`;
 - an `ignores` glob added without its `$ignores` reason.
 
-Fix them and run it again. Running it again changes nothing that is
-already written.
+Fix them and run it again. A second run keeps every reason already
+written, and changes only what the site's findings changed: an entry
+comes, rises, falls or goes with them, each named in the report.
 
 **The baseline from here on.** It only shrinks.
 - **This pull request** is the one that adds the list: `check-site`
-  lists each entry as added since the merge base.
+  lists each entry as added since the merge base, and each `--baseline`
+  writes it again from what the site holds.
 - **Later pull requests** can't add an entry or raise a count: the site
   check fails either against the merge base.
 - **In a baselined file**, an engine or a composition rule stays quiet
@@ -455,7 +461,7 @@ work.
 | `N of this rule here, and the baseline … holds M` | A new finding in a baselined file: move it onto its engine (§ 2). The baseline never takes a new one |
 | `The baseline … holds M of this rule here and N are left` | A bypass was fixed: `check-site --baseline` shrinks the entry, in the same pull request |
 | `added to the baseline (…) since <base>: the baseline only shrinks` | An entry was added or raised after the pull request that took 0.8.2: take it back out and move the finding onto its engine |
-| `--baseline` refuses an entry | Same: the list only shrinks. It wrote the rest |
+| `--baseline` refuses an entry | After the pull request that took 0.8.2, the same: the list only shrinks. It wrote the rest. On that pull request itself, the base it compared already has a list, or there is no base: the report says which, and `--base <branch>` names the branch the pull request goes into |
 | A production build fails on `placeholder` | An address on a domain reserved for examples (`.example`, `.test`, …), or a `(placeholder)` string: write the site's own. A build that deploys nothing may run with `AGENTIC_CMS_PLACEHOLDERS=warn`; one that deploys, on its pull-request runs alone (§ 1) |
 | `init --agent-files --diff <file> \| git apply` answers `patch does not apply` | The site reworded lines the kit's change touches: merge the hunks by hand, keeping each required block's words, then `--accept <file>` ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)) |
 | The proof differs after § 1 | A kit bug: open an issue with the compare's `cause:` line; don't adjust the site |

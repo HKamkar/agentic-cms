@@ -545,10 +545,10 @@ its own:
   meets every rule. An entry that does not read is a finding, one with no
   reason a warning, and the guard's `preset` fails a file whose count
   ESLint is not told (a later block that set another processor on it among
-  them). `--baseline` writes the whole list the first time — the config has
-  none, or an empty one the merge base has none of — each reason empty, for
-  the owner, and from then on only shrinks it: an entry gone or lowered,
-  growth refused. A site from `init` 0.8.2 starts with `"baseline": []`
+  them). `--baseline` writes the whole list while the merge base has none
+  — each reason empty for the owner, and kept when it runs again on the
+  same pull request — and from then on only shrinks it: an entry gone or
+  lowered, growth refused. A site from `init` 0.8.2 starts with `"baseline": []`
   committed, and takes nothing ([migrating-to-0.8.2.md](migrating-to-0.8.2.md)).
 
 Each finding names its file, the pass and the fix; exit 1 on any, the

@@ -337,7 +337,7 @@ test("--baseline: the first time the whole list, the config's other bytes kept; 
   assert.deepEqual(JSON.parse(files[CONFIG_FILE]).baseline, shrunk.baseline, "written, shrunk, and nothing new in it");
   const said = formatBaselineReport(shrunk).join("\n");
   assert.match(said, /− src\/app\/promo-demo {2}rounds: none left, the entry is gone\n {2}↓ src\/components\/ui\/Footer\.tsx {2}agentic-cms\/email: 2 → 1/);
-  assert.match(said, /refused 1 entry: the baseline only shrinks, and takes nothing new\n\n {2}✗ src\/components\/ui\/Nav\.tsx {2}agentic-cms\/copy: 1 here, and the baseline holds 0 \(no entry\)/);
+  assert.match(said, /refused 1 entry: the baseline only shrinks, and takes nothing new\nsrc\/config\/components\.json's baseline takes new entries only while the merge base has no list, and there is no base here to compare \(not a git checkout\): --base <ref> names the branch the pull request goes into\n\n {2}✗ src\/components\/ui\/Nav\.tsx {2}agentic-cms\/copy: 1 here, and the baseline holds 0 \(no entry\)/);
   const same = await baselineSite({ root: "/site", fs: memfs(files), git: fakeGit({ repo: false }), components: PASS, lint: linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"]) });
   assert.equal(same.written, false);
   assert.match(formatBaselineReport(same)[0], /src\/config\/components\.json unchanged — 3 entries, 3 findings/);
@@ -360,8 +360,30 @@ test("--baseline: an empty list is the first run when the merge base has none, a
   assert.equal(fresh[CONFIG_FILE], config, "and nothing is written");
   const nowhere = await baselineSite({ root: "/site", fs: memfs({ ...ADOPTED, [CONFIG_FILE]: config }), git: fakeGit({ repo: false }), components: PASS, lint: found });
   assert.equal(nowhere.first, false);
-  assert.match(formatBaselineReport(nowhere).join("\n"), /refused 3 entries: the baseline only shrinks, and takes nothing new\nsrc\/config\/components\.json's baseline is an empty list, the first one only when the merge base has none, and there is no base here to compare \(not a git checkout\): --base <ref> names the branch/);
-  assert.deepEqual(firstBaseline({ baseline: [{ file: "a.tsx", rule: "agentic-cms/copy", count: 1 }] }, { found: { commit: "b" }, before: null }), { first: false, note: null }, "a list with entries is never a first one");
+  assert.match(formatBaselineReport(nowhere).join("\n"), /refused 3 entries: the baseline only shrinks, and takes nothing new\nsrc\/config\/components\.json's baseline takes new entries only while the merge base has no list, and there is no base here to compare \(not a git checkout\): --base <ref> names the branch/);
+  const list = { baseline: [{ file: "a.tsx", rule: "agentic-cms/copy", count: 1 }] };
+  assert.deepEqual(firstBaseline(list, { found: { commit: "b" }, before: null }), { first: true, note: null }, "a list with entries the base has none of is still the pull request's first");
+  assert.deepEqual(firstBaseline(list, { found: { commit: "b" }, before: { baseline: [] } }), { first: false, note: null }, "once the base has a list, even an empty one, it only shrinks");
+});
+
+test("--baseline again on the pull request that adds the list: what the site holds now, each reason kept, until the list merges; then it only shrinks", async () => {
+  const files = { ...ADOPTED, "src/components/ui/Footer.tsx": "export function Footer() { return null; }\n", [CONFIG_FILE]: withList([held("content/blog/pages-are-files.md", "example-content", 1, "the launch post, until its successor is written"), held("src/app/layout.tsx", "agentic-cms/head", 1, "the layout, until kit.seo writes its head"), held("src/app/promo-demo", "rounds", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 1, "the footer, until the address moves to the e-mail engine")]) };
+  const noList = fakeGit({ files: { [CONFIG_FILE]: '{ "motion": null }' } });
+  delete files["src/app/promo-demo/page.tsx"];
+  const found = linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Footer.tsx:44", "agentic-cms/email"], ["src/components/home/Hero.tsx:8", "react/forbid-elements"]);
+  const again = await baselineSite({ root: "/site", fs: memfs(files), git: noList, components: PASS, lint: found });
+  assert.deepEqual([again.first, again.rerun, again.refused], [true, true, []], "the merge base has no list: nothing refused");
+  assert.deepEqual(JSON.parse(files[CONFIG_FILE]).baseline, [held("content/blog/pages-are-files.md", "example-content", 1, "the launch post, until its successor is written"), held("src/app/layout.tsx", "agentic-cms/head", 1, "the layout, until kit.seo writes its head"), held("src/components/home/Hero.tsx", "react/forbid-elements", 1), held("src/components/ui/Footer.tsx", "agentic-cms/email", 2, "the footer, until the address moves to the e-mail engine")]);
+  const said = formatBaselineReport(again).join("\n");
+  assert.match(said, /^check-site --baseline: wrote src\/config\/components\.json again from what the site holds — 4 entries, 5 findings: the merge base has no list, so this pull request's follows the site until it merges, and from then on only shrinks\n/);
+  assert.match(said, /\n {2}\+ src\/components\/home\/Hero\.tsx {2}react\/forbid-elements ×1\n {4}src\/components\/home\/Hero\.tsx:8 {2}No forbid-elements of the site's own\n {2}↑ src\/components\/ui\/Footer\.tsx {2}agentic-cms\/email: 1 → 2\n {4}src\/components\/ui\/Footer\.tsx:40 {2}No email of the site's own\n {4}src\/components\/ui\/Footer\.tsx:44 {2}No email of the site's own\n {2}− src\/app\/promo-demo {2}rounds: none left, the entry is gone\n3 entries kept their reason; 1 entry says none yet, for the owner to fill: why it is still here\.$/m);
+  assert.doesNotMatch(said, /refused/);
+  const same = await baselineSite({ root: "/site", fs: memfs(files), git: noList, components: PASS, lint: found });
+  assert.equal(same.written, false);
+  assert.deepEqual(formatBaselineReport(same).slice(0, 1), ["check-site --baseline: src/config/components.json unchanged — 4 entries, 5 findings"], "a second run changes nothing");
+  const merged = fakeGit({ files: { [CONFIG_FILE]: files[CONFIG_FILE] } });
+  const grown = await baselineSite({ root: "/site", fs: memfs(files), git: merged, components: PASS, lint: linted(["src/app/layout.tsx:12", "agentic-cms/head"], ["src/components/ui/Footer.tsx:40", "agentic-cms/email"], ["src/components/ui/Footer.tsx:44", "agentic-cms/email"], ["src/components/home/Hero.tsx:8", "react/forbid-elements"], ["src/components/ui/Nav.tsx:3", "agentic-cms/copy"]) });
+  assert.deepEqual([grown.first, grown.refused.map((e) => `${e.file} ${e.rule}`)], [false, ["src/components/ui/Nav.tsx agentic-cms/copy"]], "the list merged: nothing new goes in");
 });
 
 test("--baseline takes none of the gates' and the config's findings: they stay, named, until fixed", async () => {
