@@ -480,6 +480,28 @@ fixed in one pull request (#142), which the owner gated at its head
 
 **The release.** #143; `v0.8.3` is on main's merge commit, 1af1a18.
 
+## Phase 15 — 0.8.4, a baseline re-run keeps its reasons (released 2026-10-24)
+
+0.8.3's guide has a site run `check-site --baseline` on the pull request
+that takes the rules. A second run on that pull request refused every new
+entry, because the list was already there, though the merge base had
+none. The only way round it was to write the list again from empty and
+put the reasons back by hand. The fix was one pull request (#144).
+
+**What changed:**
+- **A run is first while the merge base has no list.** The writer and the
+  check ask the same question, so each run on the pull request that adds
+  the list writes it again from what the site holds, and each entry keeps
+  its reason by file and rule.
+- **A re-run's report** names what was added, raised, shrunk and removed,
+  and how many entries still have no reason for the owner to fill.
+- **With no base to compare,** nothing new goes in, and the note names
+  `--base <ref>`.
+- **After the merge** the list only shrinks, as before.
+- **The guide** pins `#v0.8.4` (`docs/upgrading.md` § 0.8.3 → 0.8.4).
+
+**The release.** #145; `v0.8.4` is on main's merge commit, d305b5b.
+
 ## Verification recipe
 
 ```bash
