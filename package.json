@@ -1,6 +1,6 @@
 {
   "name": "agentic-cms",
-  "version": "0.8.4",
+  "version": "0.9.0-rc.0",
   "description": "A CMS with no database: content as files in a Next.js repo, edited by an AI agent, checked by the build, served static",
   "keywords": [
     "cms",
