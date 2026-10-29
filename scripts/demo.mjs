@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // The design round's throwaway route: `new` scaffolds src/app/<name>-demo
+// (in a site in several languages, under the default language's route group)
 // with a candidate per letter (copies of the section's — or the chrome
 // piece's — component to edit into ideas), the page's real copy read from
 // its file (a section) or no props at all (the chrome), and the current
@@ -53,7 +54,7 @@ if (subcommand === "new") {
   const found = positionals[0] ? [positionals[0]] : listDemos(root);
   const names = positionals[0] ? found : found.filter((name) => isKitDemo(root, name));
   const dryRun = flags["dry-run"];
-  const removed = [], kept = found.filter((name) => !names.includes(name)).map((name) => `${demoDir(name)} (not a route demo new wrote: demo clean ${name} removes it)`);
+  const removed = [], kept = found.filter((name) => !names.includes(name)).map((name) => `${demoDir(name, root)} (not a route demo new wrote: demo clean ${name} removes it)`);
   for (const name of names) {
     // what the round added since it began: committed since its base, or not tracked yet
     const base = demoManifest(root, name)?.base;
@@ -62,7 +63,7 @@ if (subcommand === "new") {
     removed.push(...r.removed); kept.push(...r.kept);
   }
   if (flags.json) console.log(JSON.stringify({ removed, kept, ...(dryRun ? { dryRun } : {}) }, null, 1));
-  else console.log(`${removed.length ? `${dryRun ? "would remove" : "removed"}: ${removed.join(", ")}` : `nothing to remove${positionals[0] ? `: no src/app/${positionals[0]}-demo` : ""}`}${kept.length ? `\nkept: ${kept.join("; ")}` : ""}`);
+  else console.log(`${removed.length ? `${dryRun ? "would remove" : "removed"}: ${removed.join(", ")}` : `nothing to remove${positionals[0] ? `: no ${demoDir(positionals[0], root)}` : ""}`}${kept.length ? `\nkept: ${kept.join("; ")}` : ""}`);
 }
 
 /** What the round would design around that is not the site's copy, said before the round is written; nothing for a page of real copy. */

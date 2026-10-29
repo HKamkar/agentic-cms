@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { defaultRoot } from "./app-root.mjs";
 import { copyNotes, isKit } from "./placeholders.mjs";
 
 export const REGISTRY = "src/components/sections/render.tsx";
@@ -23,8 +24,9 @@ export const STALE_TYPES = ".next/dev/types/validator.ts";
 export const MANIFEST = "demo.json";
 export const LETTERS = "ABCDEFGH";
 export const isDemoName = (name) => /^[a-z0-9][a-z0-9-]*$/.test(name);
-export const demoDir = (name) => `src/app/${name}-demo`;
-export const demoFile = (name) => `${demoDir(name)}/page.tsx`;
+/** A round's route folder, under the folder that holds the default language's root layout (./app-root.mjs): src/app, or its route group in a site in several languages. */
+export const demoDir = (name, root = ".") => `${defaultRoot(root)}/${name}-demo`;
+export const demoFile = (name, root = ".") => `${demoDir(name, root)}/page.tsx`;
 const rel = (root, file) => path.relative(root, file).split(path.sep).join("/");
 
 /** The registry: section type → { name (the export), alias, file (site-relative .tsx), data (an entry but plain(): the page reads more for it — a collection, a link) }. */
@@ -258,7 +260,7 @@ const writeManifest = (route, manifest) => fs.writeFileSync(path.join(path.dirna
 export function writeDemo(root, options) {
   const { name, type, page, count, components = [], showcase = false } = options;
   if (!isDemoName(name)) throw new Error(`${name}: a demo's name is lowercase letters, digits and hyphens`);
-  if (fs.existsSync(path.join(root, demoFile(name)))) throw new Error(`${demoFile(name)} exists; edit it, or remove it with demo clean ${name}`);
+  if (fs.existsSync(path.join(root, demoFile(name, root)))) throw new Error(`${demoFile(name, root)} exists; edit it, or remove it with demo clean ${name}`);
   if (!showcase) {
     if (components.length > 1) throw new Error("--component names one file, the component the candidates are copied from; several are the pieces of a --showcase");
     return writeCandidates(root, { ...options, component: components[0], count: count ?? 2 });
@@ -273,7 +275,7 @@ export function writeDemo(root, options) {
 function writeCandidates(root, { name, type, page, count, component: override, timeline = false, base = null, untracked = [] }) {
   if (!type && !override) throw new Error(`name what the candidates are for: --section <type> for a section (the route reads the page's copy), or --component <file> for a piece of the chrome (no page copy); --showcase for a review page of pieces`);
   if (!(count >= 1 && count <= LETTERS.length)) throw new Error(`--candidates is 1 to ${LETTERS.length}, not ${count}`);
-  const route = path.join(root, demoFile(name));
+  const route = path.join(root, demoFile(name, root));
   // A section's component comes from the registry unless --component names one; a chrome piece is the file alone.
   const entry = type ? readRegistry(root).get(type) : null;
   if (type && !entry && !override) { const known = [...readRegistry(root).keys()].join(", "); throw new Error(`${type}: no such section in ${REGISTRY} (${known}); pass --component <file> for one outside the registry`); }
@@ -289,7 +291,7 @@ function writeCandidates(root, { name, type, page, count, component: override, t
   fs.mkdirSync(path.dirname(route), { recursive: true });
   fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data), resolved: !override && resolvesData(root), timeline }));
   writeManifest(route, { demo: name, kind: "candidates", component: component.file, base, untracked, created: candidates.map((c) => c.file) });
-  return { route: demoFile(name), path: `/${name}-demo`, kind: "candidates", section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
+  return { route: demoFile(name, root), path: `/${name}-demo`, kind: "candidates", section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
 }
 
 /**
@@ -338,12 +340,12 @@ function showcasePieces(root, files) {
 /** A review page that is not a section's candidates: the route, a block per piece, and the manifest demo clean reads (the pieces are the site's, never removed). */
 function writeShowcase(root, { name, components = [], timeline = false, base = null, untracked = [] }) {
   const pieces = showcasePieces(root, components);
-  const route = path.join(root, demoFile(name));
+  const route = path.join(root, demoFile(name, root));
   fs.mkdirSync(path.dirname(route), { recursive: true });
   fs.writeFileSync(route, routeSource({ demo: name, showcase: true, components: pieces, timeline }));
   const files = pieces.map((p) => p.file);
   writeManifest(route, { demo: name, kind: "showcase", component: null, components: files, base, untracked, created: [] });
-  return { route: demoFile(name), path: `/${name}-demo`, kind: "showcase", section: null, page: null, component: null, components: files, candidates: [], data: false };
+  return { route: demoFile(name, root), path: `/${name}-demo`, kind: "showcase", section: null, page: null, component: null, components: files, candidates: [], data: false };
 }
 
 const SOURCES = /\.(tsx?|mjs|js)$/;
@@ -434,7 +436,7 @@ function roundPlan(root, inDemo, manifest, isNew) {
 
 const readManifest = (dir) => { try { return JSON.parse(fs.readFileSync(path.join(dir, MANIFEST), "utf8")); } catch { return null; } };
 /** A demo's manifest, or null (no demo, or one an older kit wrote). */
-export const demoManifest = (root, name) => readManifest(path.join(root, demoDir(name)));
+export const demoManifest = (root, name) => readManifest(path.join(root, demoDir(name, root)));
 
 /**
  * Removes one demo: its folder, what the round created that nothing else imports (its manifest says what it created and
@@ -443,28 +445,28 @@ export const demoManifest = (root, name) => readManifest(path.join(root, demoDir
  * removed. With dryRun nothing is removed and the lists are what would be. { removed, kept }
  */
 export function removeDemo(root, name, { newness = {}, dryRun = false } = {}) {
-  const dir = path.join(root, demoDir(name));
+  const dir = path.join(root, demoDir(name, root));
   if (!fs.existsSync(dir)) return { removed: [], kept: [] };
   const inDemo = new Set(walk(dir).map((f) => rel(root, f)));
   const manifest = readManifest(dir);
   const plan = manifest ? roundPlan(root, inDemo, manifest, roundNewness(manifest, newness)) : candidatePlan(root, dir, inDemo);
   const assets = `public/images/${name}-demo`;
-  const removed = [demoDir(name), ...plan.files, ...(fs.existsSync(path.join(root, assets)) ? [assets] : [])];
+  const removed = [demoDir(name, root), ...plan.files, ...(fs.existsSync(path.join(root, assets)) ? [assets] : [])];
   if (!dryRun) for (const file of removed) fs.rmSync(path.join(root, file), { recursive: true, force: true });
-  const stale = removeStaleTypes(root, demoDir(name), { dryRun });
+  const stale = removeStaleTypes(root, demoDir(name, root), { dryRun });
   return { removed: stale ? [...removed, stale] : removed, kept: plan.kept };
 }
 
 /** Whether a demo folder is one `demo new` wrote: its manifest, or — a demo from before the manifest — the header its route starts with. A site's own gallery in a *-demo folder is not. */
 export function isKitDemo(root, name) {
-  const dir = path.join(root, demoDir(name));
+  const dir = path.join(root, demoDir(name, root));
   if (fs.existsSync(path.join(dir, MANIFEST))) return true;
   const route = path.join(dir, "page.tsx");
   return fs.existsSync(route) && fs.readFileSync(route, "utf8").startsWith("// Throwaway demo route of the design round");
 }
 
-/** Every demo under src/app, by name. */
+/** Every demo under the default language's routes, by name. */
 export function listDemos(root) {
-  const app = path.join(root, "src/app");
+  const app = path.join(root, defaultRoot(root));
   return fs.existsSync(app) ? fs.readdirSync(app).filter((d) => d.endsWith("-demo") && fs.statSync(path.join(app, d)).isDirectory()).map((d) => d.slice(0, -5)).sort() : [];
 }

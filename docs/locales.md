@@ -105,6 +105,91 @@ reads it: its words and links in place of the default's) and
 `kit.content.in(tag)` and `kit.blog.in(tag)` read another one, with the
 same accessors.
 
+## The routes
+
+`<html lang>` is set where the document is: in a root layout. A site in
+one language has one, `src/app/layout.tsx`. A site in several has one per
+language, each prerendering its pages with its language's `lang`, so
+nothing is decided at request time: the default language's tree moves
+into a route group, which changes no URL, and each other language has a
+folder named its prefix.
+
+```text
+src/app/
+  (default)/layout.tsx              the default language's root layout
+  (default)/[[...slug]]/page.tsx    its pages
+  (default)/blog-post/[slug]/       its posts
+  (default)/not-found.tsx           what notFound() renders there
+  de/layout.tsx                     the German root layout: LOCALE = "de"
+  de/[[...slug]]/page.tsx           the German pages: LOCALE = "de"
+  global-not-found.tsx              the 404 of a path no page answers
+  globals.css, robots.ts, sitemap.ts, feed.xml/, api/, icon.png
+```
+
+A language's layout and catch-all are copies of the default's with
+`LOCALE` set to its tag: the layout renders `SiteLayout` with the
+language's config and words and takes `kit.seo.rootMetadata(LOCALE)`; the
+catch-all builds the language's pages (`kit.content.in(LOCALE)`), each at
+its path under the prefix, and renders their sections in the language. The
+placement guard (`check-site`) holds a language's copy of a route as the
+route itself, and a route group as the app folder; a language
+`site.locales` does not declare is no language to it.
+
+With no root layout at `src/app`, a path no page answers needs a document
+of its own: `src/app/global-not-found.tsx`, in the default language, which
+`next.config.ts` turns on with `experimental: { globalNotFound: true }`.
+A page that calls `notFound()` still renders its tree's `not-found.tsx`.
+
+<!-- locales: src/app/global-not-found.tsx -->
+```tsx
+// The 404 of a site in several languages (docs/locales.md): with a root
+// layout per language, none at src/app wraps a not-found page, so a path no
+// page answers gets this whole document, in the default language.
+// next.config.ts turns it on: experimental: { globalNotFound: true }.
+import type { Viewport } from "next";
+import { SiteLayout } from "@/components/ui/SiteLayout";
+import { copyFor, site } from "@/config/site";
+import { kit } from "@/kit";
+import NotFound from "./(default)/not-found";
+import "./globals.css";
+
+export const metadata = kit.seo.rootMetadata();
+
+export const viewport: Viewport = { colorScheme: "light dark" };
+
+export default function GlobalNotFound() {
+  return (
+    <SiteLayout site={kit.locales.site(site.locale)} words={copyFor(site.locale)}>
+      <NotFound />
+    </SiteLayout>
+  );
+}
+```
+
+A design round's route and the lab's go into the default language's route
+group (`demo new`, `lab route`), so they render inside the site's document
+at the same URL.
+
+## Adding a language
+
+1. Its entry in `site.locales` and its block in `copy`, both in
+   `src/config/site.ts` (above).
+2. Its pages, each the translation of a default page: `content/pages/<prefix>/<slug>.yaml`,
+   with its `seo` block in the language and its path under the prefix; its
+   voice block,
+   `content/VOICE.<prefix>.md`; the translation of each collection a page
+   of it reads (a FAQ set, the reviews, the use cases).
+3. A form's words are its definition's in `src/config/forms.ts`: a page in
+   the language names a definition written in it (`form: contact-de`).
+4. The first language added moves the default language's routes into
+   `src/app/(default)/` (its layout's stylesheet import becomes
+   `../globals.css`), adds `src/app/global-not-found.tsx` and
+   `experimental: { globalNotFound: true }` in `next.config.ts`; each
+   language then copies the layout and the catch-all into
+   `src/app/<prefix>/` with `LOCALE` its tag.
+5. `pnpm build`: the content lint, the build and the SEO audit hold every
+   step above.
+
 ## The voice and the lint
 
 Each language has its voice block, `content/VOICE.<prefix>.md`:

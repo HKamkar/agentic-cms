@@ -52,6 +52,8 @@ import { ALLOWABLE, checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, pre
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
 export const CONFIG_FILE = "src/config/components.json";
+/** The site's config, where its languages are (site.locales). */
+const SITE_CONFIG = "src/config/site.ts";
 /** The content engine's route folders: the app folder (the layout, the root metadata) and the catch-all that renders content/pages/<slug>.yaml. */
 export const ROUTES = ["src/app", "src/app/[[...slug]]"];
 /** The kit example's routes outside the content engine, each with the reason it stays there: what a site that names none has. */
@@ -64,7 +66,7 @@ export const EXCEPTIONS = {
 export const GUARD_DEFAULTS = { catalogue: "README.md", routes: ROUTES, exceptions: EXCEPTIONS, motionCss: "src/styles/motion.css", inherited: [] };
 const KEYS = new Set([...Object.keys(LINT_DEFAULTS), ...Object.keys(GUARD_DEFAULTS)]);
 /** The files Next.js reads in a route folder: the route's own files and its metadata, plus the root layout's stylesheet. */
-export const ROUTE_FILE = /^(?:(?:page|layout|template|loading|error|global-error|not-found|forbidden|unauthorized|default|route)\.(?:tsx|ts|jsx|js)|(?:sitemap|robots|manifest)\.(?:ts|js|xml|txt|json|webmanifest)|(?:icon|apple-icon|opengraph-image|twitter-image)\d*\.(?:ico|jpe?g|png|gif|svg|tsx|ts|jsx|js)|(?:opengraph-image|twitter-image)\d*\.alt\.txt|favicon\.ico|globals\.css)$/;
+export const ROUTE_FILE = /^(?:(?:page|layout|template|loading|error|global-error|global-not-found|not-found|forbidden|unauthorized|default|route)\.(?:tsx|ts|jsx|js)|(?:sitemap|robots|manifest)\.(?:ts|js|xml|txt|json|webmanifest)|(?:icon|apple-icon|opengraph-image|twitter-image)\d*\.(?:ico|jpe?g|png|gif|svg|tsx|ts|jsx|js)|(?:opengraph-image|twitter-image)\d*\.alt\.txt|favicon\.ico|globals\.css)$/;
 /** A design round's throwaway route folder (`demo new`), the lab's `lab-demo` among them. */
 export const DEMO_FOLDER = /^[a-z0-9][a-z0-9-]*-demo$/;
 export const LIBRARY_NOTE = "The library is src/components/README.md: look there first, extend a primitive that almost fits, and add one only when nothing does.";
@@ -128,9 +130,33 @@ function readTree(root, fs, g) {
 const finding = (check, file, problem, fix) => ({ check, file, problem, fix });
 const layerFolders = (g) => [["motion", g.motion], ["ui", g.ui], ["patterns", g.patterns], ...g.sections.map((folder) => ["sections", folder])].filter(([, folder]) => folder);
 
+/** The site's languages' URL prefixes, as src/config/site.ts writes them (`prefix: "de"` in site.locales, docs/locales.md). */
+export const languagePrefixes = (text = "") => [...text.matchAll(/^\s*prefix:\s*["'`]([a-z0-9-]+)["'`]/gm)].map((match) => match[1]);
+const GROUP = /^\(.+\)$/;
+
+/**
+ * The route folder a folder under the app folder stands for. A route group
+ * at the top — the default language's tree, `(default)`, in a site whose
+ * root layouts are each language's — changes no URL, and a language's
+ * prefix (`languages`) holds that language's copy of a route: both are
+ * transparent, so src/app/de/[[...slug]] is the catch-all and
+ * src/app/(default)/blog-post/[slug] the post template, held as theirs are.
+ */
+export function routeFolder(g, folder) {
+  if (!within(folder, g.app) || folder === g.app) return folder;
+  const [first, ...rest] = folder.slice(g.app.length + 1).split("/");
+  return GROUP.test(first) || (g.languages ?? []).includes(first) ? [g.app, ...rest].join("/") : folder;
+}
+
+/** The folder of a file under the app folder that would be a *-demo route: its first, or the first inside a route group. */
+const demoFolderOf = (g, file) => {
+  const [first, second] = file.slice(g.app.length + 1).split("/");
+  return GROUP.test(first) ? second : first;
+};
+
 /** The files a running design round created, with their module.css: from each *-demo folder's demo.json. */
 export function roundCandidates(g, tree) {
-  const manifests = tree.files.filter((file) => within(file, g.app) && path.posix.basename(file) === DEMO_MANIFEST && DEMO_FOLDER.test(file.slice(g.app.length + 1).split("/")[0]));
+  const manifests = tree.files.filter((file) => within(file, g.app) && path.posix.basename(file) === DEMO_MANIFEST && DEMO_FOLDER.test(demoFolderOf(g, file)));
   const created = manifests.flatMap((file) => { try { const list = JSON.parse(tree.read(file)).created; return Array.isArray(list) ? list.filter((f) => typeof f === "string") : []; } catch { return []; } });
   return new Set(created.flatMap((file) => [file, file.replace(/\.[jt]sx?$/, ".module.css")]));
 }
@@ -208,14 +234,18 @@ function checkExceptions(g) {
   ];
 }
 
-/** src/app holds route files only, in the content engine's route folders and the named exceptions'; a *-demo folder is a round's or the lab's. */
+/**
+ * src/app holds route files only, in the content engine's route folders and
+ * the named exceptions' — or a language's copy of one, or one in a route
+ * group (routeFolder()); a *-demo folder is a round's or the lab's.
+ */
 function checkRoutes(g, tree, exempt) {
   const known = new Set([...g.routes, ...Object.keys(g.exceptions)]);
-  const files = tree.files.filter((f) => within(f, g.app) && !exempt.has(f) && !DEMO_FOLDER.test(f.slice(g.app.length + 1).split("/")[0]));
-  const stray = files.filter((file) => !(known.has(path.posix.dirname(file)) && ROUTE_FILE.test(path.posix.basename(file))));
+  const files = tree.files.filter((f) => within(f, g.app) && !exempt.has(f) && !DEMO_FOLDER.test(demoFolderOf(g, f)));
+  const stray = files.filter((file) => !(known.has(routeFolder(g, path.posix.dirname(file))) && ROUTE_FILE.test(path.posix.basename(file))));
   const found = stray.map((file) => {
     const folder = path.posix.dirname(file);
-    if (known.has(folder)) return finding("routes", file, "not a route file (page, layout, route, not-found, the metadata files)", PAGE_FIX);
+    if (known.has(routeFolder(g, folder))) return finding("routes", file, "not a route file (page, layout, route, not-found, the metadata files)", PAGE_FIX);
     return finding("routes", file, `in ${folder}/, which is neither the content engine's route nor a named exception`, `${PAGE_FIX}; ${exceptionFix(folder)}, in its own pull request`);
   });
   return [...checkExceptions(g), ...found];
@@ -339,8 +369,9 @@ function layerCounts(g, tree) {
 
 /** The guard over a site: { config, layers, inherited, candidates, disables, allowed, findings, warnings }, the findings and the warnings each { check, file, problem, fix }, the disables those of a required rule with a reason, `allowed` the `allow` entries componentRules() takes. Throws GuardConfigError for a config it cannot read. */
 export function checkComponents({ root, fs, config = readConfig(root, fs) }) {
-  const g = resolveGuard(config);
-  const tree = readTree(root, fs, g);
+  const resolved = resolveGuard(config);
+  const tree = readTree(root, fs, resolved);
+  const g = { ...resolved, languages: languagePrefixes(tree.read(SITE_CONFIG) ?? "") };
   const candidates = roundCandidates(g, tree);
   const exempt = new Set([...g.inherited, ...candidates]);
   const findings = CHECKS.flatMap((check) => check(g, tree, exempt));

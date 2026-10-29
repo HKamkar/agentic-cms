@@ -97,6 +97,9 @@ test("rounds: a *-demo route demo new did not write fails, the lab's own passes,
   assert.equal(report.rounds, 3);
   const fake = await site({ ...CLEAN, "src/app/lab-demo/page.tsx": "// my own lab\n" });
   assert.deepEqual(checks(fake.findings), ["rounds src/app/lab-demo"], "a lab-demo route lab route did not write is a round made by hand");
+  const grouped = await site({ ...CLEAN, "src/app/(default)/hero-demo/page.tsx": "// Candidate route\n", "src/app/(default)/hero-demo/demo.json": "{}", "src/app/(default)/promo-demo/page.tsx": "x", "public/images/hero-demo/a.webp": "webp" });
+  assert.deepEqual(checks(grouped.findings), ["rounds src/app/(default)/promo-demo"], "a site in several languages: its rounds in the default language's route group");
+  assert.equal(grouped.rounds, 2);
 });
 
 test("the lab's header is the first line lab route writes", () => {

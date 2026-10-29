@@ -117,7 +117,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   alternates: { types: { "application/rss+xml": \`\${site.url}/feed.xml\` } },
 };`;
-export const KIT_HEAD = "export const metadata = kit.seo.rootMetadata();";
+export const KIT_HEAD = "export const metadata = kit.seo.rootMetadata(LOCALE);";
 
 /** Replaces `from` in a text that must hold it once, or throws naming the file: the fixture follows the starter's files. */
 const swap = (file, from, to) => (text) => {
@@ -134,7 +134,11 @@ export const LEGACY = {
     "src/components/ui/Notice.tsx": 'export function Notice() {\n  return (\n    <p className="font-label">\n      Free shipping on every order this month.\n    </p>\n  );\n}\n',
   },
   edit: {
-    "src/app/layout.tsx": (text) => swap("src/app/layout.tsx", KIT_HEAD, HAND_HEAD)(swap("src/app/layout.tsx", 'import type { Viewport } from "next";', 'import type { Metadata, Viewport } from "next";')(text)),
+    "src/app/layout.tsx": (text) => [
+      swap("src/app/layout.tsx", 'import type { Viewport } from "next";', 'import type { Metadata, Viewport } from "next";'),
+      swap("src/app/layout.tsx", 'import { copyFor } from "@/config/site";', 'import { copyFor, site } from "@/config/site";'),
+      swap("src/app/layout.tsx", KIT_HEAD, HAND_HEAD),
+    ].reduce((out, edit) => edit(out), text),
     "src/config/site.ts": swap("src/config/site.ts", "  guardEmail: true,\n", ""),
   },
   example: [

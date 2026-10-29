@@ -100,6 +100,21 @@ test("demo new on a registry that hands a round what it reads for a section (sec
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("demo new in a site in several languages: the round's route goes under the default language's route group, its URL the same; clean finds it there", () => {
+  const root = site();
+  try {
+    put(root, "src/app/(default)/layout.tsx", "export default function Layout() { return null; }\n");
+    put(root, "src/app/de/layout.tsx", "export default function Layout() { return null; }\n");
+    const r = run(root, ["new", "hero-card", "--section", "home-hero", "--json"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual([JSON.parse(r.stdout).route, JSON.parse(r.stdout).path], ["src/app/(default)/hero-card-demo/page.tsx", "/hero-card-demo"]);
+    assert.ok(fs.existsSync(path.join(root, "src/app/(default)/hero-card-demo/demo.json")));
+    const clean = run(root, ["clean", "hero-card"]);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.ok(!fs.existsSync(path.join(root, "src/app/(default)/hero-card-demo")), "clean removes it from the group");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("demo new on a page that still holds the starter's placeholder copy, or the kit example's brand, says so first, naming the fields; then writes the round", () => {
   const root = site();
   try {

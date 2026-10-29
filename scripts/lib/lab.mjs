@@ -11,11 +11,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { LAB_COMMENT } from "agentic-cms/lab";
+import { defaultRoot } from "./app-root.mjs";
 
 export { LAB_COMMENT, LAB_DIR, ROUNDS_DIR, animates, followsTheme, isSceneName, listScenes, sceneDuration, sceneMeta } from "agentic-cms/lab";
 export const KINDS = ["icon", "mark", "loop"];
-export const ROUTE_DIR = "src/app/lab-demo";
-export const ROUTE_FILE = `${ROUTE_DIR}/page.tsx`;
+/** The lab's throwaway route, under the folder that holds the default language's root layout (./app-root.mjs). */
+export const routeDir = (root = ".") => `${defaultRoot(root)}/lab-demo`;
+export const routeFile = (root = ".") => `${routeDir(root)}/page.tsx`;
 export { STALE_TYPES, removeStaleTypes } from "./demo.mjs";
 
 /** The throwaway route, from the kit's template (templates/lab-demo/page.tsx). */
