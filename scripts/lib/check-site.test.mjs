@@ -300,6 +300,10 @@ test("retired: a URL the base's page or published post answered that nothing ans
   assert.match(formatSiteReport(report).join("\n"), /check-site: 2 warnings, which fail nothing[\s\S]*⚠ content\/pages\/about\.yaml {2}\[retired\]/);
   assert.deepEqual((await site({ ...now, "content/redirects.yaml": "- from: /team\n  to: /about-us\n- from: /about\n  to: /about-us\n- from: /news/gone\n  to: /blog\n" }, { git: fakeGit({ files: then }) })).warnings, [], "each with its redirect");
   assert.deepEqual((await site(now)).warnings, [], "no base: nothing compared");
+  const languages = { ...then, "content/pages/de/about.yaml": page("/de/about"), "content/blog/de/gone.md": post() };
+  const translated = await site({ ...now, "content/pages/de/about.yaml": page("/de/about-us") }, { git: fakeGit({ files: languages }) });
+  assert.deepEqual(checks(translated.warnings), ["retired content/pages/about.yaml", "retired content/blog/gone.md", "retired content/pages/de/about.yaml", "retired content/blog/de/gone.md"], "a language's pages and posts, under its prefix");
+  assert.match(translated.warnings[3].problem, /^gone since origin\/HEAD: \/de\/news\/gone answers 404 now/);
 });
 
 test("leftovers: the example's brand by line and its sample content, each a finding of its rule; none in the kit, whose example is the example", async () => {

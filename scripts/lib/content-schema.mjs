@@ -140,14 +140,17 @@ function yamlFiles(def, { fs, root }) {
 
 /**
  * The change a site needs for its editor to find each schema: every YAML
- * content file of a collection, and each template under content/_templates/
- * a collection has (TEMPLATES), that does not open with its schema's line,
- * as { file, text } with the line in. `fs` is injected (node:fs, or a test's).
+ * content file of a collection, of each of its translations into another
+ * language (`translated`, [{ def, original }] from ./translations.mjs,
+ * which names its original's schema), and each template under
+ * content/_templates/ a collection has (TEMPLATES), that does not open with
+ * its schema's line, as { file, text } with the line in. `fs` is injected
+ * (node:fs, or a test's).
  */
-export function schemaLineEdits(root, collections, { fs }) {
+export function schemaLineEdits(root, collections, { fs, translated = [] }) {
   const defs = Object.values(collections);
   const byName = new Map(defs.map((def) => [def.name, def]));
-  const wanted = defs.flatMap((def) => yamlFiles(def, { fs, root }).map((file) => [file, schemaFile(def)]));
+  const wanted = [...defs.map((def) => ({ def, original: def })), ...translated].flatMap(({ def, original }) => yamlFiles(def, { fs, root }).map((file) => [file, schemaFile(original)]));
   for (const [template, name] of Object.entries(TEMPLATES)) {
     const file = `content/_templates/${template}`;
     if (byName.has(name) && fs.existsSync(path.join(root, file))) wanted.push([file, schemaFile(byName.get(name))]);

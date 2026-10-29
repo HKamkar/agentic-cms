@@ -12,6 +12,7 @@ import { describe, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { postTree, withContent } from "../src/lib/content/test-helpers.ts";
 import { kit } from "../src/kit.ts";
+import { createLocales } from "../src/lib/locales.ts";
 import { format, lint as lintTree, readVoice } from "./lib/content-lint.mjs";
 import { scaffold } from "./lib/init.mjs";
 
@@ -351,6 +352,54 @@ describe("filesystem rules", () => {
     has(lines, "WARN content/blog/notes.txt stray-file: is not a .md/.mdx file; the loader ignores it");
     has(lines, "WARN content/blog/drafts stray-file: is a folder; the loader reads only files");
     has(lines, "WARN content/extra.yaml stray-file: is not a collection file; nothing reads it");
+    assert.equal(lines.filter((line) => line.includes("stray-file")).length, 3);
+  });
+});
+
+describe("a site in several languages", () => {
+  const GERMAN_SITE = { ...site, locales: [{ locale: "de", prefix: "de", ogLocale: "de_DE", tagline: "Was es tut.", description: "Notizen.", links: { home: "/de", blog: "/de/blog", contact: "/de#contact-form" }, nav: [], signIn: site.signIn, cta: site.cta, footer: site.footer }] };
+  const locales = createLocales(GERMAN_SITE);
+  const germanPage = (route, description = "Notizen zu privater KI unter eigener Kontrolle, für Gründer, die an regulierte Branchen verkaufen.") => CLEAN["pages/blog.yaml"].replace("path: /blog", `path: ${route}`).replace("Insights on private AI", "Einblicke in private KI").replace(/description: .*/, `description: ${description}`);
+  const GERMAN = { "VOICE.md": VOICE_MD(VOICE_YAML), "VOICE.de.md": VOICE_MD(VOICE_YAML.replace("match: robust", "match: robuste")), "pages/de/blog.yaml": germanPage("/de/blog") };
+  const german = (files = {}, options = {}) => run({ ...GERMAN, ...files }, { voice: null, site: GERMAN_SITE, locales, ...options });
+
+  test("a language's translations are linted with every rule, and a clean one yields nothing", () => {
+    assert.deepEqual(german(), []);
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Kurz.") }), "FAIL content/pages/de/blog.yaml seo-description: seo.description is 5 characters");
+    withContent({ ...CLEAN, ...GERMAN }, (root) => {
+      for (const rel of IMAGES) publicFile(root, rel);
+      assert.ok(lint({ root, now: NOW, site: GERMAN_SITE, locales }).collections.some((row) => row.name === "pages.de" && row.source === "content/pages/de" && row.entries === 1));
+    });
+  });
+
+  test("each language has its voice block, content/VOICE.<prefix>.md, and only its own", () => {
+    const withoutVoice = Object.fromEntries(Object.entries(GERMAN).filter(([file]) => file !== "VOICE.de.md"));
+    has(run(withoutVoice, { voice: null, site: GERMAN_SITE, locales }), "FAIL content/VOICE.de.md voice: does not exist: the voice rules of de, VOICE.md's block written for the language (docs/locales.md)");
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Eine robuste Lösung für private KI unter eigener Kontrolle, für Gründer in regulierten Branchen.") }), 'FAIL content/pages/de/blog.yaml voice-banned: seo.description "robuste" is banned');
+    lacks(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Ein robust gebautes System für private KI unter eigener Kontrolle, für Gründer in regulierten Branchen.") }), "voice-banned");
+  });
+
+  test("the alt-weak heuristic, which reads English, holds the default language alone", () => {
+    const weak = JSON.stringify({ "h-kamkar": { name: "H. Kamkar", image: "/images/authors/h-kamkar.webp", imageAlt: "Image of H. Kamkar" } });
+    lacks(german({ "authors.de.json": weak }), "alt-weak");
+    has(german({ "authors.json": weak }), "FAIL content/authors.json alt-weak");
+  });
+
+  test("a page file out of place fails, as the engine would", () => {
+    has(german({ "pages/de/blog.yaml": germanPage("/blog") }), 'FAIL content/pages/de/blog.yaml schema: seo.path "/blog" must be "/de/blog", the path of content/pages/blog.yaml under /de');
+    has(german({ "pages/de/team.yaml": germanPage("/de/team") }), "FAIL content/pages/de/team.yaml schema: translates no page: content/pages/team.yaml does not exist");
+  });
+
+  test("the redirects see every language's routes", () => {
+    has(german({ "redirects.yaml": "- from: /de/blog\n  to: /blog\n" }), 'FAIL content/redirects.yaml redirect-from: [0].from "/de/blog" is a live page\'s or post\'s (content/pages/de/blog.yaml)');
+    assert.deepEqual(german({ "redirects.yaml": "- from: /de/insights\n  to: /de/blog\n" }), []);
+  });
+
+  test("stray files: a language site.locales does not declare is named so; a declared one's folder and files are the loader's", () => {
+    const lines = german({ "pages/fr/blog.yaml": germanPage("/fr/blog"), "authors.fr.json": "{}", "VOICE.fr.md": "x", "authors.de.json": CLEAN["authors.json"] });
+    has(lines, "WARN content/pages/fr stray-file: is a folder; the loader reads only files, and a language's translations, in a folder named its prefix, are site.locales' (de)");
+    has(lines, "WARN content/authors.fr.json stray-file: is a translation into a language site.locales does not declare; nothing reads it (docs/locales.md)");
+    has(lines, "WARN content/VOICE.fr.md stray-file: is a translation into a language site.locales does not declare");
     assert.equal(lines.filter((line) => line.includes("stray-file")).length, 3);
   });
 });

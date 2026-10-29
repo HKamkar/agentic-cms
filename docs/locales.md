@@ -81,6 +81,27 @@ reads it: its words and links in place of the default's) and
 `kit.content.in(tag)` and `kit.blog.in(tag)` read another one, with the
 same accessors.
 
+## The voice and the lint
+
+Each language has its voice block, `content/VOICE.<prefix>.md`:
+`VOICE.md`'s prose and its fenced block written for the language — the
+banned words and patterns, the claim words and their subject, the model
+and cloud rules — in its words. `agentic-cms lint` fails a declared
+language without one and lints each translation with its language's block
+and every rule that is not a voice rule (the SEO lengths, the dates, the
+alt pairs, the pictures, a post's structure, the placeholders). The
+alt-weak heuristic reads English, so it holds the default language's
+files alone. The lint also holds the redirects against every language's
+pages and posts, fails a page file out of place as the engine does, and
+warns on a translation into a language `site.locales` does not declare
+(a folder or a file nothing reads).
+
+`agentic-cms check` reads each translation on disk and where each
+language's page files sit; `agentic-cms schema --lines` opens a translated
+YAML file with its collection's schema line (`../../_schemas/pages.json`
+from `content/pages/de/`); the site check's retired pass warns on a page
+or a post of any language whose URL went without a redirect.
+
 ## The head and the sitemap
 
 `kit.seo` finds a page's language from its path, so a route calls the

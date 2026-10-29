@@ -20,6 +20,10 @@
 // --production`, the first step of a site's `pnpm build`). The example's
 // brand in a file the site's baseline holds (lib/baseline.mjs: what a site
 // had when it took 0.8.2) passes while the file has no more than its count.
+// A site in several languages (`locales`, kit.locales; docs/locales.md) has
+// each language's translations linted with its own voice block,
+// content/VOICE.<prefix>.md, and every rule that is not a voice rule; the
+// alt-weak heuristic, which reads English, holds the default language alone.
 //
 // Loaded through scripts/lib/load-ts.mjs: the tests via `node --import`, the
 // CLI via a dynamic import after the hook (in the package's own checkout the
@@ -30,7 +34,9 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { ContentError, formatPath, readCollection, sourceOf } from "agentic-cms/content";
 import { baselineCounts } from "./baseline.mjs";
+import { checkPagePaths } from "agentic-cms/locales";
 import { exampleBrandIn, exampleBrandLeftovers, hasPlaceholder, isKit, NOT_CONTENT, onReservedDomain, placeholderLines, REPLACE } from "./placeholders.mjs";
+import { translations } from "./translations.mjs";
 
 export const LIMITS = {
   title: { warnMax: 60, failMax: 70 }, // = check-seo
@@ -206,72 +212,108 @@ const isProse = (key, value) => !SKIP_KEYS.has(key) && !IMAGE_KEYS.has(key) && !
 const isCalendarDay = (day) => new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 const words = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 
-/** `collections` is the site's registry (kit.collections), `site` its config (kit.site): the lint reads the site it is given, never a module of its own. `production`: placeholders FAIL. */
-export function lint({ root = process.cwd(), collections, site, voice, now = new Date(), production = false }) {
+/**
+ * `collections` is the site's registry (kit.collections), `site` its config
+ * (kit.site), `locales` its languages (kit.locales, left out for a site in
+ * one): the lint reads the site it is given, never a module of its own.
+ * `production`: placeholders FAIL.
+ */
+export function lint({ root = process.cwd(), collections, site, locales, voice, now = new Date(), production = false }) {
   if (!collections || !site) throw new Error("lint(): collections and site are required");
   const previous = process.cwd();
   process.chdir(root);
   try {
-    return lintTree({ root, collections, site, given: voice, now, marks: { level: production ? "FAIL" : "WARN", kit: isKit(root) } });
+    return lintTree({ root, collections, site, locales, given: voice, now, marks: { level: production ? "FAIL" : "WARN", kit: isKit(root) } });
   } finally {
     process.chdir(previous);
   }
 }
 
-function lintTree({ root, collections, site, given, now, marks }) {
+/** The voice block of `file` compiled, or null with its problems added as FAILs; `given` (a test's) in place of the file. */
+function voiceMatchers(root, file, given, add, missing) {
+  if (given) return compile(voiceSchema.parse(given));
+  const read = readVoice(path.join(root, file));
+  if (read.voice) return compile(read.voice);
+  for (const { path: p, problem } of read.problems) add("FAIL", file, "voice", p, missing && /does not exist/.test(problem) ? missing : problem);
+  return null;
+}
+
+function lintTree({ root, collections, site, locales, given, now, marks }) {
   const findings = [];
   const rows = [];
   const add = (level, file, rule, path, problem) => findings.push({ level, file, rule, path, problem });
-  let matchers = null;
-  if (given) matchers = compile(voiceSchema.parse(given));
-  else {
-    const read = readVoice(path.join(root, VOICE_FILE));
-    if (read.voice) matchers = compile(read.voice);
-    else for (const { path: p, problem } of read.problems) add("FAIL", VOICE_FILE, "voice", p, problem);
+  // posts and pages: { entry, route } — every language's, for the redirects
+  const tree = { root, now, marks, site, images: [], posts: [], pages: [], redirects: [], retired: retiredSlugs(root), findings, rows, add };
+  const matchers = voiceMatchers(root, VOICE_FILE, given, add);
+  for (const [key, def] of Object.entries(collections)) lintCollection(def, def.name, tree, { matchers, locale: null, key });
+  const languages = translations({ collections, locales, root });
+  for (const locale of (locales?.all ?? []).filter((candidate) => !candidate.isDefault)) {
+    const file = `content/VOICE.${locale.prefix}.md`;
+    const voice = voiceMatchers(root, file, given, add, `does not exist: the voice rules of ${locale.locale}, VOICE.md's block written for the language (docs/locales.md)`);
+    for (const { key, original, def } of languages.filter((translation) => translation.locale === locale)) lintCollection(def, original.name, tree, { matchers: voice, locale, key });
   }
-  const images = []; // every site-absolute image reference: { file, path, value }
-  const posts = [];
-  const pages = [];
-  const redirects = [];
-  const retired = retiredSlugs(root);
-  for (const def of Object.values(collections)) {
-    let entries;
-    try {
-      entries = readCollection(def);
-    } catch (error) {
-      if (!(error instanceof ContentError)) throw error;
-      for (const issue of error.issues) add("FAIL", error.file, "schema", issue.path, issue.problem);
-      rows.push({ name: def.name, source: sourceOf(def), entries: 0 });
-      continue;
-    }
-    rows.push({ name: def.name, source: sourceOf(def), entries: entries.length });
-    for (const entry of entries) {
-      const base = def.kind === "list" ? [Number(entry.slug)] : def.kind === "map" ? [entry.slug] : [];
-      const ctx = { file: entry.file, collection: def.name };
-      for (const leaf of leaves(entry.data, base)) {
-        const p = formatPath(leaf.segments);
-        findings.push(...placeholderRules(marks, { file: entry.file, path: p, value: leaf.value }));
-        if (def.name === "redirects") continue; // paths, not prose or pictures: redirectRules() reads them
-        if (IMAGE_KEYS.has(leaf.key) || leaf.value.startsWith("/images/")) images.push({ file: entry.file, path: p, value: leaf.value });
-        else if (matchers && isProse(leaf.key, leaf.value)) findings.push(...textRules(matchers, { ...ctx, path: p, key: leaf.key }, leaf.value));
-      }
-      if (def.name === "posts") {
-        posts.push(entry);
-        findings.push(...postRules(root, entry, now, matchers, images, retired, titleSuffix(site), marks));
-      }
-      if (def.name === "pages") { pages.push(entry); findings.push(...pageRules(entry, now)); }
-      if (def.name === "redirects") redirects.push(entry);
-      if (def.name === "authors" || def.name === "reviews") findings.push(...altRules(entry, base));
-    }
-  }
+  if (locales && locales.all.length > 1) findings.push(...pagePathRules(locales, tree.pages));
+  const { images, posts, pages, redirects } = tree;
   findings.push(...imageRules(root, images));
-  findings.push(...orphanRules(root, posts, images));
-  findings.push(...redirectRules(redirects, { pages, posts, site }));
-  findings.push(...strayRules(root, collections));
+  findings.push(...orphanRules(root, posts.map(({ entry }) => entry), images));
+  findings.push(...redirectRules(redirects, { pages, posts }));
+  findings.push(...strayRules(root, collections, locales));
   findings.push(...workshopRules(root));
   findings.push(...configPlaceholders(root, marks));
   if (!marks.kit) findings.push(...brandRules(root, site));
   return { findings, collections: rows };
+}
+
+/**
+ * One collection of one language: read as a build reads it (an engine error
+ * is its FAILs), then every rule on each entry. `name` is the collection's
+ * own (its translation's is `posts.de`), `locale` null for the default
+ * language.
+ */
+function lintCollection(def, name, tree, { matchers, locale }) {
+  const { root, now, marks, site, findings, rows, add } = tree;
+  let entries;
+  try {
+    entries = readCollection(def);
+  } catch (error) {
+    if (!(error instanceof ContentError)) throw error;
+    for (const issue of error.issues) add("FAIL", error.file, "schema", issue.path, issue.problem);
+    rows.push({ name: def.name, source: sourceOf(def), entries: 0 });
+    return;
+  }
+  rows.push({ name: def.name, source: sourceOf(def), entries: entries.length });
+  for (const entry of entries) {
+    const base = def.kind === "list" ? [Number(entry.slug)] : def.kind === "map" ? [entry.slug] : [];
+    const ctx = { file: entry.file, collection: name };
+    for (const leaf of leaves(entry.data, base)) {
+      const p = formatPath(leaf.segments);
+      findings.push(...placeholderRules(marks, { file: entry.file, path: p, value: leaf.value }));
+      if (name === "redirects") continue; // paths, not prose or pictures: redirectRules() reads them
+      if (IMAGE_KEYS.has(leaf.key) || leaf.value.startsWith("/images/")) tree.images.push({ file: entry.file, path: p, value: leaf.value });
+      else if (matchers && isProse(leaf.key, leaf.value)) findings.push(...textRules(matchers, { ...ctx, path: p, key: leaf.key }, leaf.value));
+    }
+    if (name === "posts") {
+      tree.posts.push({ entry, route: `${locale ? `/${locale.prefix}` : ""}${site.postPrefix}/${entry.slug}`, locale });
+      findings.push(...postRules(root, entry, now, matchers, tree.images, tree.retired, titleSuffix(site), marks, !locale));
+    }
+    if (name === "pages") { tree.pages.push({ entry, route: entry.data.seo.path, locale }); findings.push(...pageRules(entry, now)); }
+    if (name === "redirects") tree.redirects.push(entry);
+    if (name === "authors" || name === "reviews") findings.push(...altRules(entry, base, !locale));
+  }
+}
+
+/** Every page file where the engine wants it (checkPagePaths): no default page under a prefix, a translation at its page's path under its own. */
+function pagePathRules(locales, pages) {
+  const defaults = pages.filter(({ locale }) => !locale).map(({ entry }) => entry);
+  return locales.all.flatMap((language) => {
+    try {
+      checkPagePaths(locales, language.locale, pages.filter(({ locale }) => (locale?.locale ?? locales.default.locale) === language.locale).map(({ entry }) => entry), () => defaults);
+      return [];
+    } catch (error) {
+      if (!(error instanceof ContentError)) throw error;
+      return error.issues.map((issue) => ({ level: "FAIL", file: error.file, rule: "schema", path: issue.path, problem: issue.problem }));
+    }
+  });
 }
 
 /** The starter's marker in a string, or a stand-in address on a reserved domain (outside the kit, whose example is on one by design). */
@@ -341,14 +383,15 @@ const dayRules = (file, path, day, now) => {
   return [];
 };
 
-function altRules(entry, base) {
+/** `weak`: the alt-weak heuristic, which reads English, runs (the default language's files). */
+function altRules(entry, base, weak = true) {
   const out = [];
   const data = entry.data;
   for (const [key, altKey] of Object.entries(ALT_OF)) {
     if (!(key in data)) continue;
     const p = (name) => formatPath([...base, name]);
     if (data[key] && !data[altKey] && key !== "photo") out.push({ level: "FAIL", file: entry.file, rule: "alt-pair", path: p(altKey), problem: `is missing while ${key} is set; say what the picture shows, in a sentence` });
-    if (data[altKey] && WEAK_ALT.test(data[altKey])) out.push({ level: "FAIL", file: entry.file, rule: "alt-weak", path: p(altKey), problem: `${q(data[altKey])} names the slot, not the picture` });
+    if (weak && data[altKey] && WEAK_ALT.test(data[altKey])) out.push({ level: "FAIL", file: entry.file, rule: "alt-weak", path: p(altKey), problem: `${q(data[altKey])} names the slot, not the picture` });
   }
   return out;
 }
@@ -361,10 +404,10 @@ function retiredSlugs(root) {
   return new Set(rows.filter((cells) => cells.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(cells[1]) && cells[3] === "retired").map((cells) => cells[2]));
 }
 
-function postRules(root, entry, now, matchers, images, retired, suffix, marks) {
+function postRules(root, entry, now, matchers, images, retired, suffix, marks, weak) {
   const { file, data } = entry;
   const out = [];
-  out.push(...altRules(entry, []));
+  out.push(...altRules(entry, [], weak));
   if (!data.keywords) out.push({ level: "FAIL", file, rule: "keywords-count", path: "keywords", problem: `is missing; ${LIMITS.keywords.min}–${LIMITS.keywords.max} keywords` });
   else if (data.keywords.length < LIMITS.keywords.min || data.keywords.length > LIMITS.keywords.max) out.push({ level: "FAIL", file, rule: "keywords-count", path: "keywords", problem: `has ${data.keywords.length} entries; ${LIMITS.keywords.min}–${LIMITS.keywords.max}` });
   if (data.seoTitle) out.push(lengthRule(file, "seoTitle", data.seoTitle, LIMITS.title));
@@ -393,8 +436,8 @@ function pageRules(entry, now) {
   return [lengthRule(file, "seo.title", data.seo.title, LIMITS.title), descriptionRule(file, "seo.description", data.seo.description), ...dayRules(file, "seo.updated", data.seo.updated, now)].filter(Boolean);
 }
 
-/** The routes a reader gets today: every page's path and every published post's URL (a draft's answers 404 in production), each with its file. */
-const liveRoutes = ({ pages, posts, site }) => new Map([...pages.map((page) => [page.data.seo.path, page.file]), ...posts.filter((post) => !post.data.draft).map((post) => [`${site.postPrefix}/${post.slug}`, post.file])]);
+/** The routes a reader gets today, in every language: every page's path and every published post's URL (a draft's answers 404 in production), each with its file. */
+const liveRoutes = ({ pages, posts }) => new Map([...pages.map(({ entry, route }) => [route, entry.file]), ...posts.filter(({ entry }) => !entry.data.draft).map(({ entry, route }) => [route, entry.file])]);
 
 /** Where a redirect's `to` ends up once the entries it lands on are followed: { route, via } — `via` the entries passed, `loop` when it comes back. */
 function follow(start, byFrom, redirects) {
@@ -561,26 +604,45 @@ function orphanRules(root, posts, images) {
 
 const EXTENSIONS = { markdown: [".md", ".mdx"], yaml: [".yaml", ".yml"], json: [".json"] };
 
-/** Files the loader silently ignores: a wrong extension or a folder inside a collection, an unknown file next to the collections. */
-function strayRules(root, collections) {
+// A file collection's translation, content/<stem>.<prefix>.<ext>, by its parts.
+const TRANSLATED_FILE = /^(.+)\.([a-z]{2,3}(?:-[a-z0-9]{2,8})*)(\.[a-z]+)$/;
+
+/**
+ * Files the loader silently ignores: a wrong extension or a folder inside a
+ * collection, an unknown file next to the collections. A declared
+ * language's (`locales`) translations, its folder in a folder collection and
+ * its VOICE.<prefix>.md are the loader's; another language's are named so.
+ */
+function strayRules(root, collections, locales) {
   const out = [];
   const content = path.join(root, "content");
   if (!fs.existsSync(content)) return out;
-  const defs = Object.values(collections);
-  const known = new Set([...NOT_CONTENT, ...defs.map((def) => (def.kind === "folder" ? def.dir : def.file))]);
+  const defs = Object.entries(collections).map(([, def]) => def);
+  const others = (locales?.all ?? []).filter((locale) => !locale.isDefault);
+  const prefixes = new Set(others.map((locale) => locale.prefix));
+  const files = new Set(defs.filter((def) => def.kind !== "folder").map((def) => def.file));
+  const known = new Set([...NOT_CONTENT, ...defs.map((def) => (def.kind === "folder" ? def.dir : def.file)), ...others.flatMap((locale) => [`VOICE.${locale.prefix}.md`, ...defs.filter((def) => def.kind !== "folder").map((def) => locales.collection(def, locale.locale).file)])]);
+  const stray = (file, problem) => out.push({ level: "WARN", file, rule: "stray-file", path: "", problem });
+  const undeclared = "a translation into a language site.locales does not declare; nothing reads it (docs/locales.md)";
   for (const entry of fs.readdirSync(content, { withFileTypes: true })) {
     if (entry.name.startsWith("_") || known.has(entry.name)) continue;
-    out.push({ level: "WARN", file: `content/${entry.name}`, rule: "stray-file", path: "", problem: entry.isDirectory() ? "is not a collection folder; nothing reads it" : "is not a collection file; nothing reads it" });
+    const [, stem, , ext] = entry.name.match(TRANSLATED_FILE) ?? [];
+    if (entry.isFile() && (files.has(`${stem}${ext}`) || entry.name.startsWith("VOICE."))) stray(`content/${entry.name}`, `is ${undeclared}`);
+    else stray(`content/${entry.name}`, entry.isDirectory() ? "is not a collection folder; nothing reads it" : "is not a collection file; nothing reads it");
   }
   for (const def of defs) {
     if (def.kind !== "folder" || !fs.existsSync(path.join(content, def.dir))) continue;
     const extensions = EXTENSIONS[def.format];
-    for (const entry of fs.readdirSync(path.join(content, def.dir), { withFileTypes: true })) {
-      if (entry.name.startsWith("_")) continue;
-      const file = `${sourceOf(def)}/${entry.name}`;
-      if (entry.isDirectory()) out.push({ level: "WARN", file, rule: "stray-file", path: "", problem: "is a folder; the loader reads only files" });
-      else if (!extensions.includes(path.extname(entry.name))) out.push({ level: "WARN", file, rule: "stray-file", path: "", problem: `is not a ${extensions.join("/")} file; the loader ignores it` });
-    }
+    const walk = (dir, language) => {
+      for (const entry of fs.readdirSync(path.join(content, dir), { withFileTypes: true })) {
+        if (entry.name.startsWith("_")) continue;
+        const file = `content/${dir}/${entry.name}`;
+        if (entry.isDirectory() && !language && prefixes.has(entry.name)) walk(`${dir}/${entry.name}`, entry.name);
+        else if (entry.isDirectory()) stray(file, language || !others.length ? "is a folder; the loader reads only files" : `is a folder; the loader reads only files, and a language's translations, in a folder named its prefix, are site.locales' (${[...prefixes].join(", ")})`);
+        else if (!extensions.includes(path.extname(entry.name))) stray(file, `is not a ${extensions.join("/")} file; the loader ignores it`);
+      }
+    };
+    walk(def.dir, null);
   }
   return out;
 }

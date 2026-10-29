@@ -205,9 +205,14 @@ function checkExceptions({ found, show, before }, g, site, config) {
 
 /** The posts' URL prefix as site.ts writes it (the starter's when it names none). */
 const postPrefix = (text) => text.match(/^\s*postPrefix:\s*["'`]([^"'`\n]+)["'`]/m)?.[1] ?? "/blog-post";
-/** A page or post file of the engine's: directly in its folder, not `_`-prefixed. */
-const pageFile = (file) => new RegExp(`^${PAGES}/[^/_][^/]*\\.ya?ml$`).test(file);
-const postFile = (file) => new RegExp(`^${POSTS}/[^/_][^/]*\\.mdx?$`).test(file);
+/** A page or post file of the engine's: in its folder or a language's under it (docs/locales.md), not `_`-prefixed. */
+const pageFile = (file) => new RegExp(`^${PAGES}/(?:[a-z0-9-]+/)?[^/_][^/]*\\.ya?ml$`).test(file);
+const postFile = (file) => new RegExp(`^${POSTS}/(?:[a-z0-9-]+/)?[^/_][^/]*\\.mdx?$`).test(file);
+/** A post's URL: the prefix and its slug, under its language's prefix when it sits in that language's folder (content/blog/de/x.md → /de/blog-post/x). */
+const postRoute = (file, prefix) => {
+  const language = path.posix.dirname(file).slice(POSTS.length + 1);
+  return `${language ? `/${language}` : ""}${prefix}/${path.basename(file).replace(/\.mdx?$/, "")}`;
+};
 const parsed = (text) => { try { return parseYaml(text); } catch { return null; } };
 /** A post's frontmatter says draft: true. */
 const draftPost = (text) => parsed(text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "")?.draft === true;
@@ -219,7 +224,7 @@ function routesOf(files, read, prefix, { drafts }) {
     const text = read(file);
     if (text === null) continue;
     if (pageFile(file)) { const route = parsed(text)?.seo?.path; if (typeof route === "string") routes.set(route, file); }
-    if (postFile(file) && (drafts || !draftPost(text))) routes.set(`${prefix}/${path.basename(file).replace(/\.mdx?$/, "")}`, file);
+    if (postFile(file) && (drafts || !draftPost(text))) routes.set(postRoute(file, prefix), file);
   }
   return routes;
 }

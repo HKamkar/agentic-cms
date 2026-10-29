@@ -14,8 +14,10 @@ import { parse } from "yaml";
 import { z } from "zod";
 import * as content from "../../src/lib/content/index.ts";
 import { kit } from "../../src/kit.ts";
+import { createLocales } from "../../src/lib/locales.ts";
 import { fill, siteIdentity } from "./starter.mjs";
 import { jsonSchemaOf, schemaFile, schemaFiles, schemaLine, schemaLineEdits, SCHEMAS, staleSchemas, TEMPLATES, withSchemaLine, writeSchemas } from "./content-schema.mjs";
+import { translations } from "./translations.mjs";
 
 const REPO = path.resolve(import.meta.dirname, "../..");
 const STARTER = path.join(REPO, "templates/starter");
@@ -147,5 +149,10 @@ test("schemaLineEdits: a site's YAML content files and templates take their line
   fs.rmSync(root, { recursive: true });
   assert.deepEqual(schemaLineEdits(REPO, kit.collections, { fs }), [], "the example's files and the templates open with their line");
   assert.deepEqual(schemaLineEdits(STARTER, kit.collections, { fs }), [], "the starter's too");
+  const german = scratch({ "content/pages/de/home.yaml": "seo: {}\n", "content/reviews.de.yaml": "[]\n" });
+  const locales = createLocales({ ...kit.site, locales: [{ ...kit.site, locale: "de", prefix: "de", ogLocale: "de_DE" }] });
+  const translated = translations({ collections: kit.collections, locales, root: german });
+  assert.deepEqual(schemaLineEdits(german, kit.collections, { fs, translated }).map(({ file, text: body }) => `${file} ${body.split("\n")[0]}`), ["content/reviews.de.yaml # yaml-language-server: $schema=./_schemas/reviews.json", "content/pages/de/home.yaml # yaml-language-server: $schema=../../_schemas/pages.json"], "a translation names its collection's schema, from its own folder");
+  fs.rmSync(german, { recursive: true });
   assert.deepEqual(Object.keys(TEMPLATES).filter((name) => !fs.existsSync(path.join(REPO, "content/_templates", name))), [], "every template TEMPLATES names exists");
 });
