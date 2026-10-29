@@ -61,7 +61,8 @@ then a bumped pin here; never a patch under `node_modules`.
   `--write` adds the missing hosts; `dev-server.md`).
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative. Public URLs do
-  not change without redirects.
+  not change without redirects: an entry of `content/redirects.yaml`,
+  which `next.config.ts` serves (`/editorial:retire-content` writes it).
 - Analytics loads only behind the visitor's consent: `agentic-cms/consent`
   and `agentic-cms/consent/google` (`GoogleTag`, the consent default as an
   inline script near the top of `<body>`), configured in

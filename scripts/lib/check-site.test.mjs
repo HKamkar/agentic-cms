@@ -39,6 +39,7 @@ function fakeGit({ refs = ["origin/HEAD"], commit = "b".repeat(40), files = {}, 
     if (command === "rev-parse" && rest[0] === "--verify") { const ref = rest[2].replace(/\^\{commit\}$/, ""); return (ref === "HEAD" ? head : refs.includes(ref)) ? ok("c".repeat(40)) : no; }
     if (command === "merge-base") return refs.includes(rest[1]) && !shallow ? ok(commit) : no;
     if (command === "show") { const file = rest[0].split(":./")[1]; return file in files ? { status: 0, stdout: files[file] } : no; }
+    if (command === "ls-tree") { const specs = rest.slice(rest.indexOf("--") + 1); return ok(Object.keys(files).filter((file) => specs.some((spec) => file.startsWith(`${spec}/`))).join("\n")); }
     return no;
   };
   return Object.assign(git, { calls });
@@ -263,6 +264,23 @@ test("tools: the site's own Playwright, sharp over public/ and next dev scripts 
 
 test("machineAddresses: an IPv4 address in the code, loopback, 0.0.0.0, a version and a comment line left out", () => {
   assert.deepEqual(machineAddresses('const a = "203.0.113.4";\n// 192.0.2.1\n * 192.0.2.2\nconst v = "1.2.3";\nconst l = ["127.0.0.1", "0.0.0.0"];\nconst b = "http://198.51.100.20:3000";\n'), [{ line: 1, address: "203.0.113.4" }, { line: 6, address: "198.51.100.20" }]);
+});
+
+test("retired: a URL the base's page or published post answered that nothing answers now and no redirect names warns, with the fix; a draft keeps its URL", async () => {
+  const page = (route) => `seo:\n  path: ${route}\n`;
+  const post = (draft = false) => `---\ntitle: A post\n${draft ? "draft: true\n" : ""}---\n\nBody.\n`;
+  const then = { "content/pages/about.yaml": page("/about"), "content/pages/team.yaml": page("/team"), "content/pages/old-name.yaml": page("/kept"), "content/blog/gone.md": post(), "content/blog/never.md": post(true), "content/blog/hidden.md": post(), "content/blog/_template.md": post() };
+  const now = { ...CLEAN, "src/config/site.ts": 'export const site = {\n  name: "Ours",\n  email: "hello@ours.dev",\n  postPrefix: "/news",\n};\n', "content/pages/about.yaml": page("/about-us"), "content/pages/new-name.yaml": page("/kept"), "content/blog/hidden.md": post(true), "content/redirects.yaml": "- from: /team\n  to: /about-us\n" };
+  const report = await site(now, { git: fakeGit({ files: then }) });
+  assert.deepEqual(report.findings, [], "a warning: it fails nothing");
+  assert.deepEqual(checks(report.warnings), ["retired content/pages/about.yaml", "retired content/blog/gone.md"], "the page renamed with its route kept, the redirected one, the draft at the base, the post kept as a draft and the template: none");
+  const [moved, gone] = report.warnings;
+  assert.match(moved.problem, /^its route was \/about at origin\/HEAD and is no longer: \/about answers 404 now, and no redirect in content\/redirects\.yaml names it/);
+  assert.match(gone.problem, /^gone since origin\/HEAD: \/news\/gone answers 404 now/);
+  assert.equal(gone.fix, 'add "- from: /news/gone" with "to: <the page that has its content now>" to content/redirects.yaml (/editorial:retire-content writes it), or keep the post as a draft (draft: true), which keeps its URL');
+  assert.match(formatSiteReport(report).join("\n"), /check-site: 2 warnings, which fail nothing[\s\S]*⚠ content\/pages\/about\.yaml {2}\[retired\]/);
+  assert.deepEqual((await site({ ...now, "content/redirects.yaml": "- from: /team\n  to: /about-us\n- from: /about\n  to: /about-us\n- from: /news/gone\n  to: /blog\n" }, { git: fakeGit({ files: then }) })).warnings, [], "each with its redirect");
+  assert.deepEqual((await site(now)).warnings, [], "no base: nothing compared");
 });
 
 test("leftovers: the example's brand by line and its sample content, each a finding of its rule; none in the kit, whose example is the example", async () => {

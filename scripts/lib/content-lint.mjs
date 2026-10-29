@@ -11,7 +11,8 @@
 // grammar with the engine's `file: path problem` shape). The exact rules
 // (the banned list, the patterns, the model names, the mark, the em dash,
 // the alt pairs, the counts, the dates, the structure, the images, the
-// workshop file's shape, the example's brand in a site) FAIL; the
+// workshop file's shape, the redirects against the pages and posts, the
+// example's brand in a site) FAIL; the
 // heuristics (voice-claim, voice-cloud) and the soft ranges (a title over 60,
 // a description outside 70–160, a future date, a stale draft, an orphan, a
 // stray file) WARN — the CLI's --strict promotes those too. Placeholder copy
@@ -230,6 +231,8 @@ function lintTree({ root, collections, site, given, now, marks }) {
   }
   const images = []; // every site-absolute image reference: { file, path, value }
   const posts = [];
+  const pages = [];
+  const redirects = [];
   const retired = retiredSlugs(root);
   for (const def of Object.values(collections)) {
     let entries;
@@ -248,6 +251,7 @@ function lintTree({ root, collections, site, given, now, marks }) {
       for (const leaf of leaves(entry.data, base)) {
         const p = formatPath(leaf.segments);
         findings.push(...placeholderRules(marks, { file: entry.file, path: p, value: leaf.value }));
+        if (def.name === "redirects") continue; // paths, not prose or pictures: redirectRules() reads them
         if (IMAGE_KEYS.has(leaf.key) || leaf.value.startsWith("/images/")) images.push({ file: entry.file, path: p, value: leaf.value });
         else if (matchers && isProse(leaf.key, leaf.value)) findings.push(...textRules(matchers, { ...ctx, path: p, key: leaf.key }, leaf.value));
       }
@@ -255,12 +259,14 @@ function lintTree({ root, collections, site, given, now, marks }) {
         posts.push(entry);
         findings.push(...postRules(root, entry, now, matchers, images, retired, titleSuffix(site), marks));
       }
-      if (def.name === "pages") findings.push(...pageRules(entry, now));
+      if (def.name === "pages") { pages.push(entry); findings.push(...pageRules(entry, now)); }
+      if (def.name === "redirects") redirects.push(entry);
       if (def.name === "authors" || def.name === "reviews") findings.push(...altRules(entry, base));
     }
   }
   findings.push(...imageRules(root, images));
   findings.push(...orphanRules(root, posts, images));
+  findings.push(...redirectRules(redirects, { pages, posts, site }));
   findings.push(...strayRules(root, collections));
   findings.push(...workshopRules(root));
   findings.push(...configPlaceholders(root, marks));
@@ -385,6 +391,50 @@ function postRules(root, entry, now, matchers, images, retired, suffix, marks) {
 function pageRules(entry, now) {
   const { file, data } = entry;
   return [lengthRule(file, "seo.title", data.seo.title, LIMITS.title), descriptionRule(file, "seo.description", data.seo.description), ...dayRules(file, "seo.updated", data.seo.updated, now)].filter(Boolean);
+}
+
+/** The routes a reader gets today: every page's path and every published post's URL (a draft's answers 404 in production), each with its file. */
+const liveRoutes = ({ pages, posts, site }) => new Map([...pages.map((page) => [page.data.seo.path, page.file]), ...posts.filter((post) => !post.data.draft).map((post) => [`${site.postPrefix}/${post.slug}`, post.file])]);
+
+/** Where a redirect's `to` ends up once the entries it lands on are followed: { route, via } — `via` the entries passed, `loop` when it comes back. */
+function follow(start, byFrom, redirects) {
+  const via = [];
+  let route = start;
+  while (byFrom.has(route)) {
+    if (via.includes(byFrom.get(route))) return { route, via, loop: true };
+    via.push(byFrom.get(route));
+    route = redirects[byFrom.get(route)].data.to.split(/[?#]/)[0];
+  }
+  return { route, via, loop: false };
+}
+
+/**
+ * content/redirects.yaml against the pages and the posts (FAIL each): a
+ * `from` listed once and no live page's path or published post's URL (it
+ * would hide what is there); no chain (a `to` that is another entry's
+ * `from`, which costs a hop) and no loop; a `to` path that a page, a
+ * published post or the blog index answers. An https:// `to` is the host's.
+ */
+function redirectRules(redirects, ctx) {
+  const live = liveRoutes(ctx);
+  const byFrom = new Map();
+  const out = [];
+  const where = (at, key) => ({ level: "FAIL", file: redirects[at].file, path: formatPath([at, key]) });
+  const entries = (via) => via.map((i) => formatPath([i])).join(" → ");
+  redirects.forEach(({ data: { from } }, at) => {
+    if (byFrom.has(from)) out.push({ ...where(at, "from"), rule: "redirect-from", problem: `${q(from)} is listed already at ${formatPath([byFrom.get(from)])}: one entry per path` });
+    else byFrom.set(from, at);
+    if (live.has(from)) out.push({ ...where(at, "from"), rule: "redirect-from", problem: `${q(from)} is a live page's or post's (${live.get(from)}): the redirect would hide it — take the page off first (/editorial:retire-content), or drop the entry` });
+  });
+  redirects.forEach(({ data: { from, to } }, at) => {
+    if (/^https:\/\//.test(to)) return;
+    const route = to.split(/[?#]/)[0];
+    const end = route === from ? { loop: true, via: [] } : follow(route, byFrom, redirects);
+    if (end.loop) out.push({ ...where(at, "to"), rule: "redirect-chain", problem: `${q(to)} leads back to ${q(from)} (${entries([at, ...end.via])}): a loop, which no browser follows — point it at a page that exists` });
+    else if (end.via.length) out.push({ ...where(at, "to"), rule: "redirect-chain", problem: `${q(to)} is itself redirected (${entries(end.via)}): a chain — point it at ${q(end.route)} directly` });
+    else if (!live.has(route)) out.push({ ...where(at, "to"), rule: "redirect-to", problem: `${q(to)} is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL` });
+  });
+  return out;
 }
 
 /** The lines of the body with their file line numbers, fenced code blanked so nothing inside it is read as a heading, an image or prose. */

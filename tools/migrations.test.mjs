@@ -103,3 +103,20 @@ test("the migration's YAML collections are the standard ones whose files are YAM
   const yaml = Object.values(kit.collections).filter((def) => (def.kind === "folder" ? def.format === "yaml" : /\.ya?ml$/.test(def.file))).map(({ name, kind, dir, file, format }) => ({ name, kind, ...(dir ? { dir, format } : { file }) }));
   assert.deepEqual(yaml, Object.values(YAML_COLLECTIONS));
 });
+
+test("0.9.0's redirects: the starter's empty list and redirects() in the Next config, as the template has it; a config with redirects of its own left by hand", () => {
+  const site = content084Fixture();
+  assert.ok(!read(site, "next.config.ts").includes("redirectsFor"), "0.8.4's config");
+  const found = detect(site, { kitRoot: KIT, ...quiet }).filter(({ piece }) => piece === "redirects").map(({ what }) => what);
+  assert.deepEqual(found, ["content/redirects.yaml: the site's redirects, an empty list to write", "next.config.ts: redirects() to return redirectsFor()"]);
+  const { changed } = apply(site, { kitRoot: KIT, ...quiet });
+  assert.deepEqual(changed.filter(({ piece }) => piece === "redirects").map(({ file, status }) => `${file} ${status}`), ["content/redirects.yaml created", "next.config.ts redirects()"]);
+  assert.equal(read(site, "next.config.ts"), read(KIT, "templates/site/next.config.ts"));
+  assert.equal(read(site, "content/redirects.yaml"), read(KIT, "templates/starter/content/redirects.yaml"));
+  assert.deepEqual(apply(site, { kitRoot: KIT, ...quiet }).changed.filter(({ piece }) => piece === "redirects"), [], "a second run changes nothing");
+  fs.writeFileSync(path.join(site, "next.config.ts"), "export default {\n  async redirects() {\n    return [{ source: \"/a\", destination: \"/b\", permanent: true }];\n  },\n};\n");
+  const manual = apply(site, { kitRoot: KIT, ...quiet }).manual.filter(({ piece }) => piece === "redirects");
+  assert.equal(manual.length, 1);
+  assert.match(manual[0].text, /^next\.config\.ts: it has a redirects\(\) of its own: return \[\.\.\.redirectsFor\(\), \.\.\.the site's own\]/);
+  assert.equal(manual[0].link, GUIDE);
+});

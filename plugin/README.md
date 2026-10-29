@@ -22,6 +22,7 @@ cannot find; the plugin has no defaults for any of them.
 | `content/blog/_template.md`, `content/_templates/*` | every field annotated; the image names and sizes; the closing paragraph of a post |
 | `content/_schemas/<collection>.json` | the JSON Schema of each collection's files (a YAML file names its own on its first line): read before a file is written, `pnpm content:check` after, for what no schema checks (`agentic-cms schema`) |
 | `content/authors.json`, `content/categories.json` | the keys a post's `author` and `category` name |
+| `content/redirects.yaml` | the site's redirects: `retire-content` writes one when a page or a post goes, `new-page` refuses a route one holds |
 | `content/editorial/calendar.md`, `backlog.md` | the dated plan (`date \| slug \| status \| owner \| note`; a `retired` row silences the stale-draft rule) and the ideas |
 | `content/editorial/workshop.yaml` | optional: where the marketing workshop lives outside the repo and what may be read there, by role (below) |
 | the engine's docs — `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` in a checkout of agentic-cms, or under `node_modules/agentic-cms/` on a site that installs the package | the content engine's contract, the post body conventions, the head and structured-data contract |
@@ -44,7 +45,7 @@ commits go on the repo's working branch.
 | `new-post` | add a post as a draft from a brief, a draft file or the workshop's drafts, with its images and frontmatter | the lint clean on the new file, the build, a look at the built post, a commit; the user flips `draft` |
 | `update-post` | change a post's copy, fields or images, `updatedAt` set, the two dates and the URL intact | the lint, the build, the route's audit lines, a commit |
 | `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image; or write the real copy of a page that still holds placeholder copy (a starter's home page and blog index), the marker removed with it | the lint with no placeholder left, the build, a capture of the page at the site's widths, a commit |
-| `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |
+| `retire-content` | hide a post (`draft: true`, the indexed URL kept), or remove a page or a post with its redirect, written into `redirects.yaml` | the lint, the build, the sitemap without it, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge, after quoting the lint's own lines | a HIGH / MEDIUM / LOW report with a verdict, then the fixes the user approves |
 | `critic` | read a post as the senior editor and fact-checker who did not watch it being written: the prose cuts, and every external claim checked against primary sources in two passes | one report with a verdict, a confidence and an action per claim, then the cuts the user approves |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |

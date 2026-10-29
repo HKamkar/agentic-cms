@@ -19,7 +19,7 @@ export const SCHEMAS = "content/_schemas";
 /** The modeline the YAML language server reads a file's schema from. */
 export const SCHEMA_LINE = /^# yaml-language-server: \$schema=(\S*)[^\n]*\n?/;
 /** The annotated templates under content/_templates/, by the collection each is a file (or an entry) of. */
-export const TEMPLATES = { "page.yaml": "pages", "faq.yaml": "faqs", "review.yaml": "reviews", "use-case.yaml": "useCases" };
+export const TEMPLATES = { "page.yaml": "pages", "faq.yaml": "faqs", "review.yaml": "reviews", "use-case.yaml": "useCases", "redirect.yaml": "redirects" };
 /** The helpers' named types (their .meta({ type })): the JSON Schema each is, and its line. Any other name gets a line alone. */
 const NAMED = {
   "YYYY-MM-DD": { keywords: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, line: "A date, YYYY-MM-DD, quoted in YAML." },

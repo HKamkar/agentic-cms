@@ -28,6 +28,10 @@ plugin's contract `plugin/README.md`.
   (`agentic-cms schema`, `content/_schemas/`): what a field says, the line
   an editor reads it by, the check in every build, what an agent reads
   before writing a file.
+- [redirects.md](redirects.md) — redirects as content
+  (`content/redirects.yaml`): what an entry says, how `next.config.ts`
+  serves it, what the lint, the site check and the SEO audit hold, and
+  what `retire-content` writes.
 - [forms.md](forms.md) — what a form can ask (every ordinary field type,
   notes, groups, a prefill from the URL) and forms that deliver: the
   endpoint route, where submissions go (a webhook, a provider's API as a sink), the environment

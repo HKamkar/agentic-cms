@@ -137,6 +137,7 @@ async function build(site) {
   noExample(site);
   schemasShipped(site);
   starterBuilds(site);
+  redirectsServed(site);
   emailGuarded(site);
   lintsClean(site);
   guardFails(site);
@@ -210,6 +211,27 @@ function starterBuilds(site) {
     fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
   }
   run("pnpm", ["build"], site);
+}
+
+/**
+ * The site's redirects reach Next through the config init wrote
+ * (docs/redirects.md): one written into content/redirects.yaml in place of
+ * the starter's [] is in the next build's routes manifest as a 308, and a
+ * path the sitemap lists, redirected, fails the SEO audit (run alone on
+ * that build: the content lint would refuse it first). The redirect stays,
+ * as a site's own would.
+ */
+function redirectsServed(site) {
+  edit(site, "content/redirects.yaml", (text) => text.replace(/^\[\]\n/m, "- from: /news\n  to: /blog\n"));
+  run("pnpm", ["exec", "next", "build"], site);
+  const manifest = JSON.parse(fs.readFileSync(path.join(site, ".next/routes-manifest.json"), "utf8"));
+  if (!manifest.redirects?.some((r) => r.source === "/news" && r.destination === "/blog" && r.statusCode === 308)) fail(`next.config's redirects() did not serve content/redirects.yaml: ${JSON.stringify(manifest.redirects)}`);
+  const file = path.join(site, "content/redirects.yaml");
+  const kept = fs.readFileSync(file, "utf8");
+  fs.writeFileSync(file, `${kept}- from: /blog\n  to: /\n`);
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  fs.writeFileSync(file, kept);
+  if (audit.status !== 1 || !/FAIL \/sitemap\.xml sitemap: \S+\/blog is redirected \(content\/redirects\.yaml\)/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit with a redirected sitemap path answered ${audit.status}: ${`${audit.stdout}${audit.stderr}`.trim().slice(-600)}`);
 }
 
 /**
@@ -397,7 +419,7 @@ function upgrade(site) {
  * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
  * 0.8.4's own texts from the installed package's record, a rule and a skill
  * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them)
- * and its content (no JSON Schemas, no schema lines),
+ * and its content (no JSON Schemas, no schema lines, no redirects),
  * upgraded by the installed `agentic-cms upgrade` with the tarball as its
  * spec: the 0.9.0 migration moves the copies, the steps left by hand come
  * back with their section (exit 1), the lint and the tests pass, the docs
@@ -417,7 +439,7 @@ function upgradeFrom084(site) {
   const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
   const wrong = [
     r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
-    !["removed", "moved", "thin", "schema line", "written"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    !["removed", "moved", "thin", "schema line", "written", "created", "redirects()"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
     report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
     report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
   ].filter(Boolean);

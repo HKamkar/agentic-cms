@@ -56,9 +56,10 @@ under `src/` (`agentic-cms/copy`, `docs/primitives.md` § Enforced).
 | `schema.ts` | The field vocabulary: `text()`, `optional()`, `dateOnly()`, `isoTimestamp()`, `ref()` — each with its own error wording |
 | `read.ts` | `readCollection()`, `readEntry()`, `slugsOf()`, `sourceOf()`: listing, parsing (gray-matter + yaml, yaml, JSON), validation, the production-only cache |
 | `errors.ts` | `ContentError`, `ContentIssue`, `formatPath()`, `colonTrap()` / `trappedLine()` / `COLON_FIX` (the colon trap's wording) |
-| `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the seven definitions around the site's section union; `SectionLike`, the least the engine knows about a section |
+| `collections.ts` | The standard contract: the schemas of `authors`, `categories`, `posts`, `reviews`, `faqs`, `useCases` and `pages` (`pageSeoSchema`, `jsonldSchema`, `pageSchema(sections)`); `createCollections({ sections })` builds the eight definitions around the site's section union (`redirectsCollection()` the redirects' alone); `SectionLike`, the least the engine knows about a section |
 | `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
-| `index.ts` | The public surface, `agentic-cms/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`) a site reads as `kit.content` |
+| `redirects.ts` | `redirectsFor()`: `content/redirects.yaml` as `next.config.ts`'s `redirects()` returns it (`{ source, destination, permanent }`, permanent unless an entry says false), read when Next loads its config at build time — `docs/redirects.md` |
+| `index.ts` | The public surface, `agentic-cms/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`, `getRedirects()`) a site reads as `kit.content`, and `redirectsFor()` |
 | `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
 | `agentic-cms check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
@@ -193,12 +194,14 @@ fails that one.
 
 ## Collections
 
-The seven standard collections, in the order the scripts read and document
+The eight standard collections, in the order the scripts read and document
 them: `authors` (`content/authors.json`, a map), `categories`
 (`content/categories.json`, a map), `posts` (`content/blog/*.md`), `reviews`
 (`content/reviews.yaml`, a list), `faqs` (`content/faqs/*.yaml`), `useCases`
-(`content/use-cases.yaml`, a list) and `pages` (`content/pages/*.yaml`, each
-validated by the site's section union). Their schemas are `collections.ts`;
+(`content/use-cases.yaml`, a list), `pages` (`content/pages/*.yaml`, each
+validated by the site's section union) and `redirects`
+(`content/redirects.yaml`, a list, which `next.config.ts` serves through
+`redirectsFor()`). Their schemas are `collections.ts`;
 the field tables — every key, its type, whether it is required, and the
 `.describe()` text — are generated from those schemas into the **site's
 `content/README.md`** (its "Fields" section) by `agentic-cms docs`,

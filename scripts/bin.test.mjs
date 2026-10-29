@@ -58,7 +58,7 @@ test("a command that reads the site refuses to run outside a site's root, with t
 test("schema: the example's files are current (the build's docs --check says so too); its help names --check and --lines; outside a site's root it is refused", () => {
   const r = run(["schema", "--check"], REPO);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /^schema: content\/_schemas\/ is up to date \(7 collections\)\n$/);
+  assert.match(r.stdout, /^schema: content\/_schemas\/ is up to date \(8 collections\)\n$/);
   assert.match(run(["docs", "--check"], REPO).stdout, /content\/README\.md and content\/_schemas\/ are up to date/);
   const help = run(["schema", "--help"]);
   assert.equal(help.status, 0);

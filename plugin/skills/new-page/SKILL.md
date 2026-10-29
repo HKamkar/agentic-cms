@@ -26,12 +26,17 @@ one existing file in `content/pages/` as a worked example,
 `src/lib/seo/README.md` (the head, the structured data, the OG image; the
 engine's docs, under `node_modules/agentic-cms/` on a site that
 installs the package),
-`content/VOICE.md`, `src/config/site.ts`.
+`content/VOICE.md`, `src/config/site.ts`, `content/redirects.yaml` (the
+old paths the site sends elsewhere).
 
 ## Steps
 
 1. **The route and the sections.** Confirm `seo.path` with the user and list
-   the sections by type, chosen from the registry tables only. A section
+   the sections by type, chosen from the registry tables only. A route
+   that is an entry's `from` in `content/redirects.yaml` is an old URL the
+   site sends elsewhere: stop and say so (taking it back means removing
+   the redirect, the user's call; the lint fails a page the redirect
+   would hide). A section
    type that does not exist is code (a schema, a component, a registry
    entry; the repo's design document says how): stop and say so.
 2. **The file.** For a page with placeholder copy, keep its file, its

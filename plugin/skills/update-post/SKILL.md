@@ -51,5 +51,6 @@ git push                                                    # when the user says
 ## Stop for the user
 
 A change to the title, the category or the FAQ heading (each has an SEO
-consequence); any request to rename the file (an indexed URL needs a
-redirect on the host: stop unless the repo documents one); the push.
+consequence); any request to rename the file (an indexed URL changes:
+the old one needs its entry in `content/redirects.yaml`, which
+`retire-content` writes, and the user says where it goes); the push.

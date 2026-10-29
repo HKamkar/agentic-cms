@@ -81,7 +81,7 @@ test("a field's description is its .describe(); a ref is a line naming its colle
 test("the example's collections give the committed files, which name no slug, and the sections are one definition keyed by type", () => {
   const files = schemaFiles(kit.collections, deps);
   assert.deepEqual(staleSchemas(REPO, files, { fs }), [], "run agentic-cms schema and commit content/_schemas/");
-  assert.deepEqual([...files.keys()].map((file) => path.basename(file)), ["authors.json", "categories.json", "posts.json", "reviews.json", "faqs.json", "use-cases.json", "pages.json"]);
+  assert.deepEqual([...files.keys()].map((file) => path.basename(file)), ["authors.json", "categories.json", "posts.json", "reviews.json", "faqs.json", "use-cases.json", "pages.json", "redirects.json"]);
   const posts = files.get(`${SCHEMAS}/posts.json`);
   for (const slug of Object.keys(JSON.parse(fs.readFileSync(path.join(REPO, "content/authors.json"), "utf8")))) assert.ok(!posts.includes(`"${slug}"`), `no author slug listed (${slug})`);
   const pages = JSON.parse(files.get(`${SCHEMAS}/pages.json`));

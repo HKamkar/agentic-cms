@@ -8,13 +8,17 @@
 //   job 8, the content schemas: each YAML content file's schema line
 //     (lib/content-schema.mjs), then content/_schemas/ and the field tables
 //     written by the site's own installed command line, which loads its
-//     registry.
-// Job 9 adds the site's redirects, job 3 the dependency's spec.
+//     registry;
+//   job 9, the redirects: the starter's empty content/redirects.yaml and
+//     redirects() in the site's Next config (lib/redirects.mjs), a config
+//     the edit cannot place left by hand.
+// Job 3 adds the dependency's spec.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { legacyFiles, moveLegacy } from "../lib/agent-files-move.mjs";
 import { SCHEMAS, schemaLineEdits } from "../lib/content-schema.mjs";
+import { REDIRECTS_FILE, redirectEdits } from "../lib/redirects.mjs";
 
 /** Where each manual step is written: its section of the upgrade guide in the installed package. */
 export const GUIDE = "node_modules/agentic-cms/docs/upgrading.md#084--090";
@@ -59,6 +63,7 @@ export const YAML_COLLECTIONS = {
   faqs: { name: "faqs", kind: "folder", dir: "faqs", format: "yaml" },
   useCases: { name: "useCases", kind: "list", file: "use-cases.yaml" },
   pages: { name: "pages", kind: "folder", dir: "pages", format: "yaml" },
+  redirects: { name: "redirects", kind: "list", file: "redirects.yaml" },
 };
 /** The site's installed command line, which loads its own registry (`pnpm add` installed this release's); null without one. */
 const installedBin = (site) => { const bin = path.join(site, "node_modules/agentic-cms/bin/agentic-cms.mjs"); return fs.existsSync(bin) ? bin : null; };
@@ -79,8 +84,21 @@ const CONTENT_SCHEMAS = {
   },
 };
 
+const REDIRECTS = {
+  piece: "redirects",
+  detect: (site, { kitRoot }) => {
+    const { edits, manual } = redirectEdits(site, { fs, kitRoot });
+    return [...edits.map(({ file }) => (file === REDIRECTS_FILE ? `${file}: the site's redirects, an empty list to write` : `${file}: redirects() to return redirectsFor()`)), ...manual.map(({ file, step }) => `by hand: ${file}: ${step}`)];
+  },
+  apply: (site, { kitRoot }) => {
+    const { edits, manual } = redirectEdits(site, { fs, kitRoot });
+    for (const { file, text } of edits) fs.writeFileSync(path.join(site, file), text);
+    return { changed: edits.map(({ file }) => ({ file, status: file === REDIRECTS_FILE ? "created" : "redirects()" })), manual: manual.map(({ file, step }) => ({ text: `${file}: ${step}`, link: GUIDE })) };
+  },
+};
+
 /** The pieces, in the order they apply. */
-export const PIECES = [AGENT_FILES, CONTENT_SCHEMAS];
+export const PIECES = [AGENT_FILES, CONTENT_SCHEMAS, REDIRECTS];
 
 /** What the migration would change: [{ piece, what }]. */
 export const detect = (site, context) => PIECES.flatMap(({ piece, detect: found }) => found(site, context).map((what) => ({ piece, what })));

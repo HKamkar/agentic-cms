@@ -19,7 +19,7 @@ export type KitOptions<S extends ZodType<SectionLike>, C extends Collections<S>>
   site: SiteConfig;
   /** The union of the site's page section schemas (src/components/sections/schemas.ts). */
   sections: S;
-  /** A site with collections of its own returns the standard seven plus them; the lint, the docs and the status read them all. */
+  /** A site with collections of its own returns the standard eight plus them; the lint, the docs and the status read them all. */
   collections?: (standard: Collections<S>) => C;
 };
 

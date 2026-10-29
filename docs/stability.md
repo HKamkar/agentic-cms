@@ -134,7 +134,7 @@ Each command's flags, defaults and exit codes are in
 
 | File | Mark | Read by |
 |---|---|---|
-| the content files: `content/pages/`, `content/blog/`, the collections, `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
+| the content files: `content/pages/`, `content/blog/`, the collections (`content/redirects.yaml` among them since 0.9.0), `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
 | `content/_schemas/`, the JSON Schemas, and the first line of each YAML content file and template that names its schema (`# yaml-language-server: $schema=…`) | stable | an editor's YAML language server; `agentic-cms schema --check`, in `docs --check` — [schema.md](schema.md) |
 | `src/config/site.ts`, `src/config/forms.ts` | stable | `createKit()`, the form engine |
 | `src/config/harness.ts`, the site's profile and its seed | stable | the screenshot harness — [visual-parity.md](visual-parity.md#the-sites-profile) |

@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=./_schemas/redirects.json
+# The site's redirects, served by next.config.ts (redirectsFor() from
+# agentic-cms/content, read at build time): each entry a `from` (a path the
+# site no longer answers), a `to` (a page's path, a post's URL, the blog
+# index, or an https:// URL) and `permanent` (true unless it says false).
+# An indexed URL never changes without one: /editorial:retire-content
+# writes it when a page goes, and the content lint refuses a `from` that is
+# a live page or post, a chain and a `to` that lands nowhere. A new entry
+# reads like content/_templates/redirect.yaml.
+- from: /sections            # the catalogue has no index page: its first page stands in
+  to: /sections/home

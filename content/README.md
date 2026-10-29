@@ -24,6 +24,7 @@ never claims, is `VOICE.md` in this folder.
 | FAQ sets | `faqs/<key>.yaml` (one file per set; a page's `faq` section names the key) | the FAQ section and the FAQPage structured data of every page that shows one | `_templates/faq.yaml` | › `faqs` |
 | Use cases | `use-cases.yaml` (a list, in card order) | the `use-case-cards` section and the ItemList structured data of every page that shows them | `_templates/use-case.yaml` | › `useCases` |
 | Pages | `pages/<slug>.yaml` (`seo.path` is the route) | the page itself: its head, its structured data, and its sections in order with all their copy | `_templates/page.yaml` | › `pages` (one table per section type) — all of them at the end of this file |
+| Redirects | `redirects.yaml` (a list: each old path and where it goes now) | nothing on a page: `next.config.ts` serves them, a 308 from each `from` to its `to` ([docs/redirects.md](../docs/redirects.md)) | `_templates/redirect.yaml` | › `redirects` |
 
 Files and folders starting with `_` are never read (`_templates/`,
 `_schemas/`, `blog/_template.md`). A page file lists its sections by `type`; the copy
@@ -59,14 +60,14 @@ isolation.
 | `new-page` | add a page from the template, made of existing section types, with its SEO block, structured data and OG image; or write the real copy of a page that still holds placeholder copy | the lint with no placeholder left, the build, a capture of the page at the site's widths, a commit |
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge | a HIGH / MEDIUM / LOW report with a verdict, then the approved fixes |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |
-| `retire-content` | hide a post (`draft: true`, the indexed URL kept) or, once a redirect exists, remove a page | the lint, the build, the sitemap without it, a commit |
+| `retire-content` | hide a post (`draft: true`, the indexed URL kept), or remove a page or a post with its redirect, written into `redirects.yaml` | the lint, the build, the sitemap without it, a commit |
 
 ## Rules
 
 - **Quote dates, write booleans as `true` / `false`.** Every file is YAML
   1.2 (frontmatter included): an unquoted `2026-05-02` or `yes` is text.
 - **The file name is the identity.** A post's filename is its indexed URL
-  and never changes without a redirect; a FAQ set's filename is the key a
+  and never changes without a redirect (an entry of `redirects.yaml`); a FAQ set's filename is the key a
   page reads it by; a map's key is what a post's `author` / `category` names.
 - **Every field the schema does not know is an error**, so a typo in a key
   fails the build instead of silently doing nothing.
@@ -574,5 +575,15 @@ A wrapper around several sections, for a design that decorates a run of them tog
 |---|---|---|---|
 | `variant` | one of use-cases-upper, use-cases-lower | yes | Which of the design's two wrappers; the wireframe draws both as a dashed box that names the variant |
 | `sections` | list of one of the section types below | yes | The sections inside the wrapper, in order |
+
+### `redirects` — `content/redirects.yaml`
+
+A redirect from a URL the site no longer answers, in content/redirects.yaml; next.config.ts serves them (redirectsFor()) (one file holding a list, one entry per item).
+
+| Key | Type | Required | Description |
+|---|---|---|---|
+| `from` | text | yes | The old path, as it was indexed: /words, without a trailing slash; never a live page's or post's path |
+| `to` | text | yes | Where it goes now: a page's path, a post's URL or the blog index, or an https:// URL; never another redirect's from |
+| `permanent` | true / false | no | true, or left out: a permanent redirect (308), which search engines follow and index the target of; false: a temporary one (307) |
 
 <!-- content-docs:end -->

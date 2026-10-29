@@ -9,7 +9,8 @@
 //
 // --strict turns warnings into failures; --report also writes the findings to
 // .parity/seo-report.txt. Reads .next/server/app/**/*.html, the built
-// sitemap.xml and robots.txt bodies, and the image files under public/.
+// sitemap.xml and robots.txt bodies, the image files under public/, and the
+// redirects of content/redirects.yaml (a sitemap lists no redirected path).
 // The contract it checks is src/lib/seo/README.md; the site's origin is
 // its config, read from src/kit.ts through scripts/lib/load-ts.mjs (the
 // hook must be registered before the TypeScript is imported, hence the
@@ -193,6 +194,7 @@ function checkSitemap(ctx) {
     const route = loc.slice(SITE_URL.length).replace(/\/$/, "") || "/";
     seen.set(route, (seen.get(route) ?? 0) + 1);
     if (!ctx.routes.has(route)) fail("/sitemap.xml", "sitemap", `${loc} has no built page`);
+    if (ctx.redirected.has(route)) fail("/sitemap.xml", "sitemap", `${loc} is redirected (content/redirects.yaml): a sitemap lists the pages a reader lands on, never a path that sends them elsewhere — drop the redirect or the page`);
     if (lastmod && (Number.isNaN(Date.parse(lastmod)) || Date.parse(lastmod) > Date.now() + 86400e3)) fail("/sitemap.xml", "sitemap", `${loc} lastmod ${lastmod} is invalid or in the future`);
   }
   for (const [route, n] of seen) if (n > 1) fail("/sitemap.xml", "sitemap", `${route} listed ${n} times`);
@@ -208,7 +210,7 @@ function checkUniqueness(ctx) {
 // ---------- run ----------
 const pages = routes();
 if (!pages.length) { console.error("check-seo: no prerendered pages under .next/server/app — run `next build` first"); process.exit(2); }
-const ctx = { routes: new Set(pages.map((p) => p.route)), indexable: [], titles: new Map(), descriptions: new Map() };
+const ctx = { routes: new Set(pages.map((p) => p.route)), redirected: new Set(kit.content.getRedirects().map((redirect) => redirect.from)), indexable: [], titles: new Map(), descriptions: new Map() };
 for (const page of pages) await checkPage(page, ctx);
 checkSitemap(ctx);
 checkUniqueness(ctx);

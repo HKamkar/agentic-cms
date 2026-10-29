@@ -60,6 +60,14 @@ prints the rest.
   the field tables. The build's `docs --check` fails until they are there;
   commit them. Where the installed command cannot run, `upgrade` prints the
   two commands as a step by hand ([schema.md](schema.md)).
+- **The redirects.** `upgrade` writes the starter's empty
+  `content/redirects.yaml`, which the engine now reads like every
+  collection, and has the site's Next config return `redirectsFor()` from
+  `redirects()`, placed as the template has it. A config with a
+  `redirects()` of its own, or none the edit can find, is a step by hand:
+  return `[...redirectsFor(), ...the site's own]`. Redirects the host held
+  (a `_redirects` file, a dashboard's list) move into the file by hand
+  ([redirects.md](redirects.md)).
 - **By hand, `AGENTS.md` and `CLAUDE.md`.** They are the site's own, so
   the move leaves them. Replace what the 0.8 template copied into
   `AGENTS.md` — its sections on styling, gotchas and the parity harness,
