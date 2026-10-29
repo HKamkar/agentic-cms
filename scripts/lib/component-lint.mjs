@@ -42,17 +42,15 @@
 // components rule, .claude/rules/components.md).
 
 import { baselineConfigs, checkBaseline, heldByBaseline } from "./baseline.mjs";
-import { COPY_PROPS, ENGINE_RULES, PLUGIN, REQUIRED, TOOLS } from "./engine-rules.mjs";
+import { COPY_PROPS, ENGINE_RULES, KIT_MOTION, PLUGIN, REQUIRED, TOOLS } from "./engine-rules.mjs";
 import { ALLOWABLE, ANIMATION_ALTERNATIVES, PREFERRED, PREFERRED_RULES, RENDERING_LIBRARIES, SITE_TOOLS } from "./preferred-rules.mjs";
 
-export { ALLOWABLE, ANIMATION_ALTERNATIVES, COPY_PROPS, PREFERRED, REQUIRED, RENDERING_LIBRARIES, SITE_TOOLS, TOOLS };
+export { ALLOWABLE, ANIMATION_ALTERNATIVES, COPY_PROPS, KIT_MOTION, PREFERRED, REQUIRED, RENDERING_LIBRARIES, SITE_TOOLS, TOOLS };
 /** The plugin, one object for every block that registers it: `plugins: { "agentic-cms": plugin }`, the required rules (each holding a site's baseline, ./baseline.mjs) and the preferred ones. */
 export const plugin = { meta: { name: PLUGIN }, rules: { ...Object.fromEntries(Object.entries(ENGINE_RULES).map(([name, rule]) => [name, heldByBaseline(`${PLUGIN}/${name}`, rule)])), ...PREFERRED_RULES } };
 
 /** The animation libraries: only the motion layer imports them. */
 export const ANIMATION_LIBRARIES = ["motion", "framer-motion"];
-/** The kit's play-once layer: a site with a motion folder wraps it there; a site without one has it as its motion layer. */
-export const KIT_MOTION = "agentic-cms/ix";
 
 /** What a site that names nothing gets: the kit's folders, every layer present. */
 export const DEFAULTS = {
