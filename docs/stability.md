@@ -129,6 +129,7 @@ Each command's flags, defaults and exit codes are in
 
 | Commands | Mark |
 |---|---|
+| the command line itself: `agentic-cms --help`, `agentic-cms --version` | stable |
 | the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs`, `agentic-cms schema` | stable |
 | the images: `agentic-cms placeholder`, `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` | stable |
 | the proofs: `agentic-cms visual-parity`, `agentic-cms parity` | stable |

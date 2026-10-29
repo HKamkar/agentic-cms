@@ -32,7 +32,8 @@ package is installed:
 The names are free. On 2026-10-16 the registry answered 404 for
 `agentic-cms` and `create-agentic-cms`. It answered the same for
 `agenticcms`, `agentic_cms` and `agentic.cms`, the variants that npm's
-name-similarity check would refuse a new package over.
+name-similarity check would refuse a new package over. On 2026-10-29 it
+still answered 404 for `agentic-cms`: nothing is published yet.
 
 **The target.** After 0.9.0, an empty folder becomes a site with:
 
@@ -98,10 +99,10 @@ These ten points are the definition of done for 0.9.0.
 
 | # | Question | Options | Decided (owner, 2026-10-17) |
 |---|---|---|---|
-| D1 | Who owns the packages on npm | (a) the owner's npm account; (b) an npm organisation, which is free for public packages | **Decided: (b).** The organisation owns both packages, so a second maintainer, or a move to a GitHub organisation later, changes nothing a site sees. The repository stays where it is until 1.0.0 settles "Name and home". Moving it then means one step: delete and re-create the trusted publisher. |
-| D2 | The first publish. npm sets up a trusted publisher only for a package that already exists, so the first version of each package goes up by hand | (a) the owner publishes 0.8.0 by hand right after its tag, from the tarball `test:pack` built; (b) the first publish is `0.9.0-rc.0`, by hand, after job 2 | **Decided: (a).** It claims the name now, with a real release rather than a placeholder. `create-agentic-cms` gets its own first hand publish when job 4 lands. A hand publish carries no provenance; every publish after it does. |
+| D1 | Who owns the packages on npm | (a) the owner's npm account; (b) an npm organisation, which is free for public packages | **Decided (owner, 2026-10-29): (a),** in place of the (b) taken on 2026-10-17. Both names are unscoped, and npm's docs say "Only user accounts can create and manage unscoped packages. Organizations can only manage scoped packages." ([npm Docs, package scope, access level and visibility](https://docs.npmjs.com/package-scope-access-level-and-visibility/)). The owner's own account, `hkamkar`, with two-factor authentication on, publishes and owns both, `agentic-cms` and `create-agentic-cms`. The repository stays where it is until 1.0.0 settles "Name and home". Moving it then means one step: delete and re-create the trusted publisher. |
+| D2 | The first publish. npm sets up a trusted publisher only for a package that already exists, so the first version of each package goes up by hand | (a) the owner publishes 0.8.0 by hand right after its tag, from the tarball `test:pack` built; (b) the first publish is `0.9.0-rc.0`, by hand, after job 2 | **Decided (owner, 2026-10-29): (b),** in place of the (a) taken on 2026-10-17. 0.8.4 is never published. The first version on npm is `0.9.0-rc.0` under `next`, published by hand from the tarball the release workflow's `check` job proved (`docs/releasing.md`, job 2); the trusted publisher follows it (O3), and the first publish from CI, `rc.1`, within two days of it. `create-agentic-cms` gets its own first hand publish when job 4 lands (O5). A hand publish carries no provenance; every publish after it does. |
 | D3 | Who presses publish | (a) pushing a `v*` tag publishes; (b) the publish job waits in a GitHub environment `npm` for the owner's approval | **Decided: (b).** A publish is permanent: npm limits unpublishing, and a version number, once used, can never be published again. The trusted publisher names the environment, so no other workflow or job can publish. |
-| D4 | The name of the create package | (a) `create-agentic-cms`, run as `pnpm create agentic-cms` or `npm create agentic-cms@latest`; (b) `@<org>/create`, run as `pnpm create @<org>` | **Decided: (a).** It is the form every framework uses. |
+| D4 | The name of the create package | (a) `create-agentic-cms`, run as `pnpm create agentic-cms` or `npm create agentic-cms@latest`; (b) `@<scope>/create`, run as `pnpm create @<scope>` | **Decided: (a).** It is the form every framework uses. |
 | D5 | Where release candidates come from | (a) npm under the `next` tag, tagged `v0.9.0-rc.N`; (b) a `develop` sha, as for 0.8.0 | **Decided: (a).** The gate then installs what will ship, by the path a site uses. A candidate tag may sit on `develop`; a release tag sits only on `main`. |
 | D6 | Peer ranges | (a) open floors, as today: `next >=16.3.6`, `eslint >=9`, `playwright-core >=1.63.0`; (b) each range bounded to the major CI runs, such as `next ^16.3.6` | **Decided: (b).** Supporting a major the kit has not run is a kit release, not a surprise for a site. CI tests the floor and the newest version of each range (job 7). |
 | D7 | Installs from git | (a) keep them working: `prepare` still builds on a git install, to test an unreleased commit (`init --kit <spec>`); (b) drop them | **Decided: (a)** through 0.x, documented only as the kit's own development path. No guide for sites mentions it. |
@@ -125,31 +126,29 @@ recommendation on 2026-10-29.
 ## The owner's steps
 
 Only the owner can do these, because each one needs the owner's npm login
-or approval.
+or approval. (O2, a hand publish of `v0.8.4`, went with D2's change: no
+0.8 version is published.)
 
-- **O1, before job 2:** an npm account with two-factor authentication (a
-  security key), and the organisation if D1 is (b).
-- **O2, right after the `v0.8.0` tag (D2a):** publish the tag's tarball by
-  hand: `pnpm pack` on the tag, then `pnpm publish <tarball>` with 2FA. The
-  npm page for 0.8.0 shows 0.8.0's GitHub install lines; 0.9.0 replaces
-  them. **Not done yet:** on 2026-10-29 the registry still answered 404 for
-  `agentic-cms`. The name is held only once it is published, so this is the
-  first step now, with the newest tag's tarball (`v0.8.4`) in place of
-  0.8.0's.
-- **O3, within two days before `v0.9.0-rc.0`:**
+- **O1, before the first publish:** the owner's own npm account, with
+  two-factor authentication (a security key); it owns both packages, and
+  there is no npm organisation (D1). **Done** (2026-10-29): `hkamkar`, 2FA
+  on.
+- **O3, right after the hand-published `v0.9.0-rc.0`:**
   - On npmjs.com, add the trusted publisher: GitHub Actions, repository
     `HKamkar/agentic-cms`, workflow `release.yml`, environment `npm`.
   - Then set publishing access to "Require two-factor authentication and
     disallow tokens".
 
   A new trusted publisher expires unless its first publish succeeds within
-  two days, so this step comes just before the first CI publish, not right
-  after O2.
+  two days, so the first publish from CI, `v0.9.0-rc.1`, follows O3 within
+  two days.
 - **O4:** create the GitHub environment `npm`, with the owner as its
   required reviewer and deployments allowed from `v*` tags only. The
   conductor can create it through the API on the owner's word.
 - **O5, when job 4 lands:** the first publish of `create-agentic-cms`, by
-  hand, then its O3.
+  hand from the owner's account, as `rc.0` was: the tarball the release
+  workflow's `check` job proved, under `next`. Then its trusted publisher,
+  as O3 says, and the next publish from CI within two days.
 - **O6, when job 11 lands, if the kit's own pull requests should get a
   preview of the example site:** a Cloudflare API token that may upload
   Workers versions, and the account id, as the repository's secrets. A site
@@ -692,21 +691,26 @@ page, and nothing pairs a page with its translation.
 
 ### R — Release 0.9.0
 
-1. Tag `v0.9.0-rc.0` from `develop` once jobs 1 and 2 have landed. It
-   proves the pipeline end to end (OIDC, provenance, the registry smoke
-   test) before anything depends on it. O3 comes just before it.
-2. Tag `v0.9.0-rc.1` once every job has landed. It is published to `next`
-   through the workflow, with the owner's approval.
-3. **The gate is the owner's,** run in each site's own sessions: on two
+1. Tag `v0.9.0-rc.0` from `develop` once jobs 1, 7 and 2 have landed. The
+   owner publishes it by hand, under `next`, from the tarball the tag's
+   `check` job proved (D2): it holds the names, and its npm page is where
+   the README is checked (job 1).
+2. O3 right after it, then `v0.9.0-rc.1` from CI within two days: the
+   first publish through the workflow, with the owner's approval. It proves
+   the pipeline end to end (OIDC, provenance, the registry smoke test,
+   `npm audit signatures`) before anything depends on it.
+3. Jobs 3 and 4 land (O5 with job 4), and the next `-rc.N`, once every job
+   has landed, is the candidate the gate runs.
+4. **The gate is the owner's,** run in each site's own sessions: on two
    sites on 0.8.x, `pnpm dlx agentic-cms@next upgrade`, then a build, a
    proof that nothing moved and a preview link on the gate's pull request.
    Findings come back as kit fixes and the next `-rc.N`.
-4. **The release:**
+5. **The release:**
    - the release commit and the release PR, which the owner merges;
    - the tag `v0.9.0` on `main`, published to `latest` with the owner's
      approval;
    - the GitHub Release.
-5. **Time the target:** from an empty folder, `pnpm create agentic-cms
+6. **Time the target:** from an empty folder, `pnpm create agentic-cms
    my-site` to `pnpm kit serve`.
 
 ### S — The sites follow
@@ -724,15 +728,16 @@ lines are in the pull request's body, and the conductor writes them into
 `CHANGELOG.md` with the release commit, not one commit per merge.
 
 ```
-now            O2 (owner): publish v0.8.4's tarball by hand, which holds the name; O1, O4
+now            O1 done (the owner's npm account, 2FA on); O4
                [0] this plan into docs/roadmap.md
 Phase 1        Lane A  [8 schema] → [9 redirects] → [11 preview] (+ O6)
                Lane B  [6 stability] → [10 fewer copies] → [5 upgrade]
                Lane C  [13 languages], after lane A
 Phase 2        [12 docs, README, migrating-to-0.9.0]   (its README section may land first)
-Phase 3        Lane A  [1 tarball] → [2 release CI] → O3 → rc.0 → [3 npm installs] → [4 create] (+ O5)
-               Lane B  [7 peers] after 1
-then           rc.1 → gate → R → S
+Phase 3        [1 tarball] → [7 peers] → [2 release CI]   (one pull request)
+               → rc.0 (owner, by hand) → O3 → rc.1 (CI, within two days)
+               → [3 npm installs] → [4 create] (+ O5)    (a later pull request)
+then           rc.N → gate → R → S
 ```
 
 - Job 6 comes first in its lane: its test then makes every later job add
@@ -755,8 +760,10 @@ rebases:
 ## Risks and how each is held
 
 - **The first publish has no provenance.**
-  - *Hold:* D2's hand publish covers one version, and trusted publishing is
-    set before the next.
+  - *Hold:* D2's hand publish covers `rc.0` alone; O3 follows it, and
+    `rc.1`, from CI, carries provenance like every publish after it.
+- **A trusted publisher expires before its first publish.**
+  - *Hold:* `rc.1` goes out within two days of O3.
 - **A trusted publisher that doesn't match the run fails with E404.** The
   owner, repository, workflow file name and environment must match the run
   exactly.
@@ -779,7 +786,8 @@ rebases:
   write tokens at 90 days and moved logins to two-hour sessions.
   - *Hold:* the kit uses no token at all, only OIDC.
 - **The name is taken before 0.9.0.** Nothing is published yet.
-  - *Hold:* O2 now, with `v0.8.4`'s tarball.
+  - *Hold:* `rc.0` right after job 2, by hand (D2); until then, the names'
+    404 is checked again before the tag.
 - **Claude Code reads no marketplace inside `node_modules`.**
   - *Hold:* job 10's first step proves it before anything depends on it;
     D14 (b) keeps the copies, with no merges.

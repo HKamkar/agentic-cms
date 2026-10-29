@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Proves the package as a site sees it, which the checkout never does (the
-// example resolves the package's name to the source): packs the package,
-// and in a scratch folder that holds what the old install docs left there
+// example resolves the package's name to the source): packs the package
+// (prepack empties dist/, prepare builds it) and refuses a tarball that holds
+// a path no package may (tools/pack-files.mjs), and in a scratch folder that holds what the old install docs left there
 // (`pnpm init`'s package.json and the workspace snippet without
 // unrs-resolver), runs the install line of docs/init.md as it is written,
 // the tarball standing in for the git spec. The site is the starter: none of
@@ -45,6 +46,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { pack as packTarball, refusedPaths, tarballFiles } from "./pack-files.mjs";
 import { GERMAN, layLocale, POST } from "./locale-fixture.mjs";
 import { content084, site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
@@ -102,10 +104,11 @@ async function install(args, cwd) {
   if (result.status !== 0) fail(`pnpm install ${args.join(" ")} failed in ${cwd}`);
 }
 
-/** 1. The tarball: what a consumer installs, dist/ included (prepare runs first). */
+/** 1. The tarball: what a consumer installs, dist/ built fresh from this tree, no path a package refuses, under its size budget. */
 function pack(scratch) {
-  const packed = execFileSync("pnpm", ["pack", "--pack-destination", scratch, "--json"], { cwd: ROOT, encoding: "utf8" });
-  const tarball = path.join(scratch, path.basename(JSON.parse(packed.slice(packed.indexOf("{"))).filename));
+  const tarball = packTarball(ROOT, scratch);
+  const refused = refusedPaths(tarballFiles(tarball));
+  if (refused.length) fail(`the tarball holds what no package may:\n  ${refused.join("\n  ")}`);
   const size = fs.statSync(tarball).size;
   if (size > MAX_TARBALL) fail(`the tarball is ${(size / 1024).toFixed(0)} KB, over the ${MAX_TARBALL / 1024} KB the files list is meant to stay under`);
   return { tarball, size };
@@ -583,6 +586,8 @@ async function lightOnly(site, tarball) {
 
 /** 4. The installed entries a build does not run. */
 function entries(site) {
+  const version = spawnSync("pnpm", ["exec", "agentic-cms", "--version"], { cwd: site, encoding: "utf8" });
+  if (version.status !== 0 || version.stdout.trim() !== JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version) fail(`agentic-cms --version from the tarball answered ${version.status}: ${(version.stderr || version.stdout).trim()}`);
   // The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
   const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
   if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) fail(`agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`);

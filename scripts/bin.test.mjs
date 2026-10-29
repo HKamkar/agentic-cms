@@ -28,6 +28,14 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
 });
 
+test("--version prints the version of the package the bin belongs to, and a near miss names it", () => {
+  const r = run(["--version"]);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, `${JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8")).version}\n`);
+  assert.match(run(["--versio"]).stderr, /^agentic-cms: no command --versio — did you mean --version\?\n/);
+  assert.match(run(["--help"]).stdout, /\nagentic-cms --version: print the installed package's version/);
+});
+
 test("a wrong command names the nearest one and prints the map; a wrong subcommand and a wrong flag likewise", () => {
   const r = run(["lints"]);
   assert.equal(r.status, 2);

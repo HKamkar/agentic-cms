@@ -1,6 +1,8 @@
 # What every pull request and every push to develop or main must pass: the
 # verify block (lint, the unit suites, the build with its content lint and
-# SEO audit), the repo's hygiene, and the browser suite with Chromium and
+# SEO audit), the repo's hygiene, the package's lint (the tarball's files
+# against tools/pack-files.txt, publint and Are the Types Wrong on it, which
+# tools/lint-pkg.mjs says), and the browser suite with Chromium and
 # WebKit installed for it (the lab timeline's cases run in both). The pack
 # smoke (a scratch site built from the tarball, minutes) runs on pushes to
 # main; the preview (at the end) on pull requests, once the owner opts in.
@@ -35,6 +37,7 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm hygiene
+      - run: pnpm lint:pkg
   browser:
     runs-on: ubuntu-latest
     steps:

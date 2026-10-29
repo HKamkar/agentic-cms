@@ -16,7 +16,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-const TEXT = /\.(mjs|js|ts|tsx|css|md|json|yaml|yml|txt|html|svg|sh|py)$/;
+const TEXT = /\.(mjs|mts|js|ts|tsx|css|md|json|yaml|yml|txt|html|svg|sh|py)$/;
 const SHOWCASE_FILES = ["README.md"];
 
 /** The sites the README shows: the hosts linked in its "Built on" section, as the names to guard (nimbus.example → nimbus). */
@@ -26,15 +26,22 @@ export function showcasedBrands(readme) {
 }
 const SCRATCH = /(^|\/)(notes?|scratch|tmp|todo)\.[a-z]+$|\.(tmp|bak|orig|rej|log)$/i;
 
-/** Every finding over the given tracked files under root; [] when clean. */
+/** What a path alone makes a finding of: a capture, a scratch file, a picture outside the places pictures live; [] when none. */
+export function pathFindings(file) {
+  const out = [];
+  if (file.startsWith(".parity/")) out.push(`${file}: a capture; .parity/ stays out of git and the package`);
+  if (SCRATCH.test(file)) out.push(`${file}: a scratch file`);
+  if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public|templates\/starter\/public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ (the example's, the starter's) and the app icons`);
+  return out;
+}
+
+/** Every finding over the given tracked files under root (or the files of a tarball, unpacked there); [] when clean. */
 export function findings(root, files, { brands }) {
   const out = [];
   const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
   const brandRe = brands.length ? new RegExp(brands.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i") : /$^/;
   for (const file of files) {
-    if (file.startsWith(".parity/")) out.push(`${file}: a capture is tracked; .parity/ is gitignored`);
-    if (SCRATCH.test(file)) out.push(`${file}: a scratch file is tracked`);
-    if (/\.(png|jpe?g|webp)$/.test(file) && !/^(docs|public|templates\/starter\/public)\/|^src\/app\/(apple-)?icon\.png$/.test(file)) out.push(`${file}: a picture outside docs/, public/ (the example's, the starter's) and the app icons`);
+    out.push(...pathFindings(file));
     // a test needs counterexamples, so the line rules skip test files
     if (!TEXT.test(file) || /\.test\.(mjs|ts)$/.test(file) || !fs.existsSync(path.join(root, file))) continue;
     const text = read(file);

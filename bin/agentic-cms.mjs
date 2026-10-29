@@ -5,11 +5,12 @@
 // package.json names them: "content:lint": "agentic-cms lint", and so on.
 // The commands, their flags and exit codes are scripts/lib/specs.mjs (the
 // help and docs/commands.md are generated from it). The help is the map by
-// family; a wrong command names the nearest one; a command that reads the
-// site refuses to run outside a site's root.
+// family, --version the installed version (TOP); a wrong command names the
+// nearest one; a command that reads the site refuses to run outside a site's
+// root.
 import fs from "node:fs";
 import { specAt, subcommandPath, suggest, usageText } from "../scripts/lib/args.mjs";
-import { FAMILIES, SPECS } from "../scripts/lib/specs.mjs";
+import { FAMILIES, SPECS, TOP } from "../scripts/lib/specs.mjs";
 
 const [command, ...rest] = process.argv.slice(2);
 
@@ -31,6 +32,7 @@ function table() {
     for (const spec of specs) lines.push(`  ${"".padEnd(width)}   ${spec.command.padEnd(22)} ${short(spec.summary)}`);
   }
   lines.push("", "agentic-cms <command> --help prints its flags, exit codes (0 clean · 1 findings · 2 usage or environment) and examples; docs/commands.md is the contract, docs/parts.md the map of every part");
+  lines.push(`agentic-cms --version: ${TOP.flags.version.help}`);
   return lines.join("\n");
 }
 
@@ -38,9 +40,13 @@ if (!command || ["help", "--help", "-h"].includes(command)) {
   console.log(table());
   process.exit(command ? 0 : 2);
 }
+if (command === "--version") {
+  console.log(JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+  process.exit(0);
+}
 const spec = SPECS[command];
 if (!spec) {
-  console.error(`agentic-cms: no command ${command}${suggest(command, Object.keys(SPECS))}\n\n${table()}`);
+  console.error(`agentic-cms: no command ${command}${suggest(command, [...Object.keys(SPECS), "--version"])}\n\n${table()}`);
   process.exit(2);
 }
 if (rest.includes("--help") || rest.includes("-h")) {
