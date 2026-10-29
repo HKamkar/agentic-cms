@@ -27,7 +27,7 @@ export const demoDir = (name) => `src/app/${name}-demo`;
 export const demoFile = (name) => `${demoDir(name)}/page.tsx`;
 const rel = (root, file) => path.relative(root, file).split(path.sep).join("/");
 
-/** The registry: section type → { name (the export), alias, file (site-relative .tsx), data (a withData entry: the page reads more for it) }. */
+/** The registry: section type → { name (the export), alias, file (site-relative .tsx), data (an entry but plain(): the page reads more for it — a collection, a link) }. */
 export function readRegistry(root) {
   const file = path.join(root, REGISTRY);
   if (!fs.existsSync(file)) throw new Error(`no ${REGISTRY}: the section registry the route reads the component from`);
@@ -35,9 +35,12 @@ export function readRegistry(root) {
   const imports = new Map();
   for (const m of text.matchAll(/^import \{ (\w+)(?: as (\w+))? \} from "@\/components\/([^"]+)";/gm)) imports.set(m[2] ?? m[1], { name: m[1], file: `src/components/${m[3]}.tsx` });
   const registry = new Map();
-  for (const m of text.matchAll(/^\s*"?([\w-]+)"?: (plain|withData)\((\w+)/gm)) { const found = imports.get(m[3]); if (found) registry.set(m[1], { ...found, alias: m[3], data: m[2] === "withData" }); }
+  for (const m of text.matchAll(/^\s*"?([\w-]+)"?: ([a-z]\w*)\((\w+)/gm)) { const found = imports.get(m[3]); if (found) registry.set(m[1], { ...found, alias: m[3], data: m[2] !== "plain" }); }
   return registry;
 }
+
+/** Whether the registry hands a round's route what it reads for a section (`sectionData()`, the example's since 0.9.0): the route then passes it to every candidate itself. */
+export const resolvesData = (root) => /^export function sectionData\b/m.test(fs.existsSync(path.join(root, REGISTRY)) ? fs.readFileSync(path.join(root, REGISTRY), "utf8") : "");
 
 const flatten = (sections) => (Array.isArray(sections) ? sections.flatMap((s) => (s?.type === "group" ? flatten(s.sections) : [s])) : []);
 
@@ -141,7 +144,7 @@ ${blocks}
 }
 
 /** The route's source: with a section, the page's copy read at render; without one, each candidate rendered with no props (a piece of the chrome, whose copy is the site's config); with showcase, a review page of pieces. Lettered blocks, the current version last, inside the site's own layout; each under the lab's timeline with `timeline`. */
-export function routeSource({ demo, type, slug, component, letters, data = false, showcase = false, components = [], timeline = false }) {
+export function routeSource({ demo, type, slug, component, letters, data = false, resolved = false, showcase = false, components = [], timeline = false }) {
   if (showcase) return showcaseSource({ demo, components, timeline });
   const { name, file } = component;
   const candidates = letters.map((letter) => ({ letter, name: `${name}${letter}` }));
@@ -169,6 +172,7 @@ ${CHIP}
 export default function ${pascal(demo)}Demo() {
 ${routeBody(name, "", timeline)}`;
   }
+  if (data && resolved) return resolvedSource({ demo, type, slug, name, imports, rows, timeline });
   const dataNote = data ? `\n  // This section is a withData entry of the registry: the page also reads a collection for it (its resolve).\n  // Pass that here as well, the way render.tsx does, or the candidates render without it.` : "";
   return `// Throwaway demo route of the design round (the design-options skill):
 // candidates for the "${type}" section, each in its real frame with the
@@ -202,6 +206,47 @@ function copyOf(sections: SectionOf<"group">["sections"]): Props | null {
 export default function ${pascal(demo)}Demo() {
   const props = copyOf(kit.content.getPage("${slug}").sections);
   if (!props) throw new Error('content/pages/${slug}.yaml carries no "${type}" section');${dataNote}
+${routeBody(name, "{...props}", timeline)}`;
+}
+
+/** The route of a section the registry reads more for, from a registry that hands it over (sectionData()): the copy and what the page reads, in the default language, passed to each candidate as the page passes them. */
+function resolvedSource({ demo, type, slug, name, imports, rows, timeline }) {
+  return `// Throwaway demo route of the design round (the design-options skill):
+// candidates for the "${type}" section, each in its real frame with the
+// page's real copy — content/pages/${slug}.yaml, read on every render — and
+// what the page reads for it (sectionData(), as the registry renders it),
+// lettered with one line on what differs, the current version last, inside
+// the site's own layout so they are judged on its theme. Written by
+${removal(demo)}
+import type { ReactNode } from "react";
+import type { SectionOf, SectionProps } from "@/components/sections/schemas";
+import { sectionData } from "@/components/sections/render";
+import { kit } from "@/kit";
+${imports}
+
+export const metadata = kit.seo.unlistedMetadata();
+
+type Copy = SectionProps<"${type}">;
+type Props = Parameters<typeof ${name}>[0];
+const CANDIDATES: { letter: string; note: string; Candidate: (props: Props) => ReactNode }[] = [
+${rows}
+];
+
+${CHIP}
+
+/** The section's copy from its page file; groups looked into. */
+function copyOf(sections: SectionOf<"group">["sections"]): Copy | null {
+  for (const section of sections) {
+    if (section.type === "group") { const inner = copyOf(section.sections); if (inner) return inner; }
+    else if (section.type === "${type}") { const { type: _type, ...copy } = section; void _type; return copy; }
+  }
+  return null;
+}
+
+export default function ${pascal(demo)}Demo() {
+  const copy = copyOf(kit.content.getPage("${slug}").sections);
+  if (!copy) throw new Error('content/pages/${slug}.yaml carries no "${type}" section');
+  const props = { ...copy, ...sectionData("${type}", copy) } as Props;
 ${routeBody(name, "{...props}", timeline)}`;
 }
 
@@ -242,7 +287,7 @@ function writeCandidates(root, { name, type, page, count, component: override, t
   for (const c of candidates) if (fs.existsSync(path.join(root, c.file))) throw new Error(`${c.file} exists; a candidate of an earlier round? demo clean, or another name`);
   for (const c of candidates) fs.writeFileSync(path.join(root, c.file), candidateSource(source, component.name, c.letter, name));
   fs.mkdirSync(path.dirname(route), { recursive: true });
-  fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data), timeline }));
+  fs.writeFileSync(route, routeSource({ demo: name, type, slug, component, letters, data: Boolean(component.data), resolved: !override && resolvesData(root), timeline }));
   writeManifest(route, { demo: name, kind: "candidates", component: component.file, base, untracked, created: candidates.map((c) => c.file) });
   return { route: demoFile(name), path: `/${name}-demo`, kind: "candidates", section: type ?? null, page: slug, component: component.file, candidates, data: Boolean(component.data) };
 }

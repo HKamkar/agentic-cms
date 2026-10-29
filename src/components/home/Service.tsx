@@ -1,15 +1,14 @@
-import type { SectionProps } from "@/components/sections/schemas";
+import type { CtaHref, SectionProps } from "@/components/sections/schemas";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Media } from "@/components/ui/Media";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
-import { site } from "@/config/site";
 
 const card = "flex flex-col gap-2 p-4";
 
 /** A split section: the dashboard box on one side, one feature and the call to action on the other. */
-export function Service({ eyebrow, heading, text, feature, cta, dashboard }: SectionProps<"home-service">) {
+export function Service({ eyebrow, heading, text, feature, cta, dashboard, ctaHref }: SectionProps<"home-service"> & CtaHref) {
   return (
     <Section type="home-service" eyebrow={eyebrow} heading={heading}>
       <p className="mb-6 max-w-prose">{text}</p>
@@ -24,7 +23,7 @@ export function Service({ eyebrow, heading, text, feature, cta, dashboard }: Sec
             <Heading as="h3">{feature.title}</Heading>
             <p>{feature.text}</p>
           </Panel>
-          <Button href={site.links.contact} label={cta} className="mt-4" />
+          <Button href={ctaHref} label={cta} className="mt-4" />
         </div>
       </div>
     </Section>

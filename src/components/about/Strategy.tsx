@@ -2,11 +2,10 @@ import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { Section } from "@/components/ui/Section";
-import { site } from "@/config/site";
-import type { SectionProps } from "@/components/sections/schemas";
+import type { CtaHref, SectionProps } from "@/components/sections/schemas";
 
 /** "How we build": the copy, the list of beliefs and the button, beside the board the design draws. */
-export function Strategy({ eyebrow, heading, text, beliefsHeading, beliefs, cta }: SectionProps<"about-strategy">) {
+export function Strategy({ eyebrow, heading, text, beliefsHeading, beliefs, cta, ctaHref }: SectionProps<"about-strategy"> & CtaHref) {
   return (
     <Section type="about-strategy" eyebrow={eyebrow} heading={heading}>
       <p className="mb-6 max-w-prose">{text}</p>
@@ -20,7 +19,7 @@ export function Strategy({ eyebrow, heading, text, beliefsHeading, beliefs, cta 
             ))}
           </ul>
           <div>
-            <Button href={site.links.contact} label={cta} />
+            <Button href={ctaHref} label={cta} />
           </div>
         </div>
       </div>

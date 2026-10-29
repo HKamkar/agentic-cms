@@ -306,9 +306,10 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.equal(result.lightOnly, true);
   assert.ok(!fs.existsSync(path.join(target, "src/components/ui/ThemeToggle.tsx")), "no toggle component");
   const layout = read(target, "src/app/layout.tsx");
-  assert.doesNotMatch(layout, /THEME_SCRIPT|suppressHydrationWarning|data-theme/, "no theme script, nothing to suppress");
+  const document = read(target, "src/components/ui/SiteLayout.tsx");
+  assert.doesNotMatch(document, /THEME_SCRIPT|suppressHydrationWarning|data-theme/, "no theme script, nothing to suppress");
   assert.match(layout, /export const viewport: Viewport = \{ colorScheme: "light" \};/);
-  assert.match(layout, /<html lang=\{site\.locale\}>/);
+  assert.match(document, /<html lang=\{site\.locale\}>/);
   const base = read(target, "src/styles/base.css");
   assert.match(base, /^:root \{ color-scheme: light; \}$/m);
   assert.doesNotMatch(base, /data-theme|light dark|light-dark/);
@@ -324,7 +325,7 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   assert.match(standard, /^> This is the wireframe's standard/m, "still the scaffold's note");
   assert.doesNotMatch(read(target, "src/components/README.md"), /dark-mode:|ThemeToggle|theme switch/);
   assert.match(read(target, "src/components/ui/Navbar.tsx"), /<Button href=\{cta\.href\}/, "the navbar keeps everything else");
-  assert.match(layout, /^ {8}<Navbar brand=\{site\.shortName\} [^\n]*copy=\{chrome\.navbar\} \/>$/m, "the layout's navbar closes itself, the toggle it held gone");
+  assert.match(document, /^ {8}<Navbar brand=\{site\.shortName\} [^\n]*copy=\{chrome\.navbar\} \/>$/m, "the layout's navbar closes itself, the toggle it held gone");
   const config = read(target, "src/config/site.ts");
   assert.doesNotMatch(config, /themeToggle|ThemeToggle/, "no labels for a toggle the site does not have");
   assert.match(config, /^ {2}navbar: \{ label: "Main", menu: "Menu" \},\n {2}\/\*\* ui\/Footer's/m, "the chrome's other words stay, and so does the comment above the next");
@@ -333,7 +334,7 @@ test("--light-only lays out a site without dark mode: one scheme in the profile,
   const both = path.join(tmp(), "both");
   scaffold(both, { name: "My Site", kitRoot: KIT, version: "0.8.0", ...quiet });
   assert.ok(fs.existsSync(path.join(both, "src/components/ui/ThemeToggle.tsx")), "without the flag the example keeps its theme");
-  assert.match(read(both, "src/app/layout.tsx"), /THEME_SCRIPT/);
+  assert.match(read(both, "src/components/ui/SiteLayout.tsx"), /THEME_SCRIPT/);
   assert.deepEqual((await readSiteProfile(both)).schemes, ["light", "dark"]);
 });
 
@@ -356,10 +357,12 @@ test("a light-only edit that misses its place in the example fails before anythi
     if (/\.[a-z]+$|^\.[a-z]+$/.test(path.basename(entry))) { fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, ""); } else fs.mkdirSync(full, { recursive: true });
   }
   fs.writeFileSync(path.join(kit, "src/app/layout.tsx"), "export const viewport = { colorScheme: \"light dark\" };\n");
+  fs.mkdirSync(path.join(kit, "src/components/ui"), { recursive: true });
+  fs.writeFileSync(path.join(kit, "src/components/ui/SiteLayout.tsx"), "export function SiteLayout() { return null; }\n");
   for (const [file, lines] of Object.entries(KIT_ONLY)) fs.writeFileSync(path.join(kit, file), lines);
   fs.writeFileSync(path.join(kit, "STANDARD.md"), "# Standard\n\nFour values<!-- dark-mode:start -->, each a pair<!-- dark-mode:end -->.<!-- example:start --> Nine pages.<!-- example:end -->\n");
   const target = path.join(tmp(), "never");
-  assert.throws(() => scaffold(target, { name: "My Site", kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/app\/layout\.tsx: the theme script and the comment above it not found/.test(error.message));
+  assert.throws(() => scaffold(target, { name: "My Site", kitRoot: kit, version: "0.8.0", lightOnly: true, ...quiet }), (error) => error instanceof LightOnlyError && /src\/components\/ui\/SiteLayout\.tsx: the theme script and the comment above it not found/.test(error.message));
   assert.ok(!fs.existsSync(target), "nothing written");
 });
 

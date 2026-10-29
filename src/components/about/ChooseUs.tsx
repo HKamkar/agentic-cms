@@ -4,13 +4,12 @@ import { Media } from "@/components/ui/Media";
 import { Placeholder } from "@/components/ui/Placeholder";
 import { Panel } from "@/components/ui/Panel";
 import { Section } from "@/components/ui/Section";
-import { site } from "@/config/site";
-import type { SectionProps } from "@/components/sections/schemas";
+import type { CtaHref, SectionProps } from "@/components/sections/schemas";
 
 const card = "flex flex-col gap-2 p-4";
 
 /** "Own it": the copy, two cards and the button on one side, the analytics card the design draws on the other. */
-export function ChooseUs({ eyebrow, heading, text, cards, cta }: SectionProps<"about-choose-us">) {
+export function ChooseUs({ eyebrow, heading, text, cards, cta, ctaHref }: SectionProps<"about-choose-us"> & CtaHref) {
   return (
     <Section type="about-choose-us" eyebrow={eyebrow} heading={heading}>
       <p className="mb-6 max-w-prose">{text}</p>
@@ -26,7 +25,7 @@ export function ChooseUs({ eyebrow, heading, text, cards, cta }: SectionProps<"a
             ))}
           </ul>
           <div>
-            <Button href={site.links.contact} label={cta} />
+            <Button href={ctaHref} label={cta} />
           </div>
         </div>
         <Placeholder ratio="aspect-[4/3]" label="analytics card" />

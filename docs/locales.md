@@ -42,6 +42,30 @@ default language listed again, a tag or a prefix listed twice, and a
 prefix that is not a lowercase language tag (`de`, `pt-br`) or is a route
 of the site's own (`api`, the first segment of `postPrefix`).
 
+## The chrome's words
+
+The chrome's words — the skip link, the navbar's and the theme switch's
+labels, the footer's titles, the 404, the post template — and the consent
+banner's are `chrome` and `consentBanner` in `src/config/site.ts`, the
+default language's. Each other language adds its block to `copy` in the
+same file, keyed by its tag, its 404's links under its own prefix:
+
+```ts
+const copy: Record<string, { chrome: ChromeWords; consentBanner: ConsentWords }> = {
+  [site.locale]: { chrome, consentBanner },
+  de: { chrome: { skipLink: "Zum Inhalt", … }, consentBanner: { title: "Analyse-Cookies", … } },
+};
+```
+
+`copyFor(tag)` is what the layout, the footer, the 404 and the post
+template read, and it fails the build for a language with no block. The
+document every page is, `ui/SiteLayout` — `<html lang>`, the scripts, the
+header, the footer — takes the language's config (`kit.locales.site(tag)`)
+and its words, so each language's root layout is one line. A section that
+links to another page of the site takes the link from the registry in the
+page's language (`ctaHref`), never from `src/config/site.ts`, and a
+section that shows a collection reads the language's translation of it.
+
 ## The content
 
 A translation sits beside the default's file and pairs with it by slug.

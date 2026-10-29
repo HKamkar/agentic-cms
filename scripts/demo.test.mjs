@@ -83,6 +83,23 @@ test("demo new: the route and a candidate per letter from the registry's compone
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test("demo new on a registry that hands a round what it reads for a section (sectionData()): the route passes the copy and that to every candidate, typed by the current version's props, and no note", () => {
+  const root = site();
+  try {
+    const registry = path.join(root, "src/components/sections/render.tsx");
+    fs.writeFileSync(registry, fs.readFileSync(registry, "utf8").replace('"home-hero": plain(HomeHero)', '"home-hero": toContact(HomeHero)') + "export function sectionData() { return {}; }\n");
+    const linked = run(root, ["new", "hero-link", "--section", "home-hero", "--candidates", "1", "--json"]);
+    assert.equal(linked.status, 0, linked.stderr);
+    assert.equal(JSON.parse(linked.stdout).data, true, "a section the registry reads a link for is one the page reads more for");
+    assert.doesNotMatch(linked.stderr, /note:/, "a registry that hands it over needs no note");
+    const passed = fs.readFileSync(path.join(root, "src/app/hero-link-demo/page.tsx"), "utf8");
+    assert.match(passed, /import \{ sectionData \} from "@\/components\/sections\/render";/);
+    assert.match(passed, /type Props = Parameters<typeof Hero>\[0\];/);
+    assert.match(passed, /const props = \{ \.\.\.copy, \.\.\.sectionData\("home-hero", copy\) \} as Props;/);
+    assert.match(passed, /data-candidate="now"[\s\S]*<Hero \{\.\.\.props\} \/>/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test("demo new on a page that still holds the starter's placeholder copy, or the kit example's brand, says so first, naming the fields; then writes the round", () => {
   const root = site();
   try {

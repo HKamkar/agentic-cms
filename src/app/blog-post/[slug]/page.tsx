@@ -5,7 +5,7 @@ import { mdxComponents } from "@/components/blog/mdx";
 import { PostBody, postBlocks } from "@/components/blog/PostBody";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
-import { chrome } from "@/config/site";
+import { copyFor, site } from "@/config/site";
 import { kit } from "@/kit";
 import { renderPostBody } from "agentic-cms/blog";
 import { EagerImage, JsonLd } from "agentic-cms/components";
@@ -14,6 +14,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 const { blog, seo } = kit;
 const { formatDate, getAllPosts, getPostBySlug, getRelatedPosts } = blog;
+const { chrome } = copyFor(site.locale);
 
 // Every post is rendered to static HTML at build time; unknown slugs 404.
 export const dynamicParams = false;

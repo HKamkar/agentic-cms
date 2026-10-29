@@ -34,7 +34,7 @@ export default async function ContentPage({ params }: Props) {
     <>
       <JsonLd data={kit.seo.pageJsonLd(page)} />
       {page.seo.path !== "/" && <JsonLd data={kit.seo.pageBreadcrumb(page.seo)} />}
-      {renderSections(page.sections)}
+      {renderSections(page.sections, kit.locales.of(page.seo.path).locale)}
     </>
   );
 }

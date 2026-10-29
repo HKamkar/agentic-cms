@@ -132,7 +132,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `lg` ≥ 992, `xl` / `2xl` / `3xl` ≥ 1280 / 1440 / 1920.
 - The theme is `color-scheme: light dark` on `:root`, overridden by
   `data-theme` on `<html>` (the `ui/ThemeToggle` button, `localStorage.theme`,
-  and the inline script in `src/app/layout.tsx` that applies it before the
+  and the inline script in `ui/SiteLayout` that applies it before the
   first paint). A component never reads the theme; it uses the semantic
   colours and both modes follow.
 - Every section renders inside `ui/Section`: its `type` is its YAML section

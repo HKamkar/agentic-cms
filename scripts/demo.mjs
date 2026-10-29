@@ -17,7 +17,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { parseOrExit } from "./lib/args.mjs";
-import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, roundCopy, writeDemo } from "./lib/demo.mjs";
+import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, resolvesData, roundCopy, writeDemo } from "./lib/demo.mjs";
 import { formatHandover, handover } from "./lib/handover.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
@@ -46,7 +46,7 @@ if (subcommand === "new") {
     console.log(`${edit}; demo clean ${positionals[0]} removes it all`);
   }
   if (told.err.length) console.error(told.err.join("\n"));
-  if (report.data) console.error(`note: "${report.section}" is a withData section — the page reads a collection for it; pass that in the route too (the comment there says where)`);
+  if (report.data && !resolvesData(root)) console.error(`note: "${report.section}" is a withData section — the page reads a collection for it; pass that in the route too (the comment there says where)`);
   process.exit(told.exit);
 } else if (subcommand === "clean") {
   // Without a name, only the routes `demo new` wrote: a site's own gallery in a *-demo folder (the lab's route too) is kept and named.

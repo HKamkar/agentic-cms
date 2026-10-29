@@ -98,7 +98,7 @@ about one, and about a colour outside the tokens in a `style`
 `light-dark()` reads it, so the reader's system setting decides by default. A
 choice sets `data-theme="light"` or `"dark"` on `<html>`, which overrides
 `color-scheme` for the document; `ui/ThemeToggle` writes that attribute and
-`localStorage.theme`, and the inline script in `src/app/layout.tsx` replays it
+`localStorage.theme`, and the inline script in `ui/SiteLayout` replays it
 before the first paint, so a reader who chose dark never sees a white flash.
 `viewport.colorScheme` declares that both are supported. A component never reads
 the theme, never branches on it and never carries a `dark:` variant: it uses the
@@ -287,7 +287,7 @@ shared component goes into it in the same commit. In short:
 | Kind | Components | Rule |
 |---|---|---|
 | Layout | `ui/Container`, `ui/Section`, `ui/Panel` (+ `panel()`), `ui/TypeTag` | every section renders inside `Section`, whose box is a `Panel`; every card's frame is a `Panel`, and a `sections/Group` a dashed one; the tag in the corner of each names what drew it; nothing else sets a page width |
-| Chrome | `ui/Navbar`, `ui/NavLink`, <!-- dark-mode:start -->`ui/ThemeToggle`, <!-- dark-mode:end -->`ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton` | rendered once in `app/layout.tsx`; a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
+| Chrome | `ui/Navbar`, `ui/NavLink`, <!-- dark-mode:start -->`ui/ThemeToggle`, <!-- dark-mode:end -->`ui/Footer`, `ui/ConsentBanner`, `ui/CookieSettingsButton`, `ui/SiteLayout` | rendered once, by `SiteLayout`, which each language's root layout renders (`app/layout.tsx`); a page never writes header, footer or button markup. The consent banner, shown only when a Google tag id is set, is the one fixed overlay (`z-40`, under the skip link) |
 | Actions | `ui/Button` (+ `button`, `buttonClass`), `ui/OutlineButton`, `ui/IconButton` (+ `iconButton`) | a call to action is `Button`, a link; a choice on the page is `OutlineButton`, a `<button>` with `aria-pressed` when it toggles; an icon alone is `IconButton`, 44 px, its label required |
 | Title | `ui/Eyebrow` (+ `eyebrowText`), `ui/Heading` (+ `heading`) | `Section` renders both from its props; `eyebrowText` is the same label as a class string; a heading's level is apart from its size, and its `entrance` is the play-once `Reveal`, unused here |
 | Text | `ui/TextLink`, `ui/MetaLine` (+ `metaLabel`), `keepWords` (`ui/text.ts`) | a link in copy (`next/link` for a path, a new tab for `http(s)`); small uppercase metadata; a hyphenated word kept on one line |
