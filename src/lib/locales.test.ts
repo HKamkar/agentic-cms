@@ -111,3 +111,58 @@ describe("the kit's content in a language", () => {
     });
   });
 });
+
+describe("the kit's head and sitemap in a language", () => {
+  const TREE = {
+    "pages/home.yaml": page("/", "Brand: what it does"),
+    "pages/about.yaml": page("/about", "About Brand"),
+    "pages/blog.yaml": page("/blog", "The Brand blog"),
+    "pages/de/home.yaml": page("/de", "Brand: was es tut").replace("breadcrumb: Page", "breadcrumb: Start"),
+    "pages/de/about.yaml": page("/de/about", "Über Brand"),
+    ...postTree(VALID_POST),
+  };
+  const seoOf = () => createKit({ site: WITH_DE, sections }).seo;
+
+  test("a page in two languages names both, itself among them, and x-default; one in one language names none", () => {
+    withContent(TREE, () => {
+      const seo = seoOf();
+      const { getPage } = createKit({ site: WITH_DE, sections }).content.in("de");
+      const de = seo.pageMetadata(getPage("about").seo);
+      assert.deepEqual(de.alternates, { types: { "application/rss+xml": "https://brand.example/feed.xml" }, canonical: "/de/about", languages: { en: "/about", de: "/de/about", "x-default": "/about" } });
+      assert.deepEqual([(de.openGraph as { locale: string }).locale, (de.openGraph as { alternateLocale: string[] }).alternateLocale], ["de_DE", ["en_US"]]);
+      const en = seo.pageMetadata({ ...getPage("about").seo, path: "/about", title: "About Brand" });
+      assert.deepEqual([(en.alternates as { languages: object }).languages, (en.openGraph as { locale: string }).locale, (en.openGraph as { alternateLocale: string[] }).alternateLocale], [{ en: "/about", de: "/de/about", "x-default": "/about" }, "en_US", ["de_DE"]]);
+      const blog = seo.pageMetadata({ ...getPage("about").seo, path: "/blog" });
+      assert.equal((blog.alternates as { languages?: object }).languages, undefined, "the blog index has no German version");
+    });
+  });
+
+  test("the root head, the breadcrumb and the page-type block are the page's language's", () => {
+    withContent(TREE, () => {
+      const seo = seoOf();
+      const page = createKit({ site: WITH_DE, sections }).content.in("de").getPage("about");
+      const root = seo.rootMetadata("de");
+      assert.deepEqual([root.title, root.description, (root.openGraph as { locale: string }).locale], [{ default: "Brand: was es tut", template: "%s | Brand" }, "A page of the test site, long enough for the schema.", "de_DE"]);
+      assert.equal((seo.rootMetadata().openGraph as { locale: string }).locale, "en_US", "the default language's without a tag");
+      assert.deepEqual((seo.pageBreadcrumb(page.seo).itemListElement as { name: string; item: string }[]).map((crumb) => [crumb.name, crumb.item]), [["Start", "https://brand.example/de"], ["Page", "https://brand.example/de/about"]]);
+      assert.deepEqual([seo.pageJsonLd(page).inLanguage, seo.pageJsonLd(page).url], ["de", "https://brand.example/de/about"]);
+    });
+  });
+
+  test("the sitemap lists every language's pages, each in several with its alternates", () => {
+    withContent(TREE, () => {
+      const entries = seoOf().sitemap();
+      assert.deepEqual(entries.map((entry) => entry.url), ["https://brand.example/about", "https://brand.example/blog", "https://brand.example/", "https://brand.example/de/about", "https://brand.example/de", "https://brand.example/blog-post/x"]);
+      const about = { en: "https://brand.example/about", de: "https://brand.example/de/about", "x-default": "https://brand.example/about" };
+      assert.deepEqual(entries.map((entry) => entry.alternates?.languages), [about, undefined, { en: "https://brand.example/", de: "https://brand.example/de", "x-default": "https://brand.example/" }, about, { en: "https://brand.example/", de: "https://brand.example/de", "x-default": "https://brand.example/" }, undefined]);
+    });
+  });
+
+  test("a site without locales writes no alternates", () => {
+    withContent(TREE, () => {
+      const kit = createKit({ site: SITE, sections });
+      assert.equal((kit.seo.pageMetadata(kit.content.getPage("about").seo).alternates as { languages?: object }).languages, undefined);
+      assert.ok(kit.seo.sitemap().every((entry) => entry.alternates === undefined));
+    });
+  });
+});

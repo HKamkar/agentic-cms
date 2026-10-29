@@ -33,8 +33,14 @@ export function createKit<S extends ZodType<SectionLike>, C extends Collections<
   const collections = (extend ? extend(standard) : standard) as C;
   const content = localizedContent(locales, collections);
   const blog = localizedBlog(locales, collections);
-  const seo = createSeo({ site, urls, content, blog });
+  const scope = perLocale(locales, (tag) => ({ site: locales.site(tag), urls: urlsIn(locales, urls, tag), content: content.in(tag), blog: blog.in(tag) }));
+  const seo = createSeo({ site, urls, content, blog, locales, scope });
   return { site, urls, locales, collections, content, blog, seo };
+}
+
+/** The URL helpers of a language: its posts under its prefix (/de/blog-post/<slug>). */
+function urlsIn(locales: Locales, urls: ReturnType<typeof createUrls>, tag: string) {
+  return locales.get(tag).isDefault ? urls : { ...urls, postUrl: (slug: string) => locales.path(tag, urls.postUrl(slug)) };
 }
 
 /** Memoised per locale: the accessors of each language are made once. */

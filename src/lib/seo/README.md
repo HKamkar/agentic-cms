@@ -26,8 +26,13 @@ structural problem.
    1200×630 image, the Twitter card, and the site's parts — Open Graph's
    name (`site.name`) and locale (`site.ogLocale`) and the link to the
    feed. Posts get `kit.seo.postMetadata(post)` from the post page, with
-   the same parts; the root layout's `metadata` is
-   `kit.seo.rootMetadata()` (the origin, the title template with the home
+   the same parts; a page in several languages (`site.locales`,
+   `docs/locales.md`) also names each version, itself and x-default (the
+   default language's) as its hreflang alternates, and Open Graph's other
+   locales, and its sitemap entry names the same; the root layout's
+   `metadata` is
+   `kit.seo.rootMetadata()` (`rootMetadata(tag)` in another language's
+   root layout: the origin, the title template with the language's home
    page's title, its description, the site's parts); the site's parts are
    in every page's head because Next merges a route's metadata into the
    layout's one key deep — a page's `openGraph` and `alternates` replace
@@ -101,7 +106,8 @@ structural problem.
 | description | missing, empty, duplicated, < 50 or > 200 characters | < 70 or > 160 |
 | canonical | missing, not `site.url` + the route, trailing slash, more than one | |
 | Open Graph | `og:title` / `og:description` / `og:url` / `og:image` / `og:type` missing; `og:url` ≠ canonical; the image file missing under `public/`, narrower than 1200 px, or with a ratio outside 1.6–2.0 | |
-| the site's parts | | `og:site_name` missing or not `site.name`; `og:locale` missing or not `site.ogLocale`, when the site declares one; the `<link rel="alternate">` to `site.url` + `/feed.xml` missing, when the site builds the feed (a head a site still writes by hand passed without them before 0.9.0) |
+| the site's parts | in a site with languages: `og:site_name` missing or not `site.name`; the `<link rel="alternate">` to `site.url` + `/feed.xml` missing, when the site builds the feed | in a site in one language, the same (a head a site still writes by hand passed without them before 0.9.0) |
+| languages | in a site with languages: `lang` not the page's language (its prefix's in `site.locales`, else `site.locale`); `og:locale` missing or not that language's, when it declares one; for a page built in more than one language, an hreflang missing for a version, the page itself or x-default (the default language's), one twice, to another URL than the version's, to a tag the site has not or a version not built, or not named back by the version it names; an hreflang on a page built in one language; the sitemap's alternates not the page's — `docs/locales.md` | in a site in one language, `lang` not `site.locale` and `og:locale` missing or not `site.ogLocale` |
 | Twitter | `twitter:card` missing | |
 | headings | not exactly one `<h1>`; an `<h3>` before any `<h2>` | |
 | images | an `<img>` without `alt` (empty is fine for decoration) or without `width`/`height` | |

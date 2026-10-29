@@ -80,3 +80,41 @@ reads it: its words and links in place of the default's) and
 `kit.content` and `kit.blog` read the default language, as before;
 `kit.content.in(tag)` and `kit.blog.in(tag)` read another one, with the
 same accessors.
+
+## The head and the sitemap
+
+`kit.seo` finds a page's language from its path, so a route calls the
+same builders in every language. `pageMetadata(page.seo)` is the page's
+head in its language: its `og:locale` is the language's `ogLocale`, and a
+page that exists in more than one language names each version as an
+hreflang alternate — itself among them — with `x-default` for the default
+language's version, and lists the other versions' Open Graph locales
+(`og:locale:alternate`). A page in one language names none, which is why a
+site without locales writes the head it always did. `pageBreadcrumb()`
+starts at the language's home page, `pageJsonLd()` says the language in
+`inLanguage`, and `rootMetadata(tag)` is a language's root layout head:
+its home page's title and description, its `og:locale`.
+
+The sitemap lists every language's pages, and each entry of a page in
+several languages carries the same alternates as its head
+(`<xhtml:link rel="alternate" hreflang="…">`).
+
+No page redirects by the visitor's language, and nothing reads
+`Accept-Language`: every URL answers with the page it names, and search
+engines pick the version for a reader from the alternates.
+
+## What the build checks
+
+`agentic-cms seo`, the last step of `pnpm build`, holds each page's
+languages from the build alone (`scripts/lib/hreflang.mjs`): a page's
+versions are the built routes at its path in each language. In a site
+with languages it fails a page whose `lang` or `og:locale` is not its
+language's, or whose head lacks `og:site_name` or the feed link (a site in
+one language gets these as warnings: a head written by hand passed without
+them before 0.9.0); a page built in
+more than one language whose hreflang alternates miss a version, the page
+itself or `x-default`, name one twice, point at another URL than the
+version's, at a tag the site has not or at a version that is not built,
+or are not named back by the version they name; a page built in one
+language that names any; and a sitemap entry whose alternates are not its
+page's.

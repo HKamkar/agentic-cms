@@ -11,6 +11,9 @@
 // .parity/seo-report.txt. Reads .next/server/app/**/*.html, the built
 // sitemap.xml and robots.txt bodies, the image files under public/, and the
 // redirects of content/redirects.yaml (a sitemap lists no redirected path).
+// A site in several languages (site.locales, docs/locales.md) has each
+// page's lang, og:locale and hreflang alternates held against its built
+// versions by scripts/lib/hreflang.mjs.
 // A preview build (AGENTIC_CMS_PREVIEW=1, docs/preview.md) is never indexed:
 // there every page must carry noindex and robots.txt disallow everything.
 // The contract it checks is src/lib/seo/README.md; the site's origin is
@@ -24,6 +27,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { parseOrExit } from "./lib/args.mjs";
 import { pageTitles } from "./lib/head.mjs";
+import { languageFindings, sitemapLanguageFindings } from "./lib/hreflang.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { strict, report, json } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
@@ -51,6 +55,8 @@ const tags = (html, name) => [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`, "
 const head = (html) => html.slice(0, html.indexOf("</head>"));
 const metas = (html, key, value) => tags(head(html), "meta").filter((a) => a[key] === value).map((a) => a.content);
 const links = (html, rel) => tags(head(html), "link").filter((a) => a.rel === rel).map((a) => a.href);
+// React writes the attribute hrefLang; HTML reads it in any case.
+const hreflangs = (html) => tags(head(html), "link").filter((a) => a.rel === "alternate" && (a.hreflang ?? a.hrefLang)).map((a) => ({ hreflang: a.hreflang ?? a.hrefLang, href: a.href }));
 const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => m[1]);
 
 // ---------- the pages ----------
@@ -71,6 +77,9 @@ const readBuilt = (name) => (fs.existsSync(path.join(APP, name)) ? fs.readFileSy
 const findings = [];
 const fail = (route, rule, msg) => findings.push({ level: "FAIL", route, rule, msg });
 const warn = (route, rule, msg) => findings.push({ level: strict ? "FAIL" : "WARN", route, rule, msg });
+// The head's site parts and a page's language: they warn in a site in one language, whose hand-written heads passed before 0.9.0, and fail in one with languages (checkSiteHead()).
+const languages = kit.locales.all.length > 1;
+const headPart = (route, rule, msg) => (languages ? fail : warn)(route, rule, msg);
 
 // ---------- per-page rules ----------
 // Next writes the root canonical as the bare origin; both spellings are the same URL.
@@ -85,6 +94,7 @@ async function checkPage({ route, html }, ctx) {
   if (preview && !noindex) fail(route, "robots", "a preview build (AGENTIC_CMS_PREVIEW=1) carries noindex on every page, and this one is indexable: its head comes from kit.seo.rootMetadata(), which adds it");
   if (!preview && !notFound && noindex) fail(route, "robots", "carries noindex; drop it or leave the page out of the sitemap on purpose (see src/lib/seo/README.md)");
   if (notFound) return; // the 404 has no canonical, social tags or sitemap entry
+  ctx.languages.set(route, { lang: html.match(/<html\b[^>]*\blang="([^"]*)"/)?.[1], ogLocale: metas(html, "property", "og:locale")[0], alternates: hreflangs(html) });
   await checkSocial(route, html);
   checkContent(route, html);
   checkJsonLd(route, html, route.startsWith("/blog-post/"));
@@ -132,19 +142,19 @@ async function checkSocial(route, html) {
 const SITE_HEAD = "the route's head is kit.seo.pageMetadata() or postMetadata(), which keep the root layout's (src/lib/seo/README.md)";
 
 /**
- * The site's parts of every head: Open Graph's site name and locale, the
- * link to the feed. They warn: a head a site still writes by hand, which
- * its baseline holds, passed before 0.9.0 without them, and a check that
- * fails what passed comes with a migration (docs/stability.md).
+ * The site's parts of every head: Open Graph's site name, the link to the
+ * feed (og:locale is the page's language's, checkLanguages()). In a site in
+ * one language they warn: a head a site still writes by hand, which its
+ * baseline holds, passed without them before 0.9.0, and a check that fails
+ * what passed comes with a migration (docs/stability.md). A site in several
+ * languages is new to every check, and they fail there.
  */
 function checkSiteHead(route, html) {
   const siteName = metas(html, "property", "og:site_name")[0];
-  if (siteName !== site.name) warn(route, "open-graph", siteName ? `og:site_name "${siteName}" is not site.name "${site.name}"` : `og:site_name missing: ${SITE_HEAD}`);
-  const locale = metas(html, "property", "og:locale")[0];
-  if (site.ogLocale && locale !== site.ogLocale) warn(route, "open-graph", locale ? `og:locale ${locale} is not site.ogLocale ${site.ogLocale}` : `og:locale missing: ${SITE_HEAD}`);
+  if (siteName !== site.name) headPart(route, "open-graph", siteName ? `og:site_name "${siteName}" is not site.name "${site.name}"` : `og:site_name missing: ${SITE_HEAD}`);
   if (!FEED_BUILT) return;
   const feeds = tags(head(html), "link").filter((a) => a.rel === "alternate" && a.type === "application/rss+xml").map((a) => a.href);
-  if (!feeds.includes(`${SITE_URL}/feed.xml`)) warn(route, "feed", feeds.length ? `the feed link is ${feeds.join(", ")}, not ${SITE_URL}/feed.xml` : `no <link rel="alternate"> to the feed: ${SITE_HEAD}`);
+  if (!feeds.includes(`${SITE_URL}/feed.xml`)) headPart(route, "feed", feeds.length ? `the feed link is ${feeds.join(", ")}, not ${SITE_URL}/feed.xml` : `no <link rel="alternate"> to the feed: ${SITE_HEAD}`);
 }
 
 /** Headings, images and the html element. */
@@ -206,13 +216,23 @@ function checkLinks(route, html, ctx) {
 }
 
 // ---------- site-wide rules ----------
+/** Each page's lang, og:locale and hreflang alternates, against its built versions and theirs. */
+function checkLanguages(ctx) {
+  const alternatesOf = (route) => ctx.languages.get(route)?.alternates;
+  for (const [route, page] of ctx.languages) {
+    for (const { rule, msg } of languageFindings({ route, ...page, routes: ctx.routes, locales: kit.locales.all, siteUrl: SITE_URL, alternatesOf })) (rule === "hreflang" ? fail : headPart)(route, rule, rule === "open-graph" && /missing/.test(msg) ? `${msg}: ${SITE_HEAD}` : msg);
+  }
+}
+
 function checkSitemap(ctx) {
   const xml = readBuilt("sitemap.xml.body");
   if (!xml) return fail("/sitemap.xml", "sitemap", "no built sitemap (src/app/sitemap.ts)");
   const entries = [...xml.matchAll(/<url>(.*?)<\/url>/gs)].map((m) => ({
     loc: (m[1].match(/<loc>([^<]*)<\/loc>/) ?? [])[1],
     lastmod: (m[1].match(/<lastmod>([^<]*)<\/lastmod>/) ?? [])[1],
+    alternates: tags(m[1], "xhtml:link").map((a) => ({ hreflang: a.hreflang, href: a.href })),
   }));
+  for (const { rule, msg } of sitemapLanguageFindings(entries.filter((entry) => entry.loc?.startsWith(SITE_URL)), (route) => ctx.languages.get(route)?.alternates, SITE_URL)) fail("/sitemap.xml", rule, msg);
   const seen = new Map();
   for (const { loc, lastmod } of entries) {
     if (!loc?.startsWith(SITE_URL)) { fail("/sitemap.xml", "sitemap", `${loc} is not under ${SITE_URL}`); continue; }
@@ -236,8 +256,9 @@ function checkUniqueness(ctx) {
 // ---------- run ----------
 const pages = routes();
 if (!pages.length) { console.error("check-seo: no prerendered pages under .next/server/app — run `next build` first"); process.exit(2); }
-const ctx = { routes: new Set(pages.map((p) => p.route)), redirected: new Set(kit.content.getRedirects().map((redirect) => redirect.from)), indexable: [], titles: new Map(), descriptions: new Map() };
+const ctx = { routes: new Set(pages.map((p) => p.route)), redirected: new Set(kit.content.getRedirects().map((redirect) => redirect.from)), indexable: [], titles: new Map(), descriptions: new Map(), languages: new Map() };
 for (const page of pages) await checkPage(page, ctx);
+checkLanguages(ctx);
 checkSitemap(ctx);
 checkUniqueness(ctx);
 
