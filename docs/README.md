@@ -95,8 +95,11 @@ The build, its gates and the setup.
   server (`output: "standalone"`, `assemble` as the build's last step, the
   copy that nests and the check that catches it), with the notes for
   Google Cloud Run and Azure App Service.
+- [upgrade.md](upgrade.md) — `agentic-cms upgrade`: a site moved to a
+  release by that release's own code — the pin, each migration in between,
+  the agent files, the steps left by hand, the verify.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
-  next: the tag, the agent files, and each release's own steps.
+  next: the tag, the agent files, and each release's own steps, by hand.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
   0.8 (pin 0.8.1): the one required step, what it may adopt, what it deletes if it
   wrote its own.

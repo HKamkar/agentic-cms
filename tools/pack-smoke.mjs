@@ -43,6 +43,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
@@ -142,6 +143,7 @@ async function build(site) {
   bypasses(site);
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
+  upgradeFrom084(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
   agentFilesResolve(site);
@@ -380,6 +382,38 @@ function upgrade(site) {
   if (clean.status !== 0) fail(`the lint after the baseline shrank answered ${clean.status}: ${clean.output.trim().slice(-1500)}`);
   putBack(site, fresh, "");
   console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
+}
+
+/**
+ * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
+ * 0.8.4's own texts from the installed package's record, a rule and a skill
+ * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them),
+ * upgraded by the installed `agentic-cms upgrade` with the tarball as its
+ * spec: the 0.9.0 migration moves the copies, the steps left by hand come
+ * back with their section (exit 1), the lint and the tests pass, and the
+ * agent files' check is clean after it; then the fresh site is put back.
+ */
+function upgradeFrom084(site) {
+  const fresh = headOf(site);
+  site084(site, { kitRoot: path.join(site, "node_modules/agentic-cms") });
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site as 0.8.4 left its agent files");
+  const spec = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).dependencies["agentic-cms"];
+  const r = spawnSync("pnpm", ["exec", "agentic-cms", "upgrade", "--kit", spec, "--json"], { cwd: site, encoding: "utf8", env: ownBase() });
+  let report;
+  try { report = JSON.parse(r.stdout); } catch { fail(`upgrade answered ${r.status} with no report: ${r.stderr.trim().slice(-2000)}`); }
+  const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
+  const wrong = [
+    r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
+    !["removed", "moved", "thin"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
+    report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
+  ].filter(Boolean);
+  if (wrong.length) fail(`upgrade from 0.8.4: ${wrong.join("; ")}: ${r.stderr.trim().slice(-2000)}`);
+  run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
+  putBack(site, fresh, "upgrade from 0.8.4: ");
+  console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);
 }
 
 /** The text of each of a site's files, to put back. */

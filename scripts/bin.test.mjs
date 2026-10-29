@@ -20,7 +20,7 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
   assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
-  assert.match(r.stdout, /\n {2}site\s+init · setup · urls · serve\n/);
+  assert.match(r.stdout, /\n {2}site\s+init · upgrade · setup · urls · serve\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -253,6 +253,30 @@ test("init --agent-files: --diff and --accept, 0.8's hand merge, are deprecated 
     const both = run(["init", site, "--agent-files", "--check", "--accept", ".claude/rules/seo.md"]);
     assert.equal(both.status, 2);
     assert.match(both.stderr, /^init: --check and --accept are separate runs: one at a time$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("upgrade: outside a site exits 2 naming what is missing; --dry-run on a site lists what it would change, writes nothing and exits 0", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "upgrade-cli-"));
+  try {
+    const none = run(["upgrade"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^upgrade: no package\.json here: run it in the site's root$/m);
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
+    const before = fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8");
+    const dry = run(["upgrade", "--dry-run", "--json"], site);
+    assert.equal(dry.status, 0, dry.stderr);
+    const report = JSON.parse(dry.stdout);
+    assert.equal(report.dryRun, true);
+    assert.match(report.spec, /^github:HKamkar\/agentic-cms#v\d+\.\d+\.\d+/);
+    assert.deepEqual(report.verify, []);
+    assert.equal(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"), before, "nothing written");
+    const text = run(["upgrade", "--dry-run", "--from", "0.8.4"], site);
+    assert.equal(text.status, 0, text.stderr);
+    assert.match(text.stdout, /^upgrade: agentic-cms 0\.8\.4 → \S+ \(--dry-run: nothing is changed\), pnpm add agentic-cms@github:/m);
+    assert.match(text.stdout, /^ {2}0\.9\.0: nothing to do$/m, "a site laid out by this kit has nothing to move");
+    assert.equal(run(["upgrade", "--from", "latest"], site).status, 2);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

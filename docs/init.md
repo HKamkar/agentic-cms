@@ -313,6 +313,9 @@ every URL to hand over in one table ([dev-server.md](dev-server.md)).
 
 ## After a kit upgrade
 
+`agentic-cms upgrade`, run from the new release, does what follows and the
+release's own steps ([upgrade.md](upgrade.md)). By hand:
+
 ```bash
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm exec agentic-cms init . --agent-files          # the kit's lines in; the site's own kept; nothing to merge

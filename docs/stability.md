@@ -66,7 +66,7 @@ These change in any release, patches included, and none is a break:
   goes in the next breaking release.
 - **A migration or a manual step.** `agentic-cms upgrade` runs each
   release's mechanical steps and prints the rest, each with its section of
-  [upgrading.md](upgrading.md).
+  [upgrading.md](upgrading.md) ([upgrade.md](upgrade.md)).
 
 ## The policy
 
@@ -126,7 +126,7 @@ Each command's flags, defaults and exit codes are in
 | the icons: `agentic-cms icons` | stable |
 | the design round: `agentic-cms demo` | stable |
 | the lab: `agentic-cms lab` | experimental |
-| the site: `agentic-cms init`, `agentic-cms setup`, `agentic-cms urls`, `agentic-cms serve` | stable |
+| the site: `agentic-cms init`, `agentic-cms upgrade`, `agentic-cms setup`, `agentic-cms urls`, `agentic-cms serve` | stable |
 | the default gates: `agentic-cms check-components`, `agentic-cms check-site`, `agentic-cms seo`, `agentic-cms guard-email` | stable |
 | the opt-in steps: `agentic-cms critical-css`, `agentic-cms assemble` | stable |
 

@@ -123,7 +123,7 @@ at the version this site pins.
 | a dev server, a URL for the owner | `docs/dev-server.md`, `docs/browsers.md` |
 | a primitive | `docs/primitives.md` |
 | a host, a deploy | `docs/deploy.md` |
-| an upgrade of the kit | `docs/upgrading.md` |
+| an upgrade of the kit | `docs/upgrade.md` (`pnpm dlx agentic-cms@<version> upgrade`), `docs/upgrading.md` |
 | an area with traps | `docs/gotchas.md`, by topic |
 
 ## Process

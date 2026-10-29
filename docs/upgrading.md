@@ -3,8 +3,18 @@
 What a site can rely on from one version to the next, and what may change
 in any release, is [stability.md](stability.md).
 
-A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). Every
-upgrade starts the same way:
+A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). From
+0.9.0 on, one command in the site's root moves it to a release, with that
+release's own code ([upgrade.md](upgrade.md)):
+
+```bash
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade --dry-run   # what it would change
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade
+```
+
+It moves the pin, runs each migration of the releases in between, the
+agent files' refresh, prints what is left by hand with its section below,
+then runs `pnpm lint` and `pnpm test`. By hand, the same steps start:
 
 ```bash
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
@@ -25,7 +35,11 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
-## 0.8.4 → 0.9.0 (unreleased)
+## 0.8.4 → 0.9.0
+
+Unreleased: on `develop` until 0.9.0. `upgrade` runs the 0.9.0 migration
+(`scripts/migrations/0.9.0.mjs`), which takes the first item below and
+prints the rest.
 
 - **The agent files move.** The first `init . --agent-files` on 0.9.0
   moves what 0.8 copied (`--check` calls each `legacy` until then): a

@@ -920,7 +920,7 @@ agentic-cms demo clean                     # every *-demo route
 
 ## site
 
-Layer: [the site's commands](parts.md#the-sites-commands). `init` · `setup` · `urls` · `serve`
+Layer: [the site's commands](parts.md#the-sites-commands). `init` · `upgrade` · `setup` · `urls` · `serve`
 
 ### `init`
 
@@ -955,6 +955,31 @@ agentic-cms init . --name "My Site" --url https://my-site.com --email hello@my-s
 agentic-cms init my-site --name "My Site" --light-only      # a site with one scheme, light
 agentic-cms init . --agent-files          # after a kit upgrade: the kit's lines in, the site's own kept
 agentic-cms init . --agent-files --check  # what drifted, for CI
+```
+
+### `upgrade`
+
+A site moved to the release that runs it, docs/upgrading.md made executable: the version the site is on (node_modules/agentic-cms's, or the manifest's when that is older), pnpm add of the kit at this version in the site's own form of spec (a git tag, a range), each migration this release carries newer than the site's (scripts/migrations/<version>.mjs: detect, then apply, idempotent), init --agent-files (the kit's lines rewritten, the site's kept), the manual steps left with their sections of docs/upgrading.md, then pnpm lint and pnpm test; run as pnpm dlx agentic-cms@<version> upgrade, so the code that moves the site is the target's.
+
+```bash
+agentic-cms upgrade [--dry-run] [--kit <spec>] [--from <version>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--dry-run` | say what it would change — the spec, each migration's findings, the agent files as --check reports them — and change, install and run nothing |
+| `--kit <spec>` | the spec pnpm add takes (default: the site's own at this version: a git tag moved to v<version>, a range to ^<version>; a pin of another form, a tarball or a commit, needs it) |
+| `--from <version>` | the version the site is on, when node_modules and the manifest no longer say it (x.y.z): the migrations newer than it run |
+| `--json` | print the report as JSON (the progress and the commands' own output go to stderr) |
+
+Exit: `0` upgraded, the verify green and no step left by hand; or --dry-run; `1` a step left by hand (printed, with its section of docs/upgrading.md), or pnpm lint or pnpm test failed after the upgrade; `2` usage or environment, before anything is changed: no package.json, no agentic-cms dependency, a pin upgrade does not move without --kit, no version to start from without --from; or pnpm add failed, and nothing else was changed.
+
+`--json` prints `{ from, to, spec, dryRun, migrations: [{ version, found: [{ piece, what }], changed: [{ piece, file, status, note? }], manual: [{ piece, text, link }] }], agentFiles: [{ file, status, note? }], manual: [{ piece, text, link }], verify: [{ script, status }], exit }`.
+
+```bash
+agentic-cms upgrade --dry-run              # what it would change; changes nothing
+agentic-cms upgrade                        # run by the release: pnpm dlx agentic-cms@<version> upgrade in the site's root
+agentic-cms upgrade --kit file:../agentic-cms-0.9.0.tgz   # the kit from a tarball
 ```
 
 ### `setup`

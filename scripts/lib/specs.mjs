@@ -302,6 +302,19 @@ export const SPECS = {
     exit: { 0: "written, every agent file the kit's text or the site's own lines beside it, or a deprecated --diff or --accept, which does nothing", 1: "--check found drift", 2: "usage, a new site without --name or with an empty one, a --url that is not an origin or an --email that is not an address (nothing is written), --name, --url or --email with --agent-files, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report)" },
     json: "{ target, version, created, updated, kept, lightOnly, site: { name, url, email, starter: true } | { starter: false } } | { version, files: [{ file, status, note?, required?, keys?, bytes? }] }",
   },
+  upgrade: {
+    command: "upgrade", script: "upgrade", group: "site", summary: "a site moved to the release that runs it, docs/upgrading.md made executable: the version the site is on (node_modules/agentic-cms's, or the manifest's when that is older), pnpm add of the kit at this version in the site's own form of spec (a git tag, a range), each migration this release carries newer than the site's (scripts/migrations/<version>.mjs: detect, then apply, idempotent), init --agent-files (the kit's lines rewritten, the site's kept), the manual steps left with their sections of docs/upgrading.md, then pnpm lint and pnpm test; run as pnpm dlx agentic-cms@<version> upgrade, so the code that moves the site is the target's",
+    usage: "agentic-cms upgrade [--dry-run] [--kit <spec>] [--from <version>] [--json]",
+    flags: {
+      "dry-run": { type: "boolean", help: "say what it would change \u2014 the spec, each migration's findings, the agent files as --check reports them \u2014 and change, install and run nothing" },
+      kit: { type: "string", value: "<spec>", help: "the spec pnpm add takes (default: the site's own at this version: a git tag moved to v<version>, a range to ^<version>; a pin of another form, a tarball or a commit, needs it)" },
+      from: { type: "string", value: "<version>", help: "the version the site is on, when node_modules and the manifest no longer say it (x.y.z): the migrations newer than it run" },
+      json: { type: "boolean", help: "print the report as JSON (the progress and the commands' own output go to stderr)" },
+    },
+    examples: ["agentic-cms upgrade --dry-run              # what it would change; changes nothing", "agentic-cms upgrade                        # run by the release: pnpm dlx agentic-cms@<version> upgrade in the site's root", "agentic-cms upgrade --kit file:../agentic-cms-0.9.0.tgz   # the kit from a tarball"],
+    exit: { 0: "upgraded, the verify green and no step left by hand; or --dry-run", 1: "a step left by hand (printed, with its section of docs/upgrading.md), or pnpm lint or pnpm test failed after the upgrade", 2: "usage or environment, before anything is changed: no package.json, no agentic-cms dependency, a pin upgrade does not move without --kit, no version to start from without --from; or pnpm add failed, and nothing else was changed" },
+    json: "{ from, to, spec, dryRun, migrations: [{ version, found: [{ piece, what }], changed: [{ piece, file, status, note? }], manual: [{ piece, text, link }] }], agentFiles: [{ file, status, note? }], manual: [{ piece, text, link }], verify: [{ script, status }], exit }",
+  },
   setup: {
     command: "setup", script: "setup", group: "site", summary: "a clone made ready to work on, the steps after scripts/setup.sh got Node checked, pnpm and the dependencies: the browsers the kit drives (Chromium, WebKit), .env.local with this machine's addresses in ALLOWED_DEV_ORIGINS, the lint and the tests, then the URLs; each step keeps what is there, so a re-run takes seconds",
     usage: "agentic-cms setup [--check] [--build] [--no-browsers] [--engines chromium,webkit] [--deps] [--no-public] [--port <n>] [--lab-port <n>] [--json]",
