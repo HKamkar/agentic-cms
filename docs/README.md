@@ -110,6 +110,9 @@ The build, its gates and the setup.
 - [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest
   preferred, and a new site's starter without the example's brand.
-- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: agentic-cms
+- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: first what a
+  site gets (a schema for every content file, redirects as content, one
+  page on what it can rely on, the kit's skills read from the package, a
+  preview link per pull request, `upgrade`), then the docs, then agentic-cms
   as a standard npm package, published from CI with provenance, with
-  `pnpm create agentic-cms` and `upgrade`.
+  `pnpm create agentic-cms`.

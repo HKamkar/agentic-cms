@@ -1,10 +1,13 @@
 # Roadmap — 0.9.0: a standard npm package
 
-> Plan, not started: it begins after the `v0.8.2` tag, once 0.8.1's fixes
-> and 0.8.2's map and checks (`docs/roadmap-0.8.2.md`) have landed. Written
-> 2026-10-16 from a read of the kit at `develop` e615341. When 0.9.0
-> starts, this file becomes `docs/roadmap.md` (job 0). The owner took every
-> decision's recommendation on 2026-10-17.
+> Plan, not started. 0.8.2's map and checks have landed, and 0.8.3 and
+> 0.8.4 with them. Written 2026-10-16 from a read of the kit at `develop`
+> e615341; the owner took D1–D9's recommendations on 2026-10-17. On
+> 2026-10-29 the owner added six jobs that make a site easier to run and to
+> upgrade (8–11, with 5 and 6 reworded) and a docs pass (12), to land before
+> the packaging jobs, and approved the plan with D10–D17's recommendations
+> the same day. When 0.9.0 starts, this file becomes `docs/roadmap.md`
+> (job 0).
 
 A site installs agentic-cms from GitHub by tag
 (`github:HKamkar/agentic-cms#v0.8.0`). That works, but it is not how a
@@ -45,6 +48,20 @@ That command:
 To move a site from one release to the next,
 `pnpm dlx agentic-cms@latest upgrade` runs the release's mechanical steps
 and prints the rest.
+
+**And what a site gets on the way** (jobs 8–12, before the package):
+
+- its content files checked as they are typed, by a JSON Schema the
+  engine writes;
+- its redirects in one file the build checks, so a removed page does not
+  quietly become a 404;
+- one page that says what it can rely on between versions;
+- the kit's skills and guides read from the installed package, so an
+  upgrade asks for no merge of the agent files;
+- a preview link on every pull request;
+- a README that says, on its first screen, how the kit differs from a
+  database CMS such as Payload, which now calls itself "the agentic
+  content framework".
 
 ## What "a standard package" means here
 
@@ -89,6 +106,20 @@ These ten points are the definition of done for 0.9.0.
 | D8 | Where the starter lives | (a) in the main package, as today (the tarball is 640 KB of its 1 MB budget); (b) a starter package of its own | **Decided: (a)**, as the 0.8.0 roadmap said, until the budget says otherwise. |
 | D9 | 1.0.0's "what kind of CMS" briefs | (a) the first job of 0.9.0, blocking the rest (the 0.8.0 roadmap's wording); (b) a track of their own, decided before 1.0.0 | **Decided: (b).** Packaging changes none of the answers, and D1 settles "Name and home" as far as npm goes. |
 
+The jobs added on 2026-10-29 bring eight more. The owner took each
+recommendation on 2026-10-29.
+
+| # | Question | Options | Decided (owner, 2026-10-29) |
+|---|---|---|---|
+| D10 | Where the content schemas live (job 8) | (a) committed under `content/_schemas/`, held current by a check in the build; (b) written at install or `dev` into a gitignored folder | **Decided: (a).** An editor and an agent read them without running anything, and a schema change shows in review. The engine already skips `_`-prefixed paths. |
+| D11 | How an editor finds a file's schema (job 8) | (a) a `# yaml-language-server: $schema=…` line at the top of each YAML content file; (b) a `yaml.schemas` map in `.vscode/settings.json` | **Decided: (a).** It works in any editor with the YAML language server, an agent sees it in the file, and `.vscode/` stays the person's own. |
+| D12 | How redirects reach the host (job 9) | (a) `redirects()` in `next.config.ts`, from the file; (b) a `_redirects` file in the served assets | **Decided: (a).** The Worker and a Node server answer the same, and no host format leaks into the content. |
+| D13 | A page or post file removed since the merge base, with no redirect for its URL (job 9) | (a) `check-site` fails; (b) it warns, naming the fix | **Decided: (b).** No rule gets stricter (owner, 2026-10-29). `retire-content` writes the redirect itself, so an agent's path is covered, and the warning is in every lint. |
+| D14 | How a site gets the kit's skills (job 10) | (a) as Claude Code plugins from a marketplace in the installed package, `./node_modules/agentic-cms`; (b) copied as today, but rewritten on every upgrade and never merged, the site's own skills kept apart | **Decided: (a)**, if the job's first step shows Claude Code reads a `directory` marketplace there; else (b). Either way an upgrade asks for no merge. |
+| D15 | How Codex finds them (job 10) | (a) a task → skill table in the site's `AGENTS.md`; (b) a stub per skill in `.agents/skills/`: its name and description, and one line naming the package's file | **Decided: (b).** Codex lists a skill by its description; a stub is never edited, so `init` rewrites it freely. |
+| D16 | The preview's address (job 11) | (a) one per pull request: a version uploaded with the alias `pr-<n>`, the same link on every push; (b) one per push, each version's own | **Decided: (a).** The comment's link stays the same, and the latest push is what it shows. |
+| D17 | The page on what a site can rely on (job 6) | (a) a page of its own, `docs/stability.md`, with the stable/experimental column on `docs/parts.md`; (b) the column alone, as job 6 first said | **Decided: (a)** (owner, 2026-10-29: "one page"). The column marks each part; the page says what the marks promise and what no version promises. |
+
 ## The owner's steps
 
 Only the owner can do these, because each one needs the owner's npm login
@@ -99,7 +130,10 @@ or approval.
 - **O2, right after the `v0.8.0` tag (D2a):** publish the tag's tarball by
   hand: `pnpm pack` on the tag, then `pnpm publish <tarball>` with 2FA. The
   npm page for 0.8.0 shows 0.8.0's GitHub install lines; 0.9.0 replaces
-  them.
+  them. **Not done yet:** on 2026-10-29 the registry still answered 404 for
+  `agentic-cms`. The name is held only once it is published, so this is the
+  first step now, with the newest tag's tarball (`v0.8.4`) in place of
+  0.8.0's.
 - **O3, within two days before `v0.9.0-rc.0`:**
   - On npmjs.com, add the trusted publisher: GitHub Actions, repository
     `HKamkar/agentic-cms`, workflow `release.yml`, environment `npm`.
@@ -114,6 +148,10 @@ or approval.
   conductor can create it through the API on the owner's word.
 - **O5, when job 4 lands:** the first publish of `create-agentic-cms`, by
   hand, then its O3.
+- **O6, when job 11 lands, if the kit's own pull requests should get a
+  preview of the example site:** a Cloudflare API token that may upload
+  Workers versions, and the account id, as the repository's secrets. A site
+  sets its own the same way.
 - **Every publish:** the owner approves the release workflow's publish job
   (D3).
 
@@ -127,8 +165,13 @@ or approval.
 | 3 | Install from npm everywhere | `init`'s dependency spec, `allowBuilds`, every install line |
 | 4 | `pnpm create agentic-cms` | `packages/create-agentic-cms/`, a thin wrapper around `init` |
 | 5 | `agentic-cms upgrade` | the upgrade guide made executable, with migrations per version |
-| 6 | The public surface | a stable/experimental column on 0.8.2's `docs/parts.md`, and the deprecation policy |
+| 6 | What a site can rely on | one page, `docs/stability.md`, a stable/experimental column on `docs/parts.md`, and the deprecation policy |
 | 7 | Peers and engines | bounded ranges, tested at the floor and at the newest version |
+| 8 | A schema for every content file | `agentic-cms schema`: the engine's zod schemas as JSON Schema, which an editor checks as it types |
+| 9 | Redirects as content | `content/redirects.yaml`, checked by the content lint, served through `next.config.ts` |
+| 10 | Fewer files copied into a site | the skills and guides read from the installed package; thin rules; no merges on upgrade |
+| 11 | A preview link on every pull request | a CI job that uploads a preview version and comments its link and the pages it touches |
+| 12 | The docs, the README, the way from 0.8 | the sweep, how the kit differs from a database CMS, `docs/migrating-to-0.9.0.md` |
 | R | Release 0.9.0 | `rc.1` on `next`, the gate, `0.9.0` on `latest` |
 | S | The sites follow | `upgrade` in each site's own session |
 
@@ -269,7 +312,9 @@ target version's, which holds every migration up to it. The command:
 3. runs each migration between the two versions. Each one is a file,
    `scripts/migrations/<version>.mjs`, with a `detect()` and an `apply()`.
    Each is idempotent and tested on a fixture site;
-4. runs `init --agent-files --diff`, and the `--accept` the diff calls for;
+4. runs `init --agent-files`, which after job 10 rewrites the few files it
+   copies and asks for no merge (a site rule the site edited keeps its own
+   lines, the required ones checked);
 5. prints each manual step, with a link to its section of
    `docs/upgrading.md`;
 6. verifies with `pnpm lint` and `pnpm test`.
@@ -279,18 +324,42 @@ More:
 - **`--dry-run`** lists what the command would change.
 - **Exit codes:** 0 when done, 1 when manual steps are left, 2 for a usage
   or environment error.
-- **The first migration,** 0.8.0 → 0.9.0, moves the dependency spec from
-  `github:` to `^0.9.0` and removes the kit's `allowBuilds` entry. The gate
-  runs it (R).
+- **The first migration,** 0.8.x → 0.9.0, gathers what 0.9.0 changes in a
+  site, each piece added by the job that brings it:
+  - job 10: the copied skills a site never edited go (the manifest's hashes
+    say which), one it edited moves to the site's own folder with a note, the
+    rules get thin, and `.claude/settings.json` names the package's
+    marketplace;
+  - job 9: `redirects()` in `next.config.ts`, and an empty
+    `content/redirects.yaml`;
+  - job 8: the schema line at the top of each YAML content file;
+  - job 3: the dependency spec moves from `github:` to `^0.9.0`, and the
+    kit's `allowBuilds` entry goes.
+
+  The gate runs it (R).
+- **Built before the package:** this job lands in phase 1 (Order), with the
+  migrations of jobs 8–10. Job 3 adds the spec's when it lands, so `upgrade`
+  is tested on fixture sites from the start, from a tarball.
 - **It follows the command contract:** a spec, `parseOrExit`, tests, bin
   cases, `docs/upgrade.md` with its index line, and `pnpm docs:commands`.
 
-### 6 — The public surface, written down
+### 6 — What a site can rely on
 
 0.8.2's map, `docs/parts.md`, already lists every part, how to use it
 and the check that holds it. This job adds a stable or experimental column
-to that page instead of writing a page of its own.
+to it, and one short page a site's owner reads before an upgrade (D17).
 
+- **`docs/stability.md`,** one page:
+  - what a site can rely on between versions: each stable part keeps its
+    name, its options and its behaviour until a major (before 1.0.0, a
+    minor, with its migration);
+  - what may change in any release: the wireframe's markup and classes, a
+    report's wording (a `--json` shape is the contract, not the text), the
+    example's content, anything marked experimental;
+  - how a change is announced: the changelog, a `deprecated()` warning for
+    one minor, an `upgrade` migration or a manual step with its link.
+
+  It links the map's column for the part-by-part answer.
 - **The map's new column** marks each part **stable** or **experimental**:
   - every export: the 15 subpaths;
   - every command: its flags, exit codes and `--json` shapes, linked from
@@ -300,7 +369,7 @@ to that page instead of writing a page of its own.
 
   `./lab` and its commands are probably experimental.
 - **A test keeps the page complete.** Every `exports` key and every `SPECS`
-  command must appear on it.
+  command must appear on it, so each later job adds its row.
 - **The policy:**
   - before 1.0.0, a minor may break something, but only with an `upgrade`
     migration or a written manual step;
@@ -324,6 +393,176 @@ to that page instead of writing a page of its own.
   weekly, which catches a new minor that breaks the kit.
 - **The unit suites** also run on the Node floor.
 
+### 8 — A schema for every content file
+
+Today a content file is checked when `pnpm content:check` or the build
+runs. The engine's schemas are zod, with a `.describe()` on most fields, and
+zod 4 writes JSON Schema (`z.toJSONSchema`). Written as files, they let an
+editor and an agent see a wrong key or a missing field as it is typed.
+
+- **`agentic-cms schema`** writes one JSON Schema per collection, and one
+  for the page files, whose `sections` is a `oneOf` keyed by `type` from the
+  section registry's schemas, into `content/_schemas/` (D10).
+- **What a field says:**
+  - its `.describe()` text becomes the schema's `description`, and its
+    `meta()` a line of it: a `ref("authors")` field is a string "a slug of
+    `content/authors.json`";
+  - no slug is listed, so adding an author leaves the schemas as they are,
+    and `content:check` still checks every ref;
+  - the schema is the input a file may hold (`io: "input"`): a field
+    `optional()` makes takes `null`, a date is a quoted string.
+- **Never stale:** `agentic-cms schema --check` fails when a written file
+  differs from the code. `docs --check`, which the build already runs,
+  runs it too, so a schema change and its files land together.
+- **The editor sees it (D11):** the YAML templates in
+  `content/_templates/` and the starter's files open with
+  `# yaml-language-server: $schema=../_schemas/<file>.json`, and the 0.9.0
+  migration adds the line to a site's YAML content files. A post's
+  frontmatter has no editor hook; its schema is there for agents.
+- **Agents read it:** the editorial skills read a file's schema before
+  they write one, and still run `pnpm content:check` after.
+- **The command contract:** a spec, `parseOrExit`, tests (the example's
+  collections give the same schemas; a stale file fails `--check`), bin
+  cases, `docs/schema.md`, `pnpm docs:commands`, the map's row.
+
+### 9 — Redirects as content
+
+The rule is that an indexed URL never changes without a redirect, and
+nothing holds it: `retire-content` says redirects "live on the host, in
+whatever list" it has.
+
+- **`content/redirects.yaml`,** a collection: each entry `from` (a path),
+  `to` (a path or an `https://` URL) and `permanent` (true unless said).
+- **The content lint checks it:**
+  - each `from` is a path, listed once, and no live page or post (it would
+    hide the page);
+  - no chain (a `to` that is another entry's `from`) and no loop;
+  - a `to` path is a page, a post or the blog index.
+- **It reaches the host through Next (D12):** `next.config.ts`'s
+  `redirects()` returns `redirectsFor()` from `agentic-cms/content`, read
+  at build time. `init` writes the line, and the 0.9.0 migration adds it to
+  an existing config.
+- **A page that goes leaves a redirect (D13):** `check-site` gains a
+  `retired` pass. A page or post file deleted or renamed since the merge
+  base, whose URL no redirect names, is a warning with the fix: the
+  redirect, or the post kept as a draft (its URL stays, as today).
+- **The skills:** `retire-content` writes the redirect itself instead of
+  asking about the host, and `new-page` refuses a slug a redirect's `from`
+  holds.
+- **The SEO audit** fails a sitemap that lists a redirected path.
+- **The docs:** `docs/redirects.md`, the collection's field table in
+  `src/lib/content/README.md`, `content/README.md`, the map's row.
+
+### 10 — Fewer files copied into a site
+
+`init --agent-files` copies the kit's rules and skills into each site
+(`.claude/rules/`, `.claude/skills/`, `.agents/skills/`). Each release's
+change to one comes back as `kept, kit changed`, merged by hand with
+`--diff` and `--accept`: most of 0.8.x's upgrade work. And the editorial
+plugin comes from the GitHub marketplace, so it follows the kit's `main`
+branch, not the version the site pins.
+
+A site must keep little of its own: its `AGENTS.md`, each rule's `paths`
+(Claude Code loads a rule only from `.claude/rules/`), the lines the kit
+marks required, and its own edits. The rest is reference that should change
+with the pin, from the package, which already ships `docs/`.
+
+- **The skills come from the installed package (D14).** The package ships
+  `.claude-plugin/marketplace.json` and two plugins: `editorial`, as today,
+  and `design`, the seven design skills. A site's `.claude/settings.json`
+  names the marketplace by path, `./node_modules/agentic-cms`.
+  `.claude/skills/` then holds only the site's own skills.
+  - **First step:** prove that Claude Code reads a `directory` marketplace
+    inside `node_modules`, with its skills listed and loaded. If it does
+    not, D14 (b): the copies stay, rewritten on every upgrade, never merged.
+- **Codex (D15):** a stub per skill in `.agents/skills/`: its frontmatter
+  name and description, and one line naming
+  `node_modules/agentic-cms/.agents/skills/<name>/SKILL.md`.
+- **The rules get thin.** A site's `.claude/rules/<name>.md` keeps its
+  `paths`, the required lines and the site's own lines, and ends with a
+  pointer: "Before an edit these paths match, read the kit's rule,
+  `node_modules/agentic-cms/templates/site/rules/<name>.md`". A site that
+  edited a rule keeps its edits; the kit's text changes in the package.
+- **The guides,** like Payload's skill index: the site's `AGENTS.md` gets a
+  short table, from a task to the guide in `node_modules/agentic-cms/docs/`,
+  in place of the text it copies today, which keeps it well under its
+  budget.
+- **The manifest** (`.agentic-cms.json`) records the thin rules, the stubs
+  and the settings keys. `--check` still fails a required line gone, and
+  passes a site's own edits.
+- **The 0.9.0 migration** (job 5) moves a site there.
+- **The kit's own checkout** keeps its full files, being their source;
+  `skills:sync` stays.
+
+### 11 — A preview link on every pull request
+
+Today the owner reviews a change by its diff, or runs the site. A preview
+puts it on the real pages, on any device, before the merge: the review
+surface the 1.0.0 briefs recommend.
+
+- **A `preview` job** in the site's CI workflow (the template's
+  `verify.yml`; an existing site copies it):
+  - on a pull request, the site builds as production with
+    `AGENTIC_CMS_PREVIEW=1`, and a Workers version goes up without being
+    deployed, under the alias `pr-<n>` (D16): OpenNext's `upload` with
+    wrangler's `--preview-alias`, or `wrangler versions upload` after
+    OpenNext's build if `upload` cannot pass it (the job's first check);
+  - one comment, updated on each push: the link, and the pages the change
+    touches (each changed page or post file's route; "every page" when the
+    chrome, a component or a collection more than one page reads changed).
+- **A preview is not the site:**
+  - every page answers `X-Robots-Tag: noindex` (a `_headers` file the
+    preview build adds to the assets), and the robots file disallows all;
+  - the form endpoint delivers to a log sink, never the site's
+    destination;
+  - consent tags load nothing;
+  - the SEO audit knows the flag.
+- **Secrets:** `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, the site
+  owner's (O6 for the kit's example). A pull request from a fork has no
+  secrets, and its run says it made no preview.
+- **Other hosts:** Vercel and Netlify make their own previews.
+  `docs/deploy.md` says what to set there (the noindex, the form sink). The
+  kit makes none for a Node host.
+- **Tests:** a stubbed `wrangler` gives the alias, the comment's text and
+  the fork case; `check-site`'s `ci` pass knows the job.
+- **The docs:** `docs/preview.md`, `docs/deploy.md`, the template workflow,
+  the map's row.
+
+### 12 — The docs, the README, and the way from 0.8
+
+- **The sweep,** as every release does: the README, both `AGENTS.md`, the
+  skills, each guide a job touched, `docs/parts.md`, `docs/README.md`'s
+  index; the changelog is the conductor's.
+- **`docs/migrating-to-0.9.0.md`,** a site's way from 0.8.x:
+  `pnpm dlx agentic-cms@0.9.0 upgrade`, what it does (job 5's migration),
+  and what stays by hand: the preview job's secrets, the host's own
+  redirects moved into `content/redirects.yaml`, the editor's YAML
+  extension. `docs/upgrading.md`'s `## 0.8.4 → 0.9.0` links it.
+- **How the kit differs, on the README's first screen.** Payload now calls
+  itself "the agentic content framework", and a reader who meets both
+  should see in one screen that they are different tools. A section after
+  "Files, not a database" (a draft, its facts dated and linked):
+
+  > **Next to Payload.** Payload is a framework for apps and headless
+  > CMSs: a database, an admin panel generated from code, an API at request
+  > time, auth and access control. Its agents read and write the database
+  > through MCP. agentic-cms has none of those. Its content is files in git,
+  > its editor is an agent working in pull requests, and its build refuses
+  > what breaks the site's rules: the schema, the voice and the claims, the
+  > SEO, the engines in code, the pixels. What ships is static.
+  >
+  > | | Payload | agentic-cms |
+  > |---|---|---|
+  > | Content lives in | a database (MongoDB, Postgres, SQLite) | files under `content/`, in git |
+  > | Who edits | people in the admin; agents through MCP | an agent, in a pull request a person merges |
+  > | An agent's mistake meets | field validation and access rules, then the database | the build (schema, voice, SEO, engines), then the review |
+  > | Design | the site's own code | the component library's rules, and a pixel proof before a merge |
+  > | At request time | the server and the database | nothing: prerendered and static |
+  > | Pick it when | editors don't use git, the site has logins, content changes without a deploy | an agent runs a marketing site or a blog, and its voice, SEO and design must hold |
+
+  The npm description (job 1) says the same in one line. This section is
+  docs alone and may land first, on its own.
+
 ### R — Release 0.9.0
 
 1. Tag `v0.9.0-rc.0` from `develop` once jobs 1 and 2 have landed. It
@@ -332,9 +571,9 @@ to that page instead of writing a page of its own.
 2. Tag `v0.9.0-rc.1` once every job has landed. It is published to `next`
    through the workflow, with the owner's approval.
 3. **The gate is the owner's,** run in each site's own sessions: on two
-   sites on 0.8.0, `pnpm dlx agentic-cms@next upgrade`, then a build and a
-   proof that nothing moved. Findings come back as kit fixes and the next
-   `-rc.N`.
+   sites on 0.8.x, `pnpm dlx agentic-cms@next upgrade`, then a build, a
+   proof that nothing moved and a preview link on the gate's pull request.
+   Findings come back as kit fixes and the next `-rc.N`.
 4. **The release:**
    - the release commit and the release PR, which the owner merges;
    - the tag `v0.9.0` on `main`, published to `latest` with the owner's
@@ -350,21 +589,40 @@ moved, and merges.
 
 ## Order
 
+The owner's order (2026-10-29): what a site gets first, then the docs,
+then the package. And no stream of commits and pull requests: each lane of
+a phase is one pull request, with one commit per job, each proven before
+the next (fixes go into the job's commit before the push). Its changelog
+lines are in the pull request's body, and the conductor writes them into
+`CHANGELOG.md` with the release commit, not one commit per merge.
+
 ```
-after v0.8.0   O1, O2, O4 (owner); the jobs start after v0.8.2
-Lane A         [0] → [1 tarball] → [2 release CI] → O3 → rc.0 → [3 npm installs] → [4 create] (+ O5) → [5 upgrade]
-Lane B         [6 surface] after 0;  [7 peers] after 1
+now            O2 (owner): publish v0.8.4's tarball by hand, which holds the name; O1, O4
+               [0] this plan into docs/roadmap.md
+Phase 1        Lane A  [8 schema] → [9 redirects] → [11 preview] (+ O6)
+               Lane B  [6 stability] → [10 fewer copies] → [5 upgrade]
+Phase 2        [12 docs, README, migrating-to-0.9.0]   (its README section may land first)
+Phase 3        Lane A  [1 tarball] → [2 release CI] → O3 → rc.0 → [3 npm installs] → [4 create] (+ O5)
+               Lane B  [7 peers] after 1
 then           rc.1 → gate → R → S
 ```
+
+- Job 6 comes first in its lane: its test then makes every later job add
+  its part's row.
+- Job 5 follows job 10, since its first migration moves a site's agent
+  files; jobs 8 and 9 add theirs as they land, and job 3 the spec's.
 
 The jobs overlap in these files; whichever pull request lands second
 rebases:
 
 - `package.json`: jobs 1, 4 and 7;
-- `tools/pack-smoke.mjs`: jobs 1, 3, 4 and 7;
-- `scripts/lib/init.mjs`: jobs 3 and 5;
-- `verify.yml`: jobs 1 and 7;
-- `release.yml`: jobs 2 and 4.
+- `tools/pack-smoke.mjs`: jobs 1, 3, 4, 5, 7, 8, 9 and 10;
+- `scripts/lib/init.mjs`: jobs 3, 5, 8, 9 and 10;
+- `scripts/lib/check-site.mjs`: jobs 9 and 11;
+- `verify.yml` and the template's: jobs 1, 7 and 11;
+- `release.yml`: jobs 2 and 4;
+- `docs/parts.md`: jobs 6, 8, 9, 10, 11 and 12;
+- `README.md`: jobs 3, 4 and 12.
 
 ## Risks and how each is held
 
@@ -392,6 +650,18 @@ rebases:
 - **npm's rules change again.** In 2025 npm revoked classic tokens, capped
   write tokens at 90 days and moved logins to two-hour sessions.
   - *Hold:* the kit uses no token at all, only OIDC.
+- **The name is taken before 0.9.0.** Nothing is published yet.
+  - *Hold:* O2 now, with `v0.8.4`'s tarball.
+- **Claude Code reads no marketplace inside `node_modules`.**
+  - *Hold:* job 10's first step proves it before anything depends on it;
+    D14 (b) keeps the copies, with no merges.
+- **A preview gets indexed, or sends a real form.**
+  - *Hold:* the noindex header and robots file, the log sink, and a test
+    of each on the preview build.
+- **A schema file drifts from the code.**
+  - *Hold:* `schema --check` in `docs --check`, which every build runs.
+- **A redirect hides a live page.**
+  - *Hold:* the content lint refuses a `from` that is a page or a post.
 
 ## Later
 
@@ -407,5 +677,14 @@ rebases:
   attestation for 0.9.0.
 - In an empty folder, `pnpm create agentic-cms my-site` installs without a
   build approval for the kit, and then lints, tests and builds clean.
-- A site on 0.8.0 reaches 0.9.0 with `pnpm dlx agentic-cms@0.9.0 upgrade`,
-  with no hand edit beyond the steps it prints.
+- A site on 0.8.x reaches 0.9.0 with `pnpm dlx agentic-cms@0.9.0 upgrade`,
+  with no hand edit beyond the steps it prints, and no merge of an agent
+  file.
+- In that site:
+  - a YAML content file with a wrong key shows the error in the editor,
+    before any command runs;
+  - a page file deleted without a redirect warns in `pnpm lint`;
+  - a pull request gets a comment with its preview link, and the preview
+    answers `noindex`.
+- `docs/stability.md` exists, and the README's first screen says how the
+  kit differs from a database CMS.
