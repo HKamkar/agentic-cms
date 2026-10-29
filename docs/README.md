@@ -105,14 +105,13 @@ The build, its gates and the setup.
 - [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
   Tailwind, CSS and SVG, measuring, pnpm, git and GitHub, services; each
   the symptom, the reason and what to do.
-- [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
-  1.0.0.
+- [roadmap.md](roadmap.md) — the plan for 0.9.0: first what a site gets (a
+  schema for every content file, redirects as content, one page on what it
+  can rely on, the kit's skills read from the package, a preview link per
+  pull request, `upgrade`), then the docs, then agentic-cms as a standard
+  npm package, published from CI with provenance, with
+  `pnpm create agentic-cms`. The 0.8.0 plan it replaced is in history
+  (`git show v0.8.0:docs/roadmap.md`).
 - [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest
   preferred, and a new site's starter without the example's brand.
-- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: first what a
-  site gets (a schema for every content file, redirects as content, one
-  page on what it can rely on, the kit's skills read from the package, a
-  preview link per pull request, `upgrade`), then the docs, then agentic-cms
-  as a standard npm package, published from CI with provenance, with
-  `pnpm create agentic-cms`.

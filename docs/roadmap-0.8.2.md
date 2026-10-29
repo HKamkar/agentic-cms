@@ -1,6 +1,6 @@
 # Roadmap — 0.8.2: the engines hold, the rest stays open, and no Acme
 
-> Landed in 0.8.2 (2026-10-22); 0.9.0 (`docs/roadmap-0.9.0.md`) follows
+> Landed in 0.8.2 (2026-10-22); 0.9.0 (`docs/roadmap.md`) follows
 > it. Written 2026-10-17 from a survey of `develop` c9ac3ed, and revised
 > the same day after the owner's review: the engines are enforced,
 > everything else is guided and never blocked, and a new site starts
