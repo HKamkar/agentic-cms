@@ -135,7 +135,9 @@ or approval. (O2, a hand publish of `v0.8.4`, went with D2's change: no
   on.
 - **O3, right after the hand-published `v0.9.0-rc.0`:**
   - On npmjs.com, add the trusted publisher: GitHub Actions, repository
-    `HKamkar/agentic-cms`, workflow `release.yml`, environment `npm`.
+    `HKamkar/agentic-cms`, workflow `release.yml`, environment `npm`, its
+    allowed actions with `npm publish` ticked (one made after 2026-09-03
+    allows only `npm stage publish` until told).
   - Then set publishing access to "Require two-factor authentication and
     disallow tokens".
 
@@ -304,7 +306,10 @@ jobs.
    - fails unless npm is 11.5.1 or later and Node 22.14 or later, the
      floors for trusted publishing;
    - runs `npm publish <tarball> --tag latest` for a release, or
-     `--tag next` for a candidate.
+     `--tag next` for a candidate;
+   - publishes nothing when the registry holds the version from this same
+     tarball (a package's first version, which goes up by hand, D2), and
+     fails when it holds it from another.
 
    This job installs nothing and restores no cache, so a poisoned cache
    cannot reach the publish.
@@ -315,14 +320,16 @@ jobs.
      `pnpm dlx agentic-cms@<version> init smoke` (after job 4,
      `pnpm create agentic-cms@<version>`), an install with no build
      approval for the kit, then lint, test and build;
-   - runs `npm audit signatures` there, which must pass.
+   - runs `npm audit signatures` over an install of the version with npm,
+     which must pass.
 
 More:
 
 - Actions are pinned by commit sha, as in `verify.yml`, and Dependabot
   covers the new workflow.
 - A `workflow_dispatch` dry run does everything except the publish, which
-  runs with `--dry-run`.
+  runs with `--dry-run`, outside the environment and with no token; it
+  writes no GitHub Release.
 - **`docs/releasing.md` (new)** describes the procedure and the owner's
   clicks. AGENTS.md's git-workflow lines follow: tags are immutable because
   npm publishes them.

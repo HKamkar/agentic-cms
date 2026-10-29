@@ -48,7 +48,8 @@
 // installed version printed.
 //
 //   pnpm test:pack                   (a few minutes: two installs and a build)
-//   pnpm test:pack --keep            leaves the scratch site behind and prints where
+//   pnpm test:pack --keep <dir>      keeps the tarball it proved in <dir> (the release's check job publishes that file)
+//   pnpm test:pack --keep-site       leaves the scratch site behind and prints where
 //   pnpm test:pack --peers floor     (or newest: one install and one build)
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -728,8 +729,18 @@ async function peersAt(end) {
   console.log(`pack-smoke --peers ${end}: the starter builds, lints and tests on Node ${process.versions.node} with ${installed.map(([name, , version]) => `${name} ${version}`).join(", ")}`);
 }
 
+/** The folder `--keep <dir>` names, or null; exits 2 when the flag has no folder after it. */
+function keepDir(argv) {
+  const at = argv.indexOf("--keep");
+  if (at === -1) return null;
+  const dir = argv[at + 1];
+  if (!dir || dir.startsWith("--")) { console.error("pack-smoke: --keep takes the folder to keep the proven tarball in (--keep-site leaves the scratch site)"); process.exit(2); }
+  return path.resolve(dir);
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
   const at = process.argv.indexOf("--peers");
+  const keep = keepDir(process.argv);
   if (at !== -1) {
     const end = process.argv[at + 1];
     if (!PEER_ENDS.includes(end)) { console.error(`pack-smoke: --peers takes ${PEER_ENDS.join(" or ")}`); process.exit(2); }
@@ -743,7 +754,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
     entries(site);
     await lightOnly(site, tarball);
     console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
-    if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
+    if (keep) {
+      fs.mkdirSync(keep, { recursive: true });
+      fs.copyFileSync(tarball, path.join(keep, path.basename(tarball)));
+      console.log(`pack-smoke: the proven tarball kept at ${path.join(keep, path.basename(tarball))}`);
+    }
+    if (process.argv.includes("--keep-site")) console.log(`pack-smoke: scratch site kept at ${site}`);
     else fs.rmSync(scratch, { recursive: true, force: true });
   }
 }

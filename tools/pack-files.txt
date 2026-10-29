@@ -228,6 +228,7 @@ docs/parts.md
 docs/preview.md
 docs/primitives.md
 docs/redirects.md
+docs/releasing.md
 docs/roadmap-0.8.2.md
 docs/roadmap.md
 docs/schema.md
