@@ -42,6 +42,9 @@ export function sourceOf(def: CollectionDef): string {
 
 const location = (def: CollectionDef) => path.join(contentRoot(), def.kind === "folder" ? def.dir : def.file);
 
+/** Whether the collection's folder or file is there: a language with no posts has no content/blog/<prefix>/, which a listing of every language reads as none. */
+export const isOnDisk = (def: CollectionDef): boolean => fs.existsSync(location(def));
+
 /** Every entry of the collection, validated, in listing order. Throws a ContentError for the first bad file with all of its issues. */
 export function readCollection<D extends CollectionDef>(def: D): EntryOf<D>[] {
   const hit = cache.get(def) ?? entriesOf(def).map((entry) => validate(def, entry));

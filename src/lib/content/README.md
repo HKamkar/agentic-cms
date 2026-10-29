@@ -60,7 +60,8 @@ under `src/` (`agentic-cms/copy`, `docs/primitives.md` § Enforced).
 | `src/components/sections/schemas.ts` | The site's section types: one zod schema per type, copy fields only, `sectionSchema` as their discriminated union — what `createCollections()` takes |
 | `redirects.ts` | `redirectsFor()`: `content/redirects.yaml` as `next.config.ts`'s `redirects()` returns it (`{ source, destination, permanent }`, permanent unless an entry says false), read when Next loads its config at build time — `docs/redirects.md` |
 | `index.ts` | The public surface, `agentic-cms/content`: the above plus `createContent(collections)`, the typed accessors (`getAuthors()`, `getCategories()`, `getReviews()`, `getFaq()`, `getUseCases()`, `getPages()`, `getPage()`, `getRedirects()`) a site reads as `kit.content`, and `redirectsFor()` |
-| `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors, the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
+| `src/lib/locales.ts` | `createLocales(site)` (`kit.locales`, `agentic-cms/locales`): the site's languages, a page's path in each, the config as each reads it, a collection's translation; `checkPagePaths()`, where a page file in each language must sit |
+| `src/lib/index.ts`, `src/kit.ts` | `createKit({ site, sections, collections? })` composes the registry, the accessors (`kit.content`, and `kit.content.in(tag)` per language), the post pipeline and the SEO for one site; `src/kit.ts` is where the site calls it, and the one module the app and the scripts import it from |
 | `*.test.ts`, `test-helpers.ts` | `node:test` suite on mkdtemp fixtures (`withContent()`, `postTree()`), never touching `content/`; `src/lib/blog/posts.test.ts` covers the post pipeline the same way |
 | `agentic-cms check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
 | `agentic-cms lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`; in `pnpm build` after `pnpm lint` and before `next build`, as `lint --production`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
@@ -84,6 +85,19 @@ byte for byte) and `format: "md" | "mdx"`. `readEntry(def, slug)` throws
 when the slug does not exist. Locations in messages are logical
 (`content/blog/x.md`) whatever directory the engine runs in; tests and
 `content-check --root` read another tree by changing the current directory.
+
+**Translations.** A site with languages besides its default one
+(`site.locales`, `docs/locales.md`) reads each
+collection's translation through a definition of the same kind:
+`kit.locales.collection(def, tag)` puts a folder's entries under
+`content/<dir>/<prefix>/` (the subdirectory the default's listing skips)
+and a file's in `content/<stem>.<prefix>.<ext>`; `kit.content.in(tag)` and
+`kit.blog.in(tag)` are the accessors over them, the redirects one list for
+every language. A translation nobody wrote fails as any missing file does
+(`content/faqs/de: no such directory`), and a page file out of place is a
+`ContentError` from `createKit()`'s accessors: a default page under a
+prefix, a page in another language that translates no default page of its
+file name or sits off that page's path under its prefix.
 
 **Cache.** Entries are cached per definition only when
 `NODE_ENV === "production"` (each `next build` worker reads once). In

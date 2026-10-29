@@ -32,6 +32,10 @@ plugin's contract `plugin/README.md`.
   (`content/redirects.yaml`): what an entry says, how `next.config.ts`
   serves it, what the lint, the site check and the SEO audit hold, and
   what `retire-content` writes.
+- [locales.md](locales.md) — a site in several languages: each under
+  its prefix with the same slugs, its words in `site.locales`, its
+  content beside the default's and paired by slug, never filled from the
+  default language; experimental.
 - [forms.md](forms.md) — what a form can ask (every ordinary field type,
   notes, groups, a prefill from the URL) and forms that deliver: the
   endpoint route, where submissions go (a webhook, a provider's API as a sink), the environment

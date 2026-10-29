@@ -76,6 +76,15 @@ old paths the site sends elsewhere).
    must differ only in the nav and footer of the other pages.
 7. **Commit** `Page: /<slug>` on the repo's working branch.
 
+## In another language
+
+In a site in several languages (`site.locales`), a page in another
+language translates a default page: `content/pages/<prefix>/<slug>.yaml`,
+the default page's file name, at its path under the prefix. Drafting it
+is `translate`. A page that exists in one language only is a default
+page; the build fails a page in another language with no default page of
+its name.
+
 ## Verify
 
 ```bash

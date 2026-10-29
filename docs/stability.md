@@ -34,7 +34,10 @@ writes down, never silently. What that covers:
 
 An experimental part may change in any release: its options, its output,
 its name. The changelog says what changed, and nothing else holds it.
-Today that is the lab, `agentic-cms/lab` and `agentic-cms lab`, and the
+Today that is the lab, `agentic-cms/lab` and `agentic-cms lab`; the
+languages of a site, `agentic-cms/locales` with `kit.locales`,
+`kit.content.in()` and `kit.blog.in()`, `site.locales` and where a
+translation sits ([locales.md](locales.md)); and the
 preview of a pull request, `agentic-cms pr-preview`, which rests on two
 things the kit does not own: OpenNext passing `--preview-alias` through to
 `wrangler versions upload`, and the file wrangler writes the preview's URL
@@ -107,6 +110,7 @@ without it.
 | `agentic-cms/forms/server` | stable | the form endpoint's handler and sinks |
 | `agentic-cms/consent` | stable | the consent record and its hooks — [parts.md § Browser libraries](parts.md#browser-libraries) |
 | `agentic-cms/consent/google` | stable | the Google tag's adapter |
+| `agentic-cms/locales` | experimental | a site's languages: `createLocales()`, a collection's translation — [locales.md](locales.md) |
 | `agentic-cms/email` | stable | the address token |
 | `agentic-cms/ix` | stable | the motion library |
 | `agentic-cms/components` | stable | the components that carry no look |
@@ -142,6 +146,7 @@ Each command's flags, defaults and exit codes are in
 | the content files: `content/pages/`, `content/blog/`, the collections (`content/redirects.yaml` among them since 0.9.0), `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
 | `content/_schemas/`, the JSON Schemas, and the first line of each YAML content file and template that names its schema (`# yaml-language-server: $schema=…`) | stable | an editor's YAML language server; `agentic-cms schema --check`, in `docs --check` — [schema.md](schema.md) |
 | `src/config/site.ts`, `src/config/forms.ts` | stable | `createKit()`, the form engine |
+| `site.locales` in `src/config/site.ts`, and a translation's place: `content/<folder>/<prefix>/`, `content/<stem>.<prefix>.<ext>` | experimental | `createKit()`, the content engine — [locales.md](locales.md) |
 | `src/config/harness.ts`, the site's profile and its seed | stable | the screenshot harness — [visual-parity.md](visual-parity.md#the-sites-profile) |
 | `src/config/components.json` | stable | the ESLint preset and `check-site` — [primitives.md](primitives.md) |
 | `.agentic-cms.json`, the agent-file manifest (its `format` 2 since 0.9.0) | stable | `init --agent-files` alone, which writes it — [init.md § After a kit upgrade](init.md#after-a-kit-upgrade) |

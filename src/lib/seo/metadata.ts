@@ -5,10 +5,12 @@ import type { SiteConfig, Urls } from "../site.ts";
 import type { PageSeo } from "./types.ts";
 
 /**
- * The complete head of a page from its seo block: exact title, description,
- * canonical, Open Graph with the 1200×630 image, Twitter card. The route
- * returns `pageMetadata(page.seo)` from generateMetadata and nothing else;
- * the layout's metadataBase makes the paths absolute.
+ * A page's own head from its seo block: exact title, description,
+ * canonical, Open Graph with the 1200×630 image, Twitter card. It needs no
+ * site, so it carries none of the site's parts: the route returns
+ * `kit.seo.pageMetadata(page.seo)`, which adds them (`withSiteHead()`), from
+ * generateMetadata and nothing else; the layout's metadataBase makes the
+ * paths absolute.
  */
 export function pageMetadata(seo: PageSeo): Metadata {
   return {
@@ -36,6 +38,29 @@ export function unlistedMetadata(): Metadata {
 }
 
 /**
+ * What every page's head shares with the root layout's: Open Graph's site
+ * name and locale, and the link to the feed — `feed`, the language's own
+ * (/de/feed.xml) in a language with posts, else the site's.
+ */
+function siteHead(site: SiteConfig, feed = "/feed.xml") {
+  return {
+    openGraph: { siteName: site.name, ...(site.ogLocale ? { locale: site.ogLocale } : {}) },
+    alternates: { types: { "application/rss+xml": `${site.url}${feed}` } },
+  };
+}
+
+/**
+ * A page's or a post's head with the site's parts merged in. Next merges a
+ * route's metadata into the layout's one key deep: a page's `openGraph` and
+ * `alternates` replace the layout's whole, so without this a page would
+ * lose og:site_name, og:locale and the feed link the root layout declares.
+ */
+function withSiteHead(site: SiteConfig, metadata: Metadata, feed?: string): Metadata {
+  const shared = siteHead(site, feed);
+  return { ...metadata, openGraph: { ...shared.openGraph, ...metadata.openGraph }, alternates: { ...shared.alternates, ...metadata.alternates } };
+}
+
+/**
  * The head every page starts from, the root layout's `metadata`: the
  * metadataBase (the site's origin, so a page's paths become absolute), the
  * title template (`%s | <site.name>`) with the home page's title as its
@@ -45,33 +70,34 @@ export function unlistedMetadata(): Metadata {
  * preview build (AGENTIC_CMS_PREVIEW=1) adds noindex, nofollow, which every
  * page inherits: a preview is never indexed.
  */
-export function createRootMetadata(site: SiteConfig, home: () => PageSeo) {
+export function createRootMetadata(site: SiteConfig, home: () => PageSeo, feed?: string) {
   return function rootMetadata(): Metadata {
     const { title, description } = home();
     return {
       metadataBase: new URL(site.url),
       title: { default: title, template: `%s | ${site.name}` },
       description,
-      openGraph: { type: "website", siteName: site.name, ...(site.ogLocale ? { locale: site.ogLocale } : {}) },
+      openGraph: { type: "website", ...siteHead(site, feed).openGraph },
       twitter: { card: "summary_large_image" },
-      alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
+      alternates: siteHead(site, feed).alternates,
       ...(isPreview() ? { robots: { index: false, follow: false } } : {}),
     };
   };
 }
 
-/** The head builders that need the site's URLs. */
-export function createMetadata({ postUrl }: Urls) {
+/** The head builders of a page and a post, with the site's parts in each; `feed` the language's feed (siteHead()). */
+export function createMetadata(site: SiteConfig, { postUrl }: Urls, feed?: string) {
   /**
    * The head of a post from its frontmatter: the SEO title (or `title | brand`
    * through the layout template), description, canonical, Open Graph article
-   * with its dates, author, section and tags, Twitter card.
+   * with its dates, author, section and tags, Twitter card, and the site's
+   * parts.
    */
   function postMetadata(post: Post): Metadata {
     const description = post.seoDescription ?? post.excerpt;
     const url = postUrl(post.slug);
     const title = post.seoTitle ?? post.title;
-    return {
+    const head: Metadata = {
       title: post.seoTitle ? { absolute: post.seoTitle } : post.title,
       description,
       keywords: post.keywords,
@@ -90,7 +116,11 @@ export function createMetadata({ postUrl }: Urls) {
       },
       twitter: { card: "summary_large_image", title, description, images: post.ogImage ? [post.ogImage] : undefined },
     };
+    return withSiteHead(site, head, feed);
   }
 
-  return { pageMetadata, postMetadata, unlistedMetadata };
+  /** A page's head from its seo block (`pageMetadata()`), with the site's parts. */
+  const sitePageMetadata = (seo: PageSeo): Metadata => withSiteHead(site, pageMetadata(seo), feed);
+
+  return { pageMetadata: sitePageMetadata, postMetadata, unlistedMetadata };
 }

@@ -5,18 +5,19 @@
 //
 //   agentic-cms schema            writes the files (a removed collection's goes)
 //   agentic-cms schema --check    exits 1 when a file differs from the code (docs --check runs it, in every build)
-//   agentic-cms schema --lines    also opens each YAML content file and template with its schema's line
+//   agentic-cms schema --lines    also opens each YAML content file (a translation's too) and template with its schema's line
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { parseOrExit } from "./lib/args.mjs";
 import { schemaFiles, schemaLineEdits, staleSchemas, writeSchemas } from "./lib/content-schema.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { translations } from "./lib/translations.mjs";
 
 const { check, lines } = parseOrExit(SPECS.schema, process.argv.slice(2)).flags;
 
 const deps = { z: (await import("zod")).z, ...(await import("agentic-cms/content")) };
-const { collections } = (await import("@/kit")).kit;
+const { collections, locales } = (await import("@/kit")).kit;
 const files = schemaFiles(collections, deps);
 const count = `${files.size} collections`;
 
@@ -34,7 +35,7 @@ if (check) {
   console.log(`schema: ${count}, ${changed.length} file(s) changed under content/_schemas/`);
 }
 if (lines && !check) {
-  const edits = schemaLineEdits(".", collections, { fs });
+  const edits = schemaLineEdits(".", collections, { fs, translated: translations({ collections, locales, root: "." }) });
   for (const { file, text } of edits) {
     fs.writeFileSync(path.join(".", file), text);
     console.log(`schema: the schema line added to ${file}`);

@@ -58,6 +58,16 @@ and every link to it.
 4. Verify (the build's routes manifest, `.next/routes-manifest.json`,
    lists the redirect), commit `Retire: /<slug>`.
 
+## In another language
+
+In a site in several languages, each version of a page or a post has its
+own URL (`/de/about`, `/de/blog-post/<slug>`). Retiring a default page
+retires its translations first: a page in another language must translate
+a default page of its file name, and the build fails one that no longer
+does. Each removed URL gets its redirect, to the target in its own
+language where there is one. A post's versions are drafted or removed
+together unless the user says otherwise.
+
 ## Verify
 
 ```bash

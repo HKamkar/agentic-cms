@@ -43,6 +43,10 @@
       "types": "./dist/consent/google/index.d.ts",
       "default": "./dist/consent/google/index.js"
     },
+    "./locales": {
+      "types": "./dist/locales.d.ts",
+      "default": "./dist/locales.js"
+    },
     "./email": {
       "types": "./dist/email.d.ts",
       "default": "./dist/email.js"

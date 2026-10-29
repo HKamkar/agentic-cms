@@ -37,7 +37,8 @@ then a bumped pin here; never a patch under `node_modules`.
   replaces it (`/editorial:new-page`) before any design, and a production
   build fails while one remains. The content jobs are the `editorial`
   plugin (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
-  `review-voice`, `critic`, `content-status`, `retire-content`), enabled by
+  `review-voice`, `critic`, `content-status`, `retire-content`,
+  `translate`), enabled by
   `.claude/settings.json` from the package's marketplace,
   `./node_modules/agentic-cms`. `.claude/skills/` holds the site's own
   skills alone. Never read `content/` at request time: every page is
@@ -117,6 +118,7 @@ at the version this site pins.
 | writing your own of anything | `docs/parts.md`, the map of every part; `docs/stability.md`, what each promises |
 | a content file, a page, a post, the head | `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` |
 | a form, an address, a tag | `src/lib/forms/README.md`, `docs/forms.md`; `docs/email.md`; `docs/consent.md` |
+| another language, a translation | `docs/locales.md` |
 | a command | `docs/commands.md` |
 | markup, CSS or motion | the scoped rules above, each pointing at the kit's whole rule; `STANDARD.md` here |
 | a design round, a candidate, an icon, a graphic | `docs/design.md`, `docs/icons.md`, `docs/lab.md`; the design plugin's skills |

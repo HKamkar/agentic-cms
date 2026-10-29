@@ -37,7 +37,7 @@ const { kit } = await import("@/kit");
 
 say(`content-lint: root ${path.join(root, "content")}`);
 if (flags.production && !production) say(`content-lint: ${PLACEHOLDERS_ENV}=warn — placeholders stay warnings in this build; a build that deploys never sets it`);
-const result = lint({ root, collections: kit.collections, site: kit.site, production });
+const result = lint({ root, collections: kit.collections, site: kit.site, locales: kit.locales, production });
 for (const row of result.collections) say(`${row.name}: ${row.entries} entries (${row.source})`);
 const findings = result.findings.map((finding) => (strict && finding.level === "WARN" ? { ...finding, level: "FAIL" } : finding));
 const lines = findings.map(format);

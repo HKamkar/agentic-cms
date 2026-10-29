@@ -236,6 +236,7 @@ Order has it.
 | 10 | Fewer files copied into a site | the skills and guides read from the installed package; thin rules; no merges on upgrade |
 | 11 | A preview link on every pull request | a CI job that uploads a preview version and comments its link and the pages it touches |
 | 12 | The docs, the README, the way from 0.8 | the sweep, how the kit differs from a database CMS, `docs/migrating-to-0.9.0.md` |
+| 13 | A site in several languages | `site.locales`, a translation beside its original, a root layout per language, hreflang held by the audit, posts per language, the `translate` skill (experimental) |
 | R | Release 0.9.0 | `rc.1` on `next`, the gate, `0.9.0` on `latest` |
 | S | The sites follow | `upgrade` in each site's own session |
 
@@ -640,6 +641,55 @@ surface the 1.0.0 briefs recommend.
   The npm description (job 1) says the same in one line. This section is
   docs alone and may land first, on its own.
 
+### 13 — A site in several languages
+
+A site has one language today: `<html lang>` is `site.locale` on every
+page, and nothing pairs a page with its translation.
+
+- **First, every head keeps the site's parts.** A route's `openGraph` and
+  `alternates` replaced the layout's, so every page and post lost
+  `og:site_name`, `og:locale` and the feed link: `kit.seo`'s page and
+  post builders carry them now, for every site, and the audit warns on a
+  head without them (a hand-written head a baseline holds passed before).
+- **The config:** `site.locales`, each language's tag, prefix, Open Graph
+  locale, words and links; the chrome's words a block per language in
+  `copy` (`copyFor(tag)`). `createKit()` checks each entry when the kit is
+  made.
+- **The content:** a translation sits beside its original — a folder
+  collection's under `<dir>/<prefix>/`, a file's in
+  `<stem>.<prefix>.<ext>` — and pairs with it by slug; nothing is filled
+  from the default language. A page in another language translates the
+  default page of its file name, at its path under the prefix.
+  `kit.locales`, `kit.content.in(tag)`, `kit.blog.in(tag)`
+  (`agentic-cms/locales`, experimental).
+- **`<html lang>`, prerendered:** a root layout per language — the
+  default's in a route group, `src/app/(default)/`, each other's in a
+  folder named its prefix — so nothing is decided at request time, and no
+  request is redirected by its browser's language. A path no page answers
+  gets `global-not-found`, in the default language.
+- **The head and the audit:** `kit.seo` finds a page's or a post's
+  language from it; one in several languages names each version, itself
+  and x-default, in its head and its sitemap entry. The audit fails, in a
+  site with languages, a page whose `lang` or `og:locale` is not its
+  language's and an alternate missing, one-way, unknown or unbuilt.
+- **The lint:** each language's voice block, `content/VOICE.<prefix>.md`;
+  every other rule on every file; `translation-stale` warns on a
+  translation older than its original; the redirects, the schema lines,
+  `agentic-cms check` and the site check's retired pass see every
+  language.
+- **Posts per language:** `content/blog/<prefix>/<slug>.md`, its
+  registries, its post template and feed, its FAQ under the language's
+  `faqHeading`.
+- **Translation:** the `translate` skill drafts, a native speaker checks
+  before the commit, and a legal text is translated sentence by sentence,
+  never rewritten. The editorial skills know a translation's place.
+- **Nothing moves for a site in one language:** the example is proven
+  identical (`parity`, `visual-parity proof`), and the pack smoke lays a
+  second language over the starter as `docs/locales.md` says and builds
+  it.
+- **The docs:** `docs/locales.md`, the contracts, the map's rows, the
+  stability marks.
+
 ### R — Release 0.9.0
 
 1. Tag `v0.9.0-rc.0` from `develop` once jobs 1 and 2 have landed. It
@@ -678,6 +728,7 @@ now            O2 (owner): publish v0.8.4's tarball by hand, which holds the nam
                [0] this plan into docs/roadmap.md
 Phase 1        Lane A  [8 schema] → [9 redirects] → [11 preview] (+ O6)
                Lane B  [6 stability] → [10 fewer copies] → [5 upgrade]
+               Lane C  [13 languages], after lane A
 Phase 2        [12 docs, README, migrating-to-0.9.0]   (its README section may land first)
 Phase 3        Lane A  [1 tarball] → [2 release CI] → O3 → rc.0 → [3 npm installs] → [4 create] (+ O5)
                Lane B  [7 peers] after 1

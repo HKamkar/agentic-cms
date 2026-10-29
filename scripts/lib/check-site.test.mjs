@@ -97,6 +97,9 @@ test("rounds: a *-demo route demo new did not write fails, the lab's own passes,
   assert.equal(report.rounds, 3);
   const fake = await site({ ...CLEAN, "src/app/lab-demo/page.tsx": "// my own lab\n" });
   assert.deepEqual(checks(fake.findings), ["rounds src/app/lab-demo"], "a lab-demo route lab route did not write is a round made by hand");
+  const grouped = await site({ ...CLEAN, "src/app/(default)/hero-demo/page.tsx": "// Candidate route\n", "src/app/(default)/hero-demo/demo.json": "{}", "src/app/(default)/promo-demo/page.tsx": "x", "public/images/hero-demo/a.webp": "webp" });
+  assert.deepEqual(checks(grouped.findings), ["rounds src/app/(default)/promo-demo"], "a site in several languages: its rounds in the default language's route group");
+  assert.equal(grouped.rounds, 2);
 });
 
 test("the lab's header is the first line lab route writes", () => {
@@ -300,6 +303,10 @@ test("retired: a URL the base's page or published post answered that nothing ans
   assert.match(formatSiteReport(report).join("\n"), /check-site: 2 warnings, which fail nothing[\s\S]*⚠ content\/pages\/about\.yaml {2}\[retired\]/);
   assert.deepEqual((await site({ ...now, "content/redirects.yaml": "- from: /team\n  to: /about-us\n- from: /about\n  to: /about-us\n- from: /news/gone\n  to: /blog\n" }, { git: fakeGit({ files: then }) })).warnings, [], "each with its redirect");
   assert.deepEqual((await site(now)).warnings, [], "no base: nothing compared");
+  const languages = { ...then, "content/pages/de/about.yaml": page("/de/about"), "content/blog/de/gone.md": post() };
+  const translated = await site({ ...now, "content/pages/de/about.yaml": page("/de/about-us") }, { git: fakeGit({ files: languages }) });
+  assert.deepEqual(checks(translated.warnings), ["retired content/pages/about.yaml", "retired content/blog/gone.md", "retired content/pages/de/about.yaml", "retired content/blog/de/gone.md"], "a language's pages and posts, under its prefix");
+  assert.match(translated.warnings[3].problem, /^gone since origin\/HEAD: \/de\/news\/gone answers 404 now/);
 });
 
 test("leftovers: the example's brand by line and its sample content, each a finding of its rule; none in the kit, whose example is the example", async () => {

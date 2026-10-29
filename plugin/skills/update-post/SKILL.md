@@ -40,6 +40,15 @@ for what changed before.
    in the build log.
 6. **Commit** `Post: <slug>: <what changed>` on the repo's working branch.
 
+## In another language
+
+A post with translations (`content/blog/<prefix>/<slug>.md`, the same
+slug) keeps them: after an edit to the original, the lint's
+`translation-stale` warns on each one older than it. Ask the user whether
+to bring them up to date (`translate`, step 5) in this job or later; a
+change to the slug, the category or the FAQ heading is one to each
+version.
+
 ## Verify
 
 ```bash

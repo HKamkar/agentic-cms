@@ -11,7 +11,7 @@ import { readCollection, readEntry } from "./read.ts";
 
 export { ContentError, formatPath, type ContentIssue } from "./errors.ts";
 export { defineCollection, lookup, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
-export { readCollection, readEntry, slugsOf, sourceOf } from "./read.ts";
+export { isOnDisk, readCollection, readEntry, slugsOf, sourceOf } from "./read.ts";
 export { readInlineSvg } from "./inline-svg.ts";
 export { redirectsFor, toNextRedirect, type NextRedirect } from "./redirects.ts";
 export { text, optional, dateOnly, isoTimestamp, ref } from "./schema.ts";

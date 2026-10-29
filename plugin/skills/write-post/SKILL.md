@@ -89,6 +89,14 @@ site's name last), `seoDescription` (70–160, the keyword in it),
 re-read against the body (30–40 words, not the title again). `pnpm
 content:lint`: fix every `FAIL` on the file, read every `WARN`. Stop.
 
+## In another language
+
+A post written in a language of `site.locales` (`src/config/site.ts`) is
+`content/blog/<prefix>/<slug>.md`, held to that language's voice block,
+`content/VOICE.<prefix>.md`, its FAQ under the language's `faqHeading`
+(`docs/locales.md` § Posts). A post that exists in the default language
+and is wanted in another is a translation: `translate`, not a rewrite.
+
 ## Hand-off
 
 `new-post` steps 3 (the images: the user's, or made from the workshop's

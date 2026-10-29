@@ -25,7 +25,9 @@
 // shrinking the list, and the fresh site put back; then the site as one
 // that never took 0.8.0's § 3.7 left it, on each of the guide's two paths,
 // upgraded by § 1 with § 3.7 inside it to a green lint and build, its
-// sections' composition held by the baseline; its tests through the
+// sections' composition held by the baseline; then a second language laid
+// over it as docs/locales.md says (tools/locale-fixture.mjs), built, its
+// pages' lang and alternates read, and taken back; its tests through the
 // installed command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
@@ -43,6 +45,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { GERMAN, layLocale, POST } from "./locale-fixture.mjs";
 import { content084, site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
@@ -146,6 +149,7 @@ async function build(site) {
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
   upgradeFrom084(site);
+  locales(site);
   previewBuild(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
@@ -465,6 +469,52 @@ function upgradeFrom084(site) {
   if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
   putBack(site, fresh, "upgrade from 0.8.4: ");
   console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);
+}
+
+/**
+ * A second language over the fresh site (tools/locale-fixture.mjs, as
+ * docs/locales.md § Adding a language says): its production build passes
+ * the lint, the content lint and the SEO audit; the German home page is
+ * prerendered under its root layout with lang="de", its og:locale and the
+ * chrome's German words; it and the default home page name each other and
+ * x-default in their heads and in the sitemap; the German post is
+ * prerendered in German with its FAQ (the language's heading) and named by
+ * the English one, in the German feed and in the sitemap, and German pages
+ * link to the German feed; a path no page answers gets the guide's
+ * global-not-found, in the default language, noindex. The SEO audit, run on
+ * that build with one alternate taken out, fails the page that lost it.
+ * Then the fresh site is put back.
+ */
+function locales(site) {
+  const fresh = headOf(site);
+  layLocale(site, ROOT);
+  const build = answer(site, ["build"]);
+  if (build.status !== 0) fail(`the site in two languages did not build: ${build.output.trim().slice(-3000)}`);
+  const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
+  const [german, home, sitemap, missing, germanPost, englishPost, germanFeed] = ["de.html", "index.html", "sitemap.xml.body", "_not-found.html", `de/blog-post/${POST}.html`, `blog-post/${POST}.html`, "de/feed.xml.body"].map(built);
+  const names = (html, tag, href) => new RegExp(`<link rel="alternate" hrefLang="${tag}" href="${href.replace(/[.?]/g, "\\$&")}"`).test(html);
+  const origin = home.match(/<link rel="canonical" href="(https:\/\/[^"/]+)/)?.[1] ?? "";
+  const wrong = [
+    !/<html lang="de"/.test(german) && "de.html is not lang=\"de\"",
+    !german.includes(`<meta property="og:locale" content="${GERMAN.ogLocale}"/>`) && `de.html has no og:locale ${GERMAN.ogLocale}`,
+    !german.includes("Zum Inhalt springen") && "de.html does not carry the chrome's German words",
+    !(names(german, "en", origin) && names(german, "de", `${origin}/de`) && names(german, "x-default", origin)) && "de.html does not name both versions and x-default",
+    !(names(home, "de", `${origin}/de`) && /<html lang="en"/.test(home)) && "the default home page does not name its German version, or is not lang=\"en\"",
+    !sitemap.includes(`<xhtml:link rel="alternate" hreflang="de" href="${origin}/de" />`) && "the sitemap names no German alternate",
+    !(/<html lang="en"/.test(missing) && /<meta name="robots" content="noindex"/.test(missing)) && "the 404 is not the default language's, noindex",
+    !(/<html lang="de"/.test(germanPost) && germanPost.includes('"@type":"FAQPage"') && germanPost.includes("Warum Dateien?")) && "the German post is not lang=\"de\" with its FAQ under the language's heading",
+    !(names(englishPost, "de", `${origin}/de/blog-post/${POST}`) && names(germanPost, "en", `${origin}/blog-post/${POST}`)) && "the post's versions do not name each other",
+    !(germanFeed.includes("<language>de</language>") && germanFeed.includes(`<link>${origin}/de/blog-post/${POST}</link>`)) && "the German feed does not list the German post in German",
+    !german.includes(`<link rel="alternate" type="application/rss+xml" href="${origin}/de/feed.xml"/>`) && "a German page does not link to the German feed",
+    !sitemap.includes(`<loc>${origin}/de/blog-post/${POST}</loc>`) && "the sitemap does not list the German post",
+  ].filter(Boolean);
+  if (wrong.length) fail(`the site in two languages: ${wrong.join("; ")}`);
+  const file = path.join(site, ".next/server/app/index.html");
+  fs.writeFileSync(file, home.replace(/<link rel="alternate" hrefLang="de"[^>]*>/, ""));
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  if (audit.status !== 1 || !/FAIL \/ hreflang: no hreflang de: its version \/de is built/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit with an alternate taken out answered ${audit.status}: ${`${audit.stdout}${audit.stderr}`.trim().slice(-800)}`);
+  putBack(site, fresh, "the locale fixture: ");
+  console.log("pack-smoke: a second language laid over the site as docs/locales.md says builds, its pages and its post under their own root layout with their lang, their alternates and their feed, the 404 the default language's; the audit fails a page that loses an alternate");
 }
 
 /** The text of each of a site's files, to put back. */

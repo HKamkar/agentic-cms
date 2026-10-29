@@ -217,11 +217,12 @@ meaning. Props: `label`, `className?` (its spacing in the box).
 
 | Component | What it is | Props | Notes |
 |---|---|---|---|
-| `Navbar` | The site header | `brand`, `links`, `signIn`, `cta`, `copy` (`{ label, menu }`), `children?` | `"use client"`; rendered once in `app/layout.tsx`, which passes `site.shortName`, `site.nav`, `site.signIn`, `site.cta` and `chrome.navbar`<!-- dark-mode:start -->, and the theme switch as its child<!-- dark-mode:end -->. `<header>` with a `<nav>` named `copy.label` ("Main"); the brand, the links, the sign-in link, the call to action and the children after it. Below 992 px the links and actions hide (`max-lg:hidden`) behind a menu button labelled `copy.menu` (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
+| `Navbar` | The site header | `brand`, `links`, `signIn`, `cta`, `copy` (`{ label, menu }`), `children?` | `"use client"`; rendered once in `SiteLayout`, which passes `site.shortName`, `site.nav`, `site.signIn`, `site.cta` and `chrome.navbar` in the page's language<!-- dark-mode:start -->, and the theme switch as its child<!-- dark-mode:end -->. `<header>` with a `<nav>` named `copy.label` ("Main"); the brand, the links, the sign-in link, the call to action and the children after it. Below 992 px the links and actions hide (`max-lg:hidden`) behind a menu button labelled `copy.menu` (`aria-expanded aria-controls`) whose panel lists all of them. The menu's state is the path it was opened on, so a navigation closes it; Escape returns focus to the button, arrows / Home / End walk the links, an outside click closes it, and crossing 992 px closes it too. |
 | `NavLink` | A link in the chrome | `href`, `label`, `className?` | `"use client"`. An `http(s)` href renders a plain `<a>`; everything else `next/link`, marked `aria-current="page"` only when the href is exactly the current path — so a section anchor is never "current". |<!-- dark-mode:start -->
 | `ThemeToggle` | The theme switch | `labels` (`{ system, light, dark }`) | `"use client"`. One button, three states: `system` → `light` → `dark` → `system`, labelled from `chrome.themeToggle` in `src/config/site.ts`, which the layout passes. `system` removes `data-theme` from `<html>` and the key from `localStorage`; the other two write both. The attribute *is* the state (read through `useSyncExternalStore`), so the server renders `system` and the first client render agrees. |<!-- dark-mode:end -->
-| `Footer` | The site footer | — | `<footer>` with one `Panel`: the brand, `site.tagline`, the `<address>`, the e-mail, and the two link columns from `site.footer` under the titles in `chrome.footer`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year. |
-| `ConsentBanner` | The consent banner | `copy` (`{ title, text, decline, allow }`) | `"use client"`; rendered once in `app/layout.tsx`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`, which the layout passes as `copy`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
+| `SiteLayout` | The document every page is, in one language | `site` (the config in the language, `kit.locales.site()`), `words` (`copyFor()`'s `{ chrome, consentBanner }`), `children` | `<html lang>` (the language's tag) and `<body>`: <!-- dark-mode:start -->the theme script, <!-- dark-mode:end -->the consent default, the skip link, `ConsentBanner`, `Navbar`<!-- dark-mode:start --> with `ThemeToggle`<!-- dark-mode:end -->, the page in `<main>`, `Footer`, `GoogleTag`. The root layout, `app/layout.tsx`, renders it in the default language; a language of `site.locales` has a root layout of its own that renders it in its own (`docs/locales.md`). |
+| `Footer` | The site footer | `site` (the config in the page's language), `titles` (`chrome.footer`), `settings` (`consentBanner.settings`) | `<footer>` with one `Panel`: the brand (a link to `site.links.home`), `site.tagline`, the `<address>`, the e-mail, and the two link columns from `site.footer` under `titles`. The year is computed. With a Google tag id set, `CookieSettingsButton` under the year, labelled `settings`. Rendered by `SiteLayout`. |
+| `ConsentBanner` | The consent banner | `copy` (`{ title, text, decline, allow }`) | `"use client"`; rendered once in `SiteLayout`, only when a Google tag id is set (`src/config/analytics.ts`). Headless state from `agentic-cms/consent`'s `useConsent`; the copy is `consentBanner` in `src/config/site.ts`, which the layout passes as `copy`. A non-modal `role="dialog"` in `panel()`, fixed at the foot of the viewport (`z-40`, under the skip link): the site's one overlay. Decline and Allow are the same `OutlineButton`, side by side. A reopened banner takes focus to its first button; a choice hands focus back. Nothing on the server. `docs/consent.md`. |
 | `CookieSettingsButton` | Opens the consent banner again | `label`, `className?` | `"use client"`. A real `<button>` calling `openConsent()`, labelled `consentBanner.settings`, which the footer passes; the footer renders it, and any page may. |
 | `Button` | The call to action, always a link | `href`, `label`, `variant?` (`"solid" \| "outline"`, default `solid`), `current?`, `className?` | An href starting with `/` renders `next/link`, an absolute one a plain `<a>`. Its looks are the `button` map (`variants()`): `solid` is `bg-ink text-on-ink`, `outline` is `bg-panel text-ink`; both are bordered, `no-underline`. `current` sets `aria-current="page"`. |
 | `buttonClass(variant?)` | The button's classes on their own | — | For a real `<button>`: the form's submit wears `buttonClass("solid")`, `OutlineButton` `buttonClass("outline")`. |
@@ -229,8 +230,8 @@ meaning. Props: `label`, `className?` (its spacing in the box).
 | `IconButton` | A button that shows only an icon | `label`, `icon`, `onClick?`, `pressed?`, `disabled?`, `variant?` (`"outline" \| "solid"`, default `outline`), `className?` | 44 px square (`size-11`), so a finger hits it. `label` is required: it is the accessible name (`aria-label`) and the tooltip (`title`), and the icon is `aria-hidden`. Its looks are the `iconButton` map. Unused by the wireframe. |
 
 ```tsx
-<Button href={site.links.contact} label={cta} />
-<Button href={site.links.blog} label={cta} current />
+<Button href={ctaHref} label={cta} />
+<Button href={ctaHref} label={cta} current />
 <Button href={site.cta.href} label={site.cta.label} variant="outline" />
 <OutlineButton label={copy.allow} onClick={() => choose("granted")} />
 <OutlineButton label={category.name} pressed={shown === category.slug} onClick={() => setShown(category.slug)} />
@@ -541,9 +542,18 @@ of its file holds keys or the design's numbers (`CARDS` in `about/Hero`),
 never copy — the lint fails a `title` or a `label` written there.
 When the cards are content someone edits, the array is a collection the
 registry resolves for the section through `withData()` (`UseCaseCards` →
-`kit.content.getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
-`getFaq()`; `BlogIndex` → `kit.blog.getAllPosts()`), and the section keeps
-its presentation by position.
+`getUseCases()`, `Testimonials` → `getReviews()`, `FaqSection` →
+`getFaq()`; `BlogIndex` → `getAllPosts()`), and the section keeps
+its presentation by position. The registry reads them in the page's
+language (`renderSections(sections, locale)`: `kit.content.in()`,
+`kit.blog.in()`), and a link to another page of the site the same way: a
+section's call to action takes `ctaHref` (`CtaHref` in `schemas.ts`), the
+language's `site.links.contact` through `toContact()`, the blog index's
+`site.links.blog`; a section never imports `src/config/site.ts` for one.
+`sectionData(type, props, locale?)` is what the registry reads for a
+section beyond its copy: a design round's route (`demo new --section`)
+passes it to every candidate, so a candidate gets what the page gives the
+section.
 
 ## Building a new page
 
@@ -556,7 +566,8 @@ its presentation by position.
    (copy only — every field `.describe()`d, the design's numbers stay in
    the component), one component file in `src/components/<page>/` built
    inside `ui/Section` from the primitives above, and a registry entry in
-   `render.tsx` (`plain()`, or `withData()` when it shows a collection).
+   `render.tsx` (`plain()`, `toContact()` when its call to action goes to
+   the contact link, or `withData()` when it shows a collection).
 3. Illustrations are `Placeholder`; real pictures start as
    `pnpm kit placeholder <out> <w> <h>` under
    `public/images/<page>/`.

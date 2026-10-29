@@ -51,6 +51,7 @@
 // nor ESLint.
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { ROUTE_GROUP } from "./app-root.mjs";
 import { CONFIG_FILE, componentsReport, DEMO_FOLDER, disablesIn, entryLines, formatReport, globRegex, isMap, isSource, plural, readConfig, resolveGuard, validAllow } from "./check-components.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 import { baselineGrowth, countable, entryFindings, holdFindings, lintFindings, nextBaseline, validBaseline, withBaseline } from "./baseline.mjs";
@@ -93,14 +94,17 @@ function siteReader(root, fs) {
 const readJson = (text) => { try { return JSON.parse(text); } catch { return null; } };
 const folders = (site, dir) => site.entries(dir).filter((e) => e.isDirectory()).map((e) => e.name);
 
+/** The folders a *-demo route sits in: the app folder, and each route group under it (the default language's tree, in a site in several languages). */
+const demoBases = (site, app) => [app, ...folders(site, app).filter((name) => ROUTE_GROUP.test(name)).map((name) => `${app}/${name}`)];
+
 /** A *-demo route is a round's (its demo.json) or the lab's; a round's pictures go with its route. */
 function checkRounds(g, site) {
-  const routes = folders(site, g.app).filter((name) => DEMO_FOLDER.test(name));
-  const lab = (name) => name === LAB_ROUTE && (site.read(`${g.app}/${name}/page.tsx`) ?? "").startsWith(LAB_HEADER);
-  const handMade = routes.filter((name) => !site.exists(`${g.app}/${name}/${DEMO_MANIFEST}`) && !lab(name));
-  const leftover = folders(site, PICTURES).filter((name) => DEMO_FOLDER.test(name) && !routes.includes(name));
+  const routes = demoBases(site, g.app).flatMap((base) => folders(site, base).filter((name) => DEMO_FOLDER.test(name)).map((name) => ({ base, name })));
+  const lab = ({ base, name }) => name === LAB_ROUTE && (site.read(`${base}/${name}/page.tsx`) ?? "").startsWith(LAB_HEADER);
+  const handMade = routes.filter((route) => !site.exists(`${route.base}/${route.name}/${DEMO_MANIFEST}`) && !lab(route));
+  const leftover = folders(site, PICTURES).filter((name) => DEMO_FOLDER.test(name) && !routes.some((route) => route.name === name));
   return [
-    ...handMade.map((name) => finding("rounds", `${g.app}/${name}`, `a *-demo route \`demo new\` did not write (no ${DEMO_MANIFEST}): a round made by hand, whose candidates no check knows`, `a design round is agentic-cms demo new ${name.slice(0, -"-demo".length)} --section <type> (its candidates in the section's real frame, the page's copy read from its file; --component, --showcase for the rest): remove this route and start the round with demo new`)),
+    ...handMade.map(({ base, name }) => finding("rounds", `${base}/${name}`, `a *-demo route \`demo new\` did not write (no ${DEMO_MANIFEST}): a round made by hand, whose candidates no check knows`, `a design round is agentic-cms demo new ${name.slice(0, -"-demo".length)} --section <type> (its candidates in the section's real frame, the page's copy read from its file; --component, --showcase for the rest): remove this route and start the round with demo new`)),
     ...leftover.map((name) => finding("rounds", `${PICTURES}/${name}`, `a round's pictures with no round: ${g.app}/${name} is gone, and \`demo clean\` takes a round's pictures with it`, `remove the folder (agentic-cms demo clean <name> removes a round's route and pictures together); a picture a page keeps goes under ${PICTURES}/<page>/, named in the page's file`)),
   ];
 }
@@ -205,9 +209,14 @@ function checkExceptions({ found, show, before }, g, site, config) {
 
 /** The posts' URL prefix as site.ts writes it (the starter's when it names none). */
 const postPrefix = (text) => text.match(/^\s*postPrefix:\s*["'`]([^"'`\n]+)["'`]/m)?.[1] ?? "/blog-post";
-/** A page or post file of the engine's: directly in its folder, not `_`-prefixed. */
-const pageFile = (file) => new RegExp(`^${PAGES}/[^/_][^/]*\\.ya?ml$`).test(file);
-const postFile = (file) => new RegExp(`^${POSTS}/[^/_][^/]*\\.mdx?$`).test(file);
+/** A page or post file of the engine's: in its folder or a language's under it (docs/locales.md), not `_`-prefixed. */
+const pageFile = (file) => new RegExp(`^${PAGES}/(?:[a-z0-9-]+/)?[^/_][^/]*\\.ya?ml$`).test(file);
+const postFile = (file) => new RegExp(`^${POSTS}/(?:[a-z0-9-]+/)?[^/_][^/]*\\.mdx?$`).test(file);
+/** A post's URL: the prefix and its slug, under its language's prefix when it sits in that language's folder (content/blog/de/x.md → /de/blog-post/x). */
+const postRoute = (file, prefix) => {
+  const language = path.posix.dirname(file).slice(POSTS.length + 1);
+  return `${language ? `/${language}` : ""}${prefix}/${path.basename(file).replace(/\.mdx?$/, "")}`;
+};
 const parsed = (text) => { try { return parseYaml(text); } catch { return null; } };
 /** A post's frontmatter says draft: true. */
 const draftPost = (text) => parsed(text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "")?.draft === true;
@@ -219,7 +228,7 @@ function routesOf(files, read, prefix, { drafts }) {
     const text = read(file);
     if (text === null) continue;
     if (pageFile(file)) { const route = parsed(text)?.seo?.path; if (typeof route === "string") routes.set(route, file); }
-    if (postFile(file) && (drafts || !draftPost(text))) routes.set(`${prefix}/${path.basename(file).replace(/\.mdx?$/, "")}`, file);
+    if (postFile(file) && (drafts || !draftPost(text))) routes.set(postRoute(file, prefix), file);
   }
   return routes;
 }
@@ -476,7 +485,7 @@ export async function checkSite({ root, fs, git, env = {}, base, components = co
   const ci = checkCi(site, pkg, kit, () => pullRequestTargets({ git, env }));
   const own = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...ci.findings, ...tools.findings, ...checkLeftovers({ root, fs }, site, kit)];
   const baseline = hold ? baselinePass(config, [...componentFindings, ...own], site) : { findings: [...componentFindings, ...own], held: [], warnings: [] };
-  const rounds = folders(site, g.app).filter((name) => DEMO_FOLDER.test(name)).length;
+  const rounds = demoBases(site, g.app).flatMap((base) => folders(site, base).filter((name) => DEMO_FOLDER.test(name))).length;
   return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...ci.warnings, ...tools.warnings, ...retired, ...baseline.warnings] };
 }
 

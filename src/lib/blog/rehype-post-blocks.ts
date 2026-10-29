@@ -12,6 +12,7 @@
 
 import type { Element, ElementContent, Root, RootContent } from "hast";
 import { toString } from "hast-util-to-string";
+import { faqHeading } from "./faq.ts";
 
 export type PostBlockClasses = {
   run: string;
@@ -63,7 +64,8 @@ function imageBlock(paragraph: Element, c: PostBlockClasses): Element {
   ]);
 }
 
-export default function rehypePostBlocks({ classes: c }: { classes: PostBlockClasses }) {
+/** `faqHeading`: the H2 that starts the FAQ (faq.ts), "frequently asked" or "faq" without one. */
+export default function rehypePostBlocks({ classes: c, faqHeading: heading = faqHeading() }: { classes: PostBlockClasses; faqHeading?: RegExp }) {
   return (tree: Root) => {
     const blocks: Element[] = [];
     let run: ElementContent[] = [];
@@ -92,7 +94,7 @@ export default function rehypePostBlocks({ classes: c }: { classes: PostBlockCla
         blocks.push(imageBlock(n, c));
         continue;
       }
-      if (n.tagName === "h2" && /frequently asked|faq/i.test(toString(n))) {
+      if (n.tagName === "h2" && heading.test(toString(n))) {
         flush();
         const faq: ElementContent[] = [];
         let j = i + 1;

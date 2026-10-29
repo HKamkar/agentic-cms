@@ -13,7 +13,7 @@ it, and `pnpm lint` fails one that goes around it, naming the part
 The example wires it the way a site would, and leaves it off: with no
 `GOOGLE_TAG_ID` in the build's environment it ships no tag and no banner.
 Its pieces are the model — `src/config/analytics.ts` (the tag id and the
-policy), `src/app/layout.tsx`, `ui/ConsentBanner`, `ui/CookieSettingsButton`
+policy), `ui/SiteLayout` (what the root layout renders), `ui/ConsentBanner`, `ui/CookieSettingsButton`
 in the footer and `src/config/harness.ts`.
 
 ## What a site writes
@@ -29,7 +29,7 @@ export const analytics = {
 ```
 
 ```tsx
-// src/app/layout.tsx, inside <body>
+// ui/SiteLayout.tsx, the document the root layout renders, inside <body>
 {analytics.tagId && <script id="consent-default" dangerouslySetInnerHTML={{ __html: consentDefaultScript(analytics.consent) }} />}
 {analytics.tagId && <ConsentBanner />}
 …
