@@ -280,9 +280,11 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
   `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
   assert the trees identical); design work on the example starts with the
-  `design` skill like on any site. `templates/site/` is what `agentic-cms
-  init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
+  `design` skill like on any site; a site reads them as the `design`
+  plugin of the package's marketplace (`.claude-plugin/`, beside
+  `editorial`). `templates/site/` is what `agentic-cms
+  init` writes into a site (a site's `AGENTS.md`, its rules, thin from
+  `templates/site/rules/`, the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
   `templates/starter/` the content it starts from in the example's place
   (a home page and the blog index marked `(placeholder)`, empty
   collections, neutral pictures; `scripts/lib/starter.mjs`): nothing of
@@ -290,10 +292,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   kit's own `AGENTS.md` and
   `.claude/rules/` describe this repo and are not what a site gets. A
   change to a rule of the kit that a site shares goes to both. What a
-  site's edited copy must keep ends with `<!-- required -->` in the site's
-  rules and the skills (each rule's tier line, the engines, each skill's
-  closing `pnpm lint`), and `init --agent-files --check` holds it there,
-  with `.claude/settings.json`'s editorial plugin.
+  site's rule must keep ends with `<!-- required -->` (each rule's tier
+  line, the engines), which its kit block carries; `init --agent-files
+  --check` holds it, with `.claude/settings.json`'s marketplace and plugins.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own

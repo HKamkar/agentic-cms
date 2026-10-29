@@ -22,8 +22,6 @@
 
 import { attribute, elementName, parseClasses, PLUGIN, staticValue, strings } from "./engine-rules.mjs";
 
-export { parseClasses };
-
 /** The preferred rules, by their full names. */
 export const PREFERRED = ["motion", "graphics", "images", "icons", "styling"].map((rule) => `${PLUGIN}/${rule}`);
 

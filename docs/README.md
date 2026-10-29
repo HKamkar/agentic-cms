@@ -6,7 +6,12 @@ rules for an agent working on the code.
 - [parts.md](parts.md) — the map: every need a site has, the part of the
   kit that meets it and how to use it, its tier (required for the engines,
   preferred for the rest), the check that holds it and its exception key,
-  in four layers. The guides below follow the same layers.
+  in four layers, and whether it is stable or experimental. The guides
+  below follow the same layers.
+- [stability.md](stability.md) — what a site can rely on between versions:
+  what a stable part keeps, what may change in any release, how a change
+  is announced, the policy before and after 1.0.0, and every export,
+  command and file format marked.
 
 ## The content engine
 
@@ -90,8 +95,11 @@ The build, its gates and the setup.
   server (`output: "standalone"`, `assemble` as the build's last step, the
   copy that nests and the check that catches it), with the notes for
   Google Cloud Run and Azure App Service.
+- [upgrade.md](upgrade.md) — `agentic-cms upgrade`: a site moved to a
+  release by that release's own code — the pin, each migration in between,
+  the agent files, the steps left by hand, the verify.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
-  next: the tag, the agent files, and each release's own steps.
+  next: the tag, the agent files, and each release's own steps, by hand.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
   0.8 (pin 0.8.1): the one required step, what it may adopt, what it deletes if it
   wrote its own.
@@ -105,14 +113,13 @@ The build, its gates and the setup.
 - [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
   Tailwind, CSS and SVG, measuring, pnpm, git and GitHub, services; each
   the symptom, the reason and what to do.
-- [roadmap.md](roadmap.md) — what 0.8.0 adds, job by job, and the road to
-  1.0.0.
+- [roadmap.md](roadmap.md) — the plan for 0.9.0: first what a site gets (a
+  schema for every content file, redirects as content, one page on what it
+  can rely on, the kit's skills read from the package, a preview link per
+  pull request, `upgrade`), then the docs, then agentic-cms as a standard
+  npm package, published from CI with provenance, with
+  `pnpm create agentic-cms`. The 0.8.0 plan it replaced is in history
+  (`git show v0.8.0:docs/roadmap.md`).
 - [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest
   preferred, and a new site's starter without the example's brand.
-- [roadmap-0.9.0.md](roadmap-0.9.0.md) — the plan for 0.9.0: first what a
-  site gets (a schema for every content file, redirects as content, one
-  page on what it can rely on, the kit's skills read from the package, a
-  preview link per pull request, `upgrade`), then the docs, then agentic-cms
-  as a standard npm package, published from CI with provenance, with
-  `pnpm create agentic-cms`.

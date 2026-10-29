@@ -56,17 +56,23 @@ the same.
   placeholders and a logo placeholder with the site's name), and
   `src/config/site.ts` and `src/config/forms.ts` written for the site.
 - **The agent files**: `AGENTS.md` (a site's rules, the engines rule
-  first; `CLAUDE.md` includes it), `.claude/rules/` (path-scoped invariants
-  for the content engine and its layers — pages, the post pipeline, SEO —
-  the form engine, styling, design and the components, each ending with its
-  part, its tier and the check that holds it, pointing at the
-  engine's READMEs under `node_modules/agentic-cms/`; `AGENTS.md`'s
-  scoped-rules table routes Codex to them; the components rule is written
-  only beside the guard's config, which the example brings), `.claude/skills/` and
-  `.agents/skills/` (the design skills), `.claude/settings.json` (the
-  editorial plugin from the kit's marketplace, which `--agent-files --check`
-  holds enabled), and `.agentic-cms.json`, the
-  manifest of the agent files: the kit's text each one was written from
+  first, and a table from a task to the kit's guide for it; `CLAUDE.md`
+  includes it), `.claude/rules/` (path-scoped invariants for the content
+  engine and its layers — pages, the post pipeline, SEO — the form engine,
+  styling, design and the components, each thin: its `paths`, then the
+  kit's block, with the rule's title, the lines the kit marks required —
+  its part, its tier and the check that holds it among them — and a
+  pointer to the kit's whole rule in the package,
+  `node_modules/agentic-cms/templates/site/rules/<rule>.md`;
+  `AGENTS.md`'s scoped-rules table routes Codex to them; the components
+  rule is written only beside the guard's config, which the example
+  brings), `.agents/skills/` (a stub per design skill for Codex: its name
+  and description, and the package's `SKILL.md` to read),
+  `.claude/settings.json` (the package's marketplace,
+  `./node_modules/agentic-cms`, with its `editorial` and `design` plugins
+  enabled, so Claude Code reads the kit's skills at the version the site
+  pins; `.claude/skills/` is left for the site's own), and
+  `.agentic-cms.json`, the manifest of what the kit wrote
   ([§ After a kit upgrade](#after-a-kit-upgrade)).
 - **The config**: `package.json` (the scripts a build needs, the gates in
   its `lint` and `build` ([§ The gates](#the-gates)), and the dependencies
@@ -307,64 +313,59 @@ every URL to hand over in one table ([dev-server.md](dev-server.md)).
 
 ## After a kit upgrade
 
+`agentic-cms upgrade`, run from the new release, does what follows and the
+release's own steps ([upgrade.md](upgrade.md)). By hand:
+
 ```bash
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
-pnpm exec agentic-cms init . --agent-files          # the new rules and skills; the site's own edits are kept
+pnpm exec agentic-cms init . --agent-files          # the kit's lines in; the site's own kept; nothing to merge
 pnpm exec agentic-cms init . --agent-files --check  # what drifted, for CI (exit 1 on drift)
-pnpm exec agentic-cms init . --agent-files --diff <file>    # a file the site edited: the kit's change since the site took it
-pnpm exec agentic-cms init . --agent-files --accept <file>  # merged by hand: the kit's current text is the file's base
 ```
 
-`.agentic-cms.json` records each agent file's base, the hash of the kit's
-text the site last took (written by `init`, or accepted after a hand
-merge), with the kit's `version` and, for a pin between releases (which
-still carries the last release's version), the `commit` the site's
-lockfile installed. Against its base a rule is `ok` (the kit's text),
-`modified` (the site edited the kit's current text: kept, never
-overwritten), `modified, kit changed` (the site edited it and the kit's
-text changed since its base), `stale` (the site never touched it and the
-kit has a newer one) or `missing`. `--check` exits 1 on the last three, and
-on an edit that dropped what the kit requires ([§ What an edit
-keeps](#what-an-edit-keeps)), so a site that keeps its own edits keeps a
-clean check, and the CI workflow `init` writes runs it on every pull
-request. A `modified, kit changed`
-file is merged by hand: `--diff <file>` prints the kit's change alone, from
-the base to the kit's current text, as a unified diff (`git apply` takes it
-where the site's edits sit apart from it), and `--accept <file>` then
-records the kit's current text as the file's base. Where the site reworded
-the lines the kit's change touches — a release that marks a block required
-the site had written its own way — `git apply` answers `patch does not
-apply`: read the diff's hunks and put each one's new lines in where the
-site's version of them is, each required block's words as the kit has them
-([§ What an edit keeps](#what-an-edit-keeps)), then `--check` and
-`--accept <file>`. The text of the base of
-each file the site edited is kept in `.agentic-cms/base/`, under the file's
-path without its leading dot so no agent loads the copies as rules or
-skills, and so is the text of a base no release of the kit holds (a pin
-between releases; a release's text is in the package's record of its
-releases). So a file `init` writes and the site edits before committing
-it keeps its base, and `--diff` prints the kit's change alone with nothing
-committed first. The first time, a base's text comes from the kit's
-releases or the site's git history (the commit that has the file as the
-kit wrote it). Commit the folder with the manifest.
+Nothing of the kit's is copied for a site to merge. The skills are the
+kit's plugins, read from the installed package, so they change with the
+pin. A rule is thin: the refresh rewrites the kit's block — between
+`<!-- agentic-cms:start … -->` and `<!-- agentic-cms:end -->` — and
+keeps the rest: the site's own lines, which go after the block, and the
+rule's `paths` once the site has changed them (paths it never touched
+follow the kit's). A Codex stub is never the site's, and is rewritten
+whatever it holds. In `.claude/settings.json` the refresh sets the kit's
+keys — the marketplace and the two plugins it enables — and leaves every
+other key as the site has it.
 
-A file the site wrote before the manifest recorded its base has none, so
-it is measured against the kit's text at the version the site was on: the
-manifest's `version` (unless a refresh with the running version wrote it),
-else the last other version the site's `package.json` named in its git
-history. The package carries every release's text of every agent file for
-that (`scripts/lib/agent-file-releases.json`, written from the kit's tags),
-so a site needs no history of the kit. A file that is a release's text,
-untouched, is `stale`. One whose kit text has not changed since that
-version is `modified`, noted "no base: kit unchanged since 0.7.6": the
-site's own edit, nothing to take. One whose kit text has changed is
-`modified, kit changed` with that release's text as its base, and `--diff`
-prints the kit's change from it. The refresh and `--accept` record the
-base, as for any file. Where neither the version nor its text is known,
-the file is `modified, kit changed` with a note, and `--diff` says that
-what it prints is the site's whole file against the kit's current text:
-not the kit's change, and never applied whole — take the kit's lines from
-it by hand. Only a `--diff` from a base is the kit's change alone.
+`--check` reports each: `ok` (the kit's text), `modified` (the site's own
+lines or paths beside a current block: passes), `stale` (the kit's block,
+a stub or the kit's settings keys behind the kit, or a rule's scope
+changed since `AGENTS.md`'s table), `missing`, `modified, required gone`
+([§ What an edit keeps](#what-an-edit-keeps)), `unreadable` (settings
+that are not JSON) and `legacy` (below), and exits 1 on any but `ok` and
+`modified`. The CI workflow `init` writes runs it on every pull request.
+`--diff` and `--accept`, 0.8's hand merge, are deprecated: they say so and
+do nothing, and go in the next breaking release.
+
+`.agentic-cms.json` records what the kit wrote: its `format` (2), the
+kit's `version`, each rule's paths as the kit last wrote them (by hash),
+the stubs (a skill the kit drops loses its stub) and the settings keys (a
+key the kit drops leaves the site's settings). Commit it.
+
+**A site laid out before 0.9.0** holds the kit's copies: the rules whole,
+the design skills in both trees, the manifest's bases and
+`.agentic-cms/base/`. `--check` calls each `legacy`, and the refresh
+moves them, once:
+
+- a skill copy the site never touched (a text some release of the kit
+  shipped, which the package's record, `scripts/lib/agent-file-releases.json`,
+  and the old manifest know) goes;
+- one the site edited becomes its own, `<name>-site`, its frontmatter
+  renamed and a note at its top saying where the kit's is now; the refresh
+  lists each, to keep or delete;
+- each rule becomes thin, with the lines no release of the kit had kept
+  after the kit's block, and its `paths` when they were the site's own;
+- `.agentic-cms/base/` goes, and the settings take the kit's keys.
+
+`AGENTS.md` and `CLAUDE.md` are the site's own, and the move leaves them:
+the text the 0.8 templates copied into them is the site's to replace with
+the current template's ([upgrading.md](upgrading.md)).
 
 A rule for a tool the site has not
 adopted is neither written nor checked: the components rule needs the
@@ -384,34 +385,31 @@ move procedures into linked docs.
 
 ### What an edit keeps
 
-A rule or a skill marks what no site edits away with `<!-- required -->` at
-the end of a list item's or a paragraph's last line: the engines, each
-rule's tier line (its part, its tier and the check that holds it), the
-`pnpm lint` that ends each skill's procedure, and the design skills' copy
-rule (a round starts from the page's file, never with copy in a
-candidate). A site's copy keeps each block's words, in their order, and
-edits the rest as it likes: re-wrapped, re-indented, without the marker, in
+A rule marks what no site edits away with `<!-- required -->` at the end
+of a list item's or a paragraph's last line: the engines, each rule's tier
+line (its part, its tier and the check that holds it), and the pointer to
+the kit's whole rule. Inside the kit's block the refresh puts them back
+itself. A site that takes the block's marks away makes the rule wholly its
+own, and the refresh leaves it as it is; then each required block's words
+must stay, in their order: re-wrapped, re-indented, without the marker, in
 another case, under a list marker of its own (`*` for `-`, a number) or
 with the site's own words before or after them, the block is kept. Its
-words reworded, broken up or put in another order, it is gone: a site that
-says the same thing its own way keeps the kit's sentence and adds its own
-beside it. An edit that drops one is `modified, required gone`: `--check`
-exits 1 naming the block, its line in the kit's file and the file
-(`node_modules/agentic-cms/templates/site/rules/<rule>.md`, `…/.claude/skills/<skill>/SKILL.md`),
-so it goes back in as the kit has it. The refresh keeps the edit and says
-the same (`kept, required gone`); `--force` takes the kit's whole text. A
-file the kit changed since its base is `modified, kit changed` first: the
-merge brings the kit's blocks, and the check reads them once `--accept`
-records it.
+words reworded, broken up or put in another order, it is gone: `--check`
+reports `modified, required gone` and exits 1, naming the block, its line
+in the kit's file and the file
+(`node_modules/agentic-cms/templates/site/rules/<rule>.md`), so it goes
+back in as the kit has it; the refresh keeps the edit and says the same
+(`kept, required gone`); `--force` takes the kit's thin rule whole. The
+kit's skills are no site's to edit: a site that wants its own version of
+one writes it under a name of its own in `.claude/skills/`.
 
-`.claude/settings.json` is the site's own — `init` writes it once, the
-refresh again only when it is missing, and neither ever rewrites it — but
-it keeps what enables the editorial plugin: each marketplace the kit's
-template names (`extraKnownMarketplaces["agentic-cms"]`) and each plugin it
-enables (`enabledPlugins["editorial@agentic-cms"]: true`). The site's
-permissions, hooks and other plugins pass; a key gone is
-`modified, required gone`, naming it, and a file that is not JSON is
-`unreadable`.
+`.claude/settings.json` is the site's own, but for the kit's keys: each
+marketplace the kit's template names (`extraKnownMarketplaces["agentic-cms"]`,
+the package's folder) and each plugin it enables
+(`enabledPlugins["editorial@agentic-cms"]`, `enabledPlugins["design@agentic-cms"]`).
+The site's permissions, hooks and other plugins pass; a kit key gone or
+changed is `stale`, and the refresh sets it again. A file that is not JSON
+is `unreadable`, and kept.
 
 Each release's own steps — the lines a site's `AGENTS.md` and its edited
 rules take by hand, the scripts to change, the baselines to recapture — are

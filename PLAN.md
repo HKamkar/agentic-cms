@@ -312,7 +312,8 @@ editorial@agentic-cms` resolved the marketplace and installed the plugin at
 
 ## Phase 10 — 0.4.0, the kit as an agent's design toolbox (implemented 2026-09-20)
 
-`docs/roadmap.md` is the plan and the record; six pull requests into
+The 0.4.0 roadmap (`git show v0.4.0:docs/roadmap.md`) is the plan and the
+record; six pull requests into
 `develop` (#13–#18), one release. The command line's contract became one
 spec per command (`scripts/lib/specs.mjs`: strict flags, `--help`,
 `docs/commands.md` generated and checked), the harness's browser code a
@@ -333,7 +334,8 @@ the release commit.
 
 ## Phase 11 — 0.8.0, a new site in minutes (released 2026-10-17)
 
-`docs/roadmap.md` was the plan and is now the record. Its twelve jobs, 0 to
+The 0.8.0 roadmap (`git show v0.8.0:docs/roadmap.md`) was the plan and is
+now the record. Its twelve jobs, 0 to
 11, ran in two lanes as fourteen pull requests into `develop` (jobs 9 and 10
 took two each). Each ran in its own session and merged once CI was green.
 
@@ -379,7 +381,7 @@ code. Four were fixed. The fifth, on the terminal text of a 5xx page, was
 dismissed because that text never reaches HTML.
 
 `package.json` stayed at 0.7.6 on `develop` until the release commit. The
-next plan, 0.9.0 (the package on npm), is `docs/roadmap-0.9.0.md`.
+next plan, 0.9.0 (the package on npm), is `docs/roadmap.md`.
 
 ## Phase 12 — 0.8.1, the fixes from running the guide on two sites (released 2026-10-17)
 

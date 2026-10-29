@@ -21,6 +21,11 @@ The conventions every command keeps, because the caller is usually an agent:
   environment (a missing build, no browser, a bad flag).
 - **`--json`**, where a command offers it, prints one JSON document on stdout
   and sends its progress to stderr, so the output parses without scraping.
+- **What stays.** Each command is marked stable or experimental
+  ([stability.md § Commands](stability.md#commands)): a stable one keeps
+  its flags, defaults, exit codes and `--json` shape, as this page lists
+  them, until a release that says how they change; its printed wording may
+  change in any release.
 - **Errors name the fix.** A missing build says `pnpm build`; a missing
   browser says what to install; a missing marker says which file. A wrong
   command, subcommand or flag names the nearest one ("did you mean"); a
@@ -915,24 +920,24 @@ agentic-cms demo clean                     # every *-demo route
 
 ## site
 
-Layer: [the site's commands](parts.md#the-sites-commands). `init` · `setup` · `urls` · `serve`
+Layer: [the site's commands](parts.md#the-sites-commands). `init` · `upgrade` · `setup` · `urls` · `serve`
 
 ### `init`
 
-A site from the package: the wireframe example's code with a starter of the site's name in place of the example's content (a home page and the blog index whose copy is marked as placeholder, empty collections, neutral pictures), the agent files (rules and design skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
+A site from the package: the wireframe example's code with a starter of the site's name in place of the example's content (a home page and the blog index whose copy is marked as placeholder, empty collections, neutral pictures), the agent files (thin rules, Codex stubs, the Claude settings that name the package's marketplace of the kit's skills), the config, a CI workflow and a manifest; or a refresh of an existing site's agent files.
 
 ```bash
-agentic-cms init [dir] --name <Site> [--url <origin>] [--email <address>] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check | --diff <file> | --accept <file>] [--force]
+agentic-cms init [dir] --name <Site> [--url <origin>] [--email <address>] [--force] [--light-only] | agentic-cms init [dir] --agent-files [--check] [--force]
 ```
 
 - `<dir>` — where the site goes (default: the current directory)
 
 | flag | what |
 |---|---|
-| `--agent-files` | only the rules (.claude/rules/), the design skills (.claude/skills/, .agents/skills/), AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them (the one block of AGENTS.md the kit rewrites), and .claude/settings.json when it is missing (a site's own is never rewritten); a file the site edited is kept ("kept, kit changed" when the kit's text changed since the site took it), and a rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
-| `--check` | with --agent-files: report each file — ok; modified (the site edited the kit's current text: passes); modified, required gone (the site's edit dropped a block the kit marks required, a list item or a paragraph ending in <!-- required -->, re-wrapped or unmarked still counting as kept — or .claude/settings.json no longer names the kit's marketplace or enables the editorial plugin: each named, with the kit's file it is in); modified, kit changed (the site edited it and the kit's text changed since its base: --diff, merge, --accept); stale (the kit has a newer one, or a rule's scope changed since the table); missing; unreadable (.claude/settings.json is not JSON) — and AGENTS.md too big past the 32 KiB Codex reads; a file the manifest records no base for is measured against the kit's text at the version the site was on (the manifest's version, else the last other one its package.json named in git), which the package keeps for every release, and noted ("no base: kit unchanged since 0.7.6"); exit 1 on any but ok and modified; write nothing |
-| `--diff <file>` | with --agent-files: print the kit's change to a file since its base — the kit's text the site last took — as a unified diff (`git apply` reads it), the base from .agentic-cms/base/, the kit's releases or the site's git history; for a file with no base, from the kit's text at the version the site was on, or, when no release is known as its source, the site's whole file against the kit's text, which says so and is never applied whole; repeat for more files; write nothing (repeatable) |
-| `--accept <file>` | with --agent-files: record the kit's current text as the base of a file the site merged by hand (its copy in .agentic-cms/base/ while the site's text differs, or while no release of the kit holds it), so --check calls it modified, the site's edit of the kit's current text, until the kit changes it again; repeat for more files; nothing else is written (repeatable) |
+| `--agent-files` | only the agent files: each rule thin in .claude/rules/ (its paths, then the kit's block — the rule's title, the lines the kit marks required, a pointer to the kit's whole rule in node_modules/agentic-cms/templates/site/rules/ — rewritten on every run, the site's own lines after it and its own paths kept), a stub per skill for Codex in .agents/skills/ (the skill's name and description and the package's file, rewritten freely), the kit's keys in .claude/settings.json (the package's marketplace, ./node_modules/agentic-cms, and its editorial and design plugins enabled; the site's other keys kept) and AGENTS.md's scoped-rules table, written from the rules' frontmatter so Codex finds them; nothing is merged by hand. The kit's skills are its plugins, never copied: .claude/skills/ holds the site's own. A site laid out before 0.9.0 is moved first: a copy of a kit skill it never touched goes, one it edited becomes its own as <name>-site, each rule becomes thin with the site's own lines kept, and the base copies go. A rule for a tool the site has not adopted — the components rule without src/config/components.json, the guard's config — is neither written nor checked |
+| `--check` | with --agent-files: report each file — ok; modified (the site's own lines after the kit's block, its own paths, or a rule whose block marks it took away with every required block still in it: passes); modified, required gone (such a rule lost a block the kit marks required, a list item or a paragraph ending in <!-- required -->, re-wrapped or unmarked still counting as kept: each named, with the kit's file it is in); stale (the kit's lines, a stub or the kit's settings keys behind the kit's, or a rule's scope changed since the table); missing; legacy (what init copied before 0.9.0, which a refresh moves); unreadable (.claude/settings.json is not JSON) — and AGENTS.md too big past the 32 KiB Codex reads; exit 1 on any but ok and modified; write nothing |
+| `--diff <file>` | deprecated since 0.9.0, and goes in the next breaking release: nothing is merged by hand now, so it prints that and does nothing (repeatable) |
+| `--accept <file>` | deprecated since 0.9.0, and goes in the next breaking release: nothing is merged by hand now, so it prints that and does nothing (repeatable) |
 | `--name <Site>` | the site's name as it is spelled, required for a new site (a folder without content/; never taken from the folder's name): src/config/site.ts's name and short name, the starter's copy, content/VOICE.md's brand and the logo placeholder (public/images/brand/<slug>-logo.svg, its text and title); a site that has content/ takes none |
 | `--url <origin>` | the site's origin, https://<host> without a path: site.ts's url, the canonicals, the sitemap and the feed; default https://<slug>.example, a stand-in on a reserved domain that the content lint marks as placeholder |
 | `--email <address>` | the site's public address: site.ts's email and the home page's contact card; default hello@<slug>.example, a stand-in the lint marks |
@@ -940,18 +945,41 @@ agentic-cms init [dir] --name <Site> [--url <origin>] [--email <address>] [--for
 | `--light-only` | a site without dark mode: the profile's schemes are ["light"], the example's colours single values with color-scheme: light, no theme script and no theme toggle, and STANDARD.md and the component catalogue without their dark-mode lines |
 | `--json` | print the result as JSON |
 
-Exit: `0` written, every agent file the kit's text or the site's edit of it, or --diff found nothing to merge; `1` --check found drift, or --diff printed a change; `2` usage, a new site without --name or with an empty one, a --url that is not an origin or an --email that is not an address (nothing is written), --name, --url or --email with --agent-files, a --diff or --accept name that is not one of the site's agent files (or, for --accept, is missing), a base --diff finds in neither its copy, the kit's releases nor the git history, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
+Exit: `0` written, every agent file the kit's text or the site's own lines beside it, or a deprecated --diff or --accept, which does nothing; `1` --check found drift; `2` usage, a new site without --name or with an empty one, a --url that is not an origin or an --email that is not an address (nothing is written), --name, --url or --email with --agent-files, or a --light-only edit that did not find its place in the example (nothing is written; a kit bug to report).
 
-`--json` prints `{ target, version, created, updated, kept, lightOnly, site: { name, url, email, starter: true } | { starter: false } } | { version, files: [{ file, status, note?, bytes? }] } | --diff: { version, files: [{ file, status, base, from, diff, note? }] }`.
+`--json` prints `{ target, version, created, updated, kept, lightOnly, site: { name, url, email, starter: true } | { starter: false } } | { version, files: [{ file, status, note?, required?, keys?, bytes? }] }`.
 
 ```bash
 agentic-cms init my-site --name "My Site"
 agentic-cms init . --name "My Site" --url https://my-site.com --email hello@my-site.com
 agentic-cms init my-site --name "My Site" --light-only      # a site with one scheme, light
-agentic-cms init . --agent-files          # after a kit upgrade: the new rules and skills
+agentic-cms init . --agent-files          # after a kit upgrade: the kit's lines in, the site's own kept
 agentic-cms init . --agent-files --check  # what drifted, for CI
-agentic-cms init . --agent-files --diff .claude/rules/styling.md    # the kit's change since the site took it
-agentic-cms init . --agent-files --accept .claude/rules/styling.md  # merged by hand: the kit's text is its base
+```
+
+### `upgrade`
+
+A site moved to the release that runs it, docs/upgrading.md made executable: the version the site is on (node_modules/agentic-cms's, or the manifest's when that is older), pnpm add of the kit at this version in the site's own form of spec (a git tag, a range), each migration this release carries newer than the site's (scripts/migrations/<version>.mjs: detect, then apply, idempotent), init --agent-files (the kit's lines rewritten, the site's kept), the manual steps left with their sections of docs/upgrading.md, then pnpm lint and pnpm test; run as pnpm dlx agentic-cms@<version> upgrade, so the code that moves the site is the target's.
+
+```bash
+agentic-cms upgrade [--dry-run] [--kit <spec>] [--from <version>] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--dry-run` | say what it would change — the spec, each migration's findings, the agent files as --check reports them — and change, install and run nothing |
+| `--kit <spec>` | the spec pnpm add takes (default: the site's own at this version: a git tag moved to v<version>, a range to ^<version>; a pin of another form, a tarball or a commit, needs it) |
+| `--from <version>` | the version the site is on, when node_modules and the manifest no longer say it (x.y.z): the migrations newer than it run |
+| `--json` | print the report as JSON (the progress and the commands' own output go to stderr) |
+
+Exit: `0` upgraded, the verify green and no step left by hand; or --dry-run; `1` a step left by hand (printed, with its section of docs/upgrading.md), or pnpm lint or pnpm test failed after the upgrade; `2` usage or environment, before anything is changed: no package.json, no agentic-cms dependency, a pin upgrade does not move without --kit, no version to start from without --from; or pnpm add failed, and nothing else was changed.
+
+`--json` prints `{ from, to, spec, dryRun, migrations: [{ version, found: [{ piece, what }], changed: [{ piece, file, status, note? }], manual: [{ piece, text, link }] }], agentFiles: [{ file, status, note? }], manual: [{ piece, text, link }], verify: [{ script, status }], exit }`.
+
+```bash
+agentic-cms upgrade --dry-run              # what it would change; changes nothing
+agentic-cms upgrade                        # run by the release: pnpm dlx agentic-cms@<version> upgrade in the site's root
+agentic-cms upgrade --kit file:../agentic-cms-0.9.0.tgz   # the kit from a tarball
 ```
 
 ### `setup`

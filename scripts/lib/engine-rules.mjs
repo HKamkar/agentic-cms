@@ -29,14 +29,12 @@ const WORDS = /[\p{L}\p{N}]/u;
 const TOKEN = /^[!-@[-~]*$/;
 /** A camelCase name, never words: a preset, a key, an identifier (`slideInLeft`, `fadeIn`). */
 const CAMEL = /^[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)+$/;
-/** A kebab-case name, never words: a class, a variant, a key (`text-steel`, `arrow-right`). */
-const KEBAB = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;
 /** The utilities Tailwind writes with no value, which a class string may hold beside the valued ones. */
 const BARE_UTILITIES = new Set(["flex", "grid", "block", "inline", "inline-block", "inline-flex", "inline-grid", "contents", "hidden", "table", "flow-root", "relative", "absolute", "fixed", "sticky", "static", "isolate", "italic", "underline", "overline", "line-through", "no-underline", "uppercase", "lowercase", "capitalize", "normal-case", "truncate", "container", "grow", "shrink", "border", "rounded", "shadow", "outline", "ring", "invisible", "visible", "collapse", "antialiased", "sr-only", "not-sr-only", "group", "peer", "prose", "transform", "filter", "blur", "transition"]);
 const reads = (text) => WORDS.test(text);
-const readsAsWords = (text) => reads(text) && !TOKEN.test(text) && !CAMEL.test(text) && !classString(text);
-/** A field named like copy, in data, judged by its value: copy unless the value is a name (kebab or camel case) or a class string. */
-const readsAsCopy = (text) => reads(text) && !KEBAB.test(text) && !CAMEL.test(text) && !classString(text);
+/** A field named like copy, in data, judged by its value: copy unless the value is a camelCase name or a class string (a kebab-case name is one: `text-steel`). */
+const readsAsCopy = (text) => reads(text) && !CAMEL.test(text) && !classString(text);
+const readsAsWords = (text) => readsAsCopy(text) && !TOKEN.test(text);
 
 /** A class list's classes, each as { text, variants, utility }: split on whitespace, then on the colons outside brackets and parentheses; the utility without its `!` and its leading `-`. */
 export function parseClasses(text) {
@@ -175,8 +173,8 @@ const copySchema = [{
 
 /** The modules whose components are the kit's design tools, which never ship: their props name a block for review (a study, a timeline) and are no copy. */
 export const TOOLS = ["agentic-cms/lab"];
-/** The kit's play-once layer, whose components' `preset` names an effect (`slideInLeft`), never copy. */
-const MOTION_LAYER = "agentic-cms/ix";
+/** The kit's play-once layer (a site with a motion folder wraps it there; a site without one has it as its motion layer), whose components' `preset` names an effect (`slideInLeft`), never copy. */
+export const KIT_MOTION = "agentic-cms/ix";
 
 /**
  * Copy: text with a letter or a digit in it, where a reader sees it. JSX
@@ -209,7 +207,7 @@ const copy = {
     return {
       ImportDeclaration(node) {
         if (tools.includes(node.source.value)) for (const spec of node.specifiers) toolNames.add(spec.local.name);
-        if (node.source.value === MOTION_LAYER) for (const spec of node.specifiers) motionNames.add(spec.local.name);
+        if (node.source.value === KIT_MOTION) for (const spec of node.specifiers) motionNames.add(spec.local.name);
       },
       JSXText(node) { if (reads(node.value) && !decorated(node, decorations)) report(node, ""); },
       JSXExpressionContainer(node) {

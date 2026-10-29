@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 import { Linter } from "eslint";
 import { ANIMATION_ALTERNATIVES, componentRules, COPY_PROPS, copyPlaces, defaultElements, PREFERRED, preferredConfigs, REQUIRED, RENDERING_LIBRARIES, requiredConfigs, resolveOptions } from "./component-lint.mjs";
-import { parseClasses } from "./preferred-rules.mjs";
+import { parseClasses } from "./engine-rules.mjs";
 
 // The rules run as a site runs them: the `react` plugin is the one
 // eslint-config-next registers, the planted files are linted by their path.

@@ -48,7 +48,7 @@ test("every site rule template is path-scoped and points at the installed packag
 
 test("the package ships what init copies, and none of the example's content or pictures", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-  for (const entry of [...EXAMPLE, ...SHARED_CONTENT, "STANDARD.md", "tsconfig.json", "templates", ".claude/skills", ".agents/skills", "docs"]) {
+  for (const entry of [...EXAMPLE, ...SHARED_CONTENT, "STANDARD.md", "tsconfig.json", "templates", ".claude-plugin", "plugin", ".claude/skills", ".agents/skills", "docs"]) {
     assert.ok(pkg.files.includes(entry), `files: ${entry}`);
   }
   for (const entry of ["content", "public"]) assert.ok(!pkg.files.includes(entry), `files: ${entry} — the example's own content stays in the kit's repository`);

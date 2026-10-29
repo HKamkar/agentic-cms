@@ -47,7 +47,7 @@
 // components pass alone.
 import path from "node:path";
 import { suggest } from "./args.mjs";
-import { compositionCounts, eslintCounts, PROCESSOR, validBaseline } from "./baseline.mjs";
+import { COMPOSITION_RULES, eslintCounts, PROCESSOR, validBaseline } from "./baseline.mjs";
 import { ALLOWABLE, checkAllow, DEFAULTS as LINT_DEFAULTS, OWNED, PREFERRED, preferredConfigs, REQUIRED, requiredConfigs, resolveOptions, SITE_TOOLS } from "./component-lint.mjs";
 import { MANIFEST as DEMO_MANIFEST } from "./demo.mjs";
 
@@ -73,7 +73,8 @@ const SOURCE = /\.(tsx|ts|jsx|js|mjs)$/;
 const TEST = /\.test\.[cm]?[jt]sx?$/;
 
 export class GuardConfigError extends Error {}
-const isMap = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+/** A JSON object: not null, not a list. */
+export const isMap = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 /** The site's config as written, every key checked; throws GuardConfigError naming the fix. */
 export function readConfig(root, fs) {
@@ -418,7 +419,7 @@ async function baselineTold(site, root, baseline) {
     const processor = actual.processor?.meta?.name === PROCESSOR ? actual.processor.counts : {};
     for (const [rule, count] of Object.entries(rules)) {
       if (told[rule] !== count) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and ESLint is told ${told[rule] ?? "none"}: the rule fails every one`, BASELINE_FIX));
-      else if (rule in compositionCounts(rules) && processor[rule] !== count) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and no processor holds it: a block after componentRules() sets another processor on the file, so the rule fails every one`, `${BASELINE_FIX}; the file's own processor goes before componentRules()`));
+      else if (COMPOSITION_RULES.includes(rule) && processor[rule] !== count) out.push(finding("preset", file, `the baseline holds ${count} of ${rule} here, and no processor holds it: a block after componentRules() sets another processor on the file, so the rule fails every one`, `${BASELINE_FIX}; the file's own processor goes before componentRules()`));
     }
   }
   return out;

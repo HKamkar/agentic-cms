@@ -91,6 +91,8 @@
     "STANDARD.md",
     "tsconfig.json",
     "templates",
+    ".claude-plugin",
+    "plugin",
     ".claude/skills",
     ".agents/skills",
     "docs",

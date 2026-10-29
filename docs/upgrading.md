@@ -1,28 +1,69 @@
 # Upgrading a site
 
-A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). Every
-upgrade starts the same way:
+What a site can rely on from one version to the next, and what may change
+in any release, is [stability.md](stability.md).
+
+A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). From
+0.9.0 on, one command in the site's root moves it to a release, with that
+release's own code ([upgrade.md](upgrade.md)):
+
+```bash
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade --dry-run   # what it would change
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade
+```
+
+It moves the pin, runs each migration of the releases in between, the
+agent files' refresh, prints what is left by hand with its section below,
+then runs `pnpm lint` and `pnpm test`. By hand, the same steps start:
 
 ```bash
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm install
-pnpm exec agentic-cms init . --agent-files --check  # what differs from the kit's rules and skills
-pnpm exec agentic-cms init . --agent-files          # the kit's new rules and skills in; the site's own edits kept
-pnpm exec agentic-cms init . --agent-files --diff <file>    # each file kept with a kit change: that change alone
-pnpm exec agentic-cms init . --agent-files --accept <file>  # once it is merged by hand
+pnpm exec agentic-cms init . --agent-files --check  # what differs from the kit's agent files
+pnpm exec agentic-cms init . --agent-files          # the kit's lines in; the site's own kept; nothing to merge
 ```
 
-`--agent-files` rewrites a rule or a skill the site never edited and keeps
-one it did: `kept` when the release left the kit's text of it alone,
-`kept, kit changed` when it changed it. Such a file takes the release's
-change by hand: `--diff` prints it without the site's edits, the list
-below says why it was made, and `--accept` records the merge, so `--check`
-passes again ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+Since 0.9.0 nothing of the kit's agent files is merged by hand: the kit's
+skills are its plugins, read from the installed package; a rule is thin,
+its kit block rewritten and the site's own lines after it kept; a Codex
+stub is rewritten whatever it holds; the kit's keys in
+`.claude/settings.json` are set and the site's others kept
+([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
 `AGENTS.md` is the site's own from the day `init`
 wrote it and is never rewritten: a release's new lines for it are listed
 too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
+
+## 0.8.4 → 0.9.0
+
+Unreleased: on `develop` until 0.9.0. `upgrade` runs the 0.9.0 migration
+(`scripts/migrations/0.9.0.mjs`), which takes the first item below and
+prints the rest.
+
+- **The agent files move.** The first `init . --agent-files` on 0.9.0
+  moves what 0.8 copied (`--check` calls each `legacy` until then): a
+  design skill copy the site never touched goes, in both trees, since
+  Claude Code reads the kit's from its `design` plugin and Codex from a
+  stub; one the site edited becomes its own, `.claude/skills/<name>-site/`
+  (or `.agents/skills/<name>-site/`), and the refresh lists each to keep or
+  delete; each rule becomes thin, its own lines kept after the kit's block;
+  `.agentic-cms/base/` goes; `.claude/settings.json` names the package's
+  marketplace, `./node_modules/agentic-cms`, with `design@agentic-cms`
+  enabled beside `editorial@agentic-cms`. Commit what it changed with the
+  manifest.
+- **By hand, `AGENTS.md` and `CLAUDE.md`.** They are the site's own, so
+  the move leaves them. Replace what the 0.8 template copied into
+  `AGENTS.md` — its sections on styling, gotchas and the parity harness,
+  and the bullets that list the kit's docs — with the current template's
+  table, "The kit's guides"
+  (`node_modules/agentic-cms/templates/site/AGENTS.md`), and in both files
+  say that the design skills come from the kit's plugin, not
+  `.claude/skills/`.
+- **The first session after the move** may start without the kit's
+  skills: Claude Code points its registration of the marketplace at the
+  package's folder as that session starts, and the next session has them
+  ([gotchas.md § Claude Code](gotchas.md#claude-code)).
 
 ## 0.8.3 → 0.8.4
 

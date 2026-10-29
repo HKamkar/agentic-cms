@@ -491,6 +491,7 @@ steps a site adds
 
 ```bash
 pnpm kit init <dir> --name "<Site>"  # a site from the package: the example's code, a starter of the site's name, the agent files, the config, the CI workflow
+pnpm dlx agentic-cms@<version> upgrade   # a site moved to a release by that release's code: the pin, the migrations, the agent files, the steps left by hand, lint and test (--dry-run first)
 pnpm kit setup       # a clone made ready: the browsers, .env.local and its origins, lint and test, the URLs (bash scripts/setup.sh on a site)
 pnpm urls            # this machine's URLs for the dev server and the lab, and the ALLOWED_DEV_ORIGINS they need (--write adds them)
 pnpm kit serve       # next dev and the lab for a look: every demo route waited for, every URL (localhost, LAN, public) in one table; Ctrl-C stops both

@@ -43,6 +43,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
@@ -142,8 +143,36 @@ async function build(site) {
   bypasses(site);
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
+  upgradeFrom084(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  agentFilesResolve(site);
+}
+
+/**
+ * What the site's agent files name is in the installed package: the
+ * marketplace its .claude/settings.json gives by path, each plugin it enables
+ * listed there with a skill in its folder, the file each Codex stub and each
+ * thin rule points at.
+ */
+function agentFilesResolve(site) {
+  const settings = JSON.parse(fs.readFileSync(path.join(site, ".claude/settings.json"), "utf8"));
+  for (const [name, { source }] of Object.entries(settings.extraKnownMarketplaces ?? {})) {
+    if (source.source !== "directory") fail(`.claude/settings.json: the marketplace ${name} is ${source.source}, not the installed package's folder`);
+    const root = path.resolve(site, source.path);
+    const market = JSON.parse(fs.readFileSync(path.join(root, ".claude-plugin/marketplace.json"), "utf8"));
+    for (const plugin of Object.keys(settings.enabledPlugins).filter((id) => id.endsWith(`@${name}`)).map((id) => id.split("@")[0])) {
+      const entry = market.plugins.find((p) => p.name === plugin);
+      if (!entry) fail(`the package's marketplace lists no ${plugin}, which .claude/settings.json enables`);
+      const skills = path.join(root, entry.source, "skills");
+      if (!fs.existsSync(skills) || !fs.readdirSync(skills).some((skill) => fs.existsSync(path.join(skills, skill, "SKILL.md")))) fail(`the ${plugin} plugin has no skill at ${path.relative(site, skills)}`);
+    }
+  }
+  const pointers = [".agents/skills", ".claude/rules"].flatMap((dir) => fs.readdirSync(path.join(site, dir), { recursive: true }).filter((file) => file.endsWith(".md")).map((file) => path.join(site, dir, file)));
+  for (const file of pointers) {
+    for (const [, named] of fs.readFileSync(file, "utf8").matchAll(/`(node_modules\/agentic-cms\/[^`]+\.md)`/g)) if (!fs.existsSync(path.join(site, named))) fail(`${path.relative(site, file)} points at ${named}, which the package lacks`);
+  }
+  console.log(`pack-smoke: the site's marketplace, plugins, stubs and thin rules resolve in the installed package (${pointers.length} files)`);
 }
 
 /** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */
@@ -228,6 +257,11 @@ function dependabot(site) {
   if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== fs.readFileSync(path.join(ROOT, "templates/site/dependabot.yml"), "utf8")) fail("init did not write .github/dependabot.yml from the kit's template");
 }
 
+/** A file of the site written, its folder made first. */
+const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
+/** A JSON file's text as the kit writes one: two-space indents, a newline at the end. */
+const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+
 /** git in the site, as a person who commits nothing anywhere else: no signing, the identity the commit needs and no more. */
 const git = (site, ...args) => run("git", ["-c", "user.name=pack-smoke", "-c", "user.email=pack-smoke@localhost", "-c", "commit.gpgsign=false", ...args], site);
 
@@ -236,14 +270,13 @@ function layBypasses(site) {
   const added = [];
   const before = new Map();
   const current = (file) => { const text = fs.readFileSync(path.join(site, file), "utf8"); if (!before.has(file)) before.set(file, text); return text; };
-  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
   for (const bypass of BYPASSES) {
-    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(file, text); }
-    for (const [file, text] of Object.entries(bypass.append ?? {})) write(file, `${current(file)}${text}`);
-    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(file, change(current(file)));
-    for (const [file, change] of Object.entries(bypass.json ?? {})) write(file, `${JSON.stringify(change(JSON.parse(current(file))), null, 2)}\n`);
+    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(site, file, text); }
+    for (const [file, text] of Object.entries(bypass.append ?? {})) write(site, file, `${current(file)}${text}`);
+    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(site, file, change(current(file)));
+    for (const [file, change] of Object.entries(bypass.json ?? {})) write(site, file, json(change(JSON.parse(current(file)))));
   }
-  write("src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
+  write(site, "src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
   return { added, before };
 }
 
@@ -281,12 +314,23 @@ const ownBase = () => Object.fromEntries(Object.entries(ENV).filter(([key]) => k
 /** A command in the site, its exit and its output kept, run as its own CI runs it. */
 const answer = (site, args, env = {}) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env: { ...ownBase(), ...env } }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
 const edit = (site, file, change) => { const full = path.join(site, file); fs.writeFileSync(full, change(fs.readFileSync(full, "utf8"))); };
-const setScripts = (site, scripts) => edit(site, "package.json", (text) => `${JSON.stringify({ ...JSON.parse(text), scripts: { ...JSON.parse(text).scripts, ...scripts } }, null, 2)}\n`);
+const editJson = (site, file, change) => edit(site, file, (text) => json(change(JSON.parse(text))));
+const setScripts = (site, scripts) => editJson(site, "package.json", (pkg) => ({ ...pkg, scripts: { ...pkg.scripts, ...scripts } }));
+/** The baseline `check-site --baseline` wrote into the site's guard config. */
+const writtenBaseline = (site) => JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+const headOf = (site) => spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+/** The fresh site put back at its commit, which git confirms. */
+function putBack(site, fresh, label) {
+  git(site, "reset", "-q", "--hard", fresh);
+  git(site, "clean", "-fdq");
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`${label}the fresh site was not put back after the upgrade: ${left}`);
+}
 
 /** The fresh site made the site 0.8.1 left (tools/upgrade-fixture.mjs), the example's files copied from the kit's checkout. */
 function layLegacy(site) {
   setScripts(site, LEGACY.scripts);
-  for (const [file, text] of Object.entries(LEGACY.files)) { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); }
+  for (const [file, text] of Object.entries(LEGACY.files)) write(site, file, text);
   for (const [file, change] of Object.entries(LEGACY.edit)) edit(site, file, change);
   for (const file of LEGACY.example) fs.cpSync(path.join(ROOT, file), path.join(site, file), { recursive: true });
   edit(site, "src/components/README.md", (text) => `${text}\n${LEGACY.catalogued.map((name) => `\`${name}\``).join(", ")}: the site's own, from before 0.8.2.\n`);
@@ -296,7 +340,7 @@ function layLegacy(site) {
 function layUpgrade(site) {
   setScripts(site, UPGRADE.scripts);
   for (const [file, change] of Object.entries(UPGRADE.edit)) edit(site, file, change);
-  for (const [file, change] of Object.entries(UPGRADE.json)) edit(site, file, (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`);
+  for (const [file, change] of Object.entries(UPGRADE.json)) editJson(site, file, change);
 }
 
 /**
@@ -310,7 +354,7 @@ function layUpgrade(site) {
  * confirms.
  */
 function upgrade(site) {
-  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const fresh = headOf(site);
   const layout = fs.readFileSync(path.join(site, "src/app/layout.tsx"), "utf8");
   layLegacy(site);
   git(site, "add", "-A");
@@ -319,7 +363,7 @@ function upgrade(site) {
   if (old.status !== 1 || !/agentic-cms\/head/.test(old.output) || !/agentic-cms\/email/.test(old.output)) fail(`the site as 0.8.1 left it answered ${old.status} to its own lint, which should fail on 0.8.2's engines: ${old.output.trim().slice(-1200)}`);
   layUpgrade(site);
   const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
-  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const baseline = writtenBaseline(site);
   const missing = unexpected(baseline);
   if (taken.status !== 0 || missing.length) fail(`check-site --baseline answered ${taken.status}${missing.length ? `, and wrote ${missing.join(", ")}` : ""}: ${taken.output.trim().slice(-2000)}`);
   const build = answer(site, ["build"], CI_BUILD);
@@ -336,16 +380,44 @@ function upgrade(site) {
   if (shrunk.status !== 0 || !/− src\/app\/layout\.tsx {2}agentic-cms\/head: none left, the entry is gone/.test(shrunk.output)) fail(`check-site --baseline answered ${shrunk.status}, and should take the head's entry out: ${shrunk.output.trim().slice(-1500)}`);
   const clean = answer(site, ["lint"]);
   if (clean.status !== 0) fail(`the lint after the baseline shrank answered ${clean.status}: ${clean.output.trim().slice(-1500)}`);
-  git(site, "reset", "-q", "--hard", fresh);
-  git(site, "clean", "-fdq");
-  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
-  if (left) fail(`the fresh site was not put back after the upgrade: ${left}`);
+  putBack(site, fresh, "");
   console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
+}
+
+/**
+ * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
+ * 0.8.4's own texts from the installed package's record, a rule and a skill
+ * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them),
+ * upgraded by the installed `agentic-cms upgrade` with the tarball as its
+ * spec: the 0.9.0 migration moves the copies, the steps left by hand come
+ * back with their section (exit 1), the lint and the tests pass, and the
+ * agent files' check is clean after it; then the fresh site is put back.
+ */
+function upgradeFrom084(site) {
+  const fresh = headOf(site);
+  site084(site, { kitRoot: path.join(site, "node_modules/agentic-cms") });
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site as 0.8.4 left its agent files");
+  const spec = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).dependencies["agentic-cms"];
+  const r = spawnSync("pnpm", ["exec", "agentic-cms", "upgrade", "--kit", spec, "--json"], { cwd: site, encoding: "utf8", env: ownBase() });
+  let report;
+  try { report = JSON.parse(r.stdout); } catch { fail(`upgrade answered ${r.status} with no report: ${r.stderr.trim().slice(-2000)}`); }
+  const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
+  const wrong = [
+    r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
+    !["removed", "moved", "thin"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
+    report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
+  ].filter(Boolean);
+  if (wrong.length) fail(`upgrade from 0.8.4: ${wrong.join("; ")}: ${r.stderr.trim().slice(-2000)}`);
+  run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
+  putBack(site, fresh, "upgrade from 0.8.4: ");
+  console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);
 }
 
 /** The text of each of a site's files, to put back. */
 const texts = (site, files) => Object.fromEntries(files.map((file) => [file, fs.readFileSync(path.join(site, file), "utf8")]));
-const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
 
 /**
  * 3c. The site as one that never took 0.8.0's § 3.7 left it, on one of the
@@ -361,7 +433,7 @@ const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, 
  * Then the fresh site is put back, which git confirms.
  */
 function upgradeUnguarded(site, way) {
-  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const fresh = headOf(site);
   const given = texts(site, ["src/config/components.json", "eslint.config.mjs"]);
   const gates = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
   setScripts(site, UNGUARDED.scripts);
@@ -373,25 +445,21 @@ function upgradeUnguarded(site, way) {
   git(site, "commit", "-q", "-m", "the site before the rules");
   for (const [file, text] of Object.entries(UNGUARDED.worktree)) write(site, file, text);
   for (const [file, text] of Object.entries(given)) write(site, file, text);
-  edit(site, "src/config/components.json", (text) => `${JSON.stringify({ ...JSON.parse(text), exceptions: { ...JSON.parse(text).exceptions, ...way.exceptions } }, null, 2)}\n`);
+  editJson(site, "src/config/components.json", (config) => ({ ...config, exceptions: { ...config.exceptions, ...way.exceptions } }));
   setScripts(site, { lint: gates.lint, build: gates.build });
   const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
-  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const baseline = writtenBaseline(site);
   const wrong = heldOtherwise(baseline, way.expected);
-  const extra = baseline.filter(({ file, rule }) => way.expected[file]?.[rule] === undefined).map(({ file, rule, count }) => `${file} ${rule}: ${count}, expected no entry`);
-  if (taken.status !== 0 || wrong.length || extra.length) fail(`${way.name}: check-site --baseline answered ${taken.status}${[...wrong, ...extra].length ? `, and wrote ${[...wrong, ...extra].join("; ")}` : ""}: ${taken.output.trim().slice(-2500)}`);
+  if (taken.status !== 0 || wrong.length) fail(`${way.name}: check-site --baseline answered ${taken.status}${wrong.length ? `, and wrote ${wrong.join("; ")}` : ""}: ${taken.output.trim().slice(-2500)}`);
   const build = answer(site, ["build"], CI_BUILD);
   if (build.status !== 0) fail(`${way.name}: the upgraded site's CI build failed on its baseline: ${build.output.trim().slice(-3000)}`);
   const again = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
   if (again.status !== 0 || !/src\/config\/components\.json unchanged/.test(again.output)) fail(`${way.name}: a second check-site --baseline answered ${again.status}, and should change nothing: ${again.output.trim().slice(-1500)}`);
-  edit(site, "src/components/home/Service.tsx", (text) => text.replace("            {cta}\n          </a>", "            {cta}\n          </a>\n          <a href={site.links.contact}>{cta}</a>"));
+  for (const [file, change] of Object.entries(UNGUARDED.grow)) edit(site, file, change);
   const grown = answer(site, ["lint"]);
   if (grown.status !== 1 || !/4 of this rule here, and the baseline \(src\/config\/components\.json\) holds 3: the baseline only shrinks/.test(grown.output)) fail(`${way.name}: one more raw link in the baselined section answered ${grown.status}, and should fail the lint naming the count: ${grown.output.trim().slice(-1500)}`);
   fs.rmSync(path.join(site, ".claude/worktrees/stale-copy"), { recursive: true, force: true });
-  git(site, "reset", "-q", "--hard", fresh);
-  git(site, "clean", "-fdq");
-  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
-  if (left) fail(`${way.name}: the fresh site was not put back after the upgrade: ${left}`);
+  putBack(site, fresh, `${way.name}: `);
   console.log(`pack-smoke: ${way.name}, upgraded by the guide's § 1 with § 3.7 inside it — ${baseline.length} baseline entries, its sections' composition among them, its lint and CI build green, a second --baseline unchanged, a new finding refused`);
 }
 

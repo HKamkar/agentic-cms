@@ -119,12 +119,16 @@ handle is `editorial@agentic-cms` in both (`<plugin>@<marketplace>`).
 
 **Claude Code**
 
-- In a checkout of a site that ships this plugin, `.claude/settings.json`
-  names the repo's own marketplace and enables `editorial@agentic-cms`:
-  trust the folder and the skills are there. A marketplace name is
-  registered once per user, at the path of the first checkout that declared
-  it: a second clone or worktree of the same repo resolves to the first
-  one's `plugin/`, and a fork that changes the plugin renames the marketplace.
+- In a site laid out by `agentic-cms init` (0.9.0 and later), its
+  `.claude/settings.json` names the installed package's marketplace,
+  `./node_modules/agentic-cms`, and enables `editorial@agentic-cms` and
+  `design@agentic-cms`: trust the folder and the skills are there, at the
+  version the site pins. In a checkout of this repo, `.claude/settings.json`
+  names the repo's own marketplace the same way. A marketplace name is
+  registered once per user; each session in a trusted folder points it at
+  that folder's path before it loads the plugins, and the next session reads
+  them from there. A worktree resolves the path against its main checkout,
+  and a fork that changes the plugin renames the marketplace.
 - From anywhere: `claude plugin marketplace add <path or git URL of the
   repo>` then `claude plugin install editorial@agentic-cms --scope user`.
 - For development: `claude --plugin-dir ./plugin`. After a change to the
