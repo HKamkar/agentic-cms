@@ -36,12 +36,11 @@ $ pnpm build
 …
 FAIL content/blog/pages-are-files.md em-dash: title contains an em dash; use a period, a comma, or restructure the sentence
 FAIL content/blog/pages-are-files.md voice-banned: excerpt "seamless" is banned (hype); write "say what the reader does not have to do"
-WARN content/blog/pages-are-files.md seo-title: seoTitle is 67 characters; Google shows about 60
+WARN content/blog/pages-are-files.md seo-title: seoTitle is 66 characters; Google shows about 60
 FAIL content/pages/home.yaml schema: sections[0].eyebrow is required
 FAIL content/pages/home.yaml schema: sections[0] unknown key(s) eyebrows
 FAIL content/pages/home.yaml schema: sections[2].cards must have exactly 5 cards
-FAIL content/redirects.yaml redirect-to: [0].to "/sections/home" is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL
-content-lint: 8 collections, 12 entries, 6 failures, 1 warning
+content-lint: 8 collections, 12 entries, 5 failures, 1 warning
 ```
 
 `pnpm content:lint` gives the same answer in about a second, without the build.

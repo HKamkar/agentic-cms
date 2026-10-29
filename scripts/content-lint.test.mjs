@@ -321,6 +321,20 @@ describe("redirect rules", () => {
   test("redirect-to: a path no page and no post answers", () => {
     has(run(redirects(["/old", "/nowhere"])), 'FAIL content/redirects.yaml redirect-to: [0].to "/nowhere" is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL');
   });
+  test("a page or a post that fails its schema is still there: a redirect to it adds no redirect-to to the file's own FAIL", () => {
+    const fails = (lines) => lines.filter((line) => line.startsWith("FAIL"));
+    const page = { "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("    cta: Run private AI\n", "") };
+    assert.deepEqual(fails(run({ ...page, ...redirects(["/old", "/blog"]) })), fails(run(page)));
+    assert.equal(fails(run(page)).length, 1);
+    const postFile = { "blog/x.md": post(swap("category: fintech", "category: nowhere")) };
+    assert.deepEqual(fails(run({ ...postFile, ...redirects(["/old", "/blog-post/x"]) })), fails(run(postFile)));
+  });
+  test("with a folder the engine refused, a target no file names still fails redirect-to, and so does a draft", () => {
+    const page = { "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("    cta: Run private AI\n", "") };
+    has(run({ ...page, ...redirects(["/old", "/nowhere"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/nowhere" is no page');
+    const draft = { "blog/x.md": post(`${swap("category: fintech", "category: nowhere")}\ndraft: true`) };
+    has(run({ ...draft, ...redirects(["/old", "/blog-post/x"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/blog-post/x" is no page');
+  });
   test("the schema: a from with a trailing slash or a pattern, a to that is neither a path nor an https:// URL, a permanent that is no boolean", () => {
     const lines = run(redirects(["/old/", "http://nimbus.dev"]));
     has(lines, "FAIL content/redirects.yaml schema: [0].from must be a path the site no longer answers: /words or /words/more, without a trailing slash, a query or a pattern");
