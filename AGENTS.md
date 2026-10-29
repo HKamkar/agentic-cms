@@ -262,7 +262,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `pnpm agent-files:releases`, which a release commit runs). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
   (`.github/workflows/verify.yml`) runs the same on every pull request and
-  push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;
+  push to `develop` and `main`, plus the pack smoke on `main`; `peers.yml`
+  builds a site at both ends of the peer ranges. No Prettier;
   match the existing style (double quotes, semicolons, trailing commas).
 - The command line's contract is `scripts/lib/specs.mjs`: one spec per
   command (its flags, defaults, positionals, exit codes, the JSON it
@@ -325,7 +326,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   imports nothing from the site (the site's config, section union, block
   classes and element overrides come in through `createKit()` and
   `renderPostBody()`), and `next`, `react`, `react-dom`, `zod` and `motion`
-  are peers so a site has one copy of each. The example imports it by name
+  are peers, one copy in a site, each in one major (`docs/stability.md` § Peers). The example imports it by name
   (`agentic-cms/content`, …) through the `paths` self-alias in
   `tsconfig.json`, so nothing in this checkout needs `dist/`; the scripts
   do the same. `pnpm test:pack` packs it and builds a scratch site from the

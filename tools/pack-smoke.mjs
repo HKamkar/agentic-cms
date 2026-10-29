@@ -38,8 +38,18 @@
 // builds, lints and tests too, with no theme script in its pages. Exit 1 on
 // the first failure.
 //
-//   pnpm test:pack           (a few minutes: two installs and a build)
-//   pnpm test:pack --keep    leaves the scratch site behind and prints where
+//
+// With --peers, the site alone, against the package's peer ranges at one end
+// (the `peers` workflow runs both): `floor` installs each peer at the lowest
+// version its range allows, `newest` the newest version within it (an
+// install that resolves the range online), and no unmet peer of the package
+// in `pnpm peers check`; then the site's CI build, its
+// lint with no warning, its tests and the installed entries, each peer's
+// installed version printed.
+//
+//   pnpm test:pack                   (a few minutes: two installs and a build)
+//   pnpm test:pack --keep            leaves the scratch site behind and prints where
+//   pnpm test:pack --peers floor     (or newest: one install and one build)
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -653,15 +663,87 @@ const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
 const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date(Date.now() - 1000).toISOString(), version: 1 }) }, policy); // a second old: a choice stamped after readChoice reads its clock is from the future and refused
 console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
+/** The ends of the peer ranges a `--peers` run takes. */
+export const PEER_ENDS = ["floor", "newest"];
+
+/** A bounded range's floor: the version of `^X.Y.Z`; throws on any other form, which no peer may have. */
+export function floorOf(range) {
+  const m = /^\^(\d+\.\d+\.\d+)$/.exec(range);
+  if (!m) throw new Error(`the peer range ${range} is not ^X.Y.Z: a peer is bounded to the major CI runs (docs/stability.md § Peers)`);
+  return m[1];
+}
+
+/** What a `--peers` run writes into the site for each peer: its floor, or its range, which an install with no lockfile resolves to the newest version within it; eslint-config-next follows next. */
+export function peerSpecs(peers, end) {
+  const specs = Object.fromEntries(Object.entries(peers).map(([name, range]) => [name, end === "floor" ? floorOf(range) : range]));
+  return { ...specs, "eslint-config-next": specs.next };
+}
+
+/** Whether an installed version is the floor (`floor`) or within the range (`newest`): the same major, at the floor or above it. */
+export function installedAtEnd(version, range, end) {
+  const floor = floorOf(range).split(".").map(Number);
+  const got = version.split("-")[0].split(".").map(Number);
+  if (end === "floor") return got.join(".") === floor.join(".") && !version.includes("-");
+  return got[0] === floor[0] && (got[1] > floor[1] || (got[1] === floor[1] && got[2] >= floor[2]));
+}
+
+/** The peers `pnpm peers check` reports unmet that the package wants: each block of its report (`✕ unmet peer <name>`, what is installed, who wants what) that names agentic-cms. */
+export function kitUnmetPeers(report) {
+  return report.split(/^✕ /m).slice(1).filter((block) => /^\s+agentic-cms@/m.test(block)).map((block) => block.split("\n")[0].replace(/^unmet peer /, "").trim());
+}
+
+/** The site's own dependency on each peer, set to the end's spec, where the site lists it (dependencies or devDependencies). */
+function setPeers(site, specs) {
+  editJson(site, "package.json", (pkg) => {
+    for (const [name, spec] of Object.entries(specs)) {
+      const field = ["dependencies", "devDependencies"].find((key) => pkg[key]?.[name]);
+      if (!field) fail(`the site init laid out does not depend on ${name}, a peer of the package`);
+      pkg[field][name] = spec;
+    }
+    return pkg;
+  });
+}
+
+/** The site against the peer ranges at one end: installed, each peer's version checked, then its CI build, its lint, its tests and the installed entries. */
+async function peersAt(end) {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-peers-"));
   const site = path.join(scratch, "site");
-  const { tarball, size } = pack(scratch);
+  const { tarball } = pack(scratch);
   layOut(scratch, site, tarball);
-  await build(site);
+  const { peerDependencies } = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  setPeers(site, peerSpecs(peerDependencies, end));
+  // The floor names exact versions; the newest asks the registry, never pnpm's cached metadata, which may predate a release.
+  await install(end === "floor" ? ["--prefer-offline", "--no-frozen-lockfile"] : ["--no-frozen-lockfile"], site);
+  const installed = Object.entries(peerDependencies).map(([name, range]) => [name, range, JSON.parse(fs.readFileSync(path.join(site, "node_modules", name, "package.json"), "utf8")).version]);
+  const wrong = installed.filter(([, range, version]) => !installedAtEnd(version, range, end));
+  if (wrong.length) fail(`--peers ${end} installed ${wrong.map(([name, range, version]) => `${name} ${version} for ${range}`).join(", ")}`);
+  const check = spawnSync("pnpm", ["peers", "check"], { cwd: site, encoding: "utf8", env: ENV });
+  const unmet = kitUnmetPeers(`${check.stdout}${check.stderr}`);
+  if (unmet.length) fail(`--peers ${end}: pnpm reports an unmet peer of the package (${unmet.join(", ")}):\n${check.stdout}${check.stderr}`);
+  run("pnpm", ["build"], site, CI_BUILD);
+  lintsClean(site);
+  run("pnpm", ["test"], site);
   entries(site);
-  await lightOnly(site, tarball);
-  console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
-  if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
-  else fs.rmSync(scratch, { recursive: true, force: true });
+  fs.rmSync(scratch, { recursive: true, force: true });
+  console.log(`pack-smoke --peers ${end}: the starter builds, lints and tests on Node ${process.versions.node} with ${installed.map(([name, , version]) => `${name} ${version}`).join(", ")}`);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
+  const at = process.argv.indexOf("--peers");
+  if (at !== -1) {
+    const end = process.argv[at + 1];
+    if (!PEER_ENDS.includes(end)) { console.error(`pack-smoke: --peers takes ${PEER_ENDS.join(" or ")}`); process.exit(2); }
+    await peersAt(end);
+  } else {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
+    const site = path.join(scratch, "site");
+    const { tarball, size } = pack(scratch);
+    layOut(scratch, site, tarball);
+    await build(site);
+    entries(site);
+    await lightOnly(site, tarball);
+    console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+    if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
+    else fs.rmSync(scratch, { recursive: true, force: true });
+  }
 }

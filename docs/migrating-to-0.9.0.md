@@ -8,7 +8,9 @@ This is for a site on agentic-cms 0.8.x. In 0.9.0:
 - the site's redirects are a content file, `content/redirects.yaml`, which
   the build checks and `next.config.ts` serves;
 - every page's head keeps the site's Open Graph name, its locale and the
-  link to its feed.
+  link to its feed;
+- each peer of the package is bounded to the major the kit's CI runs
+  ([§ The peers' ranges](#the-peers-ranges)).
 
 And, opt-in: a preview link on every pull request, and other languages
 (experimental). [stability.md](stability.md) says what a site can rely on
@@ -269,12 +271,35 @@ translation.
   `design:<skill>` and `editorial:<skill>`.
 - The owner looks on the dev server (`pnpm kit serve`), then merges.
 
+## The peers' ranges
+
+0.8 left `next`, `eslint` and `playwright-core` open above their floors
+(`>=16.3.6`, `>=9`, `>=1.63.0`). 0.9.0 bounds every peer to the major its
+CI runs, and tests each range at both ends
+([stability.md § Peers](stability.md#peers)): `next ^16.3.6`, `react` and
+`react-dom ^19.2.0`, `zod ^4.6.2`, `motion ^13.2.0`, and the optional
+`eslint ^9.22.0` and `playwright-core ^1.63.0`.
+
+- **A site within the ranges,** as `init` writes one, has nothing to do.
+- **A site on a newer major,** `eslint` 10 or `next` 17 say, gets pnpm's
+  warning on every install, `Issues with peer dependencies found`, and
+  `pnpm peers check` names the peer, the version installed and the range
+  `agentic-cms` wants. The install goes on (unless the site set
+  `strict-peer-dependencies`), but on a pair the kit's CI has never run:
+  what breaks there is the site's to find. Move the peer back within the
+  range (`pnpm add -D eslint@^9.22.0`), or keep the newer major knowing
+  that, until a release of the kit supports it and its changelog says so.
+- **A site below a floor:** `eslint` before 9.22, whose `eslint.config.mjs`
+  (as `init` writes it) imports `eslint/config`, which 9.22 added. Move it
+  up: `pnpm add -D eslint@^9.22.0`.
+
 ## When something fails
 
 | Symptom | Do this |
 |---|---|
 | `upgrade` exits 2: no `agentic-cms` in `node_modules` and no `.agentic-cms.json` | `pnpm install` first, or name the version: `--from 0.8.4` |
 | `upgrade` exits 2 on the pin | A commit or a tarball: name the spec with `--kit <spec>` |
+| pnpm warns `Issues with peer dependencies found` | `pnpm peers check`: a peer outside the range 0.9.0 names, a newer major or under a floor ([§ The peers' ranges](#the-peers-ranges)) |
 | `upgrade` exits 1 and lists steps | §§ 2–4; then `upgrade --from 0.8.4 --dry-run` lists what is still left |
 | `pnpm build` fails at `docs --check`: a schema or a field table missing or stale | `pnpm exec agentic-cms schema --lines && pnpm exec agentic-cms docs`, then commit `content/_schemas/` and `content/README.md` |
 | The build fails: `content/redirects.yaml` missing | The engine reads every collection's file: write it with `[]` (`upgrade` does) |
