@@ -51,7 +51,7 @@ prove the site as a release asks ([visual-parity.md](visual-parity.md)).
 
 | Version | Pieces |
 |---|---|
-| 0.9.0 | the agent files: 0.8's copies moved — a skill copy the site never touched goes, one it edited becomes `<name>-site`, each rule thin with the site's own lines kept, the base copies gone; by hand, the copied sections of `AGENTS.md` and `CLAUDE.md` ([upgrading.md § 0.8.4 → 0.9.0](upgrading.md#084--090)) |
+| 0.9.0 | the agent files: 0.8's copies moved — a skill copy the site never touched goes, one it edited becomes `<name>-site`, each rule thin with the site's own lines kept, the base copies gone; by hand, the copied sections of `AGENTS.md` and `CLAUDE.md`. The content schemas: each YAML content file's schema line, then `content/_schemas/` and the field tables from the site's installed command line. The redirects: an empty `content/redirects.yaml` and `redirects()` in the Next config; by hand, a config with redirects of its own ([migrating-to-0.9.0.md](migrating-to-0.9.0.md), [upgrading.md § 0.8.4 → 0.9.0](upgrading.md#084--090)) |
 
 A release that changes something in a site adds its piece to its own
 migration, with a fixture site as the release before it left one

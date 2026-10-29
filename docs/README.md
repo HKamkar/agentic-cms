@@ -68,7 +68,8 @@ What a site is designed with; none of it ships.
 - [design.md](design.md) — designing on the kit: what works by default,
   the loop, measure-don't-guess, what stays out of the kit.
 - [skills.md](skills.md) — the design skills: when each applies, what it
-  leans on, how a site keeps them current.
+  leans on, and how a site reads them, with the editorial plugin, from the
+  installed package.
 - [visual-parity.md](visual-parity.md) — the screenshot harness: what a
   capture contains, how to read a compare, the traps a long run meets.
 - [shot-probe-sheet.md](shot-probe-sheet.md) — one command instead of a
@@ -91,7 +92,8 @@ The build, its gates and the setup.
   its exit codes, the JSON it prints (generated from the specs).
 - [init.md](init.md) — starting a site with `agentic-cms init`, what it
   writes (the gates in its `lint` and `build`, merged into an existing
-  `package.json`; the CI workflow and Dependabot for its actions), what
+  `package.json`; the agent files, its rules thin and its skills read from
+  the package; the CI workflow and Dependabot for its actions), what
   comes next, what to do after a kit upgrade.
 - [setup.md](setup.md) — a fresh clone on a new machine, for a person or an
   agent: `bash scripts/setup.sh` and `agentic-cms setup` (Node, pnpm, the
@@ -106,7 +108,8 @@ The build, its gates and the setup.
 - [deploy.md](deploy.md) — the hosts: a Cloudflare Worker, and a Node
   server (`output: "standalone"`, `assemble` as the build's last step, the
   copy that nests and the check that catches it), with the notes for
-  Google Cloud Run and Azure App Service.
+  Google Cloud Run and Azure App Service; the redirects on the Worker,
+  and the previews Vercel and Netlify make.
 - [upgrade.md](upgrade.md) — `agentic-cms upgrade`: a site moved to a
   release by that release's own code — the pin, each migration in between,
   the agent files, the steps left by hand, the verify.
@@ -115,7 +118,8 @@ The build, its gates and the setup.
   the pages a change touches, what keeps a preview from being the site
   (noindex, forms to a log, no analytics), the other hosts.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
-  next: the tag, the agent files, and each release's own steps, by hand.
+  next: what `upgrade` does, the same by hand, and each release's own
+  steps, which `upgrade` links when it leaves one.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
   0.8 (pin 0.8.1): the one required step, what it may adopt, what it deletes if it
   wrote its own.
@@ -123,18 +127,24 @@ The build, its gates and the setup.
   0.8.2: the upgrade with its baseline, which keeps CI green and only
   shrinks; then the copy into content files, the example's leftovers, the
   preferred tier's reasons and the e-mail key, a pull request at a time.
+- [migrating-to-0.9.0.md](migrating-to-0.9.0.md) — a site from 0.8.x to
+  0.9.0: `pnpm dlx agentic-cms@0.9.0 upgrade` and what it does (the agent
+  files moved, the content schemas, the redirects file); by hand, the
+  site's `AGENTS.md`, the host's redirects and a head on `agentic-cms/seo`;
+  opt-in, the editor's schemas, a preview per pull request, another
+  language; the check.
 
 ## Across the layers
 
 - [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
-  Tailwind, CSS and SVG, measuring, pnpm, git and GitHub, services; each
-  the symptom, the reason and what to do.
+  Tailwind, CSS and SVG, measuring, pnpm, Claude Code, git and GitHub,
+  services; each the symptom, the reason and what to do.
 - [roadmap.md](roadmap.md) — the plan for 0.9.0: first what a site gets (a
   schema for every content file, redirects as content, one page on what it
   can rely on, the kit's skills read from the package, a preview link per
-  pull request, `upgrade`), then the docs, then agentic-cms as a standard
-  npm package, published from CI with provenance, with
-  `pnpm create agentic-cms`. The 0.8.0 plan it replaced is in history
+  pull request, `upgrade`, other languages), then the docs, then
+  agentic-cms as a standard npm package, published from CI with
+  provenance, with `pnpm create agentic-cms`. The 0.8.0 plan it replaced is in history
   (`git show v0.8.0:docs/roadmap.md`).
 - [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest

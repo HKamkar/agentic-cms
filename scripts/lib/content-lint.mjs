@@ -4,7 +4,8 @@
 // dates that parse but are not days, the starter's placeholders and the kit
 // example's brand (lib/placeholders.mjs). `lint({ root, collections, site })`
 // reads every collection of the site's registry exactly as a build would (an engine error is reported first, verbatim, and
-// that collection is skipped), then walks every validated entry and returns
+// that collection is skipped, though the redirects still see the routes of a
+// pages or posts folder it refused), then walks every validated entry and returns
 // findings; `scripts/content-lint.mjs` prints them, `scripts/content-lint.test.mjs`
 // asserts them on scratch trees. A finding is `{ level, file, rule, path,
 // problem }` and prints as `LEVEL file rule: path problem` (the SEO audit's
@@ -244,7 +245,8 @@ function lintTree({ root, collections, site, locales, given, now, marks }) {
   const rows = [];
   const add = (level, file, rule, path, problem) => findings.push({ level, file, rule, path, problem });
   // posts and pages: { entry, route } — every language's, for the redirects
-  const tree = { root, now, marks, site, locales, images: [], posts: [], pages: [], redirects: [], retired: retiredSlugs(root), findings, rows, add };
+  // unread: the routes of a pages or posts folder the engine refused, read from its files (routesOnDisk)
+  const tree = { root, now, marks, site, locales, images: [], posts: [], pages: [], redirects: [], unread: [], retired: retiredSlugs(root), findings, rows, add };
   const matchers = voiceMatchers(root, VOICE_FILE, given, add);
   for (const [key, def] of Object.entries(collections)) lintCollection(def, def.name, tree, { matchers, locale: null, key });
   const languages = translations({ collections, locales, root });
@@ -254,10 +256,10 @@ function lintTree({ root, collections, site, locales, given, now, marks }) {
     for (const { key, original, def } of languages.filter((translation) => translation.locale === locale)) lintCollection(def, original.name, tree, { matchers: voice, locale, key });
   }
   if (locales && locales.all.length > 1) findings.push(...pagePathRules(locales, tree.pages), ...staleRules(tree.pages, (entry) => entry.data.seo.updated, "updated"), ...staleRules(tree.posts, lastChange, "updatedAt"));
-  const { images, posts, pages, redirects } = tree;
+  const { images, posts, pages, redirects, unread } = tree;
   findings.push(...imageRules(root, images));
   findings.push(...orphanRules(root, posts.map(({ entry }) => entry), images));
-  findings.push(...redirectRules(redirects, { pages, posts }));
+  findings.push(...redirectRules(redirects, { pages, posts, unread }));
   findings.push(...strayRules(root, collections, locales));
   findings.push(...workshopRules(root));
   findings.push(...configPlaceholders(root, marks));
@@ -280,6 +282,7 @@ function lintCollection(def, name, tree, { matchers, locale }) {
     if (!(error instanceof ContentError)) throw error;
     for (const issue of error.issues) add("FAIL", error.file, "schema", issue.path, issue.problem);
     rows.push({ name: def.name, source: sourceOf(def), entries: 0 });
+    if (name === "pages" || name === "posts") tree.unread.push(...routesOnDisk(root, def, (slug) => postRoute(site, locale, slug)));
     return;
   }
   rows.push({ name: def.name, source: sourceOf(def), entries: entries.length });
@@ -294,7 +297,7 @@ function lintCollection(def, name, tree, { matchers, locale }) {
       else if (matchers && isProse(leaf.key, leaf.value)) findings.push(...textRules(matchers, { ...ctx, path: p, key: leaf.key }, leaf.value));
     }
     if (name === "posts") {
-      tree.posts.push({ entry, route: `${locale ? `/${locale.prefix}` : ""}${site.postPrefix}/${entry.slug}`, locale });
+      tree.posts.push({ entry, route: postRoute(site, locale, entry.slug), locale });
       const faq = faqHeadingOf((locale ? tree.locales.site(locale.locale) : site).faqHeading);
       findings.push(...postRules(root, entry, now, matchers, tree.images, tree.retired, titleSuffix(site), marks, !locale, faq));
     }
@@ -302,6 +305,39 @@ function lintCollection(def, name, tree, { matchers, locale }) {
     if (name === "redirects") tree.redirects.push(entry);
     if (name === "authors" || name === "reviews") findings.push(...altRules(entry, base, !locale));
   }
+}
+
+/** A post's URL in its language: `<prefix><postPrefix>/<slug>`. */
+const postRoute = (site, locale, slug) => `${locale ? `/${locale.prefix}` : ""}${site.postPrefix}/${slug}`;
+
+/** A content file's data without its schema (a post's frontmatter), or null when it does not parse. */
+function rawData(file, markdown) {
+  try {
+    const text = fs.readFileSync(file, "utf8");
+    return parseYaml(markdown ? (text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "") : text);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The routes a pages or posts folder holds on disk, each file read without
+ * its schema: a page's `seo.path`, a post's URL unless it says `draft: true`.
+ * The engine refuses the whole folder for one file that fails its schema,
+ * and that file's own FAIL stops the build: a redirect to a page of the
+ * folder is no 404 on top of it. A post's URL is its file's name; a page
+ * file that does not parse names no route.
+ */
+function routesOnDisk(root, def, postUrl) {
+  const dir = path.join(root, sourceOf(def));
+  if (def.kind !== "folder" || !fs.existsSync(dir)) return [];
+  const markdown = def.format === "markdown";
+  const ext = markdown ? /\.mdx?$/ : def.format === "json" ? /\.json$/ : /\.ya?ml$/;
+  return fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && !entry.name.startsWith("_") && ext.test(entry.name)).flatMap((entry) => {
+    const data = rawData(path.join(dir, entry.name), markdown);
+    if (markdown) return data?.draft === true ? [] : [postUrl(entry.name.replace(ext, ""))];
+    return typeof data?.seo?.path === "string" ? [data.seo.path] : [];
+  });
 }
 
 /** Every page file where the engine wants it (checkPagePaths): no default page under a prefix, a translation at its page's path under its own. */
@@ -475,10 +511,13 @@ function follow(start, byFrom, redirects) {
  * `from` listed once and no live page's path or published post's URL (it
  * would hide what is there); no chain (a `to` that is another entry's
  * `from`, which costs a hop) and no loop; a `to` path that a page, a
- * published post or the blog index answers. An https:// `to` is the host's.
+ * published post or the blog index answers, or a file of a folder the
+ * engine refused names (`unread`: its own FAIL stops the build). An
+ * https:// `to` is the host's.
  */
 function redirectRules(redirects, ctx) {
   const live = liveRoutes(ctx);
+  const there = new Set([...live.keys(), ...(ctx.unread ?? [])]);
   const byFrom = new Map();
   const out = [];
   const where = (at, key) => ({ level: "FAIL", file: redirects[at].file, path: formatPath([at, key]) });
@@ -494,7 +533,7 @@ function redirectRules(redirects, ctx) {
     const end = route === from ? { loop: true, via: [] } : follow(route, byFrom, redirects);
     if (end.loop) out.push({ ...where(at, "to"), rule: "redirect-chain", problem: `${q(to)} leads back to ${q(from)} (${entries([at, ...end.via])}): a loop, which no browser follows — point it at a page that exists` });
     else if (end.via.length) out.push({ ...where(at, "to"), rule: "redirect-chain", problem: `${q(to)} is itself redirected (${entries(end.via)}): a chain — point it at ${q(end.route)} directly` });
-    else if (!live.has(route)) out.push({ ...where(at, "to"), rule: "redirect-to", problem: `${q(to)} is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL` });
+    else if (!there.has(route)) out.push({ ...where(at, "to"), rule: "redirect-to", problem: `${q(to)} is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL` });
   });
   return out;
 }
