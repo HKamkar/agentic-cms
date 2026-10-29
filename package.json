@@ -1,8 +1,30 @@
 {
   "name": "agentic-cms",
   "version": "0.8.4",
-  "description": "A simple CMS whose editor is an AI agent: content as files in a Next.js repo, validated at build time; the content, blog, SEO and form engines, the reveal library, and the CLI that lints, audits and screenshots a site built on them",
+  "description": "A CMS with no database: content as files in a Next.js repo, edited by an AI agent, checked by the build, served static",
+  "keywords": [
+    "cms",
+    "git-based-cms",
+    "nextjs",
+    "ai-agent",
+    "agentic",
+    "claude-code",
+    "codex",
+    "content",
+    "seo",
+    "static-site",
+    "mdx"
+  ],
+  "homepage": "https://github.com/HKamkar/agentic-cms#readme",
+  "bugs": {
+    "url": "https://github.com/HKamkar/agentic-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HKamkar/agentic-cms.git"
+  },
   "license": "MIT",
+  "author": "Hossein Kamkar (https://github.com/HKamkar)",
   "type": "module",
   "sideEffects": [
     "*.css"
@@ -67,8 +89,14 @@
       "types": "./dist/cx.d.ts",
       "default": "./dist/cx.js"
     },
-    "./loader": "./scripts/lib/load-ts.mjs",
-    "./eslint": "./scripts/lib/component-lint.mjs",
+    "./loader": {
+      "types": "./scripts/lib/load-ts.d.mts",
+      "default": "./scripts/lib/load-ts.mjs"
+    },
+    "./eslint": {
+      "types": "./scripts/lib/component-lint.d.mts",
+      "default": "./scripts/lib/component-lint.mjs"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -116,9 +144,11 @@
     "test:browser": "node --test \"scripts/browser/*.test.mjs\"",
     "plugin:validate": "claude plugin validate ./plugin --strict && claude plugin validate . --strict",
     "test:pack": "node tools/pack-smoke.mjs",
+    "lint:pkg": "node tools/lint-pkg.mjs",
     "hygiene": "node tools/hygiene.mjs",
     "docs:commands": "node tools/commands-doc.mjs",
     "docs:rules": "node tools/rules-table.mjs",
+    "docs:pack": "node tools/pack-files.mjs",
     "agent-files:releases": "node tools/agent-file-releases.mjs",
     "skills:sync": "node tools/skills-sync.mjs",
     "content:check": "node bin/agentic-cms.mjs check",
@@ -129,6 +159,7 @@
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "build:pkg": "tsc -p tsconfig.build.json",
+    "prepack": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "prepare": "tsc -p tsconfig.build.json",
     "content:docs": "node bin/agentic-cms.mjs docs",
     "urls": "node bin/agentic-cms.mjs urls",
@@ -150,10 +181,10 @@
     "yaml": "^2.9.1"
   },
   "peerDependencies": {
-    "eslint": ">=9",
+    "eslint": "^9.22.0",
     "motion": "^13.2.0",
-    "next": ">=16.3.6",
-    "playwright-core": ">=1.63.0",
+    "next": "^16.3.6",
+    "playwright-core": "^1.63.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.6.2"
@@ -167,6 +198,7 @@
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@opennextjs/cloudflare": "^1.20.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -178,6 +210,7 @@
     "next": "16.3.8",
     "playwright-core": "^1.63.0",
     "postcss": "^8.5.28",
+    "publint": "^0.3.25",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwindcss": "^4",

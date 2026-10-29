@@ -92,7 +92,11 @@ These change in any release, patches included, and none is a break:
   ([SECURITY.md](../SECURITY.md#supported-versions)); an older minor gets
   none, so a site takes a fix by moving to the latest release.
 - **Node:** the floor is `engines` in `package.json` (`>=22.18`). CI runs
-  the version in `.nvmrc`, the current LTS line.
+  the version in `.nvmrc`, the current LTS line, and the unit suites and a
+  site's build on the floor too.
+- **Peers:** a site installs its own copy of each, within the range the
+  package names, bounded to the major CI runs ([§ Peers](#peers)). A new
+  major is supported by a release of the kit, whose changelog says so.
 
 ## Part by part
 
@@ -129,6 +133,7 @@ Each command's flags, defaults and exit codes are in
 
 | Commands | Mark |
 |---|---|
+| the command line itself: `agentic-cms --help`, `agentic-cms --version` | stable |
 | the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs`, `agentic-cms schema` | stable |
 | the images: `agentic-cms placeholder`, `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` | stable |
 | the proofs: `agentic-cms visual-parity`, `agentic-cms parity` | stable |
@@ -140,6 +145,28 @@ Each command's flags, defaults and exit codes are in
 | the default gates: `agentic-cms check-components`, `agentic-cms check-site`, `agentic-cms seo`, `agentic-cms guard-email` | stable |
 | the opt-in steps: `agentic-cms critical-css`, `agentic-cms assemble` | stable |
 | the opt-in CI step: `agentic-cms pr-preview` | experimental |
+
+### Peers
+
+What a site installs beside the package, each in one major. The `peers`
+workflow builds, lints and tests a site laid out from the tarball at both
+ends of every range: each peer at its floor, on the Node floor, and each at
+the newest version within its range, on `.nvmrc`'s Node. It runs on a pull
+request that changes `package.json`, on `main` and weekly. A site on a
+version outside a range gets pnpm's unmet-peer warning and runs on a
+version the kit has not tested ([migrating-to-0.9.0.md § The peers'
+ranges](migrating-to-0.9.0.md#the-peers-ranges)).
+
+| Peer | Range | What needs it |
+|---|---|---|
+| `next` | `^16.3.6` | the pages, the post pipeline, the head |
+| `react` | `^19.2.0` | the components, the post body |
+| `react-dom` | `^19.2.0` | the components |
+| `zod` | `^4.6.2` | the content schemas: the collections, a page's blocks, a site's own collection |
+| `motion` | `^13.2.0` | `agentic-cms/ix` |
+| `eslint` | `^9.22.0`, optional | `agentic-cms/eslint` and `check-site`; the site's `eslint.config.mjs` imports `eslint/config`, which 9.22 added |
+| `playwright-core` | `^1.63.0`, optional | the commands that open a page: the screenshot harness, `shot`, `probe`, `sheet`, `icons audit`, the lab |
+| Node (`engines`) | `>=22.18` | every command; CI runs the floor and `.nvmrc` |
 
 ### File formats
 

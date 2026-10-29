@@ -47,6 +47,20 @@ export const FAMILIES = [
   { group: "opt-in steps", layer: "the site's commands", about: "what a site adds when it needs them: to its build, `critical-css` for the first paint and `assemble` last for a Node host; to its CI, `pr-preview` for a preview link on every pull request" },
 ];
 
+// The command line itself, before any command: the map and the installed version. bin/agentic-cms.mjs answers both,
+// and tools/commands-doc.mjs writes them at the top of docs/commands.md.
+export const TOP = {
+  command: "agentic-cms",
+  summary: "the command line itself: the map of every command, or the version installed",
+  usage: "agentic-cms --help | agentic-cms --version",
+  flags: {
+    help: { type: "boolean", help: "print the map: every command by family, under its layer, one line each (with no command at all the map is printed too, and the exit is 2)" },
+    version: { type: "boolean", help: "print the installed package's version, as its package.json gives it" },
+  },
+  exit: { 0: "printed", 2: "no command and no flag (the map is printed)" },
+  examples: ["agentic-cms --help", "agentic-cms --version", "pnpm exec agentic-cms --version     # in a site: the version its node_modules holds"],
+};
+
 export const SPECS = {
   lint: {
     command: "lint", script: "content-lint", group: "content", site: true, summary: "the content rules: every collection read as the build reads it, then the voice, SEO, body, image and date rules",

@@ -139,6 +139,11 @@ The build, its gates and the setup.
 - [gotchas.md](gotchas.md) — traps already paid for, by topic: Next.js,
   Tailwind, CSS and SVG, measuring, pnpm, Claude Code, git and GitHub,
   services; each the symptom, the reason and what to do.
+- [releasing.md](releasing.md) — how a version reaches npm: the release
+  workflow from a pushed tag (its checks, the publish the owner approves,
+  the GitHub Release and the smoke test from the registry), the two
+  channels, a package's first publish by hand, the environment `npm`, and
+  what never happens (a version unpublished, a tag moved, a token).
 - [roadmap.md](roadmap.md) — the plan for 0.9.0: first what a site gets (a
   schema for every content file, redirects as content, one page on what it
   can rely on, the kit's skills read from the package, a preview link per

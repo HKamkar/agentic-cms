@@ -249,21 +249,21 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
-  schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
-  or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
+  schema-only loop), and `pnpm test:pack` and `pnpm lint:pkg` when
+  `package.json`, `src/lib/` or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
   under `scripts/browser/`, against the fixture site in `scripts/fixtures/`;
   it skips, naming the fix, without a Chromium) when `scripts/lib/browser.mjs`
   or a command that opens a page changed; `pnpm hygiene` before every pull
   request (`tools/hygiene.mjs`: no one site's name outside the README's
-  showcase, no machine paths or addresses, no captures, pictures or scratch
-  files committed, the two skills trees identical, the changelog,
-  `docs/commands.md`, `docs/parts.md` naming every part, the scoped-rules
-  tables and both AGENTS.md within their budgets, and the agent files' record
-  of every release, which `init` reads (`pnpm agent-files:releases`, from
-  the tags; a release commit rewrites it), current). `pnpm lint`
+  showcase, no machine path or address, no capture, picture or scratch
+  file committed, the skills trees identical, the changelog, the generated
+  docs and tables current, both AGENTS.md within budget, and the agent
+  files' record of each release, which `init` reads, current:
+  `pnpm agent-files:releases`, which a release commit runs). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
   (`.github/workflows/verify.yml`) runs the same on every pull request and
-  push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;
+  push to `develop` and `main`, plus the pack smoke on `main`; `peers.yml`
+  builds a site at both ends of the peer ranges. No Prettier;
   match the existing style (double quotes, semicolons, trailing commas).
 - The command line's contract is `scripts/lib/specs.mjs`: one spec per
   command (its flags, defaults, positionals, exit codes, the JSON it
@@ -317,21 +317,22 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   from React; `src/lib/index.ts` imports `blog/posts.ts`, not the blog
   barrel, for that reason.
 - The package is `src/lib/` (a folder or a file per subpath of `exports`
-  but `./loader` and `./eslint`, which are `scripts/lib/`; `index.ts` has
-  `createKit`), compiled
+  but `./loader` and `./eslint`, `scripts/lib/` modules with a `.d.mts`
+  beside each; `index.ts` has `createKit`), compiled
   by `tsc -p tsconfig.build.json` to the gitignored `dist/` (ESM, `.d.ts`,
-  ES2022; `prepare` runs it on install, so a git dependency builds itself
-  where `pnpm-workspace.yaml` allows it). Its relative imports name their
+  ES2022; `prepare` runs it on a git install and on a pack, after `prepack`
+  empties `dist/`). Its relative imports name their
   `.ts`/`.tsx` files (`rewriteRelativeImportExtensions` emits `.js`), it
   imports nothing from the site (the site's config, section union, block
   classes and element overrides come in through `createKit()` and
   `renderPostBody()`), and `next`, `react`, `react-dom`, `zod` and `motion`
-  are peers so a site has one copy of each. The example imports it by name
+  are peers, one copy in a site, each in one major (`docs/stability.md` § Peers). The example imports it by name
   (`agentic-cms/content`, …) through the `paths` self-alias in
   `tsconfig.json`, so nothing in this checkout needs `dist/`; the scripts
   do the same. `pnpm test:pack` packs it and builds a scratch site from the
-  tarball, which is the only build here that exercises `dist/` and
-  `exports`: run it before a release. `dist/` is ignored by git and ESLint.
+  tarball, the only build here that exercises `dist/` and `exports`;
+  `pnpm lint:pkg` lints the tarball (its files are `tools/pack-files.txt`,
+  which `pnpm docs:pack` rewrites). `dist/` is ignored by git and ESLint.
 
 ## Parity harness
 
@@ -481,8 +482,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   stable and only receives PRs from `develop` (or a feature branch).
 - Rulesets hold it: neither branch can be deleted or force-pushed, `main`
   changes only through a pull request merged as a merge commit with CI's
-  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted
-  (sites pin them). Never `--delete-branch` a release PR: its head is `develop`.
+  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted:
+  npm publishes what it names, on the owner's approval (`docs/releasing.md`;
+  a candidate's tag on `develop`, a release's on `main`). Never
+  `--delete-branch` a release PR: its head is `develop`.
 - Branch off `develop` as `feat/<slug>`, `bugfix/<slug>` or `refactor/<slug>`;
   open PRs against `develop` unless it is a release.
 - Commit messages carry no AI attribution: no `Co-Authored-By: Claude …`, no

@@ -14,6 +14,11 @@
 
 </div>
 
+agentic-cms is a CMS whose editor is an AI agent: content as files in a
+Next.js repo, validated at build time; the content, blog, SEO and form
+engines, the motion library, and the command line that lints, audits and
+screenshots a site built on them.
+
 ## The loop
 
 **1. The agent edits a file.** The landing page is `content/pages/home.yaml`:
@@ -563,6 +568,7 @@ pnpm kit --help      # every command; <command> --help prints its flags and exit
 pnpm test            # the content engine's, the post pipeline's, the lint's and the command line's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
+pnpm lint:pkg        # the tarball as npm will hold it: its files as tools/pack-files.txt lists them (pnpm docs:pack), publint, Are the Types Wrong
 pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
 ```
 
