@@ -44,6 +44,7 @@ test("the smoke runs docs/init.md's install line with the tarball for the git sp
   assert.ok(line(doc));
   assert.equal(line(read("README.md")), line(doc));
   assert.match(line(doc), new RegExp(`#v${JSON.parse(read("package.json")).version.replaceAll(".", "\\.")} init my-site --name "My Site"$`), "the line installs the version the package is");
+  assert.deepEqual(documentedInstall('pnpm dlx agentic-cms@github:HKamkar/agentic-cms#v0.9.0-rc.1 init my-site --name "X"\n', { spec: "file:x", dir: "site" }), ["dlx", "agentic-cms@file:x", "init", "site", "--name", "X"], "a candidate's tag is an install line too");
   assert.equal(documentedInstall("pnpm init\npnpm exec agentic-cms init . --name \"X\"\n", { spec: "file:x", dir: "site" }), null);
   assert.equal(documentedInstall("pnpm dlx agentic-cms@github:HKamkar/agentic-cms#v0.8.1 init my-site\n", { spec: "file:x", dir: "site" }), null, "a line without the name is no install line: init refuses it");
 });

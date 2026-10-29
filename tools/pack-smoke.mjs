@@ -84,7 +84,7 @@ export async function installWithRetry(args, run, log = console.error) {
 
 /** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site --name "My Site"`) as pnpm's arguments, a quoted one unquoted, with the package spec and the folder swapped; null when the doc has no such line. */
 export function documentedInstall(doc, { spec, dir }) {
-  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site --name "[^"\n]+"$/m)?.[0];
+  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v\d+\.\d+\.\d+(?:-rc\.\d+)? init my-site --name "[^"\n]+"$/m)?.[0];
   if (!line) return null;
   return [...line.matchAll(/"([^"]*)"|(\S+)/g)].slice(1).map(([, quoted, arg]) => quoted ?? (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
 }
