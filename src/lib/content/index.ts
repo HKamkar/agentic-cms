@@ -5,7 +5,7 @@
 // through the accessors createContent() returns; createKit() does both.
 
 import type { ZodType } from "zod";
-import type { Author, Category, Collections, Faq, Page, Review, SectionLike, UseCase } from "./collections.ts";
+import type { Author, Category, Collections, Faq, Page, Redirect, Review, SectionLike, UseCase } from "./collections.ts";
 import type { Entry } from "./define.ts";
 import { readCollection, readEntry } from "./read.ts";
 
@@ -13,6 +13,7 @@ export { ContentError, formatPath, type ContentIssue } from "./errors.ts";
 export { defineCollection, lookup, contentRoot, type CollectionDef, type DataOf, type Entry, type EntryOf, type Format, type MarkdownEntry } from "./define.ts";
 export { readCollection, readEntry, slugsOf, sourceOf } from "./read.ts";
 export { readInlineSvg } from "./inline-svg.ts";
+export { redirectsFor, toNextRedirect, type NextRedirect } from "./redirects.ts";
 export { text, optional, dateOnly, isoTimestamp, ref } from "./schema.ts";
 export {
   createCollections,
@@ -23,6 +24,8 @@ export {
   reviewSchema,
   faqSchema,
   useCaseSchema,
+  redirectSchema,
+  redirectsCollection,
   pageSeoSchema,
   jsonldSchema,
   type Author,
@@ -34,6 +37,7 @@ export {
   type PageJsonLd,
   type PageSeo,
   type PostFrontmatter,
+  type Redirect,
   type Review,
   type SectionLike,
   type UseCase,
@@ -56,6 +60,8 @@ export function createContent<S extends ZodType<SectionLike>>(collections: Colle
     getPages: (): Entry<Page<S>>[] => readCollection(collections.pages),
     /** The page content/pages/<slug>.yaml; a slug nobody wrote fails the build naming the ones that exist. */
     getPage: (slug: string): Page<S> => readEntry(collections.pages, slug).data,
+    /** The redirects of content/redirects.yaml, in file order (next.config.ts serves them through redirectsFor()). */
+    getRedirects: (): Redirect[] => readCollection(collections.redirects).map((entry) => entry.data),
   };
 }
 

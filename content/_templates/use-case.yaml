@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/use-cases.json
 # One card of content/use-cases.yaml (the "Use cases" section and the
 # page's ItemList structured data). Copy the block below to the end of that
 # file; cards show in file order, and a fourth card takes the last card's

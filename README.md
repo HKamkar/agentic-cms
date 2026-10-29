@@ -473,6 +473,7 @@ pnpm content:lint    # the content rules, about a second (agentic-cms lint; the 
 pnpm content:check   # the schemas alone, in a fraction of a second
 pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md (the build checks them with docs --check)
+pnpm kit schema      # the JSON Schema of every collection into content/_schemas/, which each YAML content file names on its first line (--lines adds it; docs --check, in the build, fails a stale one)
 ```
 
 **Design tools**
@@ -503,6 +504,7 @@ pnpm kit seo         # the SEO audit of every prerendered page, after next build
 pnpm kit guard-email # fails a build whose served files carry the site's e-mail address as text; the build's last step with guardEmail: true
 pnpm kit critical-css   # a step a site adds: each prerendered page paints from its own inlined rules, its stylesheets no longer block
 pnpm kit assemble    # a step a site adds, last: a standalone build packaged for a Node host, public/ and .next/static copied in, every file checked
+pnpm kit pr-preview  # a step a site's CI adds: a pull request's preview on Cloudflare Workers under the alias pr-<n>, never indexed, and one comment with its link and the pages the change touches
 pnpm preview         # build for Cloudflare and serve the Worker locally on :8000
 pnpm run deploy      # build for Cloudflare and deploy (pnpm wrangler login first)
 pnpm kit --help      # every command; <command> --help prints its flags and exit codes

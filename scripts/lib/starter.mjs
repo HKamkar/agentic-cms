@@ -3,7 +3,8 @@
 // home page and the blog index with their copy marked as placeholder, the
 // collections empty, the wireframe's neutral pictures, the config with the
 // site's name — its {{tokens}} filled in; the example's files under content/
-// that are none of its content (the door, the templates, the editorial plan);
+// that are none of its content (the door, the JSON Schemas, the templates, the
+// editorial plan);
 // a voice file and a logo written for the name. None of the example's posts,
 // reviews, use cases, FAQs, author, catalogue pages or pictures: the example
 // stays in the kit's own repository. The placeholder marker and the reserved
@@ -14,7 +15,7 @@ import path from "node:path";
 /** The starter's tree in the kit, its paths the site's. */
 export const STARTER = "templates/starter";
 /** The example's files under content/ that are none of its content, which a new site takes as they are. */
-export const SHARED_CONTENT = ["content/README.md", "content/_templates", "content/blog/_template.md", "content/editorial"];
+export const SHARED_CONTENT = ["content/README.md", "content/_schemas", "content/_templates", "content/blog/_template.md", "content/editorial"];
 /** The blank the site's voice file is written from. */
 const VOICE_TEMPLATE = "content/_templates/VOICE.md";
 const VOICE_START = "<!-- voice-rules:start -->";

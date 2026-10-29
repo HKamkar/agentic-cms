@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # A page: copy this file to content/pages/<slug>.yaml. The file name is only
 # the key (getPage("<slug>")); `seo.path` is the route, indexed once
 # published and never changed without a redirect. Every field is checked at

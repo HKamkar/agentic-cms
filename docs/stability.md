@@ -34,7 +34,11 @@ writes down, never silently. What that covers:
 
 An experimental part may change in any release: its options, its output,
 its name. The changelog says what changed, and nothing else holds it.
-Today that is the lab: `agentic-cms/lab` and `agentic-cms lab`.
+Today that is the lab, `agentic-cms/lab` and `agentic-cms lab`, and the
+preview of a pull request, `agentic-cms pr-preview`, which rests on two
+things the kit does not own: OpenNext passing `--preview-alias` through to
+`wrangler versions upload`, and the file wrangler writes the preview's URL
+to ([preview.md](preview.md)).
 
 ## What no version promises
 
@@ -95,7 +99,7 @@ without it.
 
 | Export | Mark | What it is |
 |---|---|---|
-| `agentic-cms` | stable | `createKit()` and the site's types — [parts.md § The content engine](parts.md#the-content-engine) |
+| `agentic-cms` | stable | `createKit()`, `isPreview()` and the site's types — [parts.md § The content engine](parts.md#the-content-engine) |
 | `agentic-cms/content` | stable | collections, schemas, the schema helpers |
 | `agentic-cms/blog` | stable | the post pipeline |
 | `agentic-cms/seo` | stable | the head and the structured data |
@@ -119,7 +123,7 @@ Each command's flags, defaults and exit codes are in
 
 | Commands | Mark |
 |---|---|
-| the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs` | stable |
+| the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs`, `agentic-cms schema` | stable |
 | the images: `agentic-cms placeholder`, `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` | stable |
 | the proofs: `agentic-cms visual-parity`, `agentic-cms parity` | stable |
 | looks and measures: `agentic-cms shot`, `agentic-cms probe`, `agentic-cms sheet` | stable |
@@ -129,12 +133,14 @@ Each command's flags, defaults and exit codes are in
 | the site: `agentic-cms init`, `agentic-cms upgrade`, `agentic-cms setup`, `agentic-cms urls`, `agentic-cms serve` | stable |
 | the default gates: `agentic-cms check-components`, `agentic-cms check-site`, `agentic-cms seo`, `agentic-cms guard-email` | stable |
 | the opt-in steps: `agentic-cms critical-css`, `agentic-cms assemble` | stable |
+| the opt-in CI step: `agentic-cms pr-preview` | experimental |
 
 ### File formats
 
 | File | Mark | Read by |
 |---|---|---|
-| the content files: `content/pages/`, `content/blog/`, the collections, `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
+| the content files: `content/pages/`, `content/blog/`, the collections (`content/redirects.yaml` among them since 0.9.0), `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
+| `content/_schemas/`, the JSON Schemas, and the first line of each YAML content file and template that names its schema (`# yaml-language-server: $schema=…`) | stable | an editor's YAML language server; `agentic-cms schema --check`, in `docs --check` — [schema.md](schema.md) |
 | `src/config/site.ts`, `src/config/forms.ts` | stable | `createKit()`, the form engine |
 | `src/config/harness.ts`, the site's profile and its seed | stable | the screenshot harness — [visual-parity.md](visual-parity.md#the-sites-profile) |
 | `src/config/components.json` | stable | the ESLint preset and `check-site` — [primitives.md](primitives.md) |

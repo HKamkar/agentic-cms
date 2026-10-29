@@ -57,7 +57,7 @@ canvas.
 
 ## content
 
-Layer: [the content engine](parts.md#the-content-engine). `lint` · `check` · `status` · `docs` — `lint`, `check`, `status`, `docs` read the site's registry and run in its root
+Layer: [the content engine](parts.md#the-content-engine). `lint` · `check` · `status` · `docs` · `schema` — `lint`, `check`, `status`, `docs`, `schema` read the site's registry and run in its root
 
 ### `lint`
 
@@ -126,7 +126,7 @@ agentic-cms status --since 7.days
 
 ### `docs`
 
-The field tables of every collection, from the schemas, into content/README.md between its markers.
+The field tables of every collection, from the schemas, into content/README.md between its markers, and the JSON Schemas under content/_schemas/ (schema).
 
 ```bash
 agentic-cms docs [--check]
@@ -134,13 +134,34 @@ agentic-cms docs [--check]
 
 | flag | what |
 |---|---|
-| `--check` | exit 1 when the tables are out of date instead of writing them (pnpm build runs this) |
+| `--check` | exit 1 when the tables or the JSON Schemas (schema --check) are out of date instead of writing them (pnpm build runs this) |
 
 Exit: `0` written, or up to date; `1` out of date (--check); `2` content/README.md has no markers.
 
 ```bash
-agentic-cms docs                          # writes the field tables into content/README.md
-agentic-cms docs --check                  # exit 1 when they are stale (pnpm build runs this)
+agentic-cms docs                          # writes the field tables into content/README.md and the schemas into content/_schemas/
+agentic-cms docs --check                  # exit 1 when either is stale (pnpm build runs this)
+```
+
+### `schema`
+
+The JSON Schema of every collection, from its zod schema, into content/_schemas/: an editor checks a YAML content file as it is typed (its first line names its schema), an agent reads what a file may hold before writing one.
+
+```bash
+agentic-cms schema [--check] [--lines]
+```
+
+| flag | what |
+|---|---|
+| `--check` | exit 1 when a file under content/_schemas/ is missing, differs from the code or names a collection there is none of, instead of writing them (docs --check runs this, so every pnpm build does) |
+| `--lines` | also open each YAML content file, and each template under content/_templates/ of a collection, with its schema's line where it lacks it: # yaml-language-server: $schema=<path from the file> (ignored with --check) |
+
+Exit: `0` written, or up to date; `1` out of date (--check).
+
+```bash
+agentic-cms schema                        # writes content/_schemas/<collection>.json
+agentic-cms schema --check                # exit 1 when one is stale (docs --check runs this)
+agentic-cms schema --lines                # and the schema line atop each YAML content file that lacks it
 ```
 
 ## images
@@ -1143,7 +1164,7 @@ agentic-cms check-components --json | jq '.findings[] | .file'
 
 ### `check-site`
 
-The site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list and the baseline only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; what is left of the kit's example (its brand by line, its posts, catalogue pages, pictures and collection entries by path, by bytes and by entry); and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason. A site that took the rules with engine bypasses, sections the composition rules fail and the example's leftovers keeps them in the baseline, which --baseline writes and every later run holds.
+The site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list and the baseline only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; what is left of the kit's example (its brand by line, its posts, catalogue pages, pictures and collection entries by path, by bytes and by entry); and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason, and a URL a page or a published post answered at the merge base that nothing answers now and no entry of content/redirects.yaml names (retired: the redirect, or the post kept as a draft). A site that took the rules with engine bypasses, sections the composition rules fail and the example's leftovers keeps them in the baseline, which --baseline writes and every later run holds.
 
 ```bash
 agentic-cms check-site [--baseline] [--base <ref>] [--json]
@@ -1168,9 +1189,9 @@ agentic-cms check-site --json | jq '.added'
 
 ## opt-in steps
 
-Layer: [the site's commands](parts.md#the-sites-commands). `critical-css` · `assemble`
+Layer: [the site's commands](parts.md#the-sites-commands). `critical-css` · `assemble` · `pr-preview` — `pr-preview` reads the site's registry and runs in its root
 
-What a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host.
+What a site adds when it needs them: to its build, `critical-css` for the first paint and `assemble` last for a Node host; to its CI, `pr-preview` for a preview link on every pull request.
 
 ### `critical-css`
 
@@ -1214,6 +1235,32 @@ Exit: `0` the package holds every file of public/ and .next/static; `1` a placeh
 ```bash
 agentic-cms assemble                      # after next build: the last step of a standalone site's build
 agentic-cms assemble --check --json
+```
+
+### `pr-preview`
+
+A pull request's preview on Cloudflare Workers, the CI step of a site that opts in (templates/site/verify.yml's preview job): the site built as production with AGENTIC_CMS_PREVIEW=1 (every page noindex, forms delivered to a log, no analytics tag), uploaded as a version that is not deployed under the alias pr-<n> — the same link on every push — and one comment on the pull request, updated on each push, with the link and the pages the change touches; a fork's pull request, or a run without the Cloudflare secrets, makes none and says so.
+
+```bash
+agentic-cms pr-preview [--pr <n>] [--base <ref>] [--no-build] [--no-comment] [--dry-run] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--pr <n>` | the pull request's number (0: from GitHub's event, GITHUB_EVENT_PATH) (default `0`) |
+| `--base <ref>` | what the change is diffed against for the pages it touches (default: the pull request's base branch on origin, GITHUB_BASE_REF; else origin/HEAD) |
+| `--no-build` | upload the OpenNext build there is (.open-next/, built with AGENTIC_CMS_PREVIEW=1) instead of building |
+| `--no-comment` | post nothing: the link and the comment are printed (by default the comment is posted, or the one there updated, with GITHUB_TOKEN) |
+| `--dry-run` | print the pages the change touches and the comment: nothing built, uploaded or posted, no secrets asked |
+| `--json` | print the result as one JSON document (the progress and the build's output go to stderr) |
+
+Exit: `0` previewed, or no preview made and why said (a fork's pull request, no secrets); `1` the build, the upload or the comment failed; `2` no pull request, or a site without @opennextjs/cloudflare or a Wrangler config.
+
+`--json` prints `{ status: "previewed" | "skipped" | "dry-run", pr, alias, url, reason?, touched: { every, pages: [{ route, file, state }] } | null, body, comment: "created" | "updated" | null }`.
+
+```bash
+agentic-cms pr-preview                    # the site's verify.yml preview job: build, upload pr-<n>, comment
+agentic-cms pr-preview --pr 12 --dry-run  # the pages a change touches and the comment, nothing uploaded
 ```
 
 <!-- commands-doc:end -->

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./_schemas/use-cases.json
 # The use cases shown by a page's `use-case-cards` section, in card order:
 # none yet. Add one from content/_templates/use-case.yaml (a list item).
 []

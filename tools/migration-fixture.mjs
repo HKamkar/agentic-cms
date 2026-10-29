@@ -38,3 +38,20 @@ export function site084(site, { kitRoot, edits = EDITS } = {}) {
   return Object.keys(files);
 }
 
+/** Every YAML file under the site's content/, by path from its root. */
+const yamlFiles = (site, dir = "content") => (fs.existsSync(path.join(site, dir)) ? fs.readdirSync(path.join(site, dir), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? yamlFiles(site, `${dir}/${e.name}`) : /\.ya?ml$/.test(e.name) ? [`${dir}/${e.name}`] : [])) : []);
+
+/** next.config.ts's lines 0.9.0 added: the import and the redirects() key with its comment. */
+const REDIRECTS_CONFIG = /^import \{ redirectsFor \} from "agentic-cms\/content";\n|^ *\/\/ content\/redirects\.yaml, read when Next[^\n]*\n *\/\/ an indexed URL that moved[^\n]*\n *redirects: async \(\) => redirectsFor\(\),\n/gm;
+
+/** Lays 0.8.4's content over the site at `site`, which 0.9.0 added to: no content/_schemas/, no YAML file naming its schema, no content/redirects.yaml or its template, a Next config without redirects(). */
+export function content084(site) {
+  fs.rmSync(path.join(site, "content/_schemas"), { recursive: true, force: true });
+  for (const file of ["content/redirects.yaml", "content/_templates/redirect.yaml"]) fs.rmSync(path.join(site, file), { force: true });
+  const config = path.join(site, "next.config.ts");
+  if (fs.existsSync(config)) fs.writeFileSync(config, fs.readFileSync(config, "utf8").replace(REDIRECTS_CONFIG, ""));
+  for (const file of yamlFiles(site)) {
+    const text = fs.readFileSync(path.join(site, file), "utf8");
+    fs.writeFileSync(path.join(site, file), text.replace(/^# yaml-language-server: \$schema=\S*\n/, ""));
+  }
+}

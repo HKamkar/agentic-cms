@@ -3,7 +3,9 @@
 // site ships no tag, no consent default and no consent banner. Server
 // components read it (the layout, the footer); a client component reads the
 // policy, never the id. Set it where the production build runs, not in
-// .env.local: the dev server would load the tag too.
+// .env.local: the dev server would load the tag too. A preview build
+// (AGENTIC_CMS_PREVIEW=1, docs/preview.md) ships no tag, whatever the
+// environment says: a preview is no visit to the site.
 //
 // The visitor's choice is kept in localStorage under `storageKey` (the cookie
 // notice names it), asked for again after `maxAgeDays`, and asked of everyone
@@ -14,6 +16,6 @@
 import type { ConsentPolicy } from "agentic-cms/consent";
 
 export const analytics = {
-  tagId: process.env.GOOGLE_TAG_ID ?? "",
+  tagId: process.env.AGENTIC_CMS_PREVIEW === "1" ? "" : (process.env.GOOGLE_TAG_ID ?? ""),
   consent: { storageKey: "consent", version: 1, maxAgeDays: 365 } satisfies ConsentPolicy,
 };

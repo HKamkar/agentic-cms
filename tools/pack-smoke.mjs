@@ -43,7 +43,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
-import { site084 } from "./migration-fixture.mjs";
+import { content084, site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
@@ -135,7 +135,9 @@ async function build(site) {
     if (fs.existsSync(path.join(kit, example))) fail(`the tarball ships the example's ${example}, which stays in the kit's repository`);
   }
   noExample(site);
+  schemasShipped(site);
   starterBuilds(site);
+  redirectsServed(site);
   emailGuarded(site);
   lintsClean(site);
   guardFails(site);
@@ -144,6 +146,7 @@ async function build(site) {
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
   upgradeFrom084(site);
+  previewBuild(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
   agentFilesResolve(site);
@@ -175,11 +178,33 @@ function agentFilesResolve(site) {
   console.log(`pack-smoke: the site's marketplace, plugins, stubs and thin rules resolve in the installed package (${pointers.length} files)`);
 }
 
+/**
+ * The preview build (docs/preview.md): the site built as production with
+ * AGENTIC_CMS_PREVIEW=1, its own audit passing what a preview must be —
+ * every page noindex, robots.txt disallowing everything — and the audit
+ * without the flag refusing that build.
+ */
+function previewBuild(site) {
+  run("pnpm", ["build"], site, { AGENTIC_CMS_PREVIEW: "1" });
+  const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
+  if (!/^Disallow: \/$/m.test(built("robots.txt.body")) || !built("index.html").includes('<meta name="robots" content="noindex, nofollow"/>')) fail("the preview build left robots.txt open or the home page indexable");
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  if (audit.status !== 1 || !/FAIL \/ robots: carries noindex/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit without the flag answered ${audit.status} on the preview build, which no production site ships`);
+}
+
 /** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */
 function noExample(site) {
   const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (["node_modules", ".next", ".git"].includes(e.name) ? [] : e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
   const left = files(site).filter((file) => /acme/i.test(path.basename(file)) || (!/\.(?:jpe?g|png|webp|ico)$/.test(file) && /acme/i.test(fs.readFileSync(file, "utf8"))));
   if (left.length) fail(`the fresh site holds the example's brand: ${left.map((file) => path.relative(site, file)).join(", ")}`);
+}
+
+/** The content files checked as they are typed (docs/schema.md): the tarball ships the JSON Schemas, init laid them out current, and the starter's YAML files open with the line an editor reads them by. */
+function schemasShipped(site) {
+  if (!fs.existsSync(path.join(site, "node_modules/agentic-cms/content/_schemas/pages.json"))) fail("the tarball lacks content/_schemas/ (package.json files)");
+  const check = spawnSync("pnpm", ["exec", "agentic-cms", "schema", "--check"], { cwd: site, encoding: "utf8", env: ENV });
+  if (check.status !== 0) fail(`agentic-cms schema --check answered ${check.status} in the fresh site: ${`${check.stdout}${check.stderr}`.trim().slice(-600)}`);
+  if (!fs.readFileSync(path.join(site, "content/pages/home.yaml"), "utf8").startsWith("# yaml-language-server: $schema=../_schemas/pages.json\n")) fail("the starter's home page does not open with its schema's line");
 }
 
 /**
@@ -201,6 +226,27 @@ function starterBuilds(site) {
     fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
   }
   run("pnpm", ["build"], site);
+}
+
+/**
+ * The site's redirects reach Next through the config init wrote
+ * (docs/redirects.md): one written into content/redirects.yaml in place of
+ * the starter's [] is in the next build's routes manifest as a 308, and a
+ * path the sitemap lists, redirected, fails the SEO audit (run alone on
+ * that build: the content lint would refuse it first). The redirect stays,
+ * as a site's own would.
+ */
+function redirectsServed(site) {
+  edit(site, "content/redirects.yaml", (text) => text.replace(/^\[\]\n/m, "- from: /news\n  to: /blog\n"));
+  run("pnpm", ["exec", "next", "build"], site);
+  const manifest = JSON.parse(fs.readFileSync(path.join(site, ".next/routes-manifest.json"), "utf8"));
+  if (!manifest.redirects?.some((r) => r.source === "/news" && r.destination === "/blog" && r.statusCode === 308)) fail(`next.config's redirects() did not serve content/redirects.yaml: ${JSON.stringify(manifest.redirects)}`);
+  const file = path.join(site, "content/redirects.yaml");
+  const kept = fs.readFileSync(file, "utf8");
+  fs.writeFileSync(file, `${kept}- from: /blog\n  to: /\n`);
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  fs.writeFileSync(file, kept);
+  if (audit.status !== 1 || !/FAIL \/sitemap\.xml sitemap: \S+\/blog is redirected \(content\/redirects\.yaml\)/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit with a redirected sitemap path answered ${audit.status}: ${`${audit.stdout}${audit.stderr}`.trim().slice(-600)}`);
 }
 
 /**
@@ -387,15 +433,18 @@ function upgrade(site) {
 /**
  * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
  * 0.8.4's own texts from the installed package's record, a rule and a skill
- * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them),
+ * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them)
+ * and its content (no JSON Schemas, no schema lines, no redirects),
  * upgraded by the installed `agentic-cms upgrade` with the tarball as its
  * spec: the 0.9.0 migration moves the copies, the steps left by hand come
- * back with their section (exit 1), the lint and the tests pass, and the
- * agent files' check is clean after it; then the fresh site is put back.
+ * back with their section (exit 1), the lint and the tests pass, the docs
+ * check and the content lint pass on what it wrote, and the agent files'
+ * check is clean after it; then the fresh site is put back.
  */
 function upgradeFrom084(site) {
   const fresh = headOf(site);
   site084(site, { kitRoot: path.join(site, "node_modules/agentic-cms") });
+  content084(site);
   git(site, "add", "-A");
   git(site, "commit", "-q", "-m", "the site as 0.8.4 left its agent files");
   const spec = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).dependencies["agentic-cms"];
@@ -405,12 +454,14 @@ function upgradeFrom084(site) {
   const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
   const wrong = [
     r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
-    !["removed", "moved", "thin"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    !["removed", "moved", "thin", "schema line", "written", "created", "redirects()"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
     report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
     report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
   ].filter(Boolean);
   if (wrong.length) fail(`upgrade from 0.8.4: ${wrong.join("; ")}: ${r.stderr.trim().slice(-2000)}`);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  run("pnpm", ["exec", "agentic-cms", "docs", "--check"], site);
+  run("pnpm", ["content:lint"], site);
   if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
   putBack(site, fresh, "upgrade from 0.8.4: ");
   console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);

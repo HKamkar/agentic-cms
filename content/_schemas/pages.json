@@ -1,0 +1,1676 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "object",
+  "properties": {
+    "seo": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The route: / for the home page, else /lowercase-words; indexed once published, never changed without a redirect"
+        },
+        "title": {
+          "type": "string",
+          "description": "The exact <title> and og:title: the topic first, the brand last, 60 characters or fewer, unique across pages"
+        },
+        "description": {
+          "type": "string",
+          "description": "The meta description: the page's promise in one sentence, 70–160 characters"
+        },
+        "ogImage": {
+          "type": "string",
+          "description": "The social image, a 1200×630 JPEG under public/images/, e.g. /images/home-og.jpg"
+        },
+        "updated": {
+          "type": "string",
+          "description": "The date the content last changed, YYYY-MM-DD (quote it); the sitemap's lastmod — bump it with the copy, not on refactors\nA date, YYYY-MM-DD, quoted in YAML.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "breadcrumb": {
+          "type": "string",
+          "description": "The page's name in the breadcrumb trail and its structured data"
+        },
+        "changeFrequency": {
+          "description": "The sitemap's changefreq hint",
+          "type": "string",
+          "enum": [
+            "always",
+            "hourly",
+            "daily",
+            "weekly",
+            "monthly",
+            "yearly",
+            "never"
+          ]
+        },
+        "priority": {
+          "description": "The sitemap's priority hint, 0–1",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "path",
+        "title",
+        "description",
+        "ogImage",
+        "updated",
+        "breadcrumb"
+      ],
+      "additionalProperties": false,
+      "description": "The SEO block: the <title>, meta description, canonical, Open Graph image, sitemap entry and breadcrumb name"
+    },
+    "jsonld": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "WebPage",
+              "description": "The schema.org page type"
+            },
+            "application": {
+              "description": "The SoftwareApplication the page is about; left out, the page describes no software (a notice, a policy, a page of plain text)",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The SoftwareApplication's name as it should read in structured data"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "One sentence on what the application is"
+                    },
+                    "operatingSystem": {
+                      "type": "string",
+                      "description": "The operatingSystem value, e.g. On-premise"
+                    },
+                    "offer": {
+                      "type": "string",
+                      "description": "The offer's description (no price)"
+                    },
+                    "featureList": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The featureList, one short line each"
+                    },
+                    "signIn": {
+                      "description": "true adds the sign-in URL and the social profiles to the application",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description",
+                    "operatingSystem",
+                    "offer",
+                    "featureList"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The SoftwareApplication the page is about"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "itemList": {
+              "description": "An ItemList of the page's use-case cards (needs a use-case-cards section)",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The list's name"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "The list's description"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organization": {
+              "description": "How the organisation is attached to the application: as its provider (with its URL) or its publisher; only with an application",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "provider",
+                    "publisher"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "A WebPage: about the software when it carries an application, otherwise a page of its own (a notice, a policy)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "AboutPage",
+              "description": "The schema.org page type"
+            },
+            "organization": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "description": "One sentence on the organisation"
+                },
+                "foundingDate": {
+                  "type": "string",
+                  "description": "The founding date, YYYY-MM-DD\nA date, YYYY-MM-DD, quoted in YAML.",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "foundingLocation": {
+                  "type": "object",
+                  "properties": {
+                    "locality": {
+                      "type": "string",
+                      "description": "The city"
+                    },
+                    "country": {
+                      "type": "string",
+                      "description": "The two-letter country code"
+                    }
+                  },
+                  "required": [
+                    "locality",
+                    "country"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where it was founded"
+                },
+                "slogan": {
+                  "type": "string",
+                  "description": "The slogan"
+                },
+                "knowsAbout": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The topics the organisation knows about"
+                }
+              },
+              "required": [
+                "description",
+                "foundingDate",
+                "foundingLocation",
+                "slogan",
+                "knowsAbout"
+              ],
+              "additionalProperties": false,
+              "description": "The organisation the page is about; name, logo, e-mail and profiles come from site.ts"
+            }
+          },
+          "required": [
+            "type",
+            "organization"
+          ],
+          "additionalProperties": false,
+          "description": "An AboutPage about the organisation, with the page's FAQ as its FAQPage (needs a faq section)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "ContactPage",
+              "description": "The schema.org page type"
+            },
+            "office": {
+              "type": "object",
+              "properties": {
+                "streetAddress": {
+                  "type": "string",
+                  "description": "Street and number"
+                },
+                "locality": {
+                  "type": "string",
+                  "description": "The city"
+                },
+                "postalCode": {
+                  "type": "string",
+                  "description": "The postal code"
+                },
+                "country": {
+                  "type": "string",
+                  "description": "The two-letter country code"
+                }
+              },
+              "required": [
+                "streetAddress",
+                "locality",
+                "postalCode",
+                "country"
+              ],
+              "additionalProperties": false,
+              "description": "The postal address"
+            },
+            "contacts": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The contactType, e.g. customer service"
+                  },
+                  "email": {
+                    "description": "The e-mail address; left out, the contact point carries the page's URL instead (an address kept out of the HTML)",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "description": "The contact points"
+            }
+          },
+          "required": [
+            "type",
+            "office",
+            "contacts"
+          ],
+          "additionalProperties": false,
+          "description": "A ContactPage with the organisation's address and contact points, and the page's FAQ as its FAQPage (needs a faq section)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "Blog",
+              "description": "The schema.org page type"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "A Blog listing every published post (nothing to declare)"
+        }
+      ],
+      "description": "The page's structured data: the copy of its JSON-LD block by page type"
+    },
+    "sections": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/section"
+      },
+      "description": "The sections in order, each a `type` and its copy"
+    }
+  },
+  "required": [
+    "seo",
+    "jsonld",
+    "sections"
+  ],
+  "additionalProperties": false,
+  "description": "content/pages: A page: content/pages/<slug>.yaml — its SEO block, its structured data, and its sections in order (seo.path is the route; the file name is only the key) (one file per entry, the file name is the slug).",
+  "definitions": {
+    "section": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-hero",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "The home hero: eyebrow, H1, paragraph, the button and the hero illustration"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-automation",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            },
+            "cards": {
+              "minItems": 2,
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The card text"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "cta",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "description": "Two cards and the button beside an illustration"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-about",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "statement": {
+              "type": "string",
+              "description": "The statement paragraph the section leads with, set in heading type"
+            },
+            "cards": {
+              "minItems": 3,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "stat": {
+                    "type": "string",
+                    "description": "The big figure"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The line under the figure"
+                  }
+                },
+                "required": [
+                  "title",
+                  "stat",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "statement",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "description": "A statement and three stat cards"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-service",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "feature": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "The feature title under the icon"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The feature text"
+                }
+              },
+              "required": [
+                "title",
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            },
+            "dashboard": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "The dashboard card's title"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The dashboard card's line"
+                },
+                "image": {
+                  "type": "string",
+                  "description": "The dashboard screenshot, under public/images/<page>/"
+                },
+                "imageAlt": {
+                  "type": "string",
+                  "description": "What the the dashboard screenshot shows, in a sentence (it is informative, not decorative)"
+                }
+              },
+              "required": [
+                "title",
+                "text",
+                "image",
+                "imageAlt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "feature",
+            "cta",
+            "dashboard"
+          ],
+          "additionalProperties": false,
+          "description": "A feature split: the dashboard card on the left, the copy, one feature and the button to the contact page on the right"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-feature",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "cards": {
+              "minItems": 5,
+              "maxItems": 5,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The card text"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "monitoring": {
+              "type": "object",
+              "properties": {
+                "image": {
+                  "type": "string",
+                  "description": "The monitoring screenshot, under public/images/<page>/"
+                },
+                "imageAlt": {
+                  "type": "string",
+                  "description": "What the the monitoring screenshot shows, in a sentence (it is informative, not decorative)"
+                }
+              },
+              "required": [
+                "image",
+                "imageAlt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "cards",
+            "monitoring"
+          ],
+          "additionalProperties": false,
+          "description": "Five feature cards, the copy and a tall screenshot beside them"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-choose-us",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "items": {
+              "minItems": 3,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The item's title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The item's text"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "demo": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "The demo card's title"
+                },
+                "image": {
+                  "type": "string",
+                  "description": "The demo screenshot, under public/images/<page>/"
+                },
+                "imageAlt": {
+                  "type": "string",
+                  "description": "What the the demo screenshot shows, in a sentence (it is informative, not decorative)"
+                }
+              },
+              "required": [
+                "title",
+                "image",
+                "imageAlt"
+              ],
+              "additionalProperties": false
+            },
+            "stats": {
+              "type": "object",
+              "properties": {
+                "image": {
+                  "type": "string",
+                  "description": "The stats card, under public/images/<page>/"
+                },
+                "imageAlt": {
+                  "type": "string",
+                  "description": "What the the stats card shows, in a sentence (it is informative, not decorative)"
+                }
+              },
+              "required": [
+                "image",
+                "imageAlt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "items",
+            "demo",
+            "stats"
+          ],
+          "additionalProperties": false,
+          "description": "Three points beside a demo card and a stats image"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "home-integration",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading"
+          ],
+          "additionalProperties": false,
+          "description": "The heading over an integration diagram (the diagram is the design's)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "reviews",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading"
+          ],
+          "additionalProperties": false,
+          "description": "The heading over the reviews; the reviews are content/reviews.yaml"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "about-hero",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text"
+          ],
+          "additionalProperties": false,
+          "description": "The About hero: eyebrow, H1, paragraph and three illustration cards (the cards are the design's)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "about-story",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "statement": {
+              "type": "string",
+              "description": "The statement paragraph the section leads with, set in heading type"
+            },
+            "founded": {
+              "type": "string",
+              "description": "The caption of the first picture card"
+            },
+            "sovereignty": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "The first stat card: the line above the number"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "The first stat card: the big number or figure"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The first stat card: the line under the number"
+                }
+              },
+              "required": [
+                "title",
+                "value",
+                "text"
+              ],
+              "additionalProperties": false,
+              "description": "The first stat card"
+            },
+            "compliance": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "The second stat card: the line above the number"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "The second stat card: the big number or figure"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The second stat card: the line under the number"
+                }
+              },
+              "required": [
+                "title",
+                "value",
+                "text"
+              ],
+              "additionalProperties": false,
+              "description": "The second stat card"
+            },
+            "partners": {
+              "type": "string",
+              "description": "The caption of the second picture card"
+            },
+            "modalities": {
+              "type": "object",
+              "properties": {
+                "heading": {
+                  "type": "string",
+                  "description": "The modality card's heading"
+                },
+                "stat": {
+                  "type": "string",
+                  "description": "The modality card's big figure"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The line under the figure"
+                }
+              },
+              "required": [
+                "heading",
+                "stat",
+                "text"
+              ],
+              "additionalProperties": false,
+              "description": "The modality card: heading, illustration, figure and line"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "statement",
+            "founded",
+            "sovereignty",
+            "compliance",
+            "partners",
+            "modalities"
+          ],
+          "additionalProperties": false,
+          "description": "A statement and five cards: two picture cards with captions, two stat cards and the modality card"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "about-strategy",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "beliefsHeading": {
+              "type": "string",
+              "description": "The heading over the list of beliefs"
+            },
+            "beliefs": {
+              "minItems": 4,
+              "maxItems": 4,
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The four beliefs"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "beliefsHeading",
+            "beliefs",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "An illustration on one side; the copy, four beliefs and the button on the other"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "about-benefits",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "cards": {
+              "minItems": 3,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The card text"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "description": "Three benefit cards"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "about-choose-us",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "cards": {
+              "minItems": 2,
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The card text"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "cards",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "Copy, two cards and the button on one side; an illustration on the other"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "faq",
+              "description": "The section type"
+            },
+            "set": {
+              "type": "string",
+              "description": "The FAQ set to show: the file name in content/faqs/\nA slug of content/faqs/ (a file's name without its extension); agentic-cms check checks it."
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "about",
+                "contact"
+              ],
+              "description": "The design variant, about or contact; the wireframe draws both the same and prints the name"
+            }
+          },
+          "required": [
+            "type",
+            "set",
+            "eyebrow",
+            "heading",
+            "variant"
+          ],
+          "additionalProperties": false,
+          "description": "A FAQ section: eyebrow, heading and the accordion of a FAQ set; the page's FAQPage structured data reads the same set"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-cases-hero",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "The Use cases hero: eyebrow, H1, paragraph and the button"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-cases-vision",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "statement": {
+              "type": "string",
+              "description": "The statement paragraph the section leads with, set in heading type"
+            },
+            "cards": {
+              "minItems": 4,
+              "maxItems": 4,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "stat": {
+                    "type": "string",
+                    "description": "The big figure"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The line under the figure"
+                  }
+                },
+                "required": [
+                  "stat",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "statement",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "description": "A statement and four stat cards"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-cases-choose-us",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "points": {
+              "minItems": 3,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The point's title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The point's text"
+                  }
+                },
+                "required": [
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "points"
+          ],
+          "additionalProperties": false,
+          "description": "Three points beside an illustration"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-case-cards",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading"
+          ],
+          "additionalProperties": false,
+          "description": "The heading over the use-case cards; the cards are content/use-cases.yaml"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-cases-benefits",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "left": {
+              "minItems": 2,
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The benefit, one line"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              "description": "The two benefits left of the dashboard"
+            },
+            "right": {
+              "minItems": 2,
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The benefit, one line"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              "description": "The two benefits right of the dashboard"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "left",
+            "right"
+          ],
+          "additionalProperties": false,
+          "description": "Two benefits on each side of an illustration"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "use-cases-strategy",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "cards": {
+              "minItems": 2,
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The card text"
+                  }
+                },
+                "required": [
+                  "title",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "cards",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "Two cards and the button beside an illustration"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "contact-hero",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "text": {
+              "type": "string",
+              "description": "The paragraph under the heading"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label; the button links to the contact section (site.links.contact)"
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "text",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "The Contact hero: eyebrow, H1, paragraph and the button"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "contact-form",
+              "description": "The section type"
+            },
+            "form": {
+              "type": "string",
+              "description": "The form to render, a key of src/config/forms.ts"
+            }
+          },
+          "required": [
+            "type",
+            "form"
+          ],
+          "additionalProperties": false,
+          "description": "The contact form; its fields and messages are the form definition"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "contact-details",
+              "description": "The section type"
+            },
+            "eyebrow": {
+              "type": "string",
+              "description": "The small label above the heading, as it should read (it is rendered uppercase)"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The section heading"
+            },
+            "cards": {
+              "minItems": 3,
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "icon": {
+                    "type": "string",
+                    "description": "The card's icon, an image path under public/images/"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The card title"
+                  },
+                  "text": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The card text, one paragraph per line (a line break between lines)"
+                  },
+                  "highlight": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "text"
+                          },
+                          "value": {
+                            "type": "string",
+                            "description": "The highlighted line, e.g. the office address"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "email"
+                          },
+                          "value": {
+                            "type": "string",
+                            "description": "An e-mail address, rendered as a mailto link"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "The highlighted line under the rule: plain text, or an e-mail address as a link"
+                  }
+                },
+                "required": [
+                  "icon",
+                  "title",
+                  "text",
+                  "highlight"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "type",
+            "eyebrow",
+            "heading",
+            "cards"
+          ],
+          "additionalProperties": false,
+          "description": "Three contact cards, each with an icon, a title, its text and a highlighted line"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "blog-index",
+              "description": "The section type"
+            },
+            "label": {
+              "type": "string",
+              "description": "The hero's label"
+            },
+            "heading": {
+              "type": "string",
+              "description": "The hero's H1"
+            },
+            "listEyebrow": {
+              "type": "string",
+              "description": "The eyebrow over the post grid"
+            },
+            "listHeading": {
+              "type": "string",
+              "description": "The heading over the post grid"
+            },
+            "cta": {
+              "type": "string",
+              "description": "The button label beside the heading (the button is the current page)"
+            }
+          },
+          "required": [
+            "type",
+            "label",
+            "heading",
+            "listEyebrow",
+            "listHeading",
+            "cta"
+          ],
+          "additionalProperties": false,
+          "description": "The blog index: the hero and the grid of every published post, newest first"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "group",
+              "description": "The section type"
+            },
+            "variant": {
+              "type": "string",
+              "enum": [
+                "use-cases-upper",
+                "use-cases-lower"
+              ],
+              "description": "Which of the design's two wrappers; the wireframe draws both as a dashed box that names the variant"
+            },
+            "sections": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/section"
+                  }
+                ]
+              },
+              "description": "The sections inside the wrapper, in order"
+            }
+          },
+          "required": [
+            "type",
+            "variant",
+            "sections"
+          ],
+          "additionalProperties": false,
+          "description": "A wrapper around several sections, for a design that decorates a run of them together"
+        }
+      ]
+    }
+  }
+}

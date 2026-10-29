@@ -13,13 +13,14 @@ import { createSeo } from "./seo/index.ts";
 import { createUrls, type SiteConfig } from "./site.ts";
 
 export type { SiteConfig, SiteLink, Urls } from "./site.ts";
+export { isPreview, PREVIEW_ENV } from "./preview.ts";
 
 export type KitOptions<S extends ZodType<SectionLike>, C extends Collections<S>> = {
   /** The site's config, data only (src/config/site.ts). */
   site: SiteConfig;
   /** The union of the site's page section schemas (src/components/sections/schemas.ts). */
   sections: S;
-  /** A site with collections of its own returns the standard seven plus them; the lint, the docs and the status read them all. */
+  /** A site with collections of its own returns the standard eight plus them; the lint, the docs and the status read them all. */
   collections?: (standard: Collections<S>) => C;
 };
 

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # The home page (/): its SEO block, its structured data and its sections in
 # order, as `agentic-cms init` wrote it for a new site. Every string that
 # starts with the placeholder marker, and the address on a domain reserved

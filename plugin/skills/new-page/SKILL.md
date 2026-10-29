@@ -18,17 +18,25 @@ there — is written here too: the file stays, its copy becomes the site's.
 ## Read first
 
 `content/README.md` "Add a page", `content/_templates/page.yaml`,
+the page's JSON Schema, `content/_schemas/pages.json` (the path the
+template's first line names: every key a page may hold, which are
+required, what each says, a `section` per type),
 `content/README.md` § Fields › `pages` (every section type and its fields),
 one existing file in `content/pages/` as a worked example,
 `src/lib/seo/README.md` (the head, the structured data, the OG image; the
 engine's docs, under `node_modules/agentic-cms/` on a site that
 installs the package),
-`content/VOICE.md`, `src/config/site.ts`.
+`content/VOICE.md`, `src/config/site.ts`, `content/redirects.yaml` (the
+old paths the site sends elsewhere).
 
 ## Steps
 
 1. **The route and the sections.** Confirm `seo.path` with the user and list
-   the sections by type, chosen from the registry tables only. A section
+   the sections by type, chosen from the registry tables only. A route
+   that is an entry's `from` in `content/redirects.yaml` is an old URL the
+   site sends elsewhere: stop and say so (taking it back means removing
+   the redirect, the user's call; the lint fails a page the redirect
+   would hide). A section
    type that does not exist is code (a schema, a component, a registry
    entry; the repo's design document says how): stop and say so.
 2. **The file.** For a page with placeholder copy, keep its file, its
@@ -41,7 +49,8 @@ installs the package),
    sign-in link, the profiles). Real copy comes from the user or the brief,
    never invented: a figure, a name or an address the user has not given
    stays a question. A new page: copy the template to
-   `content/pages/<slug>.yaml`. `seo`:
+   `content/pages/<slug>.yaml`, its first line (the schema's) kept, and
+   write it against the schema. `seo`:
    `title` of 60 characters or fewer and unique across pages, `description`
    of 70–160, `ogImage`, `updated` today (quoted), `breadcrumb`; `jsonld` by
    page type; sections with real copy under `content/VOICE.md` (the brand
@@ -55,9 +64,10 @@ installs the package),
    with an alt that says what it shows.
 4. **The chrome.** Only if the page belongs there: add it to `links`, `nav`
    and `footer.quickLinks` in `src/config/site.ts` (three separate lists).
-5. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; read the
-   `WARN` lines on the new file; no `placeholder` line left on it (a
-   production build fails while one remains).
+5. **Lint until clean.** `pnpm content:check` first (what no schema
+   checks: the refs, the cross-field rules), then `pnpm content:lint`: fix
+   every `FAIL`; read the `WARN` lines on the new file; no `placeholder`
+   line left on it (a production build fails while one remains).
 6. **Verify** (below), then look at the page at every width: `pnpm kit
    visual-parity capture <slug>-new --pages /<slug>` and open its shots,
    one per width of the site's profile, in `.parity/visual/<slug>-new/` (a

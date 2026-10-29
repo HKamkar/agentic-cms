@@ -346,7 +346,10 @@ type FormSinkConfig =
   10 s; anything but a 2xx throws. Any service that accepts a webhook takes
   it as it is: an automation platform, a CRM's inbound hook, a function of
   the site's.
-- **`log`** prints each submission to the server's log. Development only.
+- **`log`** prints each submission to the server's log. Development only,
+  and every preview: with `AGENTIC_CMS_PREVIEW=1` in the request's
+  environment (`isPreview()` from `agentic-cms`), `createFormHandler()`
+  delivers there and never reads the site's sink (`docs/preview.md`).
 - **A provider's own API** is a class implementing `FormSink` in a server
   module of the site's (`src/server/`, say), mapping the wire format onto
   the provider's fields; `formSink()` returns it (`docs/forms.md` has one).

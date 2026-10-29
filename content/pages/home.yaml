@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # The landing page (/): its SEO block, its structured data and its sections
 # in order. Every field is checked at build time (pageSchema in
 # src/lib/content/collections.ts; the section types and their fields are

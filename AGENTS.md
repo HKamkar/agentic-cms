@@ -50,7 +50,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   has one, is named by `content/editorial/workshop.yaml`.
 - Public URLs are `/`, `/sections/home`, `/sections/about`,
   `/sections/use-cases`, `/sections/contact`, `/blog`, `/blog-post/<slug>`.
-  On a live site an indexed URL never changes without a redirect; in this
+  On a live site an indexed URL never changes without a redirect (an entry
+  of `content/redirects.yaml`, which `next.config.ts` serves); in this
   example site the `/sections/*` pages are a catalogue a fork may delete.
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative.

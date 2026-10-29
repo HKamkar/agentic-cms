@@ -1,4 +1,4 @@
-// The standard content contract: the seven collections a site keeps under
+// The standard content contract: the eight collections a site keeps under
 // content/, with the schema each entry must satisfy. This is configuration
 // in the sense of frontmatter.ts before it — the rules a file has to meet —
 // not engine code; the engine (read.ts, schema.ts) knows nothing about posts
@@ -85,6 +85,31 @@ export const useCaseSchema = z
     icon: text().describe("Illustration under public/images/use-cases/"),
   })
   .describe("A use-case card on the Use cases page, in order; the same list is the page's ItemList structured data");
+
+/** A path the site answers, as a redirect names it: /lowercase-or-not/words, no trailing slash, nothing a Next path pattern reads as a parameter. */
+const LITERAL_PATH = /^(?:\/[A-Za-z0-9._~%-]+)+$/;
+const isTarget = (to: string) => {
+  if (/^https:\/\//.test(to)) return URL.canParse(to);
+  const [route] = to.split(/[?#]/);
+  return route === "/" || LITERAL_PATH.test(route);
+};
+
+export const redirectSchema = z
+  .strictObject({
+    from: text()
+      .refine((from) => LITERAL_PATH.test(from), { error: "must be a path the site no longer answers: /words or /words/more, without a trailing slash, a query or a pattern" })
+      .describe("The old path, as it was indexed: /words, without a trailing slash; never a live page's or post's path"),
+    to: text()
+      .refine(isTarget, { error: "must be a path of the site (/, /words, with a #fragment or ?query if need be) or an https:// URL" })
+      .describe("Where it goes now: a page's path, a post's URL or the blog index, or an https:// URL; never another redirect's from"),
+    permanent: z.boolean({ error: "must be true or false" }).optional().describe("true, or left out: a permanent redirect (308), which search engines follow and index the target of; false: a temporary one (307)"),
+  })
+  .describe("A redirect from a URL the site no longer answers, in content/redirects.yaml; next.config.ts serves them (redirectsFor())");
+
+/** The redirects collection, content/redirects.yaml, on its own: redirectsFor() reads it in next.config.ts, where no site registry is at hand. */
+export function redirectsCollection() {
+  return defineCollection({ name: "redirects", kind: "list", file: "redirects.yaml", schema: redirectSchema });
+}
 
 const CHANGE_FREQUENCIES = ["always", "hourly", "daily", "weekly", "monthly", "yearly", "never"] as const;
 
@@ -189,7 +214,7 @@ export function pageSchema<S extends ZodType<SectionLike>>(sections: S) {
     .describe("A page: content/pages/<slug>.yaml — its SEO block, its structured data, and its sections in order (seo.path is the route; the file name is only the key)");
 }
 
-/** The seven collections, in the order the scripts read and document them; `pages` is validated by the site's section union. */
+/** The eight collections, in the order the scripts read and document them; `pages` is validated by the site's section union. */
 export function createCollections<S extends ZodType<SectionLike>>({ sections }: { sections: S }) {
   const authors = defineCollection({ name: "authors", kind: "map", file: "authors.json", schema: authorSchema });
   const categories = defineCollection({ name: "categories", kind: "map", file: "categories.json", schema: categorySchema });
@@ -198,7 +223,8 @@ export function createCollections<S extends ZodType<SectionLike>>({ sections }: 
   const faqs = defineCollection({ name: "faqs", kind: "folder", dir: "faqs", format: "yaml", schema: faqSchema });
   const useCases = defineCollection({ name: "useCases", kind: "list", file: "use-cases.yaml", schema: useCaseSchema });
   const pages = defineCollection({ name: "pages", kind: "folder", dir: "pages", format: "yaml", schema: pageSchema(sections) });
-  return { authors, categories, posts, reviews, faqs, useCases, pages };
+  const redirects = redirectsCollection();
+  return { authors, categories, posts, reviews, faqs, useCases, pages, redirects };
 }
 
 export type Collections<S extends ZodType<SectionLike> = ZodType<SectionLike>> = ReturnType<typeof createCollections<S>>;
@@ -209,6 +235,7 @@ export type PostFrontmatter = z.output<typeof postSchema>;
 export type Review = z.output<typeof reviewSchema>;
 export type Faq = z.output<typeof faqSchema>;
 export type UseCase = z.output<typeof useCaseSchema>;
+export type Redirect = z.output<typeof redirectSchema>;
 export type PageSeo = z.output<typeof pageSeoSchema>;
 export type ChangeFrequency = (typeof CHANGE_FREQUENCIES)[number];
 export type PageJsonLd = z.output<typeof jsonldSchema>;

@@ -79,8 +79,10 @@ structural problem.
 4. **The sitemap follows from the page files and the published posts**;
    nothing is added by hand. `updated` is the page's last-modified date —
    bump it when the content changes, not on refactors.
-5. **URLs are permanent.** A public URL never changes without a redirect; a
-   new page's `path` is lowercase, hyphenated, without a trailing slash.
+5. **URLs are permanent.** A public URL never changes without a redirect, an
+   entry of `content/redirects.yaml` that `next.config.ts` serves
+   (`docs/redirects.md`); a new page's `path` is lowercase, hyphenated,
+   without a trailing slash.
 6. **`pnpm build` must pass** with zero `FAIL` lines from `check-seo`; read
    every `WARN` and fix what you can. Do not weaken a rule to get a build
    through; fix the page.
@@ -98,8 +100,8 @@ structural problem.
 | images | an `<img>` without `alt` (empty is fine for decoration) or without `width`/`height` | |
 | html | no `lang` | |
 | JSON-LD | a block that does not parse, no `@context`, a relative `url`/`item`/`sameAs`, an inner page without `BreadcrumbList`, a post without `BlogPosting` (headline, datePublished, author, publisher, image) | |
-| robots | an indexable page with `noindex`; the 404 without it | |
-| sitemap | an indexable route missing, listed twice, or a URL with no built page; `lastmod` invalid or in the future; `robots.txt` without the sitemap | |
+| robots | an indexable page with `noindex`; the 404 without it; in a preview build (`AGENTIC_CMS_PREVIEW=1`, `docs/preview.md`), a page without `noindex` and a `robots.txt` that does not disallow everything | |
+| sitemap | an indexable route missing, listed twice, or a URL with no built page; a URL `content/redirects.yaml` redirects; `lastmod` invalid or in the future; `robots.txt` without the sitemap | |
 | links | an internal `href` that matches no page and no file in `public/` | |
 
 `pnpm kit seo --strict` turns warnings into failures;

@@ -15,7 +15,9 @@ the commit. One stage per turn; a gate is a stop, not a summary.
 
 `content/VOICE.md` in full (who reads the site is the reader every stage
 writes for; the non-negotiables and claims are the rules), `content/blog/_template.md`
-(the frontmatter, the body conventions, the closing call to action),
+(the frontmatter, the body conventions, the closing call to action), the
+frontmatter's JSON Schema `content/_schemas/posts.json` (every key, which
+are required),
 `src/lib/blog/README.md` § Body pipeline, the keys of
 `content/categories.json` and `content/authors.json`, the titles and
 slugs in `content/blog/` (the internal-link candidates), the row for

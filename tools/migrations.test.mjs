@@ -9,8 +9,9 @@ import path from "node:path";
 import { test } from "node:test";
 import { agentFiles } from "../scripts/lib/agent-files.mjs";
 import { scaffold } from "../scripts/lib/init.mjs";
-import { apply, detect, GUIDE, PIECES } from "../scripts/migrations/0.9.0.mjs";
-import { EDITS, site084 } from "./migration-fixture.mjs";
+import { apply, detect, GUIDE, PIECES, YAML_COLLECTIONS } from "../scripts/migrations/0.9.0.mjs";
+import { kit } from "../src/kit.ts";
+import { content084, EDITS, site084 } from "./migration-fixture.mjs";
 
 const KIT = path.resolve(import.meta.dirname, "..");
 const quiet = { log: () => {} };
@@ -66,4 +67,56 @@ test("0.9.0 finds nothing on a site laid out by this kit, and every manual step 
   assert.deepEqual(detect(site, { kitRoot: KIT, ...quiet }), []);
   assert.ok(anchors().includes(GUIDE.split("#")[1]), `${GUIDE}: a heading of docs/upgrading.md`);
   assert.ok(PIECES.every(({ piece, detect: found, apply: change }) => piece && typeof found === "function" && typeof change === "function"));
+});
+
+/** A fresh site with 0.8.4's content over it: no JSON Schemas, no schema lines. */
+function content084Fixture() {
+  const site = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "migrate-")), "site");
+  scaffold(site, { name: "My Site", kitRoot: KIT, version: "0.9.0", ...quiet });
+  content084(site);
+  return site;
+}
+/** A stand-in for the site's installed command line: each run's arguments kept, and content/_schemas/ written as `schema` writes it. */
+function installedBin(site) {
+  const bin = path.join(site, "node_modules/agentic-cms/bin/agentic-cms.mjs");
+  fs.mkdirSync(path.dirname(bin), { recursive: true });
+  fs.writeFileSync(bin, 'import fs from "node:fs";\nfs.appendFileSync("runs.txt", `${process.argv.slice(2).join(" ")}\\n`);\nif (process.argv[2] === "schema") { fs.mkdirSync("content/_schemas", { recursive: true }); fs.writeFileSync("content/_schemas/pages.json", "{}\\n"); }\n');
+}
+
+test("0.9.0's content schemas: each standard YAML file takes its line, and the site's installed command line writes the schemas and the field tables; without one, a step by hand", () => {
+  const site = content084Fixture();
+  const found = detect(site, { kitRoot: KIT, ...quiet }).filter(({ piece }) => piece === "content schemas").map(({ what }) => what);
+  assert.ok(found.includes("content/pages/home.yaml: its first line to name its JSON Schema") && found.includes("content/reviews.yaml: its first line to name its JSON Schema"));
+  assert.equal(found.at(-1), "content/_schemas/: the JSON Schemas of the site's collections, to write");
+  const bare = apply(site, { kitRoot: KIT, ...quiet });
+  assert.deepEqual(bare.manual.filter(({ piece }) => piece === "content schemas").map(({ link }) => link), [GUIDE], "no installed command line: by hand");
+  assert.ok(read(site, "content/pages/home.yaml").startsWith("# yaml-language-server: $schema=../_schemas/pages.json\n"));
+  installedBin(site);
+  const { changed, manual } = apply(site, { kitRoot: KIT, ...quiet });
+  assert.deepEqual(changed.filter(({ piece }) => piece === "content schemas"), [{ piece: "content schemas", file: "content/_schemas/", status: "written" }]);
+  assert.deepEqual([manual.filter(({ piece }) => piece === "content schemas"), read(site, "runs.txt")], [[], "schema --lines\ndocs\n"]);
+  assert.deepEqual(detect(site, { kitRoot: KIT, ...quiet }).filter(({ piece }) => piece === "content schemas"), []);
+  assert.deepEqual(apply(site, { kitRoot: KIT, ...quiet }).changed.filter(({ piece }) => piece === "content schemas"), [], "a second run changes nothing");
+});
+
+test("the migration's YAML collections are the standard ones whose files are YAML", () => {
+  const yaml = Object.values(kit.collections).filter((def) => (def.kind === "folder" ? def.format === "yaml" : /\.ya?ml$/.test(def.file))).map(({ name, kind, dir, file, format }) => ({ name, kind, ...(dir ? { dir, format } : { file }) }));
+  assert.deepEqual(yaml, Object.values(YAML_COLLECTIONS));
+});
+
+test("0.9.0's redirects: the starter's empty list and redirects() in the Next config, as the template has it; a config with redirects of its own left by hand", () => {
+  const site = content084Fixture();
+  assert.ok(!read(site, "next.config.ts").includes("redirectsFor"), "0.8.4's config");
+  const found = detect(site, { kitRoot: KIT, ...quiet }).filter(({ piece }) => piece === "redirects").map(({ what }) => what);
+  assert.deepEqual(found, ["content/redirects.yaml: the site's redirects, an empty list to write", "next.config.ts: redirects() to return redirectsFor()"]);
+  const { changed } = apply(site, { kitRoot: KIT, ...quiet });
+  assert.deepEqual(changed.filter(({ piece }) => piece === "redirects").map(({ file, status }) => `${file} ${status}`), ["content/redirects.yaml created", "next.config.ts redirects()"]);
+  assert.equal(read(site, "next.config.ts"), read(KIT, "templates/site/next.config.ts"));
+  assert.equal(read(site, "content/redirects.yaml"), read(KIT, "templates/starter/content/redirects.yaml"));
+  assert.deepEqual(apply(site, { kitRoot: KIT, ...quiet }).changed.filter(({ piece }) => piece === "redirects"), [], "a second run changes nothing");
+  fs.writeFileSync(path.join(site, "next.config.ts"), "export default {\n  async redirects() {\n    return [{ source: \"/a\", destination: \"/b\", permanent: true }];\n  },\n};\n");
+  const manual = apply(site, { kitRoot: KIT, ...quiet }).manual.filter(({ piece }) => piece === "redirects");
+  assert.equal(manual.length, 1);
+  assert.match(manual[0].text, /^next\.config\.ts: it has a redirects\(\) of its own: return \[\.\.\.redirectsFor\(\), \.\.\.the site's own\]/);
+  assert.equal(manual[0].link, GUIDE);
 });

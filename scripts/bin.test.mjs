@@ -12,15 +12,17 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
+const REPO = path.resolve(import.meta.dirname, "..");
 const run = (args, cwd = process.cwd()) => spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: "utf8" });
 
 test("the help is the map by family, one line per command, and names the exit codes", () => {
   const r = run(["--help"]);
   assert.equal(r.status, 0);
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
-  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
+  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs · schema\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
   assert.match(r.stdout, /\n {2}site\s+init · upgrade · setup · urls · serve\n/);
+  assert.match(r.stdout, /\n {2}opt-in steps\s+critical-css · assemble · pr-preview\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -52,6 +54,37 @@ test("a command that reads the site refuses to run outside a site's root, with t
     assert.equal(run(["optimize-webp", "nope.webp"], dir).status, 2);
     assert.match(run(["optimize-webp", "nope.webp"], dir).stderr, /nope\.webp: no such file or folder/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("schema: the example's files are current (the build's docs --check says so too); its help names --check and --lines; outside a site's root it is refused", () => {
+  const r = run(["schema", "--check"], REPO);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^schema: content\/_schemas\/ is up to date \(8 collections\)\n$/);
+  assert.match(run(["docs", "--check"], REPO).stdout, /content\/README\.md and content\/_schemas\/ are up to date/);
+  const help = run(["schema", "--help"]);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--check[\s\S]*--lines/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try {
+    const outside = run(["schema"], dir);
+    assert.equal(outside.status, 2);
+    assert.match(outside.stderr, /^agentic-cms schema: no src\/kit\.ts here/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("pr-preview: no pull request is a usage error naming --pr; --dry-run prints the comment and builds nothing; outside a site's root it is refused", () => {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(?:GITHUB_|CLOUDFLARE_)/.test(key)));
+  const bare = spawnSync(process.execPath, [BIN, "pr-preview"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(bare.status, 2);
+  assert.match(bare.stderr, /^pr-preview: no pull request: run it in a pull_request workflow, or name one with --pr <n>\n$/);
+  const dry = spawnSync(process.execPath, [BIN, "pr-preview", "--pr", "7", "--dry-run", "--base", "HEAD", "--json"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(dry.status, 0, dry.stderr);
+  const result = JSON.parse(dry.stdout);
+  assert.deepEqual([result.status, result.alias, result.url], ["dry-run", "pr-7", null]);
+  assert.match(result.body, /^<!-- agentic-cms:pr-preview -->\n### Preview\n/);
+  assert.match(result.body, /No page: the change touches nothing a page is built from\./, "HEAD against itself changes nothing");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try { assert.match(run(["pr-preview", "--pr", "7"], dir).stderr, /^agentic-cms pr-preview: no src\/kit\.ts here/); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("assemble runs in any folder and, without a standalone build, says how to make one", () => {

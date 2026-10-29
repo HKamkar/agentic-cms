@@ -22,7 +22,9 @@
 //     pass lists once it is added;
 //   - ci: a workflow that runs on pull requests (init's
 //     .github/workflows/verify.yml) runs the lint (or a build that runs it),
-//     the tests, the build and the agent-file check;
+//     the tests, the build and the agent-file check; and, as warnings, its
+//     preview job (docs/preview.md) can comment and diff, and no job uploads
+//     a preview version without AGENTIC_CMS_PREVIEW=1;
 //   - tools, the preferred tier's, so warnings that fail nothing: a script of
 //     the site's own under scripts/ that drives Playwright (or another
 //     headless browser), runs sharp over public/ or starts next dev, and a
@@ -30,6 +32,10 @@
 //     an `allow` entry of agentic-cms/site-tools with its reason quiets it;
 //   - leftovers: what is left of the kit's example (./leftovers.mjs), its
 //     brand by line and its sample content by path, by bytes and by entry;
+//   - retired, a warning that fails nothing (docs/roadmap-0.9.0.md D13): a
+//     page or a post the merge base published whose URL nothing answers now
+//     (its file deleted, renamed, or its route changed) and no redirect in
+//     content/redirects.yaml names — a post kept as a draft keeps its URL;
 //   - baseline (job 7, ./baseline.mjs): the findings of the rules a
 //     baseline holds (rounds, the leftovers) are held while their file's
 //     count does; an entry that does not read, or holds more than its file
@@ -54,7 +60,7 @@ import { KIT_NAME } from "./placeholders.mjs";
 import { SITE_TOOLS } from "./preferred-rules.mjs";
 
 /** The passes check-site adds to the components pass. */
-export const SITE_PASSES = ["rounds", "exceptions", "scripts", "ci", "tools", "leftovers", "baseline"];
+export const SITE_PASSES = ["rounds", "exceptions", "scripts", "ci", "tools", "leftovers", "retired", "baseline"];
 /** The lists that only shrink against the merge base. */
 export const SHRINK_ONLY = ["inherited"];
 /** The first line of the lab's throwaway route as `lab route` writes it (templates/lab-demo/page.tsx). */
@@ -64,6 +70,9 @@ const PICTURES = "public/images";
 const SITE_CONFIG = "src/config/site.ts";
 const WORKFLOWS = ".github/workflows";
 const NEXT_CONFIGS = ["next.config.ts", "next.config.mts", "next.config.mjs", "next.config.js", "next.config.cjs"];
+const PAGES = "content/pages";
+const POSTS = "content/blog";
+const REDIRECTS = "content/redirects.yaml";
 const TOOL_SCRIPT = /\.(?:[cm]?[jt]s|sh|py)$/;
 
 /** A --base that names no commit here: exit 2. */
@@ -187,12 +196,54 @@ function atBase({ git, env, base }) {
   return { found, show, before: text === null ? null : readJson(text) };
 }
 
-/** The exceptions pass: the merge base, what was added since it, and its findings; with no base, the note why and nothing compared. */
-function checkExceptions({ git, env, base }, g, site, config) {
-  const { found, show, before } = atBase({ git, env, base });
+/** The exceptions pass: the merge base (atBase()'s answer), what was added since it, and its findings; with no base, the note why and nothing compared. */
+function checkExceptions({ found, show, before }, g, site, config) {
   if (!found.commit) return { base: null, note: found.note, added: [], findings: [] };
   const added = [...configAdded(before ?? {}, config), ...baselineAdded(before, config), ...disablesAdded(g, site, show), ...emailGuardAdded(site, show)];
   return { base: { ref: found.ref, commit: found.commit }, note: null, added, findings: [...exceptionFindings(found, before, config, added), ...baselineFindings(found, before, config)] };
+}
+
+/** The posts' URL prefix as site.ts writes it (the starter's when it names none). */
+const postPrefix = (text) => text.match(/^\s*postPrefix:\s*["'`]([^"'`\n]+)["'`]/m)?.[1] ?? "/blog-post";
+/** A page or post file of the engine's: directly in its folder, not `_`-prefixed. */
+const pageFile = (file) => new RegExp(`^${PAGES}/[^/_][^/]*\\.ya?ml$`).test(file);
+const postFile = (file) => new RegExp(`^${POSTS}/[^/_][^/]*\\.mdx?$`).test(file);
+const parsed = (text) => { try { return parseYaml(text); } catch { return null; } };
+/** A post's frontmatter says draft: true. */
+const draftPost = (text) => parsed(text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "")?.draft === true;
+
+/** The routes page and post files answer: route → file; a page's its seo.path, a post's the prefix and its slug, a draft's only with `drafts` (a draft keeps its URL; one was never indexed). */
+function routesOf(files, read, prefix, { drafts }) {
+  const routes = new Map();
+  for (const file of files) {
+    const text = read(file);
+    if (text === null) continue;
+    if (pageFile(file)) { const route = parsed(text)?.seo?.path; if (typeof route === "string") routes.set(route, file); }
+    if (postFile(file) && (drafts || !draftPost(text))) routes.set(`${prefix}/${path.basename(file).replace(/\.mdx?$/, "")}`, file);
+  }
+  return routes;
+}
+
+/** The `from` of every redirect content/redirects.yaml holds (none when it does not read). */
+function redirectedPaths(site) {
+  const list = parsed(site.read(REDIRECTS) ?? "");
+  return new Set((Array.isArray(list) ? list : []).map((entry) => entry?.from).filter((from) => typeof from === "string"));
+}
+
+/** The retired pass: each URL a page or a published post answered at the merge base that nothing answers now and no redirect names — warnings, with the fix; none without a base. */
+function checkRetired({ found, show }, { git }, site) {
+  if (!found.commit) return [];
+  const listed = git(["ls-tree", "-r", "--name-only", found.commit, "--", PAGES, POSTS]);
+  if (listed.status !== 0) return [];
+  const prefix = postPrefix(site.read(SITE_CONFIG) ?? "");
+  const then = routesOf(listed.stdout.split("\n").filter(Boolean), show, prefix, { drafts: false });
+  const now = routesOf([...site.walk(PAGES), ...site.walk(POSTS)], site.read, prefix, { drafts: true });
+  const redirected = redirectedPaths(site);
+  return [...then].filter(([route]) => !now.has(route) && !redirected.has(route)).map(([route, file]) => {
+    const moved = site.exists(file) ? `its route was ${route} at ${found.ref} and is no longer` : `gone since ${found.ref}`;
+    const keep = postFile(file) ? ", or keep the post as a draft (draft: true), which keeps its URL" : "";
+    return finding("retired", file, `${moved}: ${route} answers 404 now, and no redirect in ${REDIRECTS} names it — an indexed URL never changes without one`, `add "- from: ${route}" with "to: <the page that has its content now>" to ${REDIRECTS} (/editorial:retire-content writes it)${keep}`);
+  });
 }
 
 /** package.json's lint and build hold the gates (./gates.mjs); site.ts's `guardEmail`, when off, says why. */
@@ -219,20 +270,61 @@ function checkScripts(site, pkg) {
 }
 
 /** What CI runs: every workflow that runs on pull requests, its commands and its branch filter; { flows: [{ file, commands, branches, ignore }], unreadable }. */
-function workflowCommands(site) {
+/** The site's workflows that run on pull requests, parsed: { flows: [{ file, flow }], unreadable }. */
+function pullRequestFlows(site) {
   const files = site.walk(WORKFLOWS).filter((file) => /\.ya?ml$/.test(file)).sort();
   const onPullRequests = (on) => on === "pull_request" || (Array.isArray(on) && on.includes("pull_request")) || (isMap(on) && "pull_request" in on);
   const out = { flows: [], unreadable: [] };
   for (const file of files) {
     let flow;
     try { flow = parseYaml(site.read(file)); } catch { out.unreadable.push(file); continue; }
-    if (!onPullRequests(flow?.on)) continue;
-    const trigger = isMap(flow.on) ? flow.on.pull_request : null;
-    const runs = Object.values(flow.jobs ?? {}).flatMap((job) => (Array.isArray(job?.steps) ? job.steps : [])).map((step) => step?.run).filter((run) => typeof run === "string");
-    const commands = runs.flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean);
-    out.flows.push({ file, commands, branches: listOf(trigger?.branches), ignore: listOf(trigger?.["branches-ignore"]) });
+    if (onPullRequests(flow?.on)) out.flows.push({ file, flow });
   }
   return out;
+}
+
+/** A job's steps, and the commands its `run:` lines hold. */
+const stepsOf = (job) => (Array.isArray(job?.steps) ? job.steps : []);
+const commandsOf = (steps) => steps.map((step) => step?.run).filter((run) => typeof run === "string").flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean);
+
+function workflowCommands(site) {
+  const { flows, unreadable } = pullRequestFlows(site);
+  return {
+    unreadable,
+    flows: flows.map(({ file, flow }) => {
+      const trigger = isMap(flow.on) ? flow.on.pull_request : null;
+      return { file, commands: commandsOf(Object.values(flow.jobs ?? {}).flatMap(stepsOf)), branches: listOf(trigger?.branches), ignore: listOf(trigger?.["branches-ignore"]) };
+    }),
+  };
+}
+
+const PR_PREVIEW = /^(?:(?:pnpm (?:exec )?|npx )?agentic-cms|pnpm kit) pr-preview(?:\s|$)/;
+const HAND_PREVIEW = /\b(?:opennextjs-cloudflare upload|wrangler versions upload)\b.*--preview-alias\b/;
+const TEMPLATE_PREVIEW = "node_modules/agentic-cms/templates/site/verify.yml's preview job";
+/** The token may write pull request comments: the job's permissions, else the workflow's; none set is the repository's default, which the check cannot see. */
+const writesComments = (permissions) => permissions === undefined || permissions === "write-all" || (isMap(permissions) && permissions["pull-requests"] === "write");
+const flagged = (...envs) => envs.some((env) => String(env?.AGENTIC_CMS_PREVIEW ?? "") === "1");
+
+/**
+ * The preview job (docs/preview.md), warnings that fail nothing: one that
+ * runs pr-preview without the permission to comment or the history it
+ * diffs, and one that uploads a preview version by hand without
+ * AGENTIC_CMS_PREVIEW=1, which would be indexable and deliver its forms.
+ */
+function previewWarnings(site) {
+  return pullRequestFlows(site).flows.flatMap(({ file, flow }) => Object.entries(flow.jobs ?? {}).flatMap(([name, job]) => {
+    const steps = stepsOf(job);
+    const commands = commandsOf(steps);
+    if (commands.some((command) => PR_PREVIEW.test(command))) {
+      const checkout = steps.find((step) => /^actions\/checkout@/.test(step?.uses ?? ""));
+      return [
+        ...(writesComments(job.permissions ?? flow.permissions) ? [] : [finding("ci", file, `its ${name} job runs agentic-cms pr-preview without permissions: pull-requests: write, so the preview's comment cannot be posted`, `give the job permissions: { contents: read, pull-requests: write }, as ${TEMPLATE_PREVIEW} has`)]),
+        ...(checkout && Number(checkout.with?.["fetch-depth"] ?? 1) !== 0 ? [finding("ci", file, `its ${name} job checks out without the history, so pr-preview cannot list the pages the change touches`, `fetch-depth: 0 on its checkout step, as ${TEMPLATE_PREVIEW} has`)] : []),
+      ];
+    }
+    const hand = steps.find((step) => typeof step?.run === "string" && HAND_PREVIEW.test(step.run));
+    return hand && !flagged(flow.env, job.env, ...steps.map((step) => step?.env)) ? [finding("ci", file, `its ${name} job uploads a preview version without AGENTIC_CMS_PREVIEW=1: that preview is indexable, and its forms deliver to the site's destination`, `run agentic-cms pr-preview in the job instead, which builds and uploads with the flag (${TEMPLATE_PREVIEW})`)] : [];
+  }));
 }
 
 /** A trigger's branch filter as a list of patterns (null when it sets none). */
@@ -276,13 +368,14 @@ const CI_STEPS = [
  * A workflow on pull requests runs the gates; a warning when the one that
  * runs the lint leaves out, in its branch filter, a branch the site's pull
  * requests go into (`targets()`, asked only then), whose pull requests then
- * get none of its checks. { findings, warnings }.
+ * get none of its checks; and the preview job's warnings (previewWarnings()).
+ * { findings, warnings }.
  */
 function checkCi(site, pkg, kit, targets = () => []) {
   const workflows = workflowCommands(site);
   const linting = workflows.flows.filter((flow) => flow.commands.some((command) => LINT_STEP.test.test(command) || BUILD_STEP.test.test(command)));
   const left = linting.length ? targets().filter((branch) => !linting.some((flow) => runsInto(branch, flow))) : [];
-  const warnings = left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : [];
+  const warnings = [...(left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : []), ...previewWarnings(site)];
   return { findings: ciGates(site, pkg, kit, workflows), warnings };
 }
 
@@ -376,13 +469,15 @@ export async function checkSite({ root, fs, git, env = {}, base, components = co
   const g = resolveGuard(config);
   const pkg = readJson(site.read("package.json"));
   const kit = pkg?.name === KIT_NAME;
-  const exceptions = checkExceptions({ git, env, base }, g, site, config);
+  const at = atBase({ git, env, base });
+  const exceptions = checkExceptions(at, g, site, config);
+  const retired = checkRetired(at, { git }, site);
   const tools = checkTools(site, config, kit);
   const ci = checkCi(site, pkg, kit, () => pullRequestTargets({ git, env }));
   const own = [...checkRounds(g, site), ...exceptions.findings, ...checkScripts(site, pkg), ...ci.findings, ...tools.findings, ...checkLeftovers({ root, fs }, site, kit)];
   const baseline = hold ? baselinePass(config, [...componentFindings, ...own], site) : { findings: [...componentFindings, ...own], held: [], warnings: [] };
   const rounds = folders(site, g.app).filter((name) => DEMO_FOLDER.test(name)).length;
-  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...ci.warnings, ...tools.warnings, ...baseline.warnings] };
+  return { config: CONFIG_FILE, kit, components: summary, rounds, base: exceptions.base, history: exceptions.note, added: exceptions.added, baseline: { entries: validBaseline(config.baseline).length, held: baseline.held.length }, findings: baseline.findings, warnings: [...componentWarnings, ...ci.warnings, ...tools.warnings, ...retired, ...baseline.warnings] };
 }
 
 /** Each exception added since the base, with its reason. */

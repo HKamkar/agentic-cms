@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # The blog index (/blog): its SEO block, its structured data (a Blog
 # listing every published post, nothing to declare) and its one section.
 # The posts themselves are content/blog/*.md. Every field is checked at

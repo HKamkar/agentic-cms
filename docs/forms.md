@@ -147,8 +147,12 @@ one sink that awaits both and throws if either failed.
 | A Node server ([deploy.md](deploy.md)) | The host's app settings, on every slot or environment that runs the site. The standalone server runs with `NODE_ENV=production`, so none set means 503. |
 | Cloudflare Workers | `wrangler secret put FORM_WEBHOOK_URL`, the same for the secret. OpenNext hands them to the app as `process.env` while a request is served, which is why `formSink()` is read per request. The example's `global_fetch_strictly_public` flag lets a Worker reach public addresses only. |
 
-A preview or staging deployment points at a test destination of its own, or
-at none: a 503 there is the form's error message, not a lost lead.
+A preview never reaches the site's destination: with
+`AGENTIC_CMS_PREVIEW=1` in its environment (the kit's preview job sets it
+as the version's var, [preview.md](preview.md)), `createFormHandler()`
+delivers every submission to the server's log and never reads the sink. A
+staging deployment points at a test destination of its own, or at none: a
+503 there is the form's error message, not a lost lead.
 
 ## Receiving the webhook
 

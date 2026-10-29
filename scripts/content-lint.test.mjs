@@ -86,6 +86,7 @@ const CLEAN = {
   "use-cases.yaml": "- sector: Healthcare\n  title: Hospitals\n  text: Private AI inside the perimeter.\n  icon: /images/use-cases/health.svg\n",
   "pages/blog.yaml": ["seo:", "  path: /blog", "  title: Insights on private AI | nimbus®", "  description: Notes on running private AI under your own control, for founders selling into regulated industries.", "  ogImage: /images/blog-og.jpg", '  updated: "2026-09-01"', "  breadcrumb: Blog", "jsonld:", "  type: Blog", "sections:", "  - type: blog-index", "    label: From the team", "    heading: Insights", "    listEyebrow: Latest", "    listHeading: Every post", "    cta: Run private AI"].join("\n") + "\n",
   "blog/x.md": `---\n${FRONTMATTER}\n---\n${BODY}`,
+  "redirects.yaml": "[]\n",
 };
 /** Body line numbers: the frontmatter block ends at line OFFSET; a paragraph appended after BODY lands on APPENDED. */
 const OFFSET = 1 + FRONTMATTER.split("\n").length + 1;
@@ -119,7 +120,7 @@ describe("the clean tree", () => {
   test("yields nothing", () => assert.deepEqual(run(), []));
   test("the real content tree never fails the build", () => {
     const { findings, collections } = lint({ root: REPO, now: NOW });
-    assert.equal(collections.length, 7);
+    assert.equal(collections.length, 8);
     assert.deepEqual(findings.filter((f) => f.level === "FAIL").map(format), []);
   });
   test("format prints LEVEL file rule: path problem, with no double space for a file-level finding", () => {
@@ -134,7 +135,7 @@ describe("the engine comes first", () => {
       for (const rel of IMAGES) publicFile(root, rel);
       const { findings, collections } = lint({ root, voice: VOICE, now: NOW });
       has(findings.map(format), "FAIL content/blog/x.md schema: title is required");
-      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:1", "categories:2", "posts:0", "reviews:1", "faqs:1", "useCases:1", "pages:1"]);
+      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:1", "categories:2", "posts:0", "reviews:1", "faqs:1", "useCases:1", "pages:1", "redirects:0"]);
     });
   });
   test("a missing collection file is a FAIL on the file", () => {
@@ -293,6 +294,42 @@ describe("body rules", () => {
   });
 });
 
+describe("redirect rules", () => {
+  const redirects = (...entries) => ({ "redirects.yaml": entries.map(([from, to, more = ""]) => `- from: ${from}\n  to: ${to}\n${more}`).join("") });
+  test("a redirect to a page, a published post, a fragment of one or an https:// URL, from a path nothing answers, passes", () => {
+    assert.deepEqual(run(redirects(["/old-blog", "/blog"], ["/2019/x", "/blog-post/x"], ["/news", "/blog#latest"], ["/away", "https://nimbus.dev/x", "  permanent: false\n"])), []);
+  });
+  test("redirect-from: a path listed twice, or a live page's or published post's path, which the redirect would hide", () => {
+    const lines = run(redirects(["/old", "/blog"], ["/old", "/blog"], ["/blog", "/blog-post/x"], ["/blog-post/x", "/blog"]));
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [1].from "/old" is listed already at [0]: one entry per path');
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [2].from "/blog" is a live page\'s or post\'s (content/pages/blog.yaml): the redirect would hide it');
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [3].from "/blog-post/x" is a live page\'s or post\'s (content/blog/x.md)');
+  });
+  test("a draft's URL answers nothing in production: a redirect may take it, and none may land on it", () => {
+    const draft = { "blog/x.md": post(`${FRONTMATTER}\ndraft: true`) };
+    const lines = run({ ...draft, ...redirects(["/blog-post/x", "/blog"], ["/old", "/blog-post/x"]) });
+    lacks(lines.filter((line) => line.includes("[0].")), "redirect-from");
+    has(lines, 'FAIL content/redirects.yaml redirect-chain: [1].to "/blog-post/x" is itself redirected ([0]): a chain — point it at "/blog" directly');
+    has(run({ ...draft, ...redirects(["/old", "/blog-post/x"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/blog-post/x" is no page, no published post and not the blog index: the redirect would land on a 404');
+  });
+  test("redirect-chain: a to that is another entry's from, and a loop, its own or through others", () => {
+    has(run(redirects(["/a", "/b"], ["/b", "/blog"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/b" is itself redirected ([1]): a chain — point it at "/blog" directly');
+    has(run(redirects(["/a", "/b"], ["/b", "/a"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/b" leads back to "/a" ([0] → [1] → [0]): a loop');
+    has(run(redirects(["/a", "/a?x=1"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/a?x=1" leads back to "/a" ([0]): a loop');
+  });
+  test("redirect-to: a path no page and no post answers", () => {
+    has(run(redirects(["/old", "/nowhere"])), 'FAIL content/redirects.yaml redirect-to: [0].to "/nowhere" is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL');
+  });
+  test("the schema: a from with a trailing slash or a pattern, a to that is neither a path nor an https:// URL, a permanent that is no boolean", () => {
+    const lines = run(redirects(["/old/", "http://nimbus.dev"]));
+    has(lines, "FAIL content/redirects.yaml schema: [0].from must be a path the site no longer answers: /words or /words/more, without a trailing slash, a query or a pattern");
+    has(lines, "FAIL content/redirects.yaml schema: [0].to must be a path of the site");
+    const more = run(redirects(["/old/:slug", "/blog", "  permanent: yes\n"]));
+    has(more, "FAIL content/redirects.yaml schema: [0].from must be a path");
+    has(more, "FAIL content/redirects.yaml schema: [0].permanent must be true or false");
+  });
+});
+
 describe("filesystem rules", () => {
   test("a referenced image that does not exist fails, for every collection that carries one", () => {
     const lines = run({}, { images: [] });
@@ -370,7 +407,7 @@ describe("the starter's placeholders and the kit example's brand", () => {
       scaffold(target, { kitRoot: REPO, version: "0.8.2", name: "Nimbus Notes", now: NOW, log: () => {} });
       const { site: own } = await import(pathToFileURL(path.join(target, "src/config/site.ts")).href);
       const { findings, collections } = lint({ root: target, site: own, now: NOW });
-      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2"]);
+      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2", "redirects:0"]);
       assert.deepEqual(findings.filter((f) => f.rule !== "placeholder").map(format), [], "nothing but the placeholders");
       assert.ok(findings.length > 40 && findings.every((f) => f.level === "WARN"), "each placeholder by field, a warning while the site is written");
       for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) assert.ok(findings.some((f) => f.file === file), `${file} has placeholders`);

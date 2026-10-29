@@ -24,6 +24,14 @@ live next to its code and ship with the package (under
 `content/README.md`, the voice `content/VOICE.md`, and the editorial
 plugin's contract `plugin/README.md`.
 
+- [schema.md](schema.md) — a JSON Schema for every content file
+  (`agentic-cms schema`, `content/_schemas/`): what a field says, the line
+  an editor reads it by, the check in every build, what an agent reads
+  before writing a file.
+- [redirects.md](redirects.md) — redirects as content
+  (`content/redirects.yaml`): what an entry says, how `next.config.ts`
+  serves it, what the lint, the site check and the SEO audit hold, and
+  what `retire-content` writes.
 - [forms.md](forms.md) — what a form can ask (every ordinary field type,
   notes, groups, a prefill from the URL) and forms that deliver: the
   endpoint route, where submissions go (a webhook, a provider's API as a sink), the environment
@@ -98,6 +106,10 @@ The build, its gates and the setup.
 - [upgrade.md](upgrade.md) — `agentic-cms upgrade`: a site moved to a
   release by that release's own code — the pin, each migration in between,
   the agent files, the steps left by hand, the verify.
+- [preview.md](preview.md) — a preview link on every pull request: the
+  opt-in CI job (`agentic-cms pr-preview`), the variable and the secrets,
+  the pages a change touches, what keeps a preview from being the site
+  (noindex, forms to a log, no analytics), the other hosts.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
   next: the tag, the agent files, and each release's own steps, by hand.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to

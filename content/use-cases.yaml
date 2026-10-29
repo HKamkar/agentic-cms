@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./_schemas/use-cases.json
 # The cards of the "Use cases" section, in order; the same list is the
 # ItemList structured data of any page that shows the section. Each card:
 # sector (the tag), title, text, icon (under public/images/use-cases/). The

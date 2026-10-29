@@ -44,7 +44,7 @@ export const FAMILIES = [
   { group: "demo", layer: "design tools" },
   { group: "site", layer: "the site's commands" },
   { group: "default gates", layer: "the site's commands", about: "what every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`, and `guard-email` last on a site whose `src/config/site.ts` turns `guardEmail` on (what `init` writes for a new site); CI runs them on every pull request" },
-  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host" },
+  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds when it needs them: to its build, `critical-css` for the first paint and `assemble` last for a Node host; to its CI, `pr-preview` for a preview link on every pull request" },
 ];
 
 export const SPECS = {
@@ -77,11 +77,21 @@ export const SPECS = {
     exit: { 0: "printed" },
   },
   docs: {
-    command: "docs", script: "content-docs", group: "content", site: true, summary: "the field tables of every collection, from the schemas, into content/README.md between its markers",
+    command: "docs", script: "content-docs", group: "content", site: true, summary: "the field tables of every collection, from the schemas, into content/README.md between its markers, and the JSON Schemas under content/_schemas/ (schema)",
     usage: "agentic-cms docs [--check]",
-    flags: { check: { type: "boolean", help: "exit 1 when the tables are out of date instead of writing them (pnpm build runs this)" } },
-    examples: ["agentic-cms docs                          # writes the field tables into content/README.md", "agentic-cms docs --check                  # exit 1 when they are stale (pnpm build runs this)"],
+    flags: { check: { type: "boolean", help: "exit 1 when the tables or the JSON Schemas (schema --check) are out of date instead of writing them (pnpm build runs this)" } },
+    examples: ["agentic-cms docs                          # writes the field tables into content/README.md and the schemas into content/_schemas/", "agentic-cms docs --check                  # exit 1 when either is stale (pnpm build runs this)"],
     exit: { 0: "written, or up to date", 1: "out of date (--check)", 2: "content/README.md has no markers" },
+  },
+  schema: {
+    command: "schema", script: "content-schema", group: "content", site: true, summary: "the JSON Schema of every collection, from its zod schema, into content/_schemas/: an editor checks a YAML content file as it is typed (its first line names its schema), an agent reads what a file may hold before writing one",
+    usage: "agentic-cms schema [--check] [--lines]",
+    flags: {
+      check: { type: "boolean", help: "exit 1 when a file under content/_schemas/ is missing, differs from the code or names a collection there is none of, instead of writing them (docs --check runs this, so every pnpm build does)" },
+      lines: { type: "boolean", help: "also open each YAML content file, and each template under content/_templates/ of a collection, with its schema's line where it lacks it: # yaml-language-server: $schema=<path from the file> (ignored with --check)" },
+    },
+    examples: ["agentic-cms schema                        # writes content/_schemas/<collection>.json", "agentic-cms schema --check                # exit 1 when one is stale (docs --check runs this)", "agentic-cms schema --lines                # and the schema line atop each YAML content file that lacks it"],
+    exit: { 0: "written, or up to date", 1: "out of date (--check)" },
   },
   seo: {
     command: "seo", script: "check-seo", group: "default gates", site: true, summary: "the audit of every prerendered page after next build: title, description, canonical, Open Graph, headings, images, JSON-LD, robots, sitemap, internal links",
@@ -397,6 +407,21 @@ export const SPECS = {
     exit: { 0: "the package holds every file of public/ and .next/static", 1: "a placeholder left from the starter under content/ or src/config/ (each named by line; nothing packaged unless AGENTIC_CMS_PLACEHOLDERS=warn, for a CI run that deploys nothing), a file missing or different, or a copy nested inside the folder it should fill (each named)", 2: "usage, or no standalone build (output: \"standalone\", then next build)" },
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
   },
+  "pr-preview": {
+    command: "pr-preview", script: "pr-preview", group: "opt-in steps", site: true, summary: "a pull request's preview on Cloudflare Workers, the CI step of a site that opts in (templates/site/verify.yml's preview job): the site built as production with AGENTIC_CMS_PREVIEW=1 (every page noindex, forms delivered to a log, no analytics tag), uploaded as a version that is not deployed under the alias pr-<n> — the same link on every push — and one comment on the pull request, updated on each push, with the link and the pages the change touches; a fork's pull request, or a run without the Cloudflare secrets, makes none and says so",
+    usage: "agentic-cms pr-preview [--pr <n>] [--base <ref>] [--no-build] [--no-comment] [--dry-run] [--json]",
+    flags: {
+      pr: { type: "number", default: 0, value: "<n>", help: "the pull request's number (0: from GitHub's event, GITHUB_EVENT_PATH)" },
+      base: { type: "string", value: "<ref>", help: "what the change is diffed against for the pages it touches (default: the pull request's base branch on origin, GITHUB_BASE_REF; else origin/HEAD)" },
+      "no-build": { type: "boolean", help: "upload the OpenNext build there is (.open-next/, built with AGENTIC_CMS_PREVIEW=1) instead of building" },
+      "no-comment": { type: "boolean", help: "post nothing: the link and the comment are printed (by default the comment is posted, or the one there updated, with GITHUB_TOKEN)" },
+      "dry-run": { type: "boolean", help: "print the pages the change touches and the comment: nothing built, uploaded or posted, no secrets asked" },
+      json: { type: "boolean", help: "print the result as one JSON document (the progress and the build's output go to stderr)" },
+    },
+    examples: ["agentic-cms pr-preview                    # the site's verify.yml preview job: build, upload pr-<n>, comment", "agentic-cms pr-preview --pr 12 --dry-run  # the pages a change touches and the comment, nothing uploaded"],
+    exit: { 0: "previewed, or no preview made and why said (a fork's pull request, no secrets)", 1: "the build, the upload or the comment failed", 2: "no pull request, or a site without @opennextjs/cloudflare or a Wrangler config" },
+    json: "{ status: \"previewed\" | \"skipped\" | \"dry-run\", pr, alias, url, reason?, touched: { every, pages: [{ route, file, state }] } | null, body, comment: \"created\" | \"updated\" | null }",
+  },
   "check-components": {
     command: "check-components", script: "check-components", group: "default gates", summary: "the component library's placement guard, the first pass of check-site (which pnpm lint runs after ESLint), alone: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them, every owner and every allow entry with its reason; and the engines held: the required agentic-cms/* rules as ESLint resolves them for a sample file per layer, set as componentRules() makes them of the config, and every inline disable of one with its reason, listed; what the preferred tier guides warns and fails nothing — a transition declared in CSS outside the motion layer, an inline disable of another rule with no reason, a preferred rule set otherwise than the config makes it; the config is src/config/components.json",
     usage: "agentic-cms check-components [--json]",
@@ -406,7 +431,7 @@ export const SPECS = {
     json: "{ config, layers: { motion, ui, patterns, sections, sectionFolders }, inherited, candidates, disables: [{ file, line, rules, reason }], allowed: [{ rule, files, reason }], findings: [{ check: layers|catalogue|registry|routes|components|styles|keyframes|inherited|owners|allow|disables|preset, file, problem, fix }], warnings: [{ check: transitions|disables|preset, file, problem, fix }] }",
   },
   "check-site": {
-    command: "check-site", script: "check-site", group: "default gates", summary: "the site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list and the baseline only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; what is left of the kit's example (its brand by line, its posts, catalogue pages, pictures and collection entries by path, by bytes and by entry); and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason. A site that took the rules with engine bypasses, sections the composition rules fail and the example's leftovers keeps them in the baseline, which --baseline writes and every later run holds",
+    command: "check-site", script: "check-site", group: "default gates", summary: "the site check, which pnpm lint runs after ESLint: every pass of check-components, then the site's own — a *-demo route only demo new's (its demo.json) or the lab's, a round's pictures only while its route is there; every exception added since the merge base listed with its reason (a route exception, an owner, an allow entry, an ignores glob, an inline disable), the frozen inherited list and the baseline only shrinking; package.json's lint (ESLint, then check-site) and build (pnpm lint, lint --production, docs --check, next build, seo, and guard-email when src/config/site.ts turns guardEmail on) holding the gates, a guardEmail turned off saying why ({ off: <why> }, listed with the exceptions once added); a workflow on pull requests running the lint, the tests, the build and the agent-file check; what is left of the kit's example (its brand by line, its posts, catalogue pages, pictures and collection entries by path, by bytes and by entry); and, as warnings that fail nothing, a script of the site's own under scripts/ that drives Playwright, runs sharp over public/ or starts next dev, and a machine's address in next.config.*, each naming the kit's command and quiet with an allow entry of agentic-cms/site-tools and its reason, and a URL a page or a published post answered at the merge base that nothing answers now and no entry of content/redirects.yaml names (retired: the redirect, or the post kept as a draft). A site that took the rules with engine bypasses, sections the composition rules fail and the example's leftovers keeps them in the baseline, which --baseline writes and every later run holds",
     usage: "agentic-cms check-site [--baseline] [--base <ref>] [--json]",
     flags: {
       baseline: { type: "boolean", help: "write what the site holds now of the rules a baseline holds — the engines' findings (agentic-cms/copy, head, forms, tags, email) and the composition rules' (no-restricted-syntax, react/forbid-elements, react/no-multi-comp, no-restricted-imports) as its ESLint reads them, a round made by hand (rounds) and the example's leftovers (example-brand, example-content) — into src/config/components.json's baseline, one entry per file and rule with its count and an empty reason: the whole list while the merge base has none (the pull request that takes the rules, each run on it writing the list again and keeping each entry's reason), else the list shrunk to what is left, an entry gone or lowered; it never grows one, refusing an entry new or raised. The preferred tier's warnings and the findings of the gates and the config are never baselined (docs/migrating-to-0.8.2.md)" },

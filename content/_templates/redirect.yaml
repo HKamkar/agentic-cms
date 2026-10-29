@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../_schemas/redirects.json
+# One entry of content/redirects.yaml. Copy the block below to the end of
+# that file (in place of its [] while it has none). The redirectSchema
+# fields (src/lib/content/README.md, "redirects"):
+- from: /old-path          # required: the path that was indexed, without a trailing slash; never a live page's or post's
+  to: /new-path            # required: a page's path, a post's URL, the blog index or an https:// URL; never another entry's from
+  # permanent: false       # only for a temporary redirect (307); left out, it is permanent (308)
