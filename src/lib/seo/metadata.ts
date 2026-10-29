@@ -39,12 +39,13 @@ export function unlistedMetadata(): Metadata {
 
 /**
  * What every page's head shares with the root layout's: Open Graph's site
- * name and locale, and the link to the feed.
+ * name and locale, and the link to the feed — `feed`, the language's own
+ * (/de/feed.xml) in a language with posts, else the site's.
  */
-function siteHead(site: SiteConfig) {
+function siteHead(site: SiteConfig, feed = "/feed.xml") {
   return {
     openGraph: { siteName: site.name, ...(site.ogLocale ? { locale: site.ogLocale } : {}) },
-    alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
+    alternates: { types: { "application/rss+xml": `${site.url}${feed}` } },
   };
 }
 
@@ -54,8 +55,8 @@ function siteHead(site: SiteConfig) {
  * `alternates` replace the layout's whole, so without this a page would
  * lose og:site_name, og:locale and the feed link the root layout declares.
  */
-function withSiteHead(site: SiteConfig, metadata: Metadata): Metadata {
-  const shared = siteHead(site);
+function withSiteHead(site: SiteConfig, metadata: Metadata, feed?: string): Metadata {
+  const shared = siteHead(site, feed);
   return { ...metadata, openGraph: { ...shared.openGraph, ...metadata.openGraph }, alternates: { ...shared.alternates, ...metadata.alternates } };
 }
 
@@ -69,23 +70,23 @@ function withSiteHead(site: SiteConfig, metadata: Metadata): Metadata {
  * preview build (AGENTIC_CMS_PREVIEW=1) adds noindex, nofollow, which every
  * page inherits: a preview is never indexed.
  */
-export function createRootMetadata(site: SiteConfig, home: () => PageSeo) {
+export function createRootMetadata(site: SiteConfig, home: () => PageSeo, feed?: string) {
   return function rootMetadata(): Metadata {
     const { title, description } = home();
     return {
       metadataBase: new URL(site.url),
       title: { default: title, template: `%s | ${site.name}` },
       description,
-      openGraph: { type: "website", ...siteHead(site).openGraph },
+      openGraph: { type: "website", ...siteHead(site, feed).openGraph },
       twitter: { card: "summary_large_image" },
-      alternates: siteHead(site).alternates,
+      alternates: siteHead(site, feed).alternates,
       ...(isPreview() ? { robots: { index: false, follow: false } } : {}),
     };
   };
 }
 
-/** The head builders of a page and a post, with the site's parts in each. */
-export function createMetadata(site: SiteConfig, { postUrl }: Urls) {
+/** The head builders of a page and a post, with the site's parts in each; `feed` the language's feed (siteHead()). */
+export function createMetadata(site: SiteConfig, { postUrl }: Urls, feed?: string) {
   /**
    * The head of a post from its frontmatter: the SEO title (or `title | brand`
    * through the layout template), description, canonical, Open Graph article
@@ -96,7 +97,7 @@ export function createMetadata(site: SiteConfig, { postUrl }: Urls) {
     const description = post.seoDescription ?? post.excerpt;
     const url = postUrl(post.slug);
     const title = post.seoTitle ?? post.title;
-    return withSiteHead(site, {
+    const head: Metadata = {
       title: post.seoTitle ? { absolute: post.seoTitle } : post.title,
       description,
       keywords: post.keywords,
@@ -114,11 +115,12 @@ export function createMetadata(site: SiteConfig, { postUrl }: Urls) {
         tags: post.keywords,
       },
       twitter: { card: "summary_large_image", title, description, images: post.ogImage ? [post.ogImage] : undefined },
-    });
+    };
+    return withSiteHead(site, head, feed);
   }
 
   /** A page's head from its seo block (`pageMetadata()`), with the site's parts. */
-  const sitePageMetadata = (seo: PageSeo): Metadata => withSiteHead(site, pageMetadata(seo));
+  const sitePageMetadata = (seo: PageSeo): Metadata => withSiteHead(site, pageMetadata(seo), feed);
 
   return { pageMetadata: sitePageMetadata, postMetadata, unlistedMetadata };
 }

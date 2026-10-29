@@ -39,7 +39,14 @@ const ROOT = process.cwd();
 const APP = path.join(ROOT, ".next/server/app");
 const PUBLIC = path.join(ROOT, "public");
 const SITE_URL = site.url;
-const FEED_BUILT = fs.existsSync(path.join(APP, "feed.xml.body"));
+/** Whether a feed is built: the site's, or a language's under its prefix. */
+const feedBuilt = (prefix = "") => fs.existsSync(path.join(APP, prefix, "feed.xml.body"));
+/** The feed a page's head links to: its language's own when that one is built, else the site's when built, else none. */
+const feedOf = (route) => {
+  const { prefix } = kit.locales.of(route);
+  if (prefix && feedBuilt(prefix)) return `${SITE_URL}/${prefix}/feed.xml`;
+  return feedBuilt() ? `${SITE_URL}/feed.xml` : null;
+};
 
 const LIMITS = {
   title: { warnMax: 60, failMax: 70 },
@@ -97,7 +104,7 @@ async function checkPage({ route, html }, ctx) {
   ctx.languages.set(route, { lang: html.match(/<html\b[^>]*\blang="([^"]*)"/)?.[1], ogLocale: metas(html, "property", "og:locale")[0], alternates: hreflangs(html) });
   await checkSocial(route, html);
   checkContent(route, html);
-  checkJsonLd(route, html, route.startsWith("/blog-post/"));
+  checkJsonLd(route, html, kit.locales.unprefixed(route).startsWith("/blog-post/"));
   checkLinks(route, html, ctx);
   if (!preview) ctx.indexable.push(route);
 }
@@ -152,9 +159,10 @@ const SITE_HEAD = "the route's head is kit.seo.pageMetadata() or postMetadata(),
 function checkSiteHead(route, html) {
   const siteName = metas(html, "property", "og:site_name")[0];
   if (siteName !== site.name) headPart(route, "open-graph", siteName ? `og:site_name "${siteName}" is not site.name "${site.name}"` : `og:site_name missing: ${SITE_HEAD}`);
-  if (!FEED_BUILT) return;
+  const feed = feedOf(route);
+  if (!feed) return;
   const feeds = tags(head(html), "link").filter((a) => a.rel === "alternate" && a.type === "application/rss+xml").map((a) => a.href);
-  if (!feeds.includes(`${SITE_URL}/feed.xml`)) headPart(route, "feed", feeds.length ? `the feed link is ${feeds.join(", ")}, not ${SITE_URL}/feed.xml` : `no <link rel="alternate"> to the feed: ${SITE_HEAD}`);
+  if (!feeds.includes(feed)) headPart(route, "feed", feeds.length ? `the feed link is ${feeds.join(", ")}, not ${feed}` : `no <link rel="alternate"> to the feed: ${SITE_HEAD}`);
 }
 
 /** Headings, images and the html element. */

@@ -166,3 +166,66 @@ describe("the kit's head and sitemap in a language", () => {
     });
   });
 });
+
+describe("posts in a language", () => {
+  const GERMAN_POST = VALID_POST.replace("title: A post", "title: Ein Beitrag");
+  const FAQ = "\n## Häufige Fragen\n\n### Warum Dateien?\n\nWeil man sie prüfen kann.\n";
+  const TREE = {
+    ...postTree(VALID_POST),
+    "blog/de/x.md": `---\n${GERMAN_POST}\n---\n\nText.\n${FAQ}`,
+    "authors.de.json": JSON.stringify({ "h-kamkar": { name: "H. Kamkar" } }),
+    "categories.de.json": JSON.stringify({ fintech: { name: "Finanztechnik" } }),
+    "pages/home.yaml": page("/", "Brand: what it does"),
+    "pages/blog.yaml": page("/blog", "The Brand blog"),
+    "pages/de/home.yaml": page("/de", "Brand: was es tut").replace("breadcrumb: Page", "breadcrumb: Start"),
+    "pages/de/blog.yaml": page("/de/blog", "Der Brand-Blog").replace("breadcrumb: Page", "breadcrumb: Blog"),
+  };
+  const kitOf = (site: SiteConfig = { ...WITH_DE, locales: [{ ...DE, faqHeading: "Häufige Fragen" }] }) => createKit({ site, sections });
+
+  test("a language's post carries its language, its URL under the prefix and its dates in the language; the default's are as they were", () => {
+    withContent(TREE, () => {
+      const kit = kitOf();
+      const [german] = kit.blog.in("de").getAllPosts();
+      const [english] = kit.blog.getAllPosts();
+      assert.deepEqual([german.locale, english.locale], ["de", undefined]);
+      assert.deepEqual([kit.urls.postUrl("x", german.locale), kit.urls.postUrl("x", english.locale)], ["/de/blog-post/x", "/blog-post/x"]);
+      assert.deepEqual([kit.blog.in("de").formatDate("2026-05-02"), kit.blog.formatDate("2026-05-02")], ["2. Mai 2026", "May 2, 2026"]);
+    });
+  });
+
+  test("a post's head, breadcrumb and structured data are its language's, its versions named, its FAQ under the language's heading", () => {
+    withContent(TREE, () => {
+      const { blog, seo } = kitOf();
+      const [german] = blog.in("de").getAllPosts();
+      const head = seo.postMetadata(german);
+      assert.deepEqual(head.alternates, { types: { "application/rss+xml": "https://brand.example/de/feed.xml" }, canonical: "/de/blog-post/x", languages: { en: "/blog-post/x", de: "/de/blog-post/x", "x-default": "/blog-post/x" } });
+      assert.equal((head.openGraph as { locale: string }).locale, "de_DE");
+      assert.deepEqual((seo.postBreadcrumb(german).itemListElement as { name: string; item: string }[]).map((crumb) => [crumb.name, crumb.item]), [["Start", "https://brand.example/de"], ["Blog", "https://brand.example/de/blog"], ["Ein Beitrag", "https://brand.example/de/blog-post/x"]]);
+      assert.deepEqual([seo.postJsonLd(german).inLanguage, seo.postJsonLd(german).url], ["de", "https://brand.example/de/blog-post/x"]);
+      assert.deepEqual((seo.postFaqJsonLd(german)?.mainEntity as { name: string }[]).map((question) => question.name), ["Warum Dateien?"]);
+      assert.equal(seo.postFaqJsonLd(blog.getAllPosts()[0]), null, "the default language's heading is still \"frequently asked\" or \"faq\"");
+    });
+  });
+
+  test("the sitemap lists every language's posts with their alternates, the feed is a language's own, and a language without posts lists none", async () => {
+    withContent(TREE, () => {
+      const { seo } = kitOf();
+      const posts = seo.sitemap().filter((entry) => entry.url.includes("/blog-post/"));
+      const versions = { en: "https://brand.example/blog-post/x", de: "https://brand.example/de/blog-post/x", "x-default": "https://brand.example/blog-post/x" };
+      assert.deepEqual(posts.map((entry) => [entry.url, entry.alternates?.languages]), [["https://brand.example/blog-post/x", versions], ["https://brand.example/de/blog-post/x", versions]]);
+    });
+    await withContent(TREE, async () => {
+      const feed = await kitOf().seo.feed("de").text();
+      assert.match(feed, /<title>Der Brand-Blog<\/title>\n {4}<link>https:\/\/brand\.example\/de\/blog<\/link>/);
+      assert.match(feed, /<language>de<\/language>\n {4}<atom:link href="https:\/\/brand\.example\/de\/feed\.xml"/);
+      assert.match(feed, /<link>https:\/\/brand\.example\/de\/blog-post\/x<\/link>/);
+    });
+    const withoutPosts = Object.fromEntries(Object.entries(TREE).filter(([file]) => !file.startsWith("blog/de/")));
+    withContent(withoutPosts, () => {
+      const { seo, content } = kitOf();
+      assert.ok(seo.sitemap().every((entry) => !entry.url.includes("/de/blog-post/")), "none listed, nothing fails");
+      assert.equal((seo.pageMetadata(content.in("de").getPage("home").seo).alternates as { types: object }).types["application/rss+xml" as keyof object], "https://brand.example/feed.xml", "its pages link to the site's feed");
+      expectContentError(() => seo.feed("de"), "content/blog/de: no such directory");
+    });
+  });
+});

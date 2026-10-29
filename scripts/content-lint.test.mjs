@@ -385,6 +385,15 @@ describe("a site in several languages", () => {
     has(german({ "authors.json": weak }), "FAIL content/authors.json alt-weak");
   });
 
+  test("a post's FAQ heading is its language's: an empty FAQ under it fails, the default language's heading is just a heading there", () => {
+    const withHeading = { ...GERMAN_SITE, locales: [{ ...GERMAN_SITE.locales[0], faqHeading: "Häufige Fragen" }] };
+    const registries = { "authors.de.json": CLEAN["authors.json"], "categories.de.json": CLEAN["categories.json"] };
+    const german = (body) => run({ ...GERMAN, ...registries, "blog/de/x.md": post(FRONTMATTER, body) }, { voice: null, site: withHeading, locales: createLocales(withHeading) });
+    has(german(`${BODY}\n## Häufige Fragen\n`), 'FAIL content/blog/de/x.md faq-structure: line');
+    has(german(`${BODY}\n## Häufige Fragen\n`), '"## Häufige Fragen" has no ### question under it');
+    lacks(german(BODY.replace("## Frequently asked questions\n\n### Is this a question?\n\nYes, and this is its answer.\n", "## Frequently asked questions\n")), "faq-structure");
+  });
+
   test("a page file out of place fails, as the engine would", () => {
     has(german({ "pages/de/blog.yaml": germanPage("/blog") }), 'FAIL content/pages/de/blog.yaml schema: seo.path "/blog" must be "/de/blog", the path of content/pages/blog.yaml under /de');
     has(german({ "pages/de/team.yaml": germanPage("/de/team") }), "FAIL content/pages/de/team.yaml schema: translates no page: content/pages/team.yaml does not exist");

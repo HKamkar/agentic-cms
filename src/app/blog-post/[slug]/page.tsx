@@ -5,16 +5,20 @@ import { mdxComponents } from "@/components/blog/mdx";
 import { PostBody, postBlocks } from "@/components/blog/PostBody";
 import { eyebrowText } from "@/components/ui/Eyebrow";
 import { Section } from "@/components/ui/Section";
-import { copyFor, site } from "@/config/site";
+import { copyFor } from "@/config/site";
 import { kit } from "@/kit";
 import { renderPostBody } from "agentic-cms/blog";
 import { EagerImage, JsonLd } from "agentic-cms/components";
 
 type Props = { params: Promise<{ slug: string }> };
 
-const { blog, seo } = kit;
-const { formatDate, getAllPosts, getPostBySlug, getRelatedPosts } = blog;
-const { chrome } = copyFor(site.locale);
+// The default language's posts. A language of site.locales with posts has its own copy of this file in src/app/<prefix>/blog-post/[slug]/, with LOCALE its tag (docs/locales.md).
+const LOCALE = kit.locales.default.locale;
+
+const { seo } = kit;
+const { formatDate, getAllPosts, getPostBySlug, getRelatedPosts } = kit.blog.in(LOCALE);
+const { chrome } = copyFor(LOCALE);
+const { faqHeading } = kit.locales.site(LOCALE);
 
 // Every post is rendered to static HTML at build time; unknown slugs 404.
 export const dynamicParams = false;
@@ -34,7 +38,7 @@ export default async function PostPage({ params }: Props) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
-  const body = await renderPostBody(post, { components: mdxComponents, blocks: postBlocks });
+  const body = await renderPostBody(post, { components: mdxComponents, blocks: postBlocks, faqHeading });
   const related = getRelatedPosts(post);
   const faqLd = seo.postFaqJsonLd(post);
 

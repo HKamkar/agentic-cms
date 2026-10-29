@@ -26,10 +26,13 @@ structural problem.
    1200×630 image, the Twitter card, and the site's parts — Open Graph's
    name (`site.name`) and locale (`site.ogLocale`) and the link to the
    feed. Posts get `kit.seo.postMetadata(post)` from the post page, with
-   the same parts; a page in several languages (`site.locales`,
+   the same parts; a page or a post in several languages (`site.locales`,
    `docs/locales.md`) also names each version, itself and x-default (the
    default language's) as its hreflang alternates, and Open Graph's other
-   locales, and its sitemap entry names the same; the root layout's
+   locales, and its sitemap entry names the same; a post's head, breadcrumb
+   and structured data are its language's (`post.locale`), and a language
+   with posts links its pages to its own feed (`kit.seo.feed(tag)`, served
+   at `/<prefix>/feed.xml`); the root layout's
    `metadata` is
    `kit.seo.rootMetadata()` (`rootMetadata(tag)` in another language's
    root layout: the origin, the title template with the language's home
@@ -106,7 +109,7 @@ structural problem.
 | description | missing, empty, duplicated, < 50 or > 200 characters | < 70 or > 160 |
 | canonical | missing, not `site.url` + the route, trailing slash, more than one | |
 | Open Graph | `og:title` / `og:description` / `og:url` / `og:image` / `og:type` missing; `og:url` ≠ canonical; the image file missing under `public/`, narrower than 1200 px, or with a ratio outside 1.6–2.0 | |
-| the site's parts | in a site with languages: `og:site_name` missing or not `site.name`; the `<link rel="alternate">` to `site.url` + `/feed.xml` missing, when the site builds the feed | in a site in one language, the same (a head a site still writes by hand passed without them before 0.9.0) |
+| the site's parts | in a site with languages: `og:site_name` missing or not `site.name`; the `<link rel="alternate">` to the feed missing — the page's language's (`/<prefix>/feed.xml`) when that one is built, else `site.url` + `/feed.xml` when the site builds it | in a site in one language, the same (a head a site still writes by hand passed without them before 0.9.0) |
 | languages | in a site with languages: `lang` not the page's language (its prefix's in `site.locales`, else `site.locale`); `og:locale` missing or not that language's, when it declares one; for a page built in more than one language, an hreflang missing for a version, the page itself or x-default (the default language's), one twice, to another URL than the version's, to a tag the site has not or a version not built, or not named back by the version it names; an hreflang on a page built in one language; the sitemap's alternates not the page's — `docs/locales.md` | in a site in one language, `lang` not `site.locale` and `og:locale` missing or not `site.ogLocale` |
 | Twitter | `twitter:card` missing | |
 | headings | not exactly one `<h1>`; an `<h3>` before any `<h2>` | |
@@ -155,7 +158,7 @@ structural problem.
 | `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
 | `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
 | `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |
-| `src/lib/seo/routes.ts` | `createRoutes(…)` → `sitemap()`, `feed()` (a Response), `robots()`: what `src/app/sitemap.ts`, `src/app/feed.xml/route.ts` and `src/app/robots.ts` return |
+| `src/lib/seo/routes.ts` | `createRoutes(…)` → `sitemap()` (every language's pages and posts), `feed(tag?)` (a Response, the default language's without a tag), `robots()`: what `src/app/sitemap.ts`, `src/app/feed.xml/route.ts` and `src/app/robots.ts` return |
 | `src/lib/site.ts` | `SiteConfig`, what the engine reads of `src/config/site.ts`; `createUrls(site)` → `postUrl()`, `absoluteUrl()` (`kit.urls`) |
 | `content/pages/*.yaml` | the pages: `seo`, `jsonld`, `sections` (`content/README.md`, template `content/_templates/page.yaml`) |
 | `src/app/[[...slug]]/page.tsx` | the route that renders every page file |

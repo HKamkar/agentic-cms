@@ -38,6 +38,8 @@ export type SiteConfig = {
   readonly address: readonly string[];
   /** The URL prefix of a post, "/blog-post"; the route folder under src/app follows it. */
   readonly postPrefix: string;
+  /** The heading that starts a post's FAQ, its accordion and its FAQPage (`## Frequently asked questions`): an H2 whose text contains it; left out, one that says "frequently asked" or "faq". */
+  readonly faqHeading?: string;
   /** Site-relative; `blog` is the index the sitemap and the feed name. */
   readonly links: { readonly home: string; readonly blog: string; readonly contact: string; readonly [key: string]: string };
   readonly nav: readonly SiteLink[];
@@ -74,6 +76,8 @@ export type SiteLocale = {
   readonly signIn: SiteLink;
   readonly cta: SiteLink;
   readonly footer: SiteConfig["footer"];
+  /** The heading that starts a post's FAQ in the language (`Häufige Fragen`): an H2 whose text contains it; left out, the default language's. */
+  readonly faqHeading?: string;
 };
 
 /** The two URL helpers everything that links to a page or a post uses. */

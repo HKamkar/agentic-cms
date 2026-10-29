@@ -57,8 +57,9 @@ const IMAGE_KEYS = new Set(["image", "thumbnail", "ogImage", "icon", "photo"]);
 const ALT_OF = { image: "imageAlt", thumbnail: "thumbnailAlt", photo: "photoAlt" };
 /** Strings that are identifiers, not prose: the voice rules skip them. */
 const SKIP_KEYS = new Set(["type", "variant", "kind", "set", "form", "category", "author", "related", "changeFrequency", "path", "source", "country", "email", "operatingSystem", "keywords"]);
-/** The same test as src/lib/blog/faq.ts and rehype-post-blocks.ts: the H2 that starts the accordion. */
+/** The same test as faqHeading() in src/lib/blog/faq.ts: the H2 that starts the accordion — one containing the language's `faqHeading` (site.ts), else "frequently asked" or "faq". */
 const FAQ_HEADING = /frequently asked|faq/i;
+const faqHeadingOf = (text) => (text ? new RegExp(escape(text), "i") : FAQ_HEADING);
 const WEAK_ALT = /^(?:(?:an? )?(?:image|picture|photo|illustration|graphic|icon|screenshot)(?: of| for)?\b|(?:supporting|header) illustration\b|index card image\b)/i;
 const BLOG_IMAGES = "/images/blog/";
 const MARKDOWN_IMAGE = /!\[([^\]]*)\]\(\s*([^)\s]+)[^)]*\)/g;
@@ -243,7 +244,7 @@ function lintTree({ root, collections, site, locales, given, now, marks }) {
   const rows = [];
   const add = (level, file, rule, path, problem) => findings.push({ level, file, rule, path, problem });
   // posts and pages: { entry, route } — every language's, for the redirects
-  const tree = { root, now, marks, site, images: [], posts: [], pages: [], redirects: [], retired: retiredSlugs(root), findings, rows, add };
+  const tree = { root, now, marks, site, locales, images: [], posts: [], pages: [], redirects: [], retired: retiredSlugs(root), findings, rows, add };
   const matchers = voiceMatchers(root, VOICE_FILE, given, add);
   for (const [key, def] of Object.entries(collections)) lintCollection(def, def.name, tree, { matchers, locale: null, key });
   const languages = translations({ collections, locales, root });
@@ -294,7 +295,8 @@ function lintCollection(def, name, tree, { matchers, locale }) {
     }
     if (name === "posts") {
       tree.posts.push({ entry, route: `${locale ? `/${locale.prefix}` : ""}${site.postPrefix}/${entry.slug}`, locale });
-      findings.push(...postRules(root, entry, now, matchers, tree.images, tree.retired, titleSuffix(site), marks, !locale));
+      const faq = faqHeadingOf((locale ? tree.locales.site(locale.locale) : site).faqHeading);
+      findings.push(...postRules(root, entry, now, matchers, tree.images, tree.retired, titleSuffix(site), marks, !locale, faq));
     }
     if (name === "pages") { tree.pages.push({ entry, route: entry.data.seo.path, locale }); findings.push(...pageRules(entry, now)); }
     if (name === "redirects") tree.redirects.push(entry);
@@ -404,7 +406,7 @@ function retiredSlugs(root) {
   return new Set(rows.filter((cells) => cells.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(cells[1]) && cells[3] === "retired").map((cells) => cells[2]));
 }
 
-function postRules(root, entry, now, matchers, images, retired, suffix, marks, weak) {
+function postRules(root, entry, now, matchers, images, retired, suffix, marks, weak, faqHeading) {
   const { file, data } = entry;
   const out = [];
   out.push(...altRules(entry, [], weak));
@@ -427,7 +429,7 @@ function postRules(root, entry, now, matchers, images, retired, suffix, marks, w
     const days = Math.floor((now - new Date(`${data.date}T00:00:00Z`)) / DAY);
     if (days > LIMITS.draftDays) out.push({ level: "WARN", file, rule: "draft-stale", path: "draft", problem: `for ${days} days (date ${data.date}); publish it, or retire it with a "retired" row in ${CALENDAR}` });
   }
-  out.push(...bodyRules(root, entry, matchers, images, marks));
+  out.push(...bodyRules(root, entry, matchers, images, marks, faqHeading));
   return out.filter(Boolean);
 }
 
@@ -498,7 +500,7 @@ function bodyLines(root, entry) {
 const plainText = (text) => text.replace(/`[^`]*`/g, " ").replace(MARKDOWN_IMAGE, "$1").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/<[^>]+>/g, " ");
 const attribute = (tag, name) => tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
 
-function bodyRules(root, entry, matchers, images, marks) {
+function bodyRules(root, entry, matchers, images, marks, faqHeading = FAQ_HEADING) {
   const out = [];
   const { file, slug } = entry;
   const add = (level, rule, line, problem) => out.push({ level, file, rule, path: `line ${line}`, problem });
@@ -514,7 +516,7 @@ function bodyRules(root, entry, matchers, images, marks) {
       level = depth;
       if (depth === 2) {
         if (faq) out.push(...faqFindings(file, faq));
-        faq = FAQ_HEADING.test(heading[2]) ? { line, text, questions: [] } : null;
+        faq = faqHeading.test(heading[2]) ? { line, text, questions: [] } : null;
       } else if (faq) {
         if (depth === 3) faq.questions.push({ line, text, answered: false });
         else add("FAIL", "faq-structure", line, `${q(text)} under the FAQ heading; questions are ###`);

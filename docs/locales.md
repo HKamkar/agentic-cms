@@ -122,6 +122,8 @@ src/app/
   (default)/not-found.tsx           what notFound() renders there
   de/layout.tsx                     the German root layout: LOCALE = "de"
   de/[[...slug]]/page.tsx           the German pages: LOCALE = "de"
+  de/blog-post/[slug]/page.tsx      the German posts: LOCALE = "de"
+  de/feed.xml/route.ts              the German feed: LOCALE = "de"
   global-not-found.tsx              the 404 of a path no page answers
   globals.css, robots.ts, sitemap.ts, feed.xml/, api/, icon.png
 ```
@@ -186,9 +188,39 @@ at the same URL.
    `../globals.css`), adds `src/app/global-not-found.tsx` and
    `experimental: { globalNotFound: true }` in `next.config.ts`; each
    language then copies the layout and the catch-all into
-   `src/app/<prefix>/` with `LOCALE` its tag.
+   `src/app/<prefix>/` with `LOCALE` its tag, and a language with posts
+   the post template and the feed too.
 5. `pnpm build`: the content lint, the build and the SEO audit hold every
    step above.
+
+## Posts
+
+A post in another language is `content/blog/<prefix>/<slug>.md`, served
+at `/<prefix>/blog-post/<slug>`. It pairs with the default language's post
+of its slug, when there is one: their heads and their sitemap entries name
+each other. A post with no translation is simply absent from the
+language. Its frontmatter is the default's schema: its `author` and its
+`category` are keys of the language's registries,
+`content/authors.<prefix>.json` and `content/categories.<prefix>.json`
+(and of the default's), and its `related` names default posts' slugs, of
+which the language shows the ones it has. Its pictures are the default's,
+under `public/images/blog/<slug>/`; its alt texts are its own.
+
+`kit.blog.in(tag)` reads a language's posts: each carries `locale`, so the
+card links under the prefix (`kit.urls.postUrl(slug, locale)`) and dates
+in the language (`formatDate(date, locale)`), and `kit.seo`'s post
+builders write its head, breadcrumb and structured data in it. The FAQ
+starts at the language's heading: `faqHeading` in its `site.locales`
+entry (`Häufige Fragen`), which the accordion, the FAQPage and the lint
+read.
+
+A language with posts has its blog page, `content/pages/<prefix>/blog.yaml`,
+and two more routes: the post template and the feed, copies of the
+default's with `LOCALE` its tag, in `src/app/<prefix>/blog-post/[slug]/`
+and `src/app/<prefix>/feed.xml/`. Its pages then link to its feed. A
+language whose blog page or posts folder is missing fails the build where
+it reads them (its index, its feed); the sitemap lists the posts each
+language has.
 
 ## The voice and the lint
 

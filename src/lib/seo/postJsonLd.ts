@@ -2,7 +2,7 @@
 // frontmatter and registries, and the FAQPage block from the questions in
 // its body (src/lib/blog/faq.ts), which the accordion shows.
 
-import { extractFaq } from "../blog/faq.ts";
+import { extractFaq, faqHeading } from "../blog/faq.ts";
 import type { Post } from "../blog/posts.ts";
 import type { SiteConfig, Urls } from "../site.ts";
 
@@ -38,9 +38,9 @@ export function createPostJsonLd({ site, urls }: { site: SiteConfig; urls: Urls 
     };
   }
 
-  /** The FAQPage of the post's "Frequently asked questions" section, or null when the body has none. */
+  /** The FAQPage of the post's "Frequently asked questions" section (the heading `site.faqHeading` names, in the post's language), or null when the body has none. */
   function postFaqJsonLd(post: Post): Record<string, unknown> | null {
-    const faq = extractFaq(post.body);
+    const faq = extractFaq(post.body, faqHeading(site.faqHeading));
     if (faq.length === 0) return null;
     return {
       "@context": "https://schema.org",

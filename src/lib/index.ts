@@ -8,7 +8,7 @@ import type { ZodType } from "zod";
 // From posts.ts, not the blog barrel: the barrel reaches markdown.tsx, and this
 // module has to load under plain Node (the tests, the CLI), which has no JSX.
 import { createBlog } from "./blog/posts.ts";
-import { createCollections, createContent, type Collections, type SectionLike } from "./content/index.ts";
+import { createCollections, createContent, isOnDisk, type Collections, type SectionLike } from "./content/index.ts";
 import { checkPagePaths, collectionsIn, createLocales, type Locales } from "./locales.ts";
 import { createSeo } from "./seo/index.ts";
 import { createUrls, type SiteConfig } from "./site.ts";
@@ -27,20 +27,25 @@ export type KitOptions<S extends ZodType<SectionLike>, C extends Collections<S>>
 };
 
 export function createKit<S extends ZodType<SectionLike>, C extends Collections<S> = Collections<S>>({ site, sections, collections: extend }: KitOptions<S, C>) {
-  const urls = createUrls(site);
   const locales = createLocales(site);
+  const urls = languageUrls(locales, createUrls(site));
   const standard = createCollections({ sections });
   const collections = (extend ? extend(standard) : standard) as C;
   const content = localizedContent(locales, collections);
   const blog = localizedBlog(locales, collections);
-  const scope = perLocale(locales, (tag) => ({ site: locales.site(tag), urls: urlsIn(locales, urls, tag), content: content.in(tag), blog: blog.in(tag) }));
+  const scope = perLocale(locales, (tag) => ({ site: locales.site(tag), urls: urlsIn(locales, urls, tag), content: content.in(tag), blog: blog.in(tag), hasPosts: () => locales.get(tag).isDefault || isOnDisk(locales.collection(collections.posts, tag)) }));
   const seo = createSeo({ site, urls, content, blog, locales, scope });
   return { site, urls, locales, collections, content, blog, seo };
 }
 
-/** The URL helpers of a language: its posts under its prefix (/de/blog-post/<slug>). */
-function urlsIn(locales: Locales, urls: ReturnType<typeof createUrls>, tag: string) {
-  return locales.get(tag).isDefault ? urls : { ...urls, postUrl: (slug: string) => locales.path(tag, urls.postUrl(slug)) };
+/** The URL helpers, a post's in its language: `postUrl(slug, locale)` is under the language's prefix (/de/blog-post/<slug>), the default language's without one. */
+function languageUrls(locales: Locales, urls: ReturnType<typeof createUrls>) {
+  return { ...urls, postUrl: (slug: string, locale?: string) => (locale ? locales.path(locale, urls.postUrl(slug)) : urls.postUrl(slug)) };
+}
+
+/** The URL helpers of a language: its posts under its prefix. */
+function urlsIn(locales: Locales, urls: ReturnType<typeof languageUrls>, tag: string) {
+  return locales.get(tag).isDefault ? urls : { ...urls, postUrl: (slug: string) => urls.postUrl(slug, tag) };
 }
 
 /** Memoised per locale: the accessors of each language are made once. */
@@ -78,9 +83,14 @@ function localizedContent<S extends ZodType<SectionLike>>(locales: Locales, coll
   return { ...checked(locales.default.locale), in: checked };
 }
 
-/** The post pipeline of the default language, and `in(tag)`, another language's over its translated posts, authors and categories. */
+/**
+ * The post pipeline of the default language, and `in(tag)`, another
+ * language's over its translated posts, authors and categories: its posts
+ * carry their `locale`, its dates are formatted in it. The default
+ * language's are what they were, no `locale` and dates as before.
+ */
 function localizedBlog(locales: Locales, collections: Collections) {
-  const blogIn = perLocale(locales, (tag) => createBlog(collectionsIn(locales, collections, tag)));
+  const blogIn = perLocale(locales, (tag) => (locales.get(tag).isDefault ? createBlog(collections) : createBlog(collectionsIn(locales, collections, tag), { locale: tag })));
   return { ...blogIn(locales.default.locale), in: blogIn };
 }
 

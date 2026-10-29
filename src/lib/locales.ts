@@ -76,8 +76,8 @@ export function createLocales(site: SiteConfig) {
     if (get(tag).isDefault) return site;
     const known = sites.get(tag);
     if (known) return known;
-    const { locale, ogLocale, tagline, description, links, nav, signIn, cta, footer } = site.locales!.find((entry) => entry.locale === tag)!;
-    const scoped = { ...site, locale, ogLocale, tagline, description, links, nav, signIn, cta, footer };
+    const { locale, ogLocale, tagline, description, links, nav, signIn, cta, footer, faqHeading = site.faqHeading } = site.locales!.find((entry) => entry.locale === tag)!;
+    const scoped = { ...site, locale, ogLocale, tagline, description, links, nav, signIn, cta, footer, faqHeading };
     sites.set(tag, scoped);
     return scoped;
   }
