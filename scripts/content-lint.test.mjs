@@ -399,6 +399,13 @@ describe("a site in several languages", () => {
     has(german({ "pages/de/team.yaml": germanPage("/de/team") }), "FAIL content/pages/de/team.yaml schema: translates no page: content/pages/team.yaml does not exist");
   });
 
+  test("a translation older than its original warns, naming the original's date and the fix; one as new passes", () => {
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog").replace('updated: "2026-09-01"', 'updated: "2026-08-01"') }), 'WARN content/pages/de/blog.yaml translation-stale: content/pages/blog.yaml changed since (2026-09-01, this de version 2026-08-01): bring it up to date (/editorial:translate) and set its updated');
+    lacks(german({ "pages/de/blog.yaml": germanPage("/de/blog").replace('updated: "2026-09-01"', 'updated: "2026-09-02"') }), "translation-stale");
+    const registries = { "authors.de.json": CLEAN["authors.json"], "categories.de.json": CLEAN["categories.json"] };
+    has(german({ ...registries, "blog/de/x.md": post(FRONTMATTER.replace('publishedAt: "2026-05-02T09:00:00.000Z"', 'publishedAt: "2026-05-01T09:00:00.000Z"'), BODY) }), "WARN content/blog/de/x.md translation-stale: content/blog/x.md changed since (2026-05-02T09:00:00.000Z, this de version 2026-05-01T09:00:00.000Z)");
+  });
+
   test("the redirects see every language's routes", () => {
     has(german({ "redirects.yaml": "- from: /de/blog\n  to: /blog\n" }), 'FAIL content/redirects.yaml redirect-from: [0].from "/de/blog" is a live page\'s or post\'s (content/pages/de/blog.yaml)');
     assert.deepEqual(german({ "redirects.yaml": "- from: /de/insights\n  to: /de/blog\n" }), []);

@@ -253,7 +253,7 @@ function lintTree({ root, collections, site, locales, given, now, marks }) {
     const voice = voiceMatchers(root, file, given, add, `does not exist: the voice rules of ${locale.locale}, VOICE.md's block written for the language (docs/locales.md)`);
     for (const { key, original, def } of languages.filter((translation) => translation.locale === locale)) lintCollection(def, original.name, tree, { matchers: voice, locale, key });
   }
-  if (locales && locales.all.length > 1) findings.push(...pagePathRules(locales, tree.pages));
+  if (locales && locales.all.length > 1) findings.push(...pagePathRules(locales, tree.pages), ...staleRules(tree.pages, (entry) => entry.data.seo.updated, "updated"), ...staleRules(tree.posts, lastChange, "updatedAt"));
   const { images, posts, pages, redirects } = tree;
   findings.push(...imageRules(root, images));
   findings.push(...orphanRules(root, posts.map(({ entry }) => entry), images));
@@ -315,6 +315,23 @@ function pagePathRules(locales, pages) {
       if (!(error instanceof ContentError)) throw error;
       return error.issues.map((issue) => ({ level: "FAIL", file: error.file, rule: "schema", path: issue.path, problem: issue.problem }));
     }
+  });
+}
+
+/** When a post last changed, as its dates say: updatedAt, else publishedAt, else its date. */
+const lastChange = ({ data }) => String(data.updatedAt ?? data.publishedAt ?? `${data.date}T00:00:00.000Z`);
+
+/**
+ * A translation older than its original (WARN): the default language's
+ * file of its slug changed after it did — a page's `updated`, a post's last
+ * date — so the copy may say what the original no longer does.
+ */
+function staleRules(entries, changed, field) {
+  const originals = new Map(entries.filter(({ locale }) => !locale).map(({ entry }) => [entry.slug, entry]));
+  return entries.flatMap(({ entry, locale }) => {
+    const original = locale && originals.get(entry.slug);
+    if (!original || changed(original) <= changed(entry)) return [];
+    return [{ level: "WARN", file: entry.file, rule: "translation-stale", path: "", problem: `${original.file} changed since (${changed(original)}, this ${locale.locale} version ${changed(entry)}): bring it up to date (/editorial:translate) and set its ${field}` }];
   });
 }
 

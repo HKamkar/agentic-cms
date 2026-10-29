@@ -191,6 +191,7 @@ needs from the repo it stands in and carries nothing of any brand.
 | `/editorial:update-post` | an edit to a post, the two dates and the URL intact |
 | `/editorial:new-page` | a page from the template, made of existing section types |
 | `/editorial:retire-content` | a post hidden (its URL kept) or a page removed once a redirect exists |
+| `/editorial:translate` | a page's, a post's or a collection's translation drafted beside its original, for a native speaker to check; a legal text translated, never rewritten |
 | `/editorial:review-voice` | a file read against `VOICE.md` for what the lint cannot judge |
 | `/editorial:critic` | a post read hard by an editor who did not watch it being written, every external claim checked against primary sources |
 | `/editorial:content-status` | what is live, in draft, planned and recently changed, read-only |

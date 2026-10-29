@@ -177,8 +177,8 @@ at the same URL.
 1. Its entry in `site.locales` and its block in `copy`, both in
    `src/config/site.ts` (above).
 2. Its pages, each the translation of a default page: `content/pages/<prefix>/<slug>.yaml`,
-   with its `seo` block in the language and its path under the prefix; its
-   voice block,
+   with its `seo` block in the language and its path under the prefix
+   (`/editorial:translate` drafts one); its voice block,
    `content/VOICE.<prefix>.md`; the translation of each collection a page
    of it reads (a FAQ set, the reviews, the use cases).
 3. A form's words are its definition's in `src/config/forms.ts`: a page in
@@ -222,6 +222,28 @@ language whose blog page or posts folder is missing fails the build where
 it reads them (its index, its feed); the sitemap lists the posts each
 language has.
 
+## Translating
+
+A translation is drafted by an agent and checked by a native speaker of
+the language before it ships. `/editorial:translate` (the `editorial`
+plugin) drafts a page, a post or a collection beside its original, with
+its `seo` block written for the language's readers, lints it, and lists
+what the native speaker reads first: the headings and the calls to
+action, every claim and figure, the idioms, the terms the language's
+other pages translate differently. A post stays `draft: true` until then;
+a page is committed on the user's word that someone checked it.
+
+A legal text — a privacy policy, terms, an imprint — is translated, never
+rewritten: sentence by sentence, its structure and its defined terms
+kept, nothing added or left out, no obligation changed, every term with
+no settled equivalent listed for the native speaker and a lawyer for the
+language's market.
+
+When an original changes, its translations fall behind: the lint's
+`translation-stale` warns on a page whose original's `updated`, or a post
+whose original's last date, is later than its own, and
+`/editorial:translate` brings it up to date from what changed.
+
 ## The voice and the lint
 
 Each language has its voice block, `content/VOICE.<prefix>.md`:
@@ -230,12 +252,13 @@ banned words and patterns, the claim words and their subject, the model
 and cloud rules — in its words. `agentic-cms lint` fails a declared
 language without one and lints each translation with its language's block
 and every rule that is not a voice rule (the SEO lengths, the dates, the
-alt pairs, the pictures, a post's structure, the placeholders). The
-alt-weak heuristic reads English, so it holds the default language's
-files alone. The lint also holds the redirects against every language's
-pages and posts, fails a page file out of place as the engine does, and
-warns on a translation into a language `site.locales` does not declare
-(a folder or a file nothing reads).
+alt pairs, the pictures, a post's structure under the language's FAQ
+heading, the placeholders), and warns on a translation older than its
+original (`translation-stale`). The alt-weak heuristic reads English, so
+it holds the default language's files alone. The lint also holds the
+redirects against every language's pages and posts, fails a page file out
+of place as the engine does, and warns on a translation into a language
+`site.locales` does not declare (a folder or a file nothing reads).
 
 `agentic-cms check` reads each translation on disk and where each
 language's page files sit; `agentic-cms schema --lines` opens a translated
@@ -257,8 +280,8 @@ starts at the language's home page, `pageJsonLd()` says the language in
 `inLanguage`, and `rootMetadata(tag)` is a language's root layout head:
 its home page's title and description, its `og:locale`.
 
-The sitemap lists every language's pages, and each entry of a page in
-several languages carries the same alternates as its head
+The sitemap lists every language's pages and posts, and each entry of
+one in several languages carries the same alternates as its head
 (`<xhtml:link rel="alternate" hreflang="…">`).
 
 No page redirects by the visitor's language, and nothing reads
@@ -269,14 +292,13 @@ engines pick the version for a reader from the alternates.
 
 `agentic-cms seo`, the last step of `pnpm build`, holds each page's
 languages from the build alone (`scripts/lib/hreflang.mjs`): a page's
-versions are the built routes at its path in each language. In a site
-with languages it fails a page whose `lang` or `og:locale` is not its
+versions are the built routes at its path in each language. In a site with
+languages it fails a page whose `lang` or `og:locale` is not its
 language's, or whose head lacks `og:site_name` or the feed link (a site in
 one language gets these as warnings: a head written by hand passed without
-them before 0.9.0); a page built in
-more than one language whose hreflang alternates miss a version, the page
-itself or `x-default`, name one twice, point at another URL than the
-version's, at a tag the site has not or at a version that is not built,
-or are not named back by the version they name; a page built in one
-language that names any; and a sitemap entry whose alternates are not its
-page's.
+them before 0.9.0); a page built in more than one language whose hreflang
+alternates miss a version, the page itself or `x-default`, name one twice,
+point at another URL than the version's, at a tag the site has not or at a
+version that is not built, or are not named back by the version they name;
+a page built in one language that names any; and a sitemap entry whose
+alternates are not its page's.

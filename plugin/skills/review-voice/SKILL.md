@@ -43,6 +43,14 @@ the writing rules, and the fenced block (the exact rules the lint runs).
    quote, the FAQ heading with 3–5 questions and answers, the excerpt's
    30–40 words, an alt per image, headings from `##`.
 
+## In another language
+
+A file in a language of `site.locales` — under a `<prefix>/` folder, or
+`<stem>.<prefix>.<ext>` — is read against that language's voice block,
+`content/VOICE.<prefix>.md`, with the brand as `VOICE.md` spells it; the
+lint's lines for it are that block's. Name, in the report, the language
+the file is in.
+
 ## Report
 
 ```

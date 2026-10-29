@@ -32,7 +32,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Content is files under `content/`, validated at build time by the content
   engine: posts in `content/blog/` (the filename is the slug), the author and
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
-  the pages in `content/pages/`; the door for editing is `content/README.md`,
+  the pages in `content/pages/`, each translation beside its original in a
+  site with `site.locales` (`docs/locales.md`); the door for editing is `content/README.md`,
   the templates are `content/_templates/`. The voice and claim rules are
   `content/VOICE.md`; `agentic-cms lint` enforces its fenced block in
   `pnpm build`, right after `pnpm lint` (a FAIL stops the build, a WARN is
@@ -40,7 +41,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   prerendered, the Worker has no filesystem.
 - The procedures for content jobs are the `editorial` plugin in `plugin/`
   (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
-  `review-voice`, `critic`, `content-status`, `retire-content`, and on
+  `review-voice`, `critic`, `content-status`, `retire-content`, `translate`, and on
   Claude Code the `voice-reviewer` and `critic` agents that run the two
   review skills in isolation), brand-neutral by rule: it reads the
   brand from the repo, and a grep for this repo's brand over `plugin/` stays
@@ -202,8 +203,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   JSON-LD, the feed and the sitemap, so an imported post keeps the timestamps
   search engines already have. Keep both.
 - Post body conventions are load-bearing: the FAQ accordion and FAQPage JSON-LD
-  key off a `## Frequently asked questions` heading (rename it and the
-  accordion silently disappears); a `> blockquote` becomes the pull-quote card;
+  key off a `## Frequently asked questions` heading, or the one `faqHeading`
+  names (rename it and the accordion silently disappears); a `> blockquote` becomes the pull-quote card;
   an image on its own line becomes the inline image block. `draft: true` only
   hides in production builds; `_`-prefixed files are skipped. The post schema
   is `postSchema` in `src/lib/content/collections.ts`, documented in

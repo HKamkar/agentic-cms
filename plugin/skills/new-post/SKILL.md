@@ -66,6 +66,17 @@ the user named, and `content/editorial/workshop.yaml` if it exists (its
    the user's: they set `draft: false` and `publishedAt` (now, ISO), then
    push.
 
+## In another language
+
+In a site in several languages (`site.locales`), a post in another
+language is `content/blog/<prefix>/<slug>.md`: the original's slug when
+it translates one, its `author` and `category` keys in the language's
+registries (`authors.<prefix>.json`, `categories.<prefix>.json`), its FAQ
+under the language's `faqHeading`, its pictures the original's. Drafting
+the translation of a default post is `translate`; a language with no
+posts yet also needs its blog page and its post template and feed routes
+(`docs/locales.md` § Posts), which are the user's call.
+
 ## Verify
 
 ```bash

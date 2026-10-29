@@ -61,9 +61,16 @@ isolation.
 | `review-voice` | read a file against `VOICE.md` for what the lint cannot judge | a HIGH / MEDIUM / LOW report with a verdict, then the approved fixes |
 | `content-status` | say what is live, in draft, planned and recently changed, from the files (read-only) | the report, nothing edited |
 | `retire-content` | hide a post (`draft: true`, the indexed URL kept), or remove a page or a post with its redirect, written into `redirects.yaml` | the lint, the build, the sitemap without it, a commit |
+| `translate` | draft a translation into a language of `site.locales`, beside its original and paired by slug, or bring one up to date | a lint-clean draft, what a native speaker must read listed, a commit on the user's word that one did |
 
 ## Rules
 
+- **Another language is a translation beside its original.** In a site
+  with `site.locales`, a page's is `pages/<prefix>/<slug>.yaml`, a post's
+  `blog/<prefix>/<slug>.md`, a collection file's `<stem>.<prefix>.<ext>`,
+  each paired with its original by slug and held to `VOICE.<prefix>.md`;
+  nothing is filled from the default language (`docs/locales.md` in the
+  kit).
 - **Quote dates, write booleans as `true` / `false`.** Every file is YAML
   1.2 (frontmatter included): an unquoted `2026-05-02` or `yes` is text.
 - **The file name is the identity.** A post's filename is its indexed URL

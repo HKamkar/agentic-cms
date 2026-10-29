@@ -1,7 +1,7 @@
 {
   "name": "editorial",
-  "version": "0.1.0+codex.20260918130320",
-  "description": "The agent's side of a CMS whose content is files: skills that add, write, review, retire and report on the content of a site built from files, with the site's own voice rules read from the repo, never from the plugin",
+  "version": "0.2.0+codex.20261029134019",
+  "description": "The agent's side of a CMS whose content is files: skills that add, write, translate, review, retire and report on the content of a site built from files, with the site's own voice rules read from the repo, never from the plugin",
   "author": {
     "name": "H. Kamkar"
   },
