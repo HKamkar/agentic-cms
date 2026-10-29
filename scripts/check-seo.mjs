@@ -35,6 +35,7 @@ const ROOT = process.cwd();
 const APP = path.join(ROOT, ".next/server/app");
 const PUBLIC = path.join(ROOT, "public");
 const SITE_URL = site.url;
+const FEED_BUILT = fs.existsSync(path.join(APP, "feed.xml.body"));
 
 const LIMITS = {
   title: { warnMax: 60, failMax: 70 },
@@ -123,7 +124,27 @@ async function checkSocial(route, html) {
   for (const [k, v] of Object.entries(og)) if (!v) fail(route, "open-graph", `${k} missing`);
   if (og["og:url"] && !sameUrl(og["og:url"], canonicalUrl)) fail(route, "open-graph", `og:url ${og["og:url"]} differs from the canonical`);
   if (og["og:image"]) await checkImage(route, og["og:image"]);
+  checkSiteHead(route, html);
   if (!metas(html, "name", "twitter:card").length) fail(route, "twitter", "twitter:card missing");
+}
+
+// A route's openGraph and alternates replace the root layout's whole, so these are the parts a hand-built head loses.
+const SITE_HEAD = "the route's head is kit.seo.pageMetadata() or postMetadata(), which keep the root layout's (src/lib/seo/README.md)";
+
+/**
+ * The site's parts of every head: Open Graph's site name and locale, the
+ * link to the feed. They warn: a head a site still writes by hand, which
+ * its baseline holds, passed before 0.9.0 without them, and a check that
+ * fails what passed comes with a migration (docs/stability.md).
+ */
+function checkSiteHead(route, html) {
+  const siteName = metas(html, "property", "og:site_name")[0];
+  if (siteName !== site.name) warn(route, "open-graph", siteName ? `og:site_name "${siteName}" is not site.name "${site.name}"` : `og:site_name missing: ${SITE_HEAD}`);
+  const locale = metas(html, "property", "og:locale")[0];
+  if (site.ogLocale && locale !== site.ogLocale) warn(route, "open-graph", locale ? `og:locale ${locale} is not site.ogLocale ${site.ogLocale}` : `og:locale missing: ${SITE_HEAD}`);
+  if (!FEED_BUILT) return;
+  const feeds = tags(head(html), "link").filter((a) => a.rel === "alternate" && a.type === "application/rss+xml").map((a) => a.href);
+  if (!feeds.includes(`${SITE_URL}/feed.xml`)) warn(route, "feed", feeds.length ? `the feed link is ${feeds.join(", ")}, not ${SITE_URL}/feed.xml` : `no <link rel="alternate"> to the feed: ${SITE_HEAD}`);
 }
 
 /** Headings, images and the html element. */

@@ -23,11 +23,17 @@ structural problem.
 2. **`src/app/[[...slug]]/page.tsx` renders every page file** — the head
    from `kit.seo.pageMetadata(page.seo)`, nothing hand-written: that is
    the exact title, the description, the canonical, Open Graph with the
-   1200×630 image, the Twitter card. Posts get `kit.seo.postMetadata(post)`
-   from the post page; the root layout's `metadata` is
+   1200×630 image, the Twitter card, and the site's parts — Open Graph's
+   name (`site.name`) and locale (`site.ogLocale`) and the link to the
+   feed. Posts get `kit.seo.postMetadata(post)` from the post page, with
+   the same parts; the root layout's `metadata` is
    `kit.seo.rootMetadata()` (the origin, the title template with the home
-   page's title, its description, Open Graph's name and `site.ogLocale`,
-   the feed); a design round's or the lab's route is
+   page's title, its description, the site's parts); the site's parts are
+   in every page's head because Next merges a route's metadata into the
+   layout's one key deep — a page's `openGraph` and `alternates` replace
+   the layout's whole — so the kit's builders carry them, and
+   `pageMetadata` from `agentic-cms/seo`, which needs no site, does not;
+   a design round's or the lab's route is
    `kit.seo.unlistedMetadata()` (`noindex`). Never build these by hand:
    `pnpm lint` fails any other `metadata` or `generateMetadata`, and a
    `<head>`, `<title>`, `<meta>`, canonical `<link>` or JSON-LD `<script>`
@@ -95,6 +101,7 @@ structural problem.
 | description | missing, empty, duplicated, < 50 or > 200 characters | < 70 or > 160 |
 | canonical | missing, not `site.url` + the route, trailing slash, more than one | |
 | Open Graph | `og:title` / `og:description` / `og:url` / `og:image` / `og:type` missing; `og:url` ≠ canonical; the image file missing under `public/`, narrower than 1200 px, or with a ratio outside 1.6–2.0 | |
+| the site's parts | | `og:site_name` missing or not `site.name`; `og:locale` missing or not `site.ogLocale`, when the site declares one; the `<link rel="alternate">` to `site.url` + `/feed.xml` missing, when the site builds the feed (a head a site still writes by hand passed without them before 0.9.0) |
 | Twitter | `twitter:card` missing | |
 | headings | not exactly one `<h1>`; an `<h3>` before any `<h2>` | |
 | images | an `<img>` without `alt` (empty is fine for decoration) or without `width`/`height` | |
@@ -138,7 +145,7 @@ structural problem.
 |---|---|
 | `src/lib/seo/index.ts` | `createSeo({ site, urls, content, blog })`: everything below, composed for one site (`kit.seo`) |
 | `src/lib/seo/types.ts` | `PageSeo` (the `seo` block's type, from the schema) |
-| `src/lib/seo/metadata.ts` | `pageMetadata()` and `unlistedMetadata()` (need no site), `createMetadata(urls)` → `postMetadata()`, `createRootMetadata(site, home)` → `rootMetadata()` |
+| `src/lib/seo/metadata.ts` | `pageMetadata()` and `unlistedMetadata()` (need no site), `createMetadata(site, urls)` → the kit's `pageMetadata()` and `postMetadata()` with the site's parts, `createRootMetadata(site, home)` → `rootMetadata()` |
 | `src/lib/seo/jsonld.ts` | `createJsonLd({ site, urls, content })` → `organizationLd()`, `breadcrumbLd()`, `pageBreadcrumb()`, `postBreadcrumb()` |
 | `src/lib/seo/pageJsonLd.ts` | `createPageJsonLd(…)` → `pageJsonLd()`: the page-type block from a page file's `jsonld` block and its sections |
 | `src/lib/seo/postJsonLd.ts` | `createPostJsonLd(…)` → `postJsonLd()` (the BlogPosting), `postFaqJsonLd()` (the FAQPage from the body's questions, or null) |

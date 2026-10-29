@@ -68,6 +68,15 @@ prints the rest.
   return `[...redirectsFor(), ...the site's own]`. Redirects the host held
   (a `_redirects` file, a dashboard's list) move into the file by hand
   ([redirects.md](redirects.md)).
+- **Every head keeps the site's parts.** `kit.seo.pageMetadata()` and
+  `postMetadata()` now carry `og:site_name`, `og:locale` and the link to
+  the feed, which a page and a post lost until now: Next replaces the
+  layout's `openGraph` and `alternates` with a route's. The SEO audit warns
+  on a page without them. A route on `kit.seo` has nothing to do, and a
+  parity capture across the upgrade shows those tags added to every page
+  but the 404; a route whose `generateMetadata` returns `pageMetadata`
+  from `agentic-cms/seo`, which needs no site and adds none of them,
+  returns `kit.seo.pageMetadata()` instead.
 - **A preview link, if the site wants one.** It is opt-in, so `upgrade`
   leaves it alone. A site on Cloudflare Workers copies the `preview` job
   from `node_modules/agentic-cms/templates/site/verify.yml` into its

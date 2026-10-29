@@ -19,7 +19,7 @@ export function createSeo<S extends ZodType<SectionLike>>({ site, urls, content,
   const jsonld = createJsonLd({ site, urls, content });
   const pageJsonLd = createPageJsonLd({ site, urls, content, blog, organizationLd: jsonld.organizationLd });
   const rootMetadata = createRootMetadata(site, () => content.getPage("home").seo);
-  return { ...createMetadata(urls), rootMetadata, ...jsonld, pageJsonLd, ...createPostJsonLd({ site, urls }), ...createRoutes({ site, urls, content, blog }) };
+  return { ...createMetadata(site, urls), rootMetadata, ...jsonld, pageJsonLd, ...createPostJsonLd({ site, urls }), ...createRoutes({ site, urls, content, blog }) };
 }
 
 export type Seo = ReturnType<typeof createSeo>;
