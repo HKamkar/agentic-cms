@@ -98,9 +98,15 @@ by `pnpm test:browser`.
 - `docs` — `pnpm kit docs [--check]` (`pnpm content:docs`; `content-docs.mjs`)
   writes the field tables of every collection of the site's registry into
   the site's `content/README.md` from the schemas' `.describe()` texts
-  (between the `content-docs` markers); `--check` exits 1 when the file is
-  stale, and `pnpm build` runs it, so a schema change is followed by running
-  the command and committing the README.
+  (between the `content-docs` markers), and the JSON Schemas with them (as
+  `schema` writes them); `--check` exits 1 when either is stale, and
+  `pnpm build` runs it, so a schema change is followed by running the
+  command and committing the README and `content/_schemas/`.
+- `schema` — `pnpm kit schema [--check] [--lines]` (`content-schema.mjs`,
+  `lib/content-schema.mjs`) writes one JSON Schema per collection into
+  `content/_schemas/`, which each YAML content file names on its first line
+  for the editor (`--lines` adds the line where it is missing); `--check`
+  exits 1 when a file is stale (`../docs/schema.md`).
 - `lib/load-ts.mjs` — `node --import ./scripts/lib/load-ts.mjs …` here,
   `node --import agentic-cms/loader …` on a site (the package exports
   it as `./loader`), lets plain Node run the TypeScript under the site's `src/` (types stripped by Node;

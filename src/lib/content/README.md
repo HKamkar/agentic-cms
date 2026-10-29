@@ -64,7 +64,8 @@ under `src/` (`agentic-cms/copy`, `docs/primitives.md` § Enforced).
 | `agentic-cms check` (`scripts/content-check.mjs`) | `pnpm content:check [--root <dir>]`: reads every collection of the site's registry and reports like the SEO audit (the schema-only loop) |
 | `agentic-cms lint` (`scripts/content-lint.mjs`), `scripts/lib/content-lint.mjs`, `scripts/content-lint.test.mjs` | `pnpm content:lint`; in `pnpm build` after `pnpm lint` and before `next build`, as `lint --production`: the engine's lines first, then the rules a schema cannot carry (`content/VOICE.md`'s voice block, SEO limits at the source, post structure, images on disk, dates); the library and its `node:test` suite (`scripts/README.md`) |
 | `content/VOICE.md` | The voice and claim rules, prose plus the fenced block the lint reads |
-| `agentic-cms docs` (`scripts/content-docs.mjs`) | Generates the field tables of the site's registry into the site's `content/README.md` from the schemas; `--check` (run by `pnpm build`) fails when they are stale |
+| `agentic-cms docs` (`scripts/content-docs.mjs`) | Generates the field tables of the site's registry into the site's `content/README.md` from the schemas, and the JSON Schemas with them; `--check` (run by `pnpm build`) fails when either is stale |
+| `agentic-cms schema` (`scripts/content-schema.mjs`, `scripts/lib/content-schema.mjs`) | One JSON Schema per collection into `content/_schemas/` (`z.toJSONSchema`, the input a file may hold; a `ref()` a line naming its collection, never its slugs), which each YAML content file names on its first line for the editor; `--check` fails a stale one, `--lines` writes the missing lines — `docs/schema.md` |
 | `content/README.md`, `content/_templates/` | The door for editing content, and one annotated template per collection |
 | `scripts/lib/load-ts.mjs` | The Node loader every command and `pnpm test` use: the site's `tsconfig.json` aliases, extensionless imports, types stripped |
 
@@ -202,7 +203,10 @@ the field tables — every key, its type, whether it is required, and the
 `.describe()` text — are generated from those schemas into the **site's
 `content/README.md`** (its "Fields" section) by `agentic-cms docs`,
 one table per collection and one per section type of the site, and
-`agentic-cms docs --check` fails `pnpm build` when they are stale.
+`agentic-cms docs --check` fails `pnpm build` when they are stale. The same
+schemas are written as JSON Schema into `content/_schemas/`, one file per
+collection (`agentic-cms schema`, which `docs` runs too and `docs --check`
+checks), so an editor checks a YAML file as it is typed (`docs/schema.md`).
 
 ## Recipes
 
@@ -216,7 +220,8 @@ glossary }) })`), so the lint, the docs and the status see it; read it with
 have goes into `collections.ts` and `createContent()` instead. Put the files
 under `content/`, an annotated template in `content/_templates/`, a row
 in `content/README.md`. Run `pnpm content:docs` (the tables in
-`content/README.md`) and `pnpm test`, `pnpm content:check`, `pnpm build`. A client
+`content/README.md` and the collection's JSON Schema in `content/_schemas/`;
+a YAML template opens with its schema line, `agentic-cms schema --lines`) and `pnpm test`, `pnpm content:check`, `pnpm build`. A client
 component gets the entries as props from the page or server component that
 read them (a value import of `agentic-cms/content` in a client module fails the
 build: "Failed to write app endpoint … does not support external modules
@@ -225,7 +230,7 @@ build: "Failed to write app endpoint … does not support external modules
 **Add a field.** Add it to the schema with a helper and a `.describe()`;
 map it where the collection is consumed (`toPost()` in `posts.ts` for
 posts); mention it in the collection's template; run
-`pnpm content:docs`.
+`pnpm content:docs` (the tables and the schemas).
 
 **Reference another collection.** `field: ref("authors")` — a string that
 must be one of the target's slugs; `optional(z.array(ref("posts")))` for a

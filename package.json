@@ -76,6 +76,7 @@
     "scripts",
     "src/lib/**/README.md",
     "content/README.md",
+    "content/_schemas",
     "content/_templates",
     "content/blog/_template.md",
     "content/editorial",

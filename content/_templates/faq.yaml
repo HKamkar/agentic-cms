@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/faqs.json
 # A FAQ set: copy this file to content/faqs/<key>.yaml; the file name is
 # the key a page reads it by (getFaq("<key>")). Items show in order; an
 # answer is one paragraph (a long one may wrap over several lines, the line

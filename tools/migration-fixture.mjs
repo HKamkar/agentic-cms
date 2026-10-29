@@ -38,3 +38,14 @@ export function site084(site, { kitRoot, edits = EDITS } = {}) {
   return Object.keys(files);
 }
 
+/** Every YAML file under the site's content/, by path from its root. */
+const yamlFiles = (site, dir = "content") => (fs.existsSync(path.join(site, dir)) ? fs.readdirSync(path.join(site, dir), { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? yamlFiles(site, `${dir}/${e.name}`) : /\.ya?ml$/.test(e.name) ? [`${dir}/${e.name}`] : [])) : []);
+
+/** Lays 0.8.4's content over the site at `site`, which 0.9.0 added to: no content/_schemas/, no YAML file naming its schema. */
+export function content084(site) {
+  fs.rmSync(path.join(site, "content/_schemas"), { recursive: true, force: true });
+  for (const file of yamlFiles(site)) {
+    const text = fs.readFileSync(path.join(site, file), "utf8");
+    fs.writeFileSync(path.join(site, file), text.replace(/^# yaml-language-server: \$schema=\S*\n/, ""));
+  }
+}

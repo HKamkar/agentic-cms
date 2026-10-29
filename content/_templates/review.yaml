@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/reviews.json
 # One entry of content/reviews.yaml (the home page slider). Copy the block
 # below to the end of that file; slides show in file order. The reviewSchema
 # fields (src/lib/content/README.md, "reviews"):

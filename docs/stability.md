@@ -119,7 +119,7 @@ Each command's flags, defaults and exit codes are in
 
 | Commands | Mark |
 |---|---|
-| the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs` | stable |
+| the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs`, `agentic-cms schema` | stable |
 | the images: `agentic-cms placeholder`, `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` | stable |
 | the proofs: `agentic-cms visual-parity`, `agentic-cms parity` | stable |
 | looks and measures: `agentic-cms shot`, `agentic-cms probe`, `agentic-cms sheet` | stable |
@@ -135,6 +135,7 @@ Each command's flags, defaults and exit codes are in
 | File | Mark | Read by |
 |---|---|---|
 | the content files: `content/pages/`, `content/blog/`, the collections, `content/VOICE.md`'s fenced block, `content/editorial/workshop.yaml` | stable | the content engine and the content lint — `src/lib/content/README.md` |
+| `content/_schemas/`, the JSON Schemas, and the first line of each YAML content file and template that names its schema (`# yaml-language-server: $schema=…`) | stable | an editor's YAML language server; `agentic-cms schema --check`, in `docs --check` — [schema.md](schema.md) |
 | `src/config/site.ts`, `src/config/forms.ts` | stable | `createKit()`, the form engine |
 | `src/config/harness.ts`, the site's profile and its seed | stable | the screenshot harness — [visual-parity.md](visual-parity.md#the-sites-profile) |
 | `src/config/components.json` | stable | the ESLint preset and `check-site` — [primitives.md](primitives.md) |

@@ -57,7 +57,7 @@ canvas.
 
 ## content
 
-Layer: [the content engine](parts.md#the-content-engine). `lint` · `check` · `status` · `docs` — `lint`, `check`, `status`, `docs` read the site's registry and run in its root
+Layer: [the content engine](parts.md#the-content-engine). `lint` · `check` · `status` · `docs` · `schema` — `lint`, `check`, `status`, `docs`, `schema` read the site's registry and run in its root
 
 ### `lint`
 
@@ -126,7 +126,7 @@ agentic-cms status --since 7.days
 
 ### `docs`
 
-The field tables of every collection, from the schemas, into content/README.md between its markers.
+The field tables of every collection, from the schemas, into content/README.md between its markers, and the JSON Schemas under content/_schemas/ (schema).
 
 ```bash
 agentic-cms docs [--check]
@@ -134,13 +134,34 @@ agentic-cms docs [--check]
 
 | flag | what |
 |---|---|
-| `--check` | exit 1 when the tables are out of date instead of writing them (pnpm build runs this) |
+| `--check` | exit 1 when the tables or the JSON Schemas (schema --check) are out of date instead of writing them (pnpm build runs this) |
 
 Exit: `0` written, or up to date; `1` out of date (--check); `2` content/README.md has no markers.
 
 ```bash
-agentic-cms docs                          # writes the field tables into content/README.md
-agentic-cms docs --check                  # exit 1 when they are stale (pnpm build runs this)
+agentic-cms docs                          # writes the field tables into content/README.md and the schemas into content/_schemas/
+agentic-cms docs --check                  # exit 1 when either is stale (pnpm build runs this)
+```
+
+### `schema`
+
+The JSON Schema of every collection, from its zod schema, into content/_schemas/: an editor checks a YAML content file as it is typed (its first line names its schema), an agent reads what a file may hold before writing one.
+
+```bash
+agentic-cms schema [--check] [--lines]
+```
+
+| flag | what |
+|---|---|
+| `--check` | exit 1 when a file under content/_schemas/ is missing, differs from the code or names a collection there is none of, instead of writing them (docs --check runs this, so every pnpm build does) |
+| `--lines` | also open each YAML content file, and each template under content/_templates/ of a collection, with its schema's line where it lacks it: # yaml-language-server: $schema=<path from the file> (ignored with --check) |
+
+Exit: `0` written, or up to date; `1` out of date (--check).
+
+```bash
+agentic-cms schema                        # writes content/_schemas/<collection>.json
+agentic-cms schema --check                # exit 1 when one is stale (docs --check runs this)
+agentic-cms schema --lines                # and the schema line atop each YAML content file that lacks it
 ```
 
 ## images

@@ -26,7 +26,7 @@ never claims, is `VOICE.md` in this folder.
 | Pages | `pages/<slug>.yaml` (`seo.path` is the route) | the page itself: its head, its structured data, and its sections in order with all their copy | `_templates/page.yaml` | › `pages` (one table per section type) — all of them at the end of this file |
 
 Files and folders starting with `_` are never read (`_templates/`,
-`blog/_template.md`). A page file lists its sections by `type`; the copy
+`_schemas/`, `blog/_template.md`). A page file lists its sections by `type`; the copy
 of each section — eyebrow, heading, paragraphs, cards, stats, button
 labels, image paths and alt texts — is in the file, the design's numbers
 (reveal delays, sizes, class strings) stay in the section's component.
@@ -70,6 +70,14 @@ isolation.
   page reads it by; a map's key is what a post's `author` / `category` names.
 - **Every field the schema does not know is an error**, so a typo in a key
   fails the build instead of silently doing nothing.
+- **Each YAML file names its schema** on its first line,
+  `# yaml-language-server: $schema=…`, pointing at
+  `_schemas/<collection>.json`: an editor with the YAML language server
+  checks the file as it is typed, and an agent reads the schema before
+  writing one. Keep the line when copying a template. `_schemas/` is
+  written from the code (`pnpm content:docs`, or `agentic-cms schema`),
+  never by hand, and the build fails when it is stale
+  ([docs/schema.md](../docs/schema.md)).
 - **Text stays text.** Quotes carry their own quotation marks in the file;
   a long paragraph may wrap over several lines (the breaks read as
   spaces); nothing is trimmed.
@@ -162,8 +170,9 @@ not for these files.
 ## Fields
 
 Every key of every collection, generated from the schemas by
-`agentic-cms docs` (`pnpm content:docs`); `pnpm build` fails when
-this section is stale.
+`agentic-cms docs` (`pnpm content:docs`, which writes the JSON Schemas in
+`_schemas/` with them); `pnpm build` fails when this section or a schema
+is stale.
 
 <!-- content-docs:start -->
 

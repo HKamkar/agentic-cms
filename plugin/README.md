@@ -20,6 +20,7 @@ cannot find; the plugin has no defaults for any of them.
 | `content/README.md` | the door: what exists, how to change it, how to prove it; its "Fields" section is the generated field table of every collection and every section type (`pnpm content:docs`) |
 | `content/VOICE.md` | who reads the site, how the brand is spelled (`brand.name`, `brand.mark` in the fenced block), what is never said, the calls to action; the block the lint enforces |
 | `content/blog/_template.md`, `content/_templates/*` | every field annotated; the image names and sizes; the closing paragraph of a post |
+| `content/_schemas/<collection>.json` | the JSON Schema of each collection's files (a YAML file names its own on its first line): read before a file is written, `pnpm content:check` after, for what no schema checks (`agentic-cms schema`) |
 | `content/authors.json`, `content/categories.json` | the keys a post's `author` and `category` name |
 | `content/editorial/calendar.md`, `backlog.md` | the dated plan (`date \| slug \| status \| owner \| note`; a `retired` row silences the stale-draft rule) and the ideas |
 | `content/editorial/workshop.yaml` | optional: where the marketing workshop lives outside the repo and what may be read there, by role (below) |

@@ -12,13 +12,14 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
+const REPO = path.resolve(import.meta.dirname, "..");
 const run = (args, cwd = process.cwd()) => spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: "utf8" });
 
 test("the help is the map by family, one line per command, and names the exit codes", () => {
   const r = run(["--help"]);
   assert.equal(r.status, 0);
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
-  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
+  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs · schema\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
   assert.match(r.stdout, /\n {2}site\s+init · upgrade · setup · urls · serve\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
@@ -51,6 +52,22 @@ test("a command that reads the site refuses to run outside a site's root, with t
     assert.equal(run(["placeholder", "x.svg", "8", "8"], dir).status, 0, "placeholder runs anywhere");
     assert.equal(run(["optimize-webp", "nope.webp"], dir).status, 2);
     assert.match(run(["optimize-webp", "nope.webp"], dir).stderr, /nope\.webp: no such file or folder/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("schema: the example's files are current (the build's docs --check says so too); its help names --check and --lines; outside a site's root it is refused", () => {
+  const r = run(["schema", "--check"], REPO);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^schema: content\/_schemas\/ is up to date \(7 collections\)\n$/);
+  assert.match(run(["docs", "--check"], REPO).stdout, /content\/README\.md and content\/_schemas\/ are up to date/);
+  const help = run(["schema", "--help"]);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--check[\s\S]*--lines/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try {
+    const outside = run(["schema"], dir);
+    assert.equal(outside.status, 2);
+    assert.match(outside.stderr, /^agentic-cms schema: no src\/kit\.ts here/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

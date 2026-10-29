@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # A demo page (/sections/about): every about section type, with copy that
 # names each slot. Every field is checked at build time (pageSchema in
 # src/lib/content/collections.ts; the section types and their fields are

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "object",
+  "propertyNames": {
+    "type": "string"
+  },
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Shown in the byline, the author card and as the JSON-LD author"
+      },
+      "title": {
+        "description": "Role line under the name on the author card",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "bio": {
+        "description": "One or two sentences on the author card",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "image": {
+        "description": "Portrait under public/images/authors/",
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "imageAlt": {
+        "description": "What the portrait shows",
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": false,
+    "description": "An author of posts; the key of content/authors.json is the slug a post's `author` names"
+  },
+  "description": "content/authors.json: An author of posts; the key of content/authors.json is the slug a post's `author` names (one file holding a map, the key is the slug)."
+}

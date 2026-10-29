@@ -43,7 +43,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
-import { site084 } from "./migration-fixture.mjs";
+import { content084, site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
@@ -135,6 +135,7 @@ async function build(site) {
     if (fs.existsSync(path.join(kit, example))) fail(`the tarball ships the example's ${example}, which stays in the kit's repository`);
   }
   noExample(site);
+  schemasShipped(site);
   starterBuilds(site);
   emailGuarded(site);
   lintsClean(site);
@@ -180,6 +181,14 @@ function noExample(site) {
   const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (["node_modules", ".next", ".git"].includes(e.name) ? [] : e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
   const left = files(site).filter((file) => /acme/i.test(path.basename(file)) || (!/\.(?:jpe?g|png|webp|ico)$/.test(file) && /acme/i.test(fs.readFileSync(file, "utf8"))));
   if (left.length) fail(`the fresh site holds the example's brand: ${left.map((file) => path.relative(site, file)).join(", ")}`);
+}
+
+/** The content files checked as they are typed (docs/schema.md): the tarball ships the JSON Schemas, init laid them out current, and the starter's YAML files open with the line an editor reads them by. */
+function schemasShipped(site) {
+  if (!fs.existsSync(path.join(site, "node_modules/agentic-cms/content/_schemas/pages.json"))) fail("the tarball lacks content/_schemas/ (package.json files)");
+  const check = spawnSync("pnpm", ["exec", "agentic-cms", "schema", "--check"], { cwd: site, encoding: "utf8", env: ENV });
+  if (check.status !== 0) fail(`agentic-cms schema --check answered ${check.status} in the fresh site: ${`${check.stdout}${check.stderr}`.trim().slice(-600)}`);
+  if (!fs.readFileSync(path.join(site, "content/pages/home.yaml"), "utf8").startsWith("# yaml-language-server: $schema=../_schemas/pages.json\n")) fail("the starter's home page does not open with its schema's line");
 }
 
 /**
@@ -387,15 +396,18 @@ function upgrade(site) {
 /**
  * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
  * 0.8.4's own texts from the installed package's record, a rule and a skill
- * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them),
+ * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them)
+ * and its content (no JSON Schemas, no schema lines),
  * upgraded by the installed `agentic-cms upgrade` with the tarball as its
  * spec: the 0.9.0 migration moves the copies, the steps left by hand come
- * back with their section (exit 1), the lint and the tests pass, and the
- * agent files' check is clean after it; then the fresh site is put back.
+ * back with their section (exit 1), the lint and the tests pass, the docs
+ * check and the content lint pass on what it wrote, and the agent files'
+ * check is clean after it; then the fresh site is put back.
  */
 function upgradeFrom084(site) {
   const fresh = headOf(site);
   site084(site, { kitRoot: path.join(site, "node_modules/agentic-cms") });
+  content084(site);
   git(site, "add", "-A");
   git(site, "commit", "-q", "-m", "the site as 0.8.4 left its agent files");
   const spec = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).dependencies["agentic-cms"];
@@ -405,12 +417,14 @@ function upgradeFrom084(site) {
   const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
   const wrong = [
     r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
-    !["removed", "moved", "thin"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    !["removed", "moved", "thin", "schema line", "written"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
     report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
     report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
   ].filter(Boolean);
   if (wrong.length) fail(`upgrade from 0.8.4: ${wrong.join("; ")}: ${r.stderr.trim().slice(-2000)}`);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  run("pnpm", ["exec", "agentic-cms", "docs", "--check"], site);
+  run("pnpm", ["content:lint"], site);
   if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
   putBack(site, fresh, "upgrade from 0.8.4: ");
   console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);

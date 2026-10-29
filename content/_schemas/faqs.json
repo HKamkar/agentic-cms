@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The question, shown as the item's heading"
+          },
+          "answer": {
+            "type": "string",
+            "description": "The answer, one paragraph, shown when the item opens"
+          }
+        },
+        "required": [
+          "question",
+          "answer"
+        ],
+        "additionalProperties": false
+      },
+      "description": "The questions in order; each opens to its answer"
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "additionalProperties": false,
+  "description": "content/faqs: A FAQ set: one file per page that shows one, the file name is the key the page reads it by (one file per entry, the file name is the slug)."
+}

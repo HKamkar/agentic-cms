@@ -38,7 +38,7 @@ writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 ## 0.8.4 → 0.9.0
 
 Unreleased: on `develop` until 0.9.0. `upgrade` runs the 0.9.0 migration
-(`scripts/migrations/0.9.0.mjs`), which takes the first item below and
+(`scripts/migrations/0.9.0.mjs`), which takes each item below it can and
 prints the rest.
 
 - **The agent files move.** The first `init . --agent-files` on 0.9.0
@@ -52,6 +52,14 @@ prints the rest.
   marketplace, `./node_modules/agentic-cms`, with `design@agentic-cms`
   enabled beside `editorial@agentic-cms`. Commit what it changed with the
   manifest.
+- **The content schemas.** `upgrade` opens each YAML content file of the
+  standard collections with its schema's line
+  (`# yaml-language-server: $schema=…`), then runs the site's installed
+  `agentic-cms schema --lines` and `agentic-cms docs`. Together they write
+  `content/_schemas/`, the line of each collection of the site's own and
+  the field tables. The build's `docs --check` fails until they are there;
+  commit them. Where the installed command cannot run, `upgrade` prints the
+  two commands as a step by hand ([schema.md](schema.md)).
 - **By hand, `AGENTS.md` and `CLAUDE.md`.** They are the site's own, so
   the move leaves them. Replace what the 0.8 template copied into
   `AGENTS.md` — its sections on styling, gotchas and the parity harness,

@@ -14,8 +14,10 @@ editorial date readers see, `publishedAt` the JSON-LD `datePublished`,
 
 ## Read first
 
-The post file, `content/VOICE.md`, `src/lib/blog/README.md`, and
-`git log --oneline -- content/blog/<slug>.md` for what changed before.
+The post file, its frontmatter's JSON Schema `content/_schemas/posts.json`
+(the keys a post may hold and what each says), `content/VOICE.md`,
+`src/lib/blog/README.md`, and `git log --oneline -- content/blog/<slug>.md`
+for what changed before.
 
 ## Steps
 
@@ -30,8 +32,9 @@ The post file, `content/VOICE.md`, `src/lib/blog/README.md`, and
    named and optimised as `content/blog/_template.md` and
    the package's `scripts/README.md` say (`pnpm kit optimize-webp`); delete what
    the edit left behind (the lint's `image-orphan` rule names it).
-4. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; the `WARN`
-   lines on this file are the ones to read.
+4. **Lint until clean.** `pnpm content:check` first (the refs no schema
+   checks), then `pnpm content:lint`: fix every `FAIL`; the `WARN` lines on
+   this file are the ones to read.
 5. **Verify** (below); `pnpm kit parity` is not for a content edit (the
    page is supposed to change), but read `check-seo`'s lines for the route
    in the build log.

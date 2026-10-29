@@ -473,6 +473,7 @@ pnpm content:lint    # the content rules, about a second (agentic-cms lint; the 
 pnpm content:check   # the schemas alone, in a fraction of a second
 pnpm content:status  # what is live, in draft and planned, from the files
 pnpm content:docs    # the field tables into content/README.md (the build checks them with docs --check)
+pnpm kit schema      # the JSON Schema of every collection into content/_schemas/, which each YAML content file names on its first line (--lines adds it; docs --check, in the build, fails a stale one)
 ```
 
 **Design tools**
