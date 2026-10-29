@@ -138,5 +138,6 @@ Each command's flags, defaults and exit codes are in
 | `src/config/site.ts`, `src/config/forms.ts` | stable | `createKit()`, the form engine |
 | `src/config/harness.ts`, the site's profile and its seed | stable | the screenshot harness — [visual-parity.md](visual-parity.md#the-sites-profile) |
 | `src/config/components.json` | stable | the ESLint preset and `check-site` — [primitives.md](primitives.md) |
-| `.agentic-cms.json` and `.agentic-cms/base/`, the agent-file manifest | stable | `init --agent-files` alone, which writes them — [init.md § After a kit upgrade](init.md#after-a-kit-upgrade) |
+| `.agentic-cms.json`, the agent-file manifest (its `format` 2 since 0.9.0) | stable | `init --agent-files` alone, which writes it — [init.md § After a kit upgrade](init.md#after-a-kit-upgrade) |
+| the kit's block in a site's thin rule, a Codex stub | stable | `init --agent-files`, which rewrites them; the site's own lines go outside the block |
 | `.claude/settings.json`'s keys the kit holds | stable | `init --agent-files --check` — [init.md § What an edit keeps](init.md#what-an-edit-keeps) |

@@ -10,6 +10,13 @@
       "source": "./plugin",
       "description": "The agent's side of a CMS whose content is files: skills that add, write, review, retire and report on the content of a site built from files, with the site's own voice rules read from the repo, never from the plugin",
       "version": "0.1.0"
+    },
+    {
+      "name": "design",
+      "source": "./.claude",
+      "strict": false,
+      "description": "The design skills of agentic-cms: design a site on the kit from the wireframe to a look of its own, one element at a time through candidates the owner picks from, measured, with icons and graphics of its own, and proven on its pixels before anything merges; and the setup of a clone",
+      "version": "0.1.0"
     }
   ]
 }

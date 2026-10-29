@@ -144,6 +144,33 @@ async function build(site) {
   for (const way of PATHS) upgradeUnguarded(site, way);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  agentFilesResolve(site);
+}
+
+/**
+ * What the site's agent files name is in the installed package: the
+ * marketplace its .claude/settings.json gives by path, each plugin it enables
+ * listed there with a skill in its folder, the file each Codex stub and each
+ * thin rule points at.
+ */
+function agentFilesResolve(site) {
+  const settings = JSON.parse(fs.readFileSync(path.join(site, ".claude/settings.json"), "utf8"));
+  for (const [name, { source }] of Object.entries(settings.extraKnownMarketplaces ?? {})) {
+    if (source.source !== "directory") fail(`.claude/settings.json: the marketplace ${name} is ${source.source}, not the installed package's folder`);
+    const root = path.resolve(site, source.path);
+    const market = JSON.parse(fs.readFileSync(path.join(root, ".claude-plugin/marketplace.json"), "utf8"));
+    for (const plugin of Object.keys(settings.enabledPlugins).filter((id) => id.endsWith(`@${name}`)).map((id) => id.split("@")[0])) {
+      const entry = market.plugins.find((p) => p.name === plugin);
+      if (!entry) fail(`the package's marketplace lists no ${plugin}, which .claude/settings.json enables`);
+      const skills = path.join(root, entry.source, "skills");
+      if (!fs.existsSync(skills) || !fs.readdirSync(skills).some((skill) => fs.existsSync(path.join(skills, skill, "SKILL.md")))) fail(`the ${plugin} plugin has no skill at ${path.relative(site, skills)}`);
+    }
+  }
+  const pointers = [".agents/skills", ".claude/rules"].flatMap((dir) => fs.readdirSync(path.join(site, dir), { recursive: true }).filter((file) => file.endsWith(".md")).map((file) => path.join(site, dir, file)));
+  for (const file of pointers) {
+    for (const [, named] of fs.readFileSync(file, "utf8").matchAll(/`(node_modules\/agentic-cms\/[^`]+\.md)`/g)) if (!fs.existsSync(path.join(site, named))) fail(`${path.relative(site, file)} points at ${named}, which the package lacks`);
+  }
+  console.log(`pack-smoke: the site's marketplace, plugins, stubs and thin rules resolve in the installed package (${pointers.length} files)`);
 }
 
 /** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */

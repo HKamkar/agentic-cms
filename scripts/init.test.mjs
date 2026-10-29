@@ -9,8 +9,10 @@ import { parse as parseYaml } from "yaml";
 import { checkComponents, formatReport } from "./lib/check-components.mjs";
 import { checkSite, formatSiteReport } from "./lib/check-site.mjs";
 import { recordOf, recordText } from "../tools/agent-file-releases.mjs";
-import { REQUIRED, requiredBlocks, requiredGone, settingsGone } from "./lib/agent-required.mjs";
-import { acceptAgentFiles, AGENT_DIRS, agentFileDiff, AgentFileError, agentFiles, ALLOW_BUILDS, EXAMPLE, GatesError, kitCommit, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, SETTINGS, sha, siteVersion } from "./lib/init.mjs";
+import { REQUIRED, requiredBlocks, requiredGone, requiredSources } from "./lib/agent-required.mjs";
+import { BLOCK_END, BLOCK_START, codexStub, FORMAT, STUB_NOTE, thinRule } from "./lib/agent-file-format.mjs";
+import { measureSettings } from "./lib/agent-files.mjs";
+import { AGENT_DIRS, agentFiles, ALLOW_BUILDS, EXAMPLE, GatesError, LINT, mergeWorkspace, readManifest, RELEASES, renderAgentFiles, scaffold, SETTINGS, sha } from "./lib/init.mjs";
 import { LightOnlyError } from "./lib/light-only.mjs";
 import { KIT_ONLY, SHARED_CONTENT, siteCode, STARTER, StarterError } from "./lib/starter.mjs";
 import { readSiteProfile } from "./lib/storage-seed.mjs";
@@ -23,7 +25,7 @@ const quiet = { log: () => {} };
 test("scaffold lays out a site from the package: the example's code, the starter, the agent files, the config, a manifest", () => {
   const target = path.join(tmp(), "my-site");
   const result = scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/pages/blog.yaml", "content/VOICE.md", "public/images/brand/my-site-logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", ".github/dependabot.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/rules/components.md", ".claude/rules/pages.md", "src/config/components.json", ".claude/skills/design/SKILL.md", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
+  for (const file of ["src/kit.ts", "src/app/layout.tsx", "src/components/README.md", "src/config/site.ts", "src/config/analytics.ts", "src/config/harness.ts", "src/components/ui/ConsentBanner.tsx", "src/styles/base.css", "content/pages/home.yaml", "content/pages/blog.yaml", "content/VOICE.md", "public/images/brand/my-site-logo.svg", "STANDARD.md", "AGENTS.md", "CLAUDE.md", "README.md", "PLAN.md", "next.config.ts", "postcss.config.mjs", "eslint.config.mjs", "tsconfig.json", "package.json", "pnpm-workspace.yaml", ".gitignore", ".env.example", ".nvmrc", ".github/workflows/verify.yml", ".github/dependabot.yml", "scripts/setup.sh", ".claude/settings.json", ".claude/rules/styling.md", ".claude/rules/design.md", ".claude/rules/components.md", ".claude/rules/pages.md", "src/config/components.json", ".agents/skills/design/SKILL.md", ".agentic-cms.json"]) {
     assert.ok(fs.existsSync(path.join(target, file)), file);
   }
   assert.ok(!fs.existsSync(path.join(target, "src/lib")), "nothing of the package's source");
@@ -55,16 +57,20 @@ test("scaffold lays out a site from the package: the example's code, the starter
   assert.match(read(target, "pnpm-workspace.yaml"), /"agentic-cms@git\+https:\/\/github\.com\/HKamkar\/agentic-cms\.git": true/);
   assert.deepEqual(parseYaml(read(target, "pnpm-workspace.yaml")).allowBuilds, Object.fromEntries(ALLOW_BUILDS.map((name) => [name, true])));
   assert.equal(mergeWorkspace(read(target, "pnpm-workspace.yaml")), null, "the kit's own workspace lacks nothing");
-  assert.match(read(target, ".claude/settings.json"), /"repo": "HKamkar\/agentic-cms"/);
+  assert.deepEqual(JSON.parse(read(target, ".claude/settings.json")).extraKnownMarketplaces["agentic-cms"], { source: { source: "directory", path: "./node_modules/agentic-cms" } }, "the kit's skills come from the installed package's marketplace");
+  assert.ok(!fs.existsSync(path.join(target, ".claude/skills")), "no copy of the kit's skills: the design plugin has them");
+  assert.ok(read(target, ".agents/skills/design/SKILL.md").includes("node_modules/agentic-cms/.agents/skills/design/SKILL.md"), "Codex's stub names the package's skill");
   assert.doesNotMatch(read(target, ".claude/rules/content-engine.md"), /(?<!agentic-cms\/)src\/lib\//, "a site's rule never names the kit's source");
-  assert.match(read(target, ".claude/rules/content-engine.md"), /node_modules\/agentic-cms\/src\/lib\/content\/README\.md/);
+  assert.match(read(target, ".claude/rules/content-engine.md"), /node_modules\/agentic-cms\/templates\/site\/rules\/content-engine\.md/, "a thin rule points at the kit's whole rule");
   assert.match(read(target, "next.config.ts"), /images: \{ unoptimized: true \}/);
   assert.doesNotMatch(read(target, "next.config.ts"), /opennextjs/);
   assert.match(read(target, "STANDARD.md"), /^> This is the wireframe's standard/m);
   const manifest = readManifest(target);
   assert.equal(manifest.version, "0.4.0");
-  assert.ok(manifest.files[".claude/skills/design/SKILL.md"].startsWith("sha256:"));
-  assert.ok(manifest.files[".claude/rules/styling.md"]);
+  assert.equal(manifest.format, FORMAT);
+  assert.ok(manifest.rules[".claude/rules/styling.md"].startsWith("sha256:"));
+  assert.ok(manifest.stubs.includes(".agents/skills/design/SKILL.md"));
+  assert.deepEqual(manifest.settings, ['extraKnownMarketplaces["agentic-cms"]', 'enabledPlugins["editorial@agentic-cms"]', 'enabledPlugins["design@agentic-cms"]']);
 });
 
 test("init --name: a new site needs its name, which goes where the example says its own; --url and --email its address, else stand-ins on a reserved domain", () => {
@@ -371,28 +377,6 @@ test("the site's CI workflow is written once, then kept as the site has it", () 
   assert.equal(read(target, workflow), "name: ours\n");
 });
 
-test("agentFiles --check tells a site's edit from a kit update and a missing file", () => {
-  const target = tmp();
-  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.4.0", force: false, ...quiet });
-  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.4.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
-  fs.appendFileSync(path.join(target, ".claude/skills/design/SKILL.md"), "\nlocal note\n");
-  fs.rmSync(path.join(target, ".claude/rules/design.md"));
-  // stale: the site never touched the file (disk matches the record) but the kit's current one differs
-  const manifest = readManifest(target);
-  fs.writeFileSync(path.join(target, ".claude/rules/styling.md"), "an older version\n");
-  manifest.files[".claude/rules/styling.md"] = `sha256:${crypto.createHash("sha256").update("an older version\n").digest("hex")}`;
-  fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify(manifest));
-  const report = agentFiles(target, { kitRoot: KIT, version: "0.4.0", check: true, ...quiet });
-  const status = Object.fromEntries(report.map((f) => [f.file, f.status]));
-  assert.equal(status[".claude/skills/design/SKILL.md"], "modified");
-  assert.equal(status[".claude/rules/design.md"], "missing");
-  assert.equal(status[".claude/rules/styling.md"], "stale");
-  const written = agentFiles(target, { kitRoot: KIT, version: "0.4.0", check: false, ...quiet });
-  assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/skills/design/SKILL.md"], "kept", "a site's edit is never clobbered");
-  assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/design.md"], "created");
-  assert.equal(Object.fromEntries(written.map((f) => [f.file, f.status]))[".claude/rules/styling.md"], "updated");
-});
-
 test("a block the kit marks required is its list item or its paragraph, read with the markers out and the whitespace collapsed; a site's copy keeps its words re-wrapped, re-indented, unmarked, in another case or among its own", () => {
   const kit = [
     "# A rule",
@@ -437,74 +421,129 @@ test("every rule the kit gives a site ends with its tier line, marked required, 
   }
 });
 
-test("--check fails a site's edit that dropped a block the kit marks required, naming it; the refresh keeps the edit and says so, --accept reports it, --force takes the kit's text", () => {
+test("--check tells the kit's text, the site's own lines after the kit's block, a block or a stub behind the kit's and a missing file; the refresh rewrites the kit's lines and keeps the site's", () => {
   const target = tmp();
-  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
+  const at = (file) => path.join(target, file);
+  fs.appendFileSync(at(".claude/rules/styling.md"), "\n- The site's own line.\n");
+  const design = read(target, ".claude/rules/design.md");
+  fs.writeFileSync(at(".claude/rules/design.md"), design.replace(` ${REQUIRED}`, ` (the site's word) ${REQUIRED}`));
+  fs.rmSync(at(".claude/rules/pages.md"));
+  fs.appendFileSync(at(".agents/skills/design/SKILL.md"), "\nlocal note\n");
+  const check = statusOf(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }));
+  assert.equal(check[".claude/rules/styling.md"], "modified", "the site's own lines after the block pass");
+  assert.equal(check[".claude/rules/design.md"], "stale", "a line of the kit's block changed is the kit's to put back");
+  assert.equal(check[".claude/rules/pages.md"], "missing");
+  assert.equal(check[".agents/skills/design/SKILL.md"], "stale", "a stub is never the site's");
+  const written = statusOf(agentFiles(target, { kitRoot: KIT, version: "0.9.0", ...quiet }));
+  assert.deepEqual([written[".claude/rules/styling.md"], written[".claude/rules/design.md"], written[".claude/rules/pages.md"], written[".agents/skills/design/SKILL.md"]], ["kept", "updated", "created", "updated"]);
+  assert.ok(read(target, ".claude/rules/styling.md").endsWith(`${BLOCK_END}\n\n- The site's own line.\n`), "the site's lines stay where it put them");
+  assert.equal(read(target, ".claude/rules/design.md"), design);
+  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }).filter((f) => !["ok", "modified"].includes(f.status)), []);
+});
+
+test("a thin rule is the kit's paths, then its block: the title, each block the kit marks required as the kit has it, and the pointer to the whole rule, itself required", () => {
+  for (const name of fs.readdirSync(path.join(KIT, "templates/site/rules"))) {
+    const whole = read(KIT, `templates/site/rules/${name}`);
+    const thin = thinRule(whole, `.claude/rules/${name}`);
+    assert.ok(thin.startsWith(whole.match(/^---\n[\s\S]*?\n---\n/)[0] + "\n" + BLOCK_START + "\n" + whole.match(/^# .+$/m)[0] + "\n"), `${name}: the paths, the block, the title`);
+    for (const block of requiredSources(whole)) assert.ok(thin.includes(block), `${name}: ${block.slice(0, 40)}…`);
+    assert.deepEqual(requiredGone(thin, whole), [], `${name}: nothing the kit requires left out`);
+    assert.ok(requiredBlocks(thin).at(-1).text.startsWith(`Before an edit these paths match, read the kit's whole rule, \`node_modules/agentic-cms/templates/site/rules/${name}\``), `${name}: the pointer, last and required`);
+    assert.ok(thin.endsWith(`${BLOCK_END}\n`));
+  }
+});
+
+test("a rule whose block marks the site took away is its own: modified while every required block is in it, modified, required gone once one is not; the refresh keeps it, --force takes the kit's", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
   const RULE = ".claude/rules/pages.md";
-  const kit = read(KIT, "templates/site/rules/pages.md");
-  const [gone] = requiredBlocks(kit);
-  const lines = kit.split("\n");
-  const at = lines.findIndex((line) => line.endsWith(REQUIRED));
+  const thin = read(target, RULE);
   const entry = (report) => report.find((f) => f.file === RULE);
-  // an edit that keeps every required block, re-wrapped and unmarked: modified, and --check passes
-  const rewrapped = [...lines.slice(0, at), lines[at].replace(` ${REQUIRED}`, "").replace("; its URL", ";\n  its URL"), ...lines.slice(at + 1), "- The site's own line."].join("\n");
-  fs.writeFileSync(path.join(target, RULE), rewrapped);
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified" });
-  // the same edit without that block: the check names it, with where the kit has it
-  fs.writeFileSync(path.join(target, RULE), [...lines.slice(0, at), ...lines.slice(at + 1), "- The site's own line."].join("\n"));
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet })), { file: RULE, status: "modified, required gone", required: [gone] });
-  assert.equal(gone.line, at + 1);
+  const unmarked = thin.replace(`${BLOCK_START}\n`, "").replace(`${BLOCK_END}\n`, "- The site's own line.\n");
+  fs.writeFileSync(path.join(target, RULE), unmarked);
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet })).status, "modified");
+  const [gone] = requiredBlocks(thin);
+  const lines = unmarked.split("\n");
+  fs.writeFileSync(path.join(target, RULE), lines.filter((line) => !line.startsWith(requiredSources(thin)[0].split("\n")[0])).join("\n"));
   const edited = read(target, RULE);
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet })), { file: RULE, status: "kept, required gone", required: [gone] });
-  assert.equal(read(target, RULE), edited, "a site's edit is never clobbered");
-  assert.deepEqual(acceptAgentFiles(target, [RULE], { kitRoot: KIT }), [{ file: RULE, status: "modified, required gone", required: [gone] }]);
-  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet })).status, "updated");
-  assert.equal(read(target, RULE), kit);
+  assert.deepEqual(entry(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet })).required, [gone]);
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet })).status, "modified, required gone");
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.9.0", ...quiet })).status, "kept, required gone");
+  assert.equal(read(target, RULE), edited, "a site's own file is never clobbered");
+  assert.equal(entry(agentFiles(target, { kitRoot: KIT, version: "0.9.0", force: true, ...quiet })).status, "updated");
+  assert.equal(read(target, RULE), thin);
 });
 
-test("--check holds .claude/settings.json to the editorial plugin: the kit's marketplace and the plugin enabled; the site's own keys pass, and a refresh writes it only when it is missing", () => {
+/** A kit with this one's agent-file sources, `edit` given each { <path>: (text) => text } to change. */
+function kitWith(edit = {}) {
+  const kit = tmp();
+  for (const dir of ["templates/site/rules", ".claude/skills", ".agents/skills"]) fs.cpSync(path.join(KIT, dir), path.join(kit, dir), { recursive: true });
+  fs.copyFileSync(path.join(KIT, "templates/site/settings.json"), path.join(kit, "templates/site/settings.json"));
+  for (const [file, change] of Object.entries(edit)) fs.writeFileSync(path.join(kit, file), change(read(kit, file)));
+  return kit;
+}
+
+test("a rule's paths follow the kit while the site leaves them alone, and stay the site's once it changes them", () => {
   const target = tmp();
-  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.8.2", force: false, ...quiet });
-  const settings = () => agentFiles(target, { kitRoot: KIT, version: "0.8.2", check: true, ...quiet }).find((f) => f.file === SETTINGS);
-  const write = (value) => fs.writeFileSync(path.join(target, SETTINGS), typeof value === "string" ? value : JSON.stringify(value, null, 2));
-  const kit = JSON.parse(read(KIT, "templates/site/settings.json"));
-  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" });
-  write({ ...kit, permissions: { allow: ["Bash(pnpm lint)"] }, hooks: {}, enabledPlugins: { ...kit.enabledPlugins, "other@elsewhere": true } });
-  assert.deepEqual(settings(), { file: SETTINGS, status: "ok" }, "the site's own settings beside the kit's");
-  write({ ...kit, enabledPlugins: { "editorial@agentic-cms": false } });
-  assert.deepEqual(settings(), { file: SETTINGS, status: "modified, required gone", required: [{ text: 'enabledPlugins["editorial@agentic-cms"]: true' }] });
-  write({ permissions: kit.permissions });
-  assert.deepEqual(settings().required, [{ text: 'extraKnownMarketplaces["agentic-cms"]' }, { text: 'enabledPlugins["editorial@agentic-cms"]: true' }]);
-  const own = read(target, SETTINGS);
-  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", force: true, ...quiet }).find((f) => f.file === SETTINGS).status, "kept, required gone");
-  assert.equal(read(target, SETTINGS), own, "never rewritten, forced or not");
-  write("{ not json");
-  assert.deepEqual(settings(), { file: SETTINGS, status: "unreadable" });
-  fs.rmSync(path.join(target, SETTINGS));
-  assert.deepEqual(settings(), { file: SETTINGS, status: "missing" });
-  assert.equal(agentFiles(target, { kitRoot: KIT, version: "0.8.2", ...quiet }).find((f) => f.file === SETTINGS).status, "created");
-  assert.equal(read(target, SETTINGS), read(KIT, "templates/site/settings.json"));
-  assert.deepEqual(settingsGone({}, {}), [], "a template that names no plugin requires none");
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  const RULE = ".claude/rules/seo.md";
+  const widen = (from, to) => (text) => text.replace(from, to);
+  const later = kitWith({ "templates/site/rules/seo.md": widen('  - "content/pages/**"', '  - "content/pages/**"\n  - "content/landing/**"') });
+  assert.equal(statusOf(agentFiles(target, { kitRoot: later, version: "0.9.1", check: true, ...quiet }))[RULE], "stale");
+  agentFiles(target, { kitRoot: later, version: "0.9.1", ...quiet });
+  assert.match(read(target, RULE), /- "content\/landing\/\*\*"/, "the kit's new scope, in");
+  fs.writeFileSync(path.join(target, RULE), read(target, RULE).replace('  - "content/landing/**"', '  - "content/campaigns/**"'));
+  const own = read(target, RULE);
+  const next = kitWith({ "templates/site/rules/seo.md": widen('  - "content/pages/**"', '  - "content/pages/**"\n  - "content/offers/**"') });
+  const entry = agentFiles(target, { kitRoot: next, version: "0.9.2", check: true, ...quiet }).find((f) => f.file === RULE);
+  assert.deepEqual(entry, { file: RULE, status: "modified", note: "its own paths, kept" });
+  agentFiles(target, { kitRoot: next, version: "0.9.2", ...quiet });
+  assert.equal(read(target, RULE), own, "the site's scope is the site's");
 });
 
-test("a site's own rule that predates the manifest is kept on the first --agent-files run, not overwritten, and is a gap until the site accepts the kit's text", () => {
+test("a Codex stub stands for each of the kit's skills: the skill's name and description and the package's file; a skill the kit drops loses its stub", () => {
+  for (const name of fs.readdirSync(path.join(KIT, ".agents/skills"))) {
+    const file = `.agents/skills/${name}/SKILL.md`;
+    const stub = codexStub(read(KIT, file), file);
+    const front = (text) => text.match(/^---\n([\s\S]*?)\n---\n/)[1].split("\n").filter((line) => /^(?:name|description):/.test(line));
+    assert.deepEqual(front(stub), front(read(KIT, file)), `${name}: its name and description`);
+    assert.ok(stub.includes(`read \`node_modules/agentic-cms/${file}\``) && stub.trimEnd().endsWith(STUB_NOTE), `${name}: the package's file, and the note`);
+  }
   const target = tmp();
-  fs.mkdirSync(path.join(target, ".claude/rules"), { recursive: true });
-  fs.writeFileSync(path.join(target, ".claude/rules/styling.md"), "the site's own styling rule\n");
-  const first = agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, ...quiet });
-  const status = Object.fromEntries(first.map((f) => [f.file, f.status]));
-  assert.equal(status[".claude/rules/styling.md"], "kept, kit changed", "no base: the site never took the kit's text");
-  assert.equal(status[".claude/rules/design.md"], "created");
-  assert.ok(!(".claude/rules/components.md" in status), "no guard config: the components rule is not the site's");
-  assert.equal(read(target, ".claude/rules/styling.md"), "the site's own styling rule\n");
-  assert.ok(!(".claude/rules/styling.md" in readManifest(target).files), "and no base is made up for it");
-  const check = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: true, ...quiet }).map((f) => [f.file, f.status]));
-  assert.equal(check[".claude/rules/styling.md"], "modified, kit changed", "and --check keeps calling it the site's, with the kit's text to look at");
-  const diff = agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: KIT, version: "0.4.1" });
-  assert.equal(diff.base, null);
-  assert.match(diff.diff, /^--- a\/\.claude\/rules\/styling\.md\n\+\+\+ b\/\.claude\/rules\/styling\.md\n@@ -1 \+1,\d+ @@\n-the site's own styling rule\n/, "with no base, the site's text against the kit's");
-  const forced = Object.fromEntries(agentFiles(target, { kitRoot: KIT, version: "0.4.1", check: false, force: true, ...quiet }).map((f) => [f.file, f.status]));
-  assert.equal(forced[".claude/rules/styling.md"], "updated", "--force is the way to take the kit's");
+  const kit = kitWith();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  fs.rmSync(path.join(kit, ".agents/skills/setup"), { recursive: true });
+  const report = agentFiles(target, { kitRoot: kit, version: "0.9.1", ...quiet });
+  assert.equal(statusOf(report)[".agents/skills/setup/SKILL.md"], "removed");
+  assert.ok(!fs.existsSync(path.join(target, ".agents/skills/setup")));
+  assert.ok(!readManifest(target).stubs.includes(".agents/skills/setup/SKILL.md"));
+});
+
+test(".claude/settings.json holds the kit's keys as its template has them — the package's marketplace, the editorial and design plugins — and the site's own beside them; a refresh sets the kit's, and drops one the kit wrote and holds no more", () => {
+  const template = read(KIT, "templates/site/settings.json");
+  const kit = JSON.parse(template);
+  assert.deepEqual(kit.extraKnownMarketplaces["agentic-cms"], { source: { source: "directory", path: "./node_modules/agentic-cms" } });
+  assert.deepEqual(measureSettings(null, template), { status: "missing", text: template });
+  assert.deepEqual(measureSettings("{ not json", template), { status: "unreadable" });
+  const own = { ...kit, permissions: { allow: ["Bash(pnpm lint)"] }, hooks: {}, enabledPlugins: { ...kit.enabledPlugins, "other@elsewhere": true } };
+  assert.deepEqual(measureSettings(JSON.stringify(own), template), { status: "ok" }, "the site's own keys beside the kit's");
+  const old = { extraKnownMarketplaces: { "agentic-cms": { source: { source: "github", repo: "HKamkar/agentic-cms" } } }, enabledPlugins: { "editorial@agentic-cms": true, "other@elsewhere": true }, permissions: { allow: ["Bash(ls)"] } };
+  const moved = measureSettings(JSON.stringify(old), template);
+  assert.deepEqual(moved.keys, ['extraKnownMarketplaces["agentic-cms"]', 'enabledPlugins["design@agentic-cms"]']);
+  assert.deepEqual(JSON.parse(moved.text), { ...old, extraKnownMarketplaces: kit.extraKnownMarketplaces, enabledPlugins: { ...old.enabledPlugins, "design@agentic-cms": true } });
+  assert.deepEqual(measureSettings(JSON.stringify({ ...kit, enabledPlugins: { ...kit.enabledPlugins, "editorial@agentic-cms": false } }), template).keys, ['enabledPlugins["editorial@agentic-cms"]']);
+  const dropped = measureSettings(JSON.stringify({ ...kit, enabledPlugins: { ...kit.enabledPlugins, "old@agentic-cms": true } }), template, ['enabledPlugins["old@agentic-cms"]']);
+  assert.deepEqual(dropped.keys, ['enabledPlugins["old@agentic-cms"] (no longer the kit\'s)']);
+  assert.ok(!("old@agentic-cms" in JSON.parse(dropped.text).enabledPlugins));
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  fs.writeFileSync(path.join(target, SETTINGS), JSON.stringify(old, null, 2));
+  assert.equal(statusOf(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }))[SETTINGS], "stale");
+  assert.equal(statusOf(agentFiles(target, { kitRoot: KIT, version: "0.9.0", ...quiet }))[SETTINGS], "updated");
+  assert.equal(statusOf(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }))[SETTINGS], "ok");
+  assert.deepEqual(JSON.parse(read(target, SETTINGS)).permissions, old.permissions, "the site's own keys stay");
 });
 
 test("--agent-files keeps AGENTS.md's scoped-rules table as the site's rules read; --check flags it stale or missing, and an AGENTS.md past what Codex reads", () => {
@@ -548,7 +587,7 @@ test("the components rule follows the guard: a site without src/config/component
   const refreshed = status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: false, ...quiet }));
   assert.ok(!(".claude/rules/components.md" in refreshed), "not written");
   assert.ok(!fs.existsSync(rule));
-  assert.ok(!(".claude/rules/components.md" in readManifest(target).files), "not recorded");
+  assert.ok(!(".claude/rules/components.md" in readManifest(target).rules), "not recorded");
   assert.doesNotMatch(read(target, "AGENTS.md"), /\[Components\]/, "the table follows the rules the site has");
   const check = agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet });
   assert.ok(!check.some((f) => f.file === ".claude/rules/components.md"), "not reported missing");
@@ -557,224 +596,81 @@ test("the components rule follows the guard: a site without src/config/component
   fs.writeFileSync(path.join(target, "src/config/components.json"), "{}\n");
   assert.equal(status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }))[".claude/rules/components.md"], "missing");
   assert.equal(status(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: false, ...quiet }))[".claude/rules/components.md"], "created");
-  assert.equal(read(target, ".claude/rules/components.md"), read(KIT, "templates/site/rules/components.md"));
+  assert.equal(read(target, ".claude/rules/components.md"), thinRule(read(KIT, "templates/site/rules/components.md"), ".claude/rules/components.md"));
   assert.match(read(target, "AGENTS.md"), /\| \[Components\]\(\.claude\/rules\/components\.md\) \|$/m);
   assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
 });
 
-/** A kit as an older release left its agent files: this kit's, with the styling rule's text as it was. */
-function olderKit() {
-  const kit = tmp();
-  for (const dir of ["templates/site/rules", ".claude/skills", ".agents/skills"]) fs.cpSync(path.join(KIT, dir), path.join(kit, dir), { recursive: true });
-  fs.writeFileSync(path.join(kit, "templates/site/rules/styling.md"), read(KIT, "templates/site/rules/styling.md").replace(/\n- [^\n]*\n/, "\n- The older styling line.\n"));
-  return kit;
+/** A site as 0.8 laid its agent files out, from `kit`: the rules whole and the skills copied in both trees, a manifest of their bases, and the base copy of `edited` rules. */
+function oldSite(target, kit, { edit = {}, add = {} } = {}) {
+  for (const dir of [".claude/rules", ".claude/skills", ".agents/skills"]) fs.rmSync(path.join(target, dir), { recursive: true, force: true });
+  const files = {};
+  for (const { file, text } of renderAgentFiles(kit)) {
+    fs.mkdirSync(path.dirname(path.join(target, file)), { recursive: true });
+    fs.writeFileSync(path.join(target, file), edit[file] ? edit[file](text) : text);
+    files[file] = sha(text);
+    if (edit[file]) { fs.mkdirSync(path.dirname(path.join(target, ".agentic-cms/base", file.slice(1))), { recursive: true }); fs.writeFileSync(path.join(target, ".agentic-cms/base", file.slice(1)), text); }
+  }
+  for (const [file, text] of Object.entries(add)) fs.writeFileSync(path.join(target, file), text);
+  fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify({ version: "0.8.4", files }, null, 1));
+  fs.writeFileSync(path.join(target, SETTINGS), JSON.stringify({ extraKnownMarketplaces: { "agentic-cms": { source: { source: "github", repo: "HKamkar/agentic-cms" } } }, enabledPlugins: { "editorial@agentic-cms": true } }, null, 2));
 }
-/** This kit's agent files with a record of `releases` [{ version, changed }], each release this kit's texts but for those `changed` names by site path; a kit whose record holds its own texts is a release, one whose record does not a pin between releases. */
+
+test("a site laid out before 0.9.0 is legacy to --check, and the refresh moves it: the copies it never touched go, one it edited becomes its own, each rule thin with its own lines and paths; a second run moves nothing", () => {
+  const target = tmp();
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  oldSite(target, KIT, {
+    edit: {
+      ".claude/rules/seo.md": (text) => text.replace('  - "content/pages/**"', '  - "content/pages/**"\n  - "content/landing/**"') + "- Our own: every title ends with the brand.\n",
+      ".claude/skills/design-proof/SKILL.md": (text) => `${text}\nOur own step.\n`,
+    },
+    add: { ".agents/skills/design-icons/ours.md": "the site's own reference\n" },
+  });
+  const check = agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet });
+  assert.ok(check.length && check.every((f) => f.status === "legacy"));
+  assert.ok([".claude/skills/design", ".agents/skills/design", ".claude/rules/seo.md", ".agentic-cms/base"].every((file) => check.some((f) => f.file === file)));
+  const report = agentFiles(target, { kitRoot: KIT, version: "0.9.0", ...quiet });
+  const moved = statusOf(report.filter((f) => MOVES.includes(f.status)));
+  assert.equal(moved[".claude/skills/design"], "removed", "the kit's text: the design plugin has it");
+  assert.equal(moved[".claude/skills/design-proof"], "moved");
+  assert.equal(moved[".agents/skills/design-icons"], "moved", "a file of the site's own in it makes it the site's");
+  assert.equal(moved[".claude/rules/styling.md"], "thin");
+  assert.equal(statusOf(report)[".agents/skills/design-icons/SKILL.md"], "created", "and Codex gets the stub in its place");
+  assert.ok(!fs.existsSync(path.join(target, ".claude/skills/design")) && !fs.existsSync(path.join(target, ".agentic-cms")));
+  assert.match(read(target, ".claude/skills/design-proof-site/SKILL.md"), /^---\nname: design-proof-site\n[\s\S]*\n---\n\n> This site's own version of the kit's `design-proof` skill[\s\S]*Our own step\.\n$/);
+  assert.equal(read(target, ".agents/skills/design-icons-site/ours.md"), "the site's own reference\n");
+  const seo = read(target, ".claude/rules/seo.md");
+  assert.match(seo, /^---\npaths:\n[\s\S]*- "content\/landing\/\*\*"\n[\s\S]*?---\n/, "the site's own paths");
+  assert.ok(seo.endsWith(`${BLOCK_END}\n\n- Our own: every title ends with the brand.\n`), "and its own line, after the kit's block");
+  assert.equal(read(target, ".claude/rules/styling.md"), thinRule(read(KIT, "templates/site/rules/styling.md"), ".claude/rules/styling.md"));
+  assert.equal(JSON.parse(read(target, SETTINGS)).extraKnownMarketplaces["agentic-cms"].source.source, "directory");
+  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.9.0", check: true, ...quiet }).filter((f) => !["ok", "modified"].includes(f.status)), []);
+  assert.ok(!agentFiles(target, { kitRoot: KIT, version: "0.9.0", ...quiet }).some((f) => MOVES.includes(f.status)), "nothing left to move");
+});
+
+test("a rule a release of the kit shipped is the kit's however old, and takes the kit's current paths; on a site already moved, a rule without the marks is the site's own, never legacy", () => {
+  const target = tmp();
+  const older = (text) => text.replace('  - "content/pages/**"\n', "");
+  const kit = recordedKit([{ version: "0.8.3", changed: { ".claude/rules/seo.md": older(read(KIT, "templates/site/rules/seo.md")) } }, { version: "0.8.4" }]);
+  scaffold(target, { name: "My Site", kitRoot: KIT, version: "0.9.0", force: false, ...quiet });
+  oldSite(target, kit);
+  fs.writeFileSync(path.join(target, ".claude/rules/seo.md"), older(read(KIT, "templates/site/rules/seo.md")));
+  fs.rmSync(path.join(target, ".agentic-cms.json"));
+  assert.equal(agentFiles(target, { kitRoot: kit, version: "0.9.0", ...quiet }).find((f) => f.file === ".claude/rules/seo.md").status, "thin");
+  assert.equal(read(target, ".claude/rules/seo.md"), thinRule(read(KIT, "templates/site/rules/seo.md"), ".claude/rules/seo.md"), "0.8.3's text untouched: the kit's thin rule, the kit's paths");
+  fs.writeFileSync(path.join(target, ".claude/rules/seo.md"), read(target, ".claude/rules/seo.md").replace(`${BLOCK_START}\n`, ""));
+  assert.equal(statusOf(agentFiles(target, { kitRoot: kit, version: "0.9.0", check: true, ...quiet }))[".claude/rules/seo.md"], "modified");
+});
+
+/** This kit's agent files with a record of `releases` [{ version, changed }], each release this kit's texts but for those `changed` names by site path. */
 function recordedKit(releases) {
-  const kit = tmp();
-  for (const dir of Object.keys(AGENT_DIRS)) fs.cpSync(path.join(KIT, dir), path.join(kit, dir), { recursive: true });
+  const kit = kitWith();
   const current = renderAgentFiles(kit);
   const record = recordOf(releases.map(({ version, changed = {} }) => ({ version, files: current.map(({ file, text }) => ({ file, text: changed[file] ?? text })) })));
   fs.mkdirSync(path.dirname(path.join(kit, RELEASES)), { recursive: true });
   fs.writeFileSync(path.join(kit, RELEASES), recordText(record));
   return kit;
 }
-/** A site as 0.7.6 left it: no base copies, which 0.8.0 began to keep. */
-const withoutCopies = (target) => fs.rmSync(path.join(target, ".agentic-cms"), { recursive: true, force: true });
-const git = (cwd, ...args) => { const r = spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf8" }); assert.equal(r.status, 0, r.stderr); return r.stdout; };
 const statusOf = (report) => Object.fromEntries(report.map((f) => [f.file, f.status]));
-
-test("a site that keeps its edits passes --check: an edit of a text the kit left alone is modified (exit 0), one the kit changed is a gap until --diff, a merge and --accept", () => {
-  const target = tmp();
-  const older = olderKit();
-  const kit = recordedKit([{ version: "0.8.0" }]);
-  agentFiles(target, { kitRoot: older, version: "0.7.6", ...quiet });
-  withoutCopies(target);
-  git(target, "init", "-q");
-  git(target, "add", "-A");
-  git(target, "commit", "-qm", "the agent files as the older kit wrote them");
-  for (const rule of ["styling", "seo"]) fs.appendFileSync(path.join(target, `.claude/rules/${rule}.md`), "\n- The site's own line.\n");
-  git(target, "commit", "-qam", "the site's edits");
-  const check = statusOf(agentFiles(target, { kitRoot: kit, version: "0.8.0", check: true, ...quiet }));
-  assert.equal(check[".claude/rules/seo.md"], "modified", "the kit's text is the base: nothing to merge");
-  assert.equal(check[".claude/rules/styling.md"], "modified, kit changed");
-  // --diff reads the base from the site's history before any copy exists, and prints the kit's change alone
-  const before = agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: kit });
-  assert.match(before.from, /^git [0-9a-f]{7}$/);
-  assert.match(before.diff, /^-- The older styling line\.$/m);
-  assert.doesNotMatch(before.diff, /The site's own line/, "the site's edit is not the kit's change");
-  assert.equal(agentFileDiff(target, ".claude/rules/seo.md", { kitRoot: kit }).diff, "");
-  // the refresh keeps both edits and the base copies --diff needs, recovered from the history
-  const refreshed = statusOf(agentFiles(target, { kitRoot: kit, version: "0.8.0", ...quiet }));
-  assert.equal(refreshed[".claude/rules/styling.md"], "kept, kit changed");
-  assert.equal(refreshed[".claude/rules/seo.md"], "kept");
-  assert.equal(read(target, ".agentic-cms/base/claude/rules/styling.md"), read(older, "templates/site/rules/styling.md"));
-  assert.equal(read(target, ".agentic-cms/base/claude/rules/seo.md"), read(KIT, "templates/site/rules/seo.md"));
-  assert.ok(!fs.existsSync(path.join(target, ".agentic-cms/base/claude/rules/design.md")), "a copy only for a file the site edited");
-  assert.equal(agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: kit }).from, ".agentic-cms/base/claude/rules/styling.md");
-  // the site merges the kit's change by hand, keeping its line, and accepts it
-  fs.writeFileSync(path.join(target, ".claude/rules/styling.md"), `${read(KIT, "templates/site/rules/styling.md")}\n- The site's own line.\n`);
-  assert.equal(statusOf(agentFiles(target, { kitRoot: kit, version: "0.8.0", check: true, ...quiet }))[".claude/rules/styling.md"], "modified, kit changed", "a merge alone is not recorded");
-  assert.deepEqual(acceptAgentFiles(target, ["./.claude/rules/styling.md"], { kitRoot: kit }), [{ file: ".claude/rules/styling.md", status: "modified" }]);
-  assert.equal(read(target, ".agentic-cms/base/claude/rules/styling.md"), read(KIT, "templates/site/rules/styling.md"), "the base copy is the kit's text it took");
-  assert.deepEqual(agentFiles(target, { kitRoot: kit, version: "0.8.0", check: true, ...quiet }).filter((f) => !["ok", "modified"].includes(f.status)), [], "--check passes");
-  assert.equal(agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: kit }).diff, "");
-  // the site drops its edit: the next refresh finds the kit's text and keeps no copy
-  fs.writeFileSync(path.join(target, ".claude/rules/styling.md"), read(KIT, "templates/site/rules/styling.md"));
-  fs.writeFileSync(path.join(target, ".claude/rules/seo.md"), read(KIT, "templates/site/rules/seo.md"));
-  agentFiles(target, { kitRoot: kit, version: "0.8.0", ...quiet });
-  assert.ok(!fs.existsSync(path.join(target, ".agentic-cms")), "no edits, no copies");
-});
-
-test("--diff names the kit's file when the base is in neither its copy nor the history; --accept refuses a name that is not an agent file or a missing file, writing nothing", () => {
-  const target = tmp();
-  agentFiles(target, { kitRoot: olderKit(), version: "0.7.6", ...quiet });
-  withoutCopies(target);
-  fs.appendFileSync(path.join(target, ".claude/rules/styling.md"), "\n- The site's own line.\n");
-  assert.throws(() => agentFileDiff(target, ".claude/rules/styling.md", { kitRoot: KIT }), (error) => error instanceof AgentFileError && /node_modules\/agentic-cms\/templates\/site\/rules\/styling\.md by hand, merge, then agentic-cms init --agent-files --accept \.claude\/rules\/styling\.md$/.test(error.message));
-  const manifest = read(target, ".agentic-cms.json");
-  assert.throws(() => acceptAgentFiles(target, [".claude/rules/styling.md", "STANDARD.md"], { kitRoot: KIT }), /STANDARD\.md is not one of this site's agent files/);
-  fs.rmSync(path.join(target, ".claude/rules/seo.md"));
-  assert.throws(() => acceptAgentFiles(target, [".claude/rules/styling.md", ".claude/rules/seo.md"], { kitRoot: KIT }), /\.claude\/rules\/seo\.md is missing: agentic-cms init --agent-files writes it/);
-  assert.equal(read(target, ".agentic-cms.json"), manifest, "nothing written");
-  assert.ok(!fs.existsSync(path.join(target, ".agentic-cms")));
-});
-
-test("the manifest records the kit commit the site's lockfile installed, when the kit running is the site's own; a 0.7.6 manifest reads as before", () => {
-  const target = tmp();
-  const sha = "5345ccc35663e662b8172bcc87f8ba5f10dd10cd";
-  fs.writeFileSync(path.join(target, "pnpm-lock.yaml"), `lockfileVersion: '9.0'\n\npackages:\n\n  agentic-cms@https://codeload.github.com/HKamkar/agentic-cms/tar.gz/${sha}:\n    resolution: {gitHosted: true, tarball: https://codeload.github.com/HKamkar/agentic-cms/tar.gz/${sha}}\n`);
-  assert.equal(kitCommit(target, KIT), undefined, "no node_modules/agentic-cms: a kit run from elsewhere");
-  fs.mkdirSync(path.join(target, "node_modules"));
-  fs.symlinkSync(KIT, path.join(target, "node_modules/agentic-cms"), "dir");
-  assert.equal(kitCommit(target, KIT), sha);
-  assert.equal(kitCommit(target, olderKit()), undefined, "another kit than the one installed");
-  agentFiles(target, { kitRoot: KIT, version: "0.7.6", ...quiet });
-  assert.deepEqual(Object.keys(readManifest(target)), ["version", "commit", "files"]);
-  assert.equal(readManifest(target).commit, sha);
-  // a manifest as 0.7.6 wrote it: a version and a hash per file
-  const legacy = { version: "0.7.6", files: readManifest(target).files };
-  fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify(legacy, null, 1));
-  assert.deepEqual(agentFiles(target, { kitRoot: KIT, version: "0.8.0", check: true, ...quiet }).filter((f) => f.status !== "ok"), []);
-});
-
-/** The styling rule as an older release had it. */
-const OLDER_STYLING = read(KIT, "templates/site/rules/styling.md").replace(/\n- [^\n]*\n/, "\n- The older styling line.\n");
-const SEO = ".claude/rules/seo.md";
-const STYLING = ".claude/rules/styling.md";
-const OWN_LINE = "\n- The site's own line.\n";
-const entry = (report, file) => report.find((f) => f.file === file);
-
-/** A kit with a record of its releases: this kit's agent files, and a 0.7.6 whose texts are this kit's but for the older styling rule. */
-const releasedKit = () => recordedKit([{ version: "0.7.6", changed: { [STYLING]: OLDER_STYLING } }]);
-
-/** A site whose seo and styling rules it wrote before the manifest recorded their bases: each the text of 0.7.6 with the site's own line, under a manifest as 0.7.6 wrote it. */
-function noBaseSite(kit, { version = "0.7.6" } = {}) {
-  const target = tmp();
-  agentFiles(target, { kitRoot: kit, version, ...quiet });
-  const { files } = readManifest(target);
-  delete files[SEO];
-  delete files[STYLING];
-  fs.writeFileSync(path.join(target, ".agentic-cms.json"), JSON.stringify({ version, files }, null, 1));
-  fs.writeFileSync(path.join(target, SEO), `${read(KIT, "templates/site/rules/seo.md")}${OWN_LINE}`);
-  fs.writeFileSync(path.join(target, STYLING), `${OLDER_STYLING}${OWN_LINE}`);
-  return target;
-}
-
-test("no base, and the kit's text unchanged since the version the site was on: the site's edit (modified, noted), nothing to --diff, and the refresh records the base", () => {
-  const kit = releasedKit();
-  const target = noBaseSite(kit);
-  const check = agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet });
-  assert.deepEqual(entry(check, SEO), { file: SEO, status: "modified", note: "no base: kit unchanged since 0.7.6" });
-  const diff = agentFileDiff(target, SEO, { kitRoot: kit, version: "0.8.1" });
-  assert.deepEqual(diff, { file: SEO, status: "modified", base: sha(read(KIT, "templates/site/rules/seo.md")), from: null, diff: "", note: "no base: kit unchanged since 0.7.6" });
-  const refreshed = agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet });
-  assert.deepEqual(entry(refreshed, SEO), { file: SEO, status: "kept", note: "no base: kit unchanged since 0.7.6" });
-  assert.equal(read(target, SEO), `${read(KIT, "templates/site/rules/seo.md")}${OWN_LINE}`, "the site's edit is kept");
-  assert.equal(readManifest(target).files[SEO], sha(read(KIT, "templates/site/rules/seo.md")), "the base is recorded");
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), SEO), { file: SEO, status: "modified" }, "and is the manifest's from then on");
-});
-
-test("no base, and the kit's text changed since the version the site was on: that release's text is its base — --diff prints the kit's change alone, and the refresh keeps the file and records the base", () => {
-  const kit = releasedKit();
-  const target = noBaseSite(kit);
-  const note = "no base: from the kit's text at 0.7.6, the version the site was on";
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), STYLING), { file: STYLING, status: "modified, kit changed", note });
-  const diff = agentFileDiff(target, STYLING, { kitRoot: kit, version: "0.8.1" });
-  assert.equal(diff.base, sha(OLDER_STYLING));
-  assert.equal(diff.from, "agentic-cms 0.7.6");
-  assert.equal(diff.note, note);
-  assert.match(diff.diff, /^-- The older styling line\.$/m, "old → new");
-  assert.doesNotMatch(diff.diff, /The site's own line/, "the site's edit is not the kit's change");
-  const refreshed = agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet });
-  assert.deepEqual(entry(refreshed, STYLING), { file: STYLING, status: "kept, kit changed", note });
-  assert.equal(read(target, STYLING), `${OLDER_STYLING}${OWN_LINE}`);
-  assert.equal(readManifest(target).files[STYLING], sha(OLDER_STYLING), "the release's text is recorded as its base");
-  assert.equal(read(target, ".agentic-cms/base/claude/rules/styling.md"), OLDER_STYLING, "with its copy");
-  assert.equal(agentFileDiff(target, STYLING, { kitRoot: kit, version: "0.8.1" }).diff, diff.diff, "the same change, from the copy");
-  fs.writeFileSync(path.join(target, STYLING), `${read(KIT, "templates/site/rules/styling.md")}${OWN_LINE}`);
-  assert.deepEqual(acceptAgentFiles(target, [STYLING], { kitRoot: kit }), [{ file: STYLING, status: "modified" }]);
-});
-
-test("no base, and no release known as its source: modified, kit changed, noted, and --diff is the site's whole file against the kit's text, from the file itself; nothing is recorded", () => {
-  const kit = releasedKit();
-  const target = noBaseSite(kit, { version: "0.6.0" });
-  const note = "no base, and no release of the kit found as its source: --diff is the site's whole file";
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), SEO), { file: SEO, status: "modified, kit changed", note }, "the record has no 0.6.0");
-  const diff = agentFileDiff(target, SEO, { kitRoot: kit, version: "0.8.1" });
-  assert.equal(diff.base, null);
-  assert.equal(diff.from, SEO, "the site's file, not a base");
-  assert.equal(diff.note, note);
-  assert.match(diff.diff, /^-- The site's own line\.$/m, "the site's own lines are in it");
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet }), SEO), { file: SEO, status: "kept, kit changed", note });
-  assert.ok(!(SEO in readManifest(target).files), "no base is made up");
-});
-
-test("the version a site was on is the manifest's, unless the running version wrote it, else the last other one its package.json named in git; a file that is a release's text untouched is stale", () => {
-  const target = tmp();
-  assert.equal(siteVersion(target, { version: "0.7.6", files: {} }, "0.8.1"), "0.7.6");
-  assert.equal(siteVersion(target, { version: "0.8.1", files: {} }, "0.8.1"), undefined, "a refresh with the running version wrote it, and no git");
-  const pin = (spec) => fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ dependencies: { "agentic-cms": spec } }));
-  git(target, "init", "-q");
-  pin("github:HKamkar/agentic-cms#v0.6.1");
-  git(target, "add", "package.json");
-  git(target, "commit", "-qm", "0.6.1");
-  pin("github:HKamkar/agentic-cms#v0.7.6");
-  git(target, "commit", "-qam", "0.7.6");
-  pin("github:HKamkar/agentic-cms#v0.8.1");
-  assert.equal(siteVersion(target, { version: null, files: {} }, "0.8.1"), "0.7.6", "the upgrade not yet committed");
-  git(target, "commit", "-qam", "0.8.1");
-  assert.equal(siteVersion(target, { version: "0.8.1", files: {} }, "0.8.1"), "0.7.6", "the upgrade committed");
-  // a site's file that is the text of a release, never edited: stale, and the refresh takes the kit's
-  const kit = releasedKit();
-  fs.mkdirSync(path.join(target, ".claude/rules"), { recursive: true });
-  fs.writeFileSync(path.join(target, STYLING), OLDER_STYLING);
-  assert.deepEqual(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", check: true, ...quiet }), STYLING), { file: STYLING, status: "stale", note: "no base: the kit's text at 0.7.6" });
-  assert.equal(entry(agentFiles(target, { kitRoot: kit, version: "0.8.1", ...quiet }), STYLING).status, "updated");
-  assert.equal(read(target, STYLING), read(KIT, "templates/site/rules/styling.md"));
-});
-
-test("a rule init writes and the site edits before its first commit keeps its base: a pin's text in a copy, a release's in the kit's record, and --diff prints the kit's change alone", () => {
-  const COMPONENTS = ".claude/rules/components.md";
-  const newer = (kit) => { fs.appendFileSync(path.join(kit, "templates/site/rules/components.md"), "\n- The kit's newer line.\n"); return kit; };
-  for (const { name, releases, from } of [
-    { name: "a pin between releases", releases: [], from: ".agentic-cms/base/claude/rules/components.md" },
-    { name: "a release", releases: [{ version: "0.8.0" }], from: "agentic-cms 0.8.0" },
-  ]) {
-    const target = tmp();
-    fs.mkdirSync(path.join(target, "src/config"), { recursive: true });
-    fs.writeFileSync(path.join(target, "src/config/components.json"), "{}\n");
-    const kit = recordedKit(releases);
-    assert.equal(entry(agentFiles(target, { kitRoot: kit, version: "0.8.0", ...quiet }), COMPONENTS).status, "created", name);
-    const copy = path.join(target, ".agentic-cms/base/claude/rules/components.md");
-    assert.equal(fs.existsSync(copy), !releases.length, `${name}: a copy only where no release holds the text`);
-    fs.appendFileSync(path.join(target, COMPONENTS), OWN_LINE);
-    assert.equal(fs.existsSync(path.join(target, ".git")), false, "nothing committed");
-    const later = newer(recordedKit(releases));
-    assert.equal(entry(agentFiles(target, { kitRoot: later, version: "0.8.1", check: true, ...quiet }), COMPONENTS).status, "modified, kit changed", name);
-    const diff = agentFileDiff(target, COMPONENTS, { kitRoot: later, version: "0.8.1" });
-    assert.equal(diff.from, from, name);
-    assert.match(diff.diff, /^\+- The kit's newer line\.$/m, `${name}: the kit's change`);
-    assert.doesNotMatch(diff.diff, /The site's own line/, `${name}: alone`);
-  }
-});
+/** The statuses of what the move from 0.8 did. */
+const MOVES = ["removed", "moved", "thin"];

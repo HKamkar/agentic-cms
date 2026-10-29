@@ -1,12 +1,12 @@
 # This site: the rules for any agent working on it
 
 The site is built on `agentic-cms` (the package under `node_modules/`,
-pinned by tag in `package.json`): the content engine and its layers
-(pages, the post pipeline, SEO; forms beside it), the browser libraries,
-the design tools and the command line come from it; this repo holds what
-is the site's — the design, the content, the config, the docs. An engine
-change is a kit pull request, then a bumped tag here; never a patch under
-`node_modules`.
+pinned in `package.json`): the content engine and its layers (pages, the
+post pipeline, SEO; forms beside it), the browser libraries, the design
+tools, the command line, the agent skills and the guides come from it, at
+the version pinned; this repo holds what is the site's — the design, the
+content, the config, the docs. An engine change is a kit pull request,
+then a bumped pin here; never a patch under `node_modules`.
 
 - **The engines are required:** every word a reader sees comes from
   `content/` or `site.ts`, in pages, sections, components and design rounds
@@ -20,8 +20,8 @@ change is a kit pull request, then a bumped tag here; never a patch under
   motion, the page recipe, and §8, the register of decisions that look like
   bugs on purpose. Read it before writing any markup or CSS; the component
   catalogue is `src/components/README.md`. Design work starts with the
-  `design` skill (`.claude/skills/`, `.agents/skills/` — found from this
-  checkout with nothing installed); a look the owner has to choose goes
+  `design` skill (the kit's `design` plugin, read from the installed
+  package; a stub in `.agents/skills/` for Codex); a look the owner has to choose goes
   through `design-options`, a screenshot claim through `design-measure`,
   icons through `design-icons`, the site's own graphics (drawn as SVG in
   the lab, `pnpm kit lab`, shipped pre-rendered) through `design-graphics`,
@@ -38,8 +38,10 @@ change is a kit pull request, then a bumped tag here; never a patch under
   build fails while one remains. The content jobs are the `editorial`
   plugin (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
   `review-voice`, `critic`, `content-status`, `retire-content`), enabled by
-  `.claude/settings.json` from the kit's marketplace. Never read `content/`
-  at request time: every page is prerendered.
+  `.claude/settings.json` from the package's marketplace,
+  `./node_modules/agentic-cms`. `.claude/skills/` holds the site's own
+  skills alone. Never read `content/` at request time: every page is
+  prerendered.
 - **Every page is a content file.** It is `content/pages/<slug>.yaml`,
   rendered by the catch-all route through the section registry; a new page
   is `/editorial:new-page` (or the page template), a new section type a
@@ -50,19 +52,8 @@ change is a kit pull request, then a bumped tag here; never a patch under
   (the API, the feed, a design round's `*-demo`, `lab-demo`) is a named
   exception with its reason, in `src/config/components.json` where the
   site runs the guard. The pages rule has the rest.
-- The engines' contracts are `node_modules/agentic-cms/src/lib/*/README.md`
-  (`content`; on it `blog`, the post pipeline, and `seo`; beside it
-  `forms`); the command line is
-  `node_modules/agentic-cms/docs/commands.md`, the screenshot harness
-  `docs/visual-parity.md`, the one-shot page commands
-  `docs/shot-probe-sheet.md`, the design loop `docs/design.md`.
-- The kit's know-how is under `node_modules/agentic-cms/docs/`, read
-  there, not copied: `setup.md` on a fresh clone or a new machine
-  (`bash scripts/setup.sh`; the `setup` skill runs it);
-  `dev-server.md` before starting a server or handing over a URL;
-  `browsers.md` for what Chromium, WebKit and the owner's Safari each
-  check; `primitives.md` for what a new site builds first; `gotchas.md`,
-  the traps by topic, before touching an area it lists.
+- The kit's contracts and know-how are read in the package, never copied
+  here: [The kit's guides](#the-kits-guides) says which, by task.
 - A machine's address never goes into the repo: it is found when needed,
   per developer, and lives in the gitignored `.env.local`
   (`ALLOWED_DEV_ORIGINS`; `pnpm kit serve` starts the dev server and
@@ -86,9 +77,9 @@ change is a kit pull request, then a bumped tag here; never a patch under
   failures, before calling a change done; `pnpm kit visual-parity` before
   a merge that touches `src/`, styles or images. CI
   (`.github/workflows/verify.yml`) runs the same, and `agentic-cms init .
-  --agent-files --check` (which fails an edit of a rule or a skill that
-  dropped a line marked `<!-- required -->`), on every pull request. Never
-  drop a gate from `lint` or `build`.
+  --agent-files --check` (which fails a rule that lost a line marked
+  `<!-- required -->`, or a file of the kit's behind the kit), on every pull
+  request. Never drop a gate from `lint` or `build`.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex
@@ -113,104 +104,27 @@ paths. The table is written from the rules' frontmatter by
 | `src/**/*.tsx`, `src/**/*.css` | [Styling](.claude/rules/styling.md) |
 <!-- rules-table:end -->
 
-## Styling
+## The kit's guides
 
-- Utilities for layout, spacing, type, colour, visibility and hover/focus; a
-  `<Name>.module.css` beside the component only for what utilities cannot
-  say (layered or gradient backgrounds, keyframes, backdrop filters, a
-  static transform on an animated element). Plain CSS, breakpoints spelled
-  out, joined to utilities with `cx()`.
-- Tokens only in the `@theme static` block of `src/app/globals.css`;
-  per-breakpoint values in `src/styles/base.css`. A colour becomes a token
-  at its second use. Never `text-base` / `text-sm`: the type scale is the
-  site's. One colour utility per property per element.
-- Preflight zeroes margins, paddings, borders and list markers: never
-  `m-0`, `p-0`, `list-none`.
-- Motion is `agentic-cms/ix`, in two layers (`STANDARD.md` §7 says which).
-  The play-once layer (`Reveal`, `RevealGroup`, `Sequence`, `part()`) plays
-  a root once, never on a hover or a second scroll, runs loops only on
-  screen, hides nothing unless `motionScript()` armed the page, and takes
-  its timings from the `--ease-*` / `--motion-*` tokens. The reveals that
-  replay (`Fx`, `OnView`) target `data-ix` attributes through `ix(name)`,
-  never a styling class, and every animated component checks
-  `useReducedMotionPref()`. Start states and keyframes live in
-  `src/styles/motion.css`; no `translate-*` / `rotate-*` / `scale-*` utility
-  on an element either layer moves; a sequence longer than two seconds
-  declares `data-settle` on its section (`settle` on a `Sequence`).
-- Decorative elements are real `aria-hidden` elements, not pseudo-elements.
-  No emoji and no symbol characters platforms render as emoji in the UI: an
-  icon is an SVG. Interactive things are real `<button>`s and links; no
-  `outline-none` on anything a keyboard reaches.
-- Images stay `<img>` with `width`, `height` and `alt`; above the fold in a
-  server component `EagerImage` (`agentic-cms/components`), everything else
-  `loading="lazy"`.
+Read the guide before the task: each is under `node_modules/agentic-cms/`,
+at the version this site pins.
 
-## Gotchas
-
-- Next 16: `params` is a Promise; `await params` in `generateMetadata` and
-  the page. Run `pnpm install` first: `node_modules/next/dist/docs/` is
-  absent until then, and it is the Next this version is, not the one you
-  remember.
-- The kit's commands and `pnpm test` load the site's TypeScript through
-  `agentic-cms/loader` (Node strips the types; the hook resolves `@/` and
-  extensionless imports). Code that must stay loadable that way —
-  `src/kit.ts`, `src/config/site.ts`, `src/config/forms.ts`,
-  `src/components/sections/schemas.ts` — uses `import type`, no `enum`, no
-  parameter properties, no `.tsx` and nothing from React.
-- The dev server can miss utilities a file starts using (the CSS scan is
-  cached under `.next/dev`): a class the production build has but the dev
-  page lacks means `rm -rf .next/dev` and a restart, not a bug.
-- After a `pnpm build`, a restarted dev server can fail every page with
-  `Can't resolve '@vercel/turbopack-next/internal/…'` (the font loader's
-  path, typically): it is reading the caches the production build left.
-  Stop it, `rm -rf .next/dev .next/cache/turbopack`, start it again. Never
-  delete `.next` whole while an audit reads it
-  (`node_modules/agentic-cms/docs/design.md` § When the dev server will
-  not serve).
-- `pnpm build` fails a route without an `seo` block; a demo route
-  (`src/app/<name>-demo/`, `pnpm kit demo clean`) is therefore removed before a branch merges — the
-  guard, not an obstacle.
-- A Node server host (`output: "standalone"`) is packaged by `pnpm kit
-  assemble` as the build's last step, never by a hand-written `cp`: a copy
-  that names `.next/standalone/public` as its target nests inside it once
-  the file trace has made that folder, and every image 404s on the server
-  (`node_modules/agentic-cms/docs/deploy.md`).
-
-## Parity harness and long runs
-
-The contract is `node_modules/agentic-cms/docs/visual-parity.md`. The
-site's profile in `src/config/harness.ts` says once what every capture
-takes without a flag: its `widths`, its `schemes` (a proof runs a pass in
-each, the dark one's captures ending in `-dark`) and `proof: { pages, ref }`,
-what a bare `pnpm kit visual-parity proof` covers and proves against — so
-that command, with no flag, is the site's proof. The rules:
-a baseline is `capture <label> --ref <commit>`, never a checkout that moved
-on (`pnpm kit visual-parity proof [--motion] [--states]` runs baseline,
-after and compare in one); a capture photographs a copy of the build, so after its `snapshot:`
-line the tree is free, but build the exact tree you mean to prove; a
-static or settled frame never jitters, a mid-flight one may (re-run once
-with `--fresh`: an unchanged page's shots are otherwise copied from the
-cache, the same frame again);
-a `reflow` verdict or a diff on every text line below one section is, per
-its `cause:` line, a section a fraction of a pixel taller, else a stacking
-context that flipped the compositor (`pnpm kit probe` prints the chain);
-a capture copies every page-width whose build files are unchanged from
-`.parity/shot-cache/` and runs several browsers (`--jobs`); keep a proof
-as short as the change allows — the profile's widths and schemes (a flag
-only for a run that needs others; never a scheme the site does not have),
-the pages the change touches (`--pages`), one page per template
-(`--sample 1`) only when the change is site-wide, `--states` / `--motion`
-only when hover or animation changed; only a
-first capture of a large site needs the background, and it is finished
-when `.parity/visual/<label>/capture.json` exists; commit each proven state
-before the next change; `.parity/` is gitignored and grows fast
-(`pnpm kit visual-parity clean` keeps the newest captures, `--dry-run`
-first); whatever the site shows until a visitor's choice is stored (a
-consent banner) is closed in every capture, shot, probe and icon audit,
-demo and lab routes on the dev server included, by the seed in
-`src/config/harness.ts` (`export const harness = { storage: { <key>:
-<record> } }`, `{now}` for the time), applied to both sides of a proof,
-and `--no-storage` shows it again.
+| Before | Read |
+|---|---|
+| writing your own of anything | `docs/parts.md`, the map of every part; `docs/stability.md`, what each promises |
+| a content file, a page, a post, the head | `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` |
+| a form, an address, a tag | `src/lib/forms/README.md`, `docs/forms.md`; `docs/email.md`; `docs/consent.md` |
+| a command | `docs/commands.md` |
+| markup, CSS or motion | the scoped rules above, each pointing at the kit's whole rule; `STANDARD.md` here |
+| a design round, a candidate, an icon, a graphic | `docs/design.md`, `docs/icons.md`, `docs/lab.md`; the design plugin's skills |
+| a screenshot claim | `docs/shot-probe-sheet.md` |
+| a capture or a proof | `docs/visual-parity.md`: the profile, the baselines, the cache, the seed, what a verdict means |
+| a fresh clone or a new machine | `docs/setup.md` (`bash scripts/setup.sh`; the `setup` skill) |
+| a dev server, a URL for the owner | `docs/dev-server.md`, `docs/browsers.md` |
+| a primitive | `docs/primitives.md` |
+| a host, a deploy | `docs/deploy.md` |
+| an upgrade of the kit | `docs/upgrading.md` |
+| an area with traps | `docs/gotchas.md`, by topic |
 
 ## Process
 

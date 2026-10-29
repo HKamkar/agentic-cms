@@ -110,7 +110,7 @@ and the captures are removed before a merge.
 | A real picture made light | `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` — `scripts/README.md` | preferred | stable | the content lint's `image-weight`, for a picture a content file names | — |
 | A screenshot or a proof | `agentic-cms visual-parity proof` (the baseline, the capture after, the compare, in one), `capture`, `compare`, `clean`; `agentic-cms parity` when the markup must not move either; a consent banner held back by the site's seed, `src/config/harness.ts`; the `design-proof` skill — [visual-parity.md](visual-parity.md), [browsers.md](browsers.md) | preferred | stable | `check-site`'s `tools` (a site's own Playwright script under `scripts/`: a warning) | `allow` (`agentic-cms/site-tools`) |
 | A measurement behind a screenshot claim | `agentic-cms shot` (a picture with its box), `agentic-cms probe` (the box, the computed styles, the stacking contexts, the pending reveals); the `design-measure` skill — [shot-probe-sheet.md](shot-probe-sheet.md) | preferred | stable | `check-site`'s `tools` (a site's own Playwright script under `scripts/`: a warning) | `allow` (`agentic-cms/site-tools`) |
-| The design procedure | the skills in `.claude/skills/` and `.agents/skills/`, identical: `design`, `design-options`, `design-measure`, `design-icons`, `design-graphics`, `design-proof` — [skills.md](skills.md), [design.md](design.md) | preferred | stable | `agentic-cms init --agent-files --check` (a skill missing or stale, or a site's edit that dropped a line the kit marks required: the closing `pnpm lint`, the copy rule) | — |
+| The design procedure | the kit's `design` plugin: `design`, `design-options`, `design-measure`, `design-icons`, `design-graphics`, `design-proof`, `setup` — in a site read from the installed package through its marketplace, which `.claude/settings.json` names, with a stub per skill in `.agents/skills/` for Codex; in the kit's checkout `.claude/skills/` and `.agents/skills/`, identical — [skills.md](skills.md), [design.md](design.md) | preferred | stable | `agentic-cms init --agent-files --check` (the settings without the package's marketplace or the plugin, a stub missing or stale, a copy from before 0.9.0) | — |
 
 ## The site's commands
 
@@ -237,10 +237,12 @@ A FAIL stops the build, a WARN is read, `--strict` promotes the warnings.
 collection and prerenders every page; `agentic-cms seo` audits every
 prerendered page (`src/lib/seo/README.md` § What the audit checks).
 `agentic-cms init --agent-files --check` reports an agent file that is
-missing or stale, a site's edit of a rule or a skill that dropped a line
-the kit marks required (`<!-- required -->`: each rule's tier line, the
-engines, each skill's closing `pnpm lint`), and a `.claude/settings.json`
-that no longer enables the editorial plugin
+missing, stale (a thin rule's kit block, a stub or the kit's settings keys
+behind the kit) or a copy from before 0.9.0, a rule the site took the
+kit's block apart in that dropped a line the kit marks required
+(`<!-- required -->`: each rule's tier line, the engines, the pointer to
+the kit's whole rule), and a `.claude/settings.json` without the package's
+marketplace and the editorial and design plugins
 ([init.md § What an edit keeps](init.md#what-an-edit-keeps)). The opt-in
 steps, `critical-css` and `assemble`, run where a site's `build` names
 them; `guard-email` is a gate of every site whose `site.ts` turns

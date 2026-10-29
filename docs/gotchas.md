@@ -27,6 +27,17 @@ read, by symptom:
 
 ## Next.js
 
+- **`params` is a Promise.** In this Next (16), `generateMetadata` and the
+  page both `await params`; reading a field off it directly is `undefined`.
+  Its own docs are `node_modules/next/dist/docs/`, absent until
+  `pnpm install`: the Next this version is, not the one an agent remembers.
+- **A config file the kit's commands cannot load.** The commands and
+  `pnpm test` load the site's TypeScript through `agentic-cms/loader`: Node
+  strips the types, and the hook resolves `@/` and extensionless imports.
+  So what they load — `src/kit.ts`, `src/config/site.ts`,
+  `src/config/forms.ts`, `src/components/sections/schemas.ts` — uses
+  `import type`, no `enum`, no parameter properties, no `.tsx` and nothing
+  from React.
 - **A page that renders but never hydrates.** On a phone, another
   computer or a VM's public address the page shows, but nothing on it
   works: reveals stay hidden, buttons do nothing. `next dev` serves its
@@ -135,6 +146,24 @@ read, by symptom:
   `allowBuilds` alone, so the names of the old list stop the install at
   `ERR_PNPM_IGNORED_BUILDS` until they are keys of `allowBuilds`. `init`
   carries them over when it merges a workspace.
+
+## Claude Code
+
+- **The kit's skills missing in a session.** Claude Code registers a
+  marketplace once per machine, by name. A site's `.claude/settings.json`
+  names `agentic-cms` at `./node_modules/agentic-cms`, and each session in
+  a trusted folder points that registration at its own folder before it
+  loads the plugins, so each site reads the kit at its own pin. The session
+  that moves the registration (the first after a site leaves 0.8's GitHub
+  source, or the first in one site after a session in a different one on
+  the same machine) can start without the kit's skills; the next one has
+  them. An
+  untrusted folder loads no project plugin at all.
+- **A worktree reads the main checkout's kit.** In a git worktree the
+  relative path resolves against the main checkout, so a session in a
+  worktree whose branch moves the kit's pin reads the main checkout's
+  `node_modules/agentic-cms` until that checkout installs the same
+  version.
 
 ## Git and GitHub
 

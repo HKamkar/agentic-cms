@@ -544,6 +544,14 @@ with the pin, from the package, which already ships `docs/`.
   - **First step:** prove that Claude Code reads a `directory` marketplace
     inside `node_modules`, with its skills listed and loaded. If it does
     not, D14 (b): the copies stay, rewritten on every upgrade, never merged.
+  - **Proven, D14 (a)** (2026-10-29, Claude Code 2.1.270): on a site
+    installed from the packed tarball, in pnpm's symlinked layout, with the
+    folder trusted, both plugins load in place from
+    `node_modules/agentic-cms`: 15 skills and the two agents. The
+    marketplace is registered per machine by name, and each trusted session
+    points it at its own folder, so the session that moves it has the
+    skills from the next one on; a worktree resolves the path against its
+    main checkout (`docs/gotchas.md` § Claude Code).
 - **Codex (D15):** a stub per skill in `.agents/skills/`: its frontmatter
   name and description, and one line naming
   `node_modules/agentic-cms/.agents/skills/<name>/SKILL.md`.
