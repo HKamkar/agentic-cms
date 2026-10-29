@@ -1189,9 +1189,9 @@ agentic-cms check-site --json | jq '.added'
 
 ## opt-in steps
 
-Layer: [the site's commands](parts.md#the-sites-commands). `critical-css` · `assemble`
+Layer: [the site's commands](parts.md#the-sites-commands). `critical-css` · `assemble` · `pr-preview` — `pr-preview` reads the site's registry and runs in its root
 
-What a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host.
+What a site adds when it needs them: to its build, `critical-css` for the first paint and `assemble` last for a Node host; to its CI, `pr-preview` for a preview link on every pull request.
 
 ### `critical-css`
 
@@ -1235,6 +1235,32 @@ Exit: `0` the package holds every file of public/ and .next/static; `1` a placeh
 ```bash
 agentic-cms assemble                      # after next build: the last step of a standalone site's build
 agentic-cms assemble --check --json
+```
+
+### `pr-preview`
+
+A pull request's preview on Cloudflare Workers, the CI step of a site that opts in (templates/site/verify.yml's preview job): the site built as production with AGENTIC_CMS_PREVIEW=1 (every page noindex, forms delivered to a log, no analytics tag), uploaded as a version that is not deployed under the alias pr-<n> — the same link on every push — and one comment on the pull request, updated on each push, with the link and the pages the change touches; a fork's pull request, or a run without the Cloudflare secrets, makes none and says so.
+
+```bash
+agentic-cms pr-preview [--pr <n>] [--base <ref>] [--no-build] [--no-comment] [--dry-run] [--json]
+```
+
+| flag | what |
+|---|---|
+| `--pr <n>` | the pull request's number (0: from GitHub's event, GITHUB_EVENT_PATH) (default `0`) |
+| `--base <ref>` | what the change is diffed against for the pages it touches (default: the pull request's base branch on origin, GITHUB_BASE_REF; else origin/HEAD) |
+| `--no-build` | upload the OpenNext build there is (.open-next/, built with AGENTIC_CMS_PREVIEW=1) instead of building |
+| `--no-comment` | post nothing: the link and the comment are printed (by default the comment is posted, or the one there updated, with GITHUB_TOKEN) |
+| `--dry-run` | print the pages the change touches and the comment: nothing built, uploaded or posted, no secrets asked |
+| `--json` | print the result as one JSON document (the progress and the build's output go to stderr) |
+
+Exit: `0` previewed, or no preview made and why said (a fork's pull request, no secrets); `1` the build, the upload or the comment failed; `2` no pull request, or a site without @opennextjs/cloudflare or a Wrangler config.
+
+`--json` prints `{ status: "previewed" | "skipped" | "dry-run", pr, alias, url, reason?, touched: { every, pages: [{ route, file, state }] } | null, body, comment: "created" | "updated" | null }`.
+
+```bash
+agentic-cms pr-preview                    # the site's verify.yml preview job: build, upload pr-<n>, comment
+agentic-cms pr-preview --pr 12 --dry-run  # the pages a change touches and the comment, nothing uploaded
 ```
 
 <!-- commands-doc:end -->

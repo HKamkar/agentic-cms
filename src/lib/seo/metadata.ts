@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isPreview } from "../preview.ts";
 import type { Post } from "../blog/posts.ts";
 import type { SiteConfig, Urls } from "../site.ts";
 import type { PageSeo } from "./types.ts";
@@ -40,7 +41,9 @@ export function unlistedMetadata(): Metadata {
  * title template (`%s | <site.name>`) with the home page's title as its
  * default, the home page's description, the site's Open Graph name and
  * locale, the Twitter card, and the link to the feed. `home` reads the home
- * page's seo block when the layout is rendered, not when the kit is made.
+ * page's seo block when the layout is rendered, not when the kit is made. A
+ * preview build (AGENTIC_CMS_PREVIEW=1) adds noindex, nofollow, which every
+ * page inherits: a preview is never indexed.
  */
 export function createRootMetadata(site: SiteConfig, home: () => PageSeo) {
   return function rootMetadata(): Metadata {
@@ -52,6 +55,7 @@ export function createRootMetadata(site: SiteConfig, home: () => PageSeo) {
       openGraph: { type: "website", siteName: site.name, ...(site.ogLocale ? { locale: site.ogLocale } : {}) },
       twitter: { card: "summary_large_image" },
       alternates: { types: { "application/rss+xml": `${site.url}/feed.xml` } },
+      ...(isPreview() ? { robots: { index: false, follow: false } } : {}),
     };
   };
 }

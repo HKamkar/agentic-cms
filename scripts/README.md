@@ -190,6 +190,12 @@ by `pnpm test:browser`.
   folders, never as them — and checks every file there by size and hash;
   exit 1 naming each missing, different or nested file. The last step of a
   standalone site's build (`docs/deploy.md`).
+- `pr-preview` — `pnpm kit pr-preview [--pr <n>] [--dry-run] …`
+  (`pr-preview.mjs`, `lib/pr-preview.mjs`) the CI preview job's step: the
+  site built with `AGENTIC_CMS_PREVIEW=1`, uploaded as a Workers version
+  under the alias `pr-<n>`, and one comment with the link and the pages the
+  change touches; a fork's run, or one without the Cloudflare secrets, makes
+  none and says so (`docs/preview.md`).
 - `icons` — `pnpm kit icons add|remove <id>…` keeps the site's icon
   manifest and generates `src/config/icons.ts` from `lucide-static` and
   `simple-icons` (installed by the site; the kit ships no icon data);

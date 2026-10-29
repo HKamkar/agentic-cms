@@ -34,7 +34,11 @@ writes down, never silently. What that covers:
 
 An experimental part may change in any release: its options, its output,
 its name. The changelog says what changed, and nothing else holds it.
-Today that is the lab: `agentic-cms/lab` and `agentic-cms lab`.
+Today that is the lab, `agentic-cms/lab` and `agentic-cms lab`, and the
+preview of a pull request, `agentic-cms pr-preview`, which rests on two
+things the kit does not own: OpenNext passing `--preview-alias` through to
+`wrangler versions upload`, and the file wrangler writes the preview's URL
+to ([preview.md](preview.md)).
 
 ## What no version promises
 
@@ -95,7 +99,7 @@ without it.
 
 | Export | Mark | What it is |
 |---|---|---|
-| `agentic-cms` | stable | `createKit()` and the site's types — [parts.md § The content engine](parts.md#the-content-engine) |
+| `agentic-cms` | stable | `createKit()`, `isPreview()` and the site's types — [parts.md § The content engine](parts.md#the-content-engine) |
 | `agentic-cms/content` | stable | collections, schemas, the schema helpers |
 | `agentic-cms/blog` | stable | the post pipeline |
 | `agentic-cms/seo` | stable | the head and the structured data |
@@ -129,6 +133,7 @@ Each command's flags, defaults and exit codes are in
 | the site: `agentic-cms init`, `agentic-cms upgrade`, `agentic-cms setup`, `agentic-cms urls`, `agentic-cms serve` | stable |
 | the default gates: `agentic-cms check-components`, `agentic-cms check-site`, `agentic-cms seo`, `agentic-cms guard-email` | stable |
 | the opt-in steps: `agentic-cms critical-css`, `agentic-cms assemble` | stable |
+| the opt-in CI step: `agentic-cms pr-preview` | experimental |
 
 ### File formats
 

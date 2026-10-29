@@ -132,6 +132,7 @@ The build, the gates it runs and the setup of the machine it runs on.
 | An address kept out of every served file | `agentic-cms guard-email` after `next build` — [email.md § The guard](email.md#the-guard--agentic-cms-guard-email) | required | stable | on in `pnpm build` for a site whose `src/config/site.ts` turns `guardEmail` on (D5; `guardsEmail()` in `scripts/lib/gates.mjs`), held by `check-site`'s `scripts`; a site without the key builds as it did and may add the step | `guardEmail: { off: "<why>" }` |
 | The first paint without a blocking stylesheet | `agentic-cms critical-css` after `next build` — [deploy.md § Critical CSS](deploy.md#critical-css) | preferred | stable | opt-in | — |
 | A Node server host | `output: "standalone"` and `agentic-cms assemble` as the build's last step, never a hand-written `cp` — [deploy.md](deploy.md) | preferred | stable | `assemble` checks every file of the package | — |
+| A preview link on every pull request | the CI workflow's opt-in `preview` job, `agentic-cms pr-preview`: a Cloudflare Workers version under the alias `pr-<n>`, not deployed, built with `AGENTIC_CMS_PREVIEW=1` (`isPreview()` from `agentic-cms`: every page noindex, forms delivered to a log, no analytics tag), and one comment with the link and the pages the change touches; on Vercel or Netlify, the flag in their preview environment — [preview.md](preview.md) | preferred | experimental | opt-in; the SEO audit in a preview build (noindex everywhere, `robots.txt` closed); `check-site`'s `ci` (warnings: a preview job that cannot comment or diff, a preview uploaded by hand without the flag) | — |
 | A Cloudflare Worker | `pnpm preview`, `pnpm run deploy` (OpenNext), every page from the static-assets cache — [deploy.md § Cloudflare Workers](deploy.md#cloudflare-workers) | preferred | stable | — | — |
 | TypeScript under `src/` in a script | `node --import agentic-cms/loader`: Node strips the types, the hook resolves the aliases of the site's `tsconfig.json` — `scripts/lib/load-ts.mjs` | preferred | stable | — | — |
 | The installed kit's version | `agentic-cms/package.json` | preferred | stable | — | — |
@@ -251,5 +252,5 @@ the kit's whole rule), and a `.claude/settings.json` without the package's
 marketplace and the editorial and design plugins
 ([init.md § What an edit keeps](init.md#what-an-edit-keeps)). The opt-in
 steps, `critical-css` and `assemble`, run where a site's `build` names
-them; `guard-email` is a gate of every site whose `site.ts` turns
+them, and `pr-preview` where its CI's preview job does; `guard-email` is a gate of every site whose `site.ts` turns
 `guardEmail` on, and a step a site without the key may add.

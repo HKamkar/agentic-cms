@@ -13,6 +13,7 @@ import { createSeo } from "./seo/index.ts";
 import { createUrls, type SiteConfig } from "./site.ts";
 
 export type { SiteConfig, SiteLink, Urls } from "./site.ts";
+export { isPreview, PREVIEW_ENV } from "./preview.ts";
 
 export type KitOptions<S extends ZodType<SectionLike>, C extends Collections<S>> = {
   /** The site's config, data only (src/config/site.ts). */

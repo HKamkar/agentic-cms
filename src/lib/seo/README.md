@@ -100,7 +100,7 @@ structural problem.
 | images | an `<img>` without `alt` (empty is fine for decoration) or without `width`/`height` | |
 | html | no `lang` | |
 | JSON-LD | a block that does not parse, no `@context`, a relative `url`/`item`/`sameAs`, an inner page without `BreadcrumbList`, a post without `BlogPosting` (headline, datePublished, author, publisher, image) | |
-| robots | an indexable page with `noindex`; the 404 without it | |
+| robots | an indexable page with `noindex`; the 404 without it; in a preview build (`AGENTIC_CMS_PREVIEW=1`, `docs/preview.md`), a page without `noindex` and a `robots.txt` that does not disallow everything | |
 | sitemap | an indexable route missing, listed twice, or a URL with no built page; a URL `content/redirects.yaml` redirects; `lastmod` invalid or in the future; `robots.txt` without the sitemap | |
 | links | an internal `href` that matches no page and no file in `public/` | |
 

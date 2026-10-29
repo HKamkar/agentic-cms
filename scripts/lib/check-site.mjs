@@ -22,7 +22,9 @@
 //     pass lists once it is added;
 //   - ci: a workflow that runs on pull requests (init's
 //     .github/workflows/verify.yml) runs the lint (or a build that runs it),
-//     the tests, the build and the agent-file check;
+//     the tests, the build and the agent-file check; and, as warnings, its
+//     preview job (docs/preview.md) can comment and diff, and no job uploads
+//     a preview version without AGENTIC_CMS_PREVIEW=1;
 //   - tools, the preferred tier's, so warnings that fail nothing: a script of
 //     the site's own under scripts/ that drives Playwright (or another
 //     headless browser), runs sharp over public/ or starts next dev, and a
@@ -268,20 +270,61 @@ function checkScripts(site, pkg) {
 }
 
 /** What CI runs: every workflow that runs on pull requests, its commands and its branch filter; { flows: [{ file, commands, branches, ignore }], unreadable }. */
-function workflowCommands(site) {
+/** The site's workflows that run on pull requests, parsed: { flows: [{ file, flow }], unreadable }. */
+function pullRequestFlows(site) {
   const files = site.walk(WORKFLOWS).filter((file) => /\.ya?ml$/.test(file)).sort();
   const onPullRequests = (on) => on === "pull_request" || (Array.isArray(on) && on.includes("pull_request")) || (isMap(on) && "pull_request" in on);
   const out = { flows: [], unreadable: [] };
   for (const file of files) {
     let flow;
     try { flow = parseYaml(site.read(file)); } catch { out.unreadable.push(file); continue; }
-    if (!onPullRequests(flow?.on)) continue;
-    const trigger = isMap(flow.on) ? flow.on.pull_request : null;
-    const runs = Object.values(flow.jobs ?? {}).flatMap((job) => (Array.isArray(job?.steps) ? job.steps : [])).map((step) => step?.run).filter((run) => typeof run === "string");
-    const commands = runs.flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean);
-    out.flows.push({ file, commands, branches: listOf(trigger?.branches), ignore: listOf(trigger?.["branches-ignore"]) });
+    if (onPullRequests(flow?.on)) out.flows.push({ file, flow });
   }
   return out;
+}
+
+/** A job's steps, and the commands its `run:` lines hold. */
+const stepsOf = (job) => (Array.isArray(job?.steps) ? job.steps : []);
+const commandsOf = (steps) => steps.map((step) => step?.run).filter((run) => typeof run === "string").flatMap((run) => run.split(/\n|;|&&|\|\|/)).map((command) => command.trim()).filter(Boolean);
+
+function workflowCommands(site) {
+  const { flows, unreadable } = pullRequestFlows(site);
+  return {
+    unreadable,
+    flows: flows.map(({ file, flow }) => {
+      const trigger = isMap(flow.on) ? flow.on.pull_request : null;
+      return { file, commands: commandsOf(Object.values(flow.jobs ?? {}).flatMap(stepsOf)), branches: listOf(trigger?.branches), ignore: listOf(trigger?.["branches-ignore"]) };
+    }),
+  };
+}
+
+const PR_PREVIEW = /^(?:(?:pnpm (?:exec )?|npx )?agentic-cms|pnpm kit) pr-preview(?:\s|$)/;
+const HAND_PREVIEW = /\b(?:opennextjs-cloudflare upload|wrangler versions upload)\b.*--preview-alias\b/;
+const TEMPLATE_PREVIEW = "node_modules/agentic-cms/templates/site/verify.yml's preview job";
+/** The token may write pull request comments: the job's permissions, else the workflow's; none set is the repository's default, which the check cannot see. */
+const writesComments = (permissions) => permissions === undefined || permissions === "write-all" || (isMap(permissions) && permissions["pull-requests"] === "write");
+const flagged = (...envs) => envs.some((env) => String(env?.AGENTIC_CMS_PREVIEW ?? "") === "1");
+
+/**
+ * The preview job (docs/preview.md), warnings that fail nothing: one that
+ * runs pr-preview without the permission to comment or the history it
+ * diffs, and one that uploads a preview version by hand without
+ * AGENTIC_CMS_PREVIEW=1, which would be indexable and deliver its forms.
+ */
+function previewWarnings(site) {
+  return pullRequestFlows(site).flows.flatMap(({ file, flow }) => Object.entries(flow.jobs ?? {}).flatMap(([name, job]) => {
+    const steps = stepsOf(job);
+    const commands = commandsOf(steps);
+    if (commands.some((command) => PR_PREVIEW.test(command))) {
+      const checkout = steps.find((step) => /^actions\/checkout@/.test(step?.uses ?? ""));
+      return [
+        ...(writesComments(job.permissions ?? flow.permissions) ? [] : [finding("ci", file, `its ${name} job runs agentic-cms pr-preview without permissions: pull-requests: write, so the preview's comment cannot be posted`, `give the job permissions: { contents: read, pull-requests: write }, as ${TEMPLATE_PREVIEW} has`)]),
+        ...(checkout && Number(checkout.with?.["fetch-depth"] ?? 1) !== 0 ? [finding("ci", file, `its ${name} job checks out without the history, so pr-preview cannot list the pages the change touches`, `fetch-depth: 0 on its checkout step, as ${TEMPLATE_PREVIEW} has`)] : []),
+      ];
+    }
+    const hand = steps.find((step) => typeof step?.run === "string" && HAND_PREVIEW.test(step.run));
+    return hand && !flagged(flow.env, job.env, ...steps.map((step) => step?.env)) ? [finding("ci", file, `its ${name} job uploads a preview version without AGENTIC_CMS_PREVIEW=1: that preview is indexable, and its forms deliver to the site's destination`, `run agentic-cms pr-preview in the job instead, which builds and uploads with the flag (${TEMPLATE_PREVIEW})`)] : [];
+  }));
 }
 
 /** A trigger's branch filter as a list of patterns (null when it sets none). */
@@ -325,13 +368,14 @@ const CI_STEPS = [
  * A workflow on pull requests runs the gates; a warning when the one that
  * runs the lint leaves out, in its branch filter, a branch the site's pull
  * requests go into (`targets()`, asked only then), whose pull requests then
- * get none of its checks. { findings, warnings }.
+ * get none of its checks; and the preview job's warnings (previewWarnings()).
+ * { findings, warnings }.
  */
 function checkCi(site, pkg, kit, targets = () => []) {
   const workflows = workflowCommands(site);
   const linting = workflows.flows.filter((flow) => flow.commands.some((command) => LINT_STEP.test.test(command) || BUILD_STEP.test.test(command)));
   const left = linting.length ? targets().filter((branch) => !linting.some((flow) => runsInto(branch, flow))) : [];
-  const warnings = left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : [];
+  const warnings = [...(left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : []), ...previewWarnings(site)];
   return { findings: ciGates(site, pkg, kit, workflows), warnings };
 }
 

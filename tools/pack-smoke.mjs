@@ -146,6 +146,7 @@ async function build(site) {
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
   upgradeFrom084(site);
+  previewBuild(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
   agentFilesResolve(site);
@@ -175,6 +176,20 @@ function agentFilesResolve(site) {
     for (const [, named] of fs.readFileSync(file, "utf8").matchAll(/`(node_modules\/agentic-cms\/[^`]+\.md)`/g)) if (!fs.existsSync(path.join(site, named))) fail(`${path.relative(site, file)} points at ${named}, which the package lacks`);
   }
   console.log(`pack-smoke: the site's marketplace, plugins, stubs and thin rules resolve in the installed package (${pointers.length} files)`);
+}
+
+/**
+ * The preview build (docs/preview.md): the site built as production with
+ * AGENTIC_CMS_PREVIEW=1, its own audit passing what a preview must be —
+ * every page noindex, robots.txt disallowing everything — and the audit
+ * without the flag refusing that build.
+ */
+function previewBuild(site) {
+  run("pnpm", ["build"], site, { AGENTIC_CMS_PREVIEW: "1" });
+  const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
+  if (!/^Disallow: \/$/m.test(built("robots.txt.body")) || !built("index.html").includes('<meta name="robots" content="noindex, nofollow"/>')) fail("the preview build left robots.txt open or the home page indexable");
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  if (audit.status !== 1 || !/FAIL \/ robots: carries noindex/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit without the flag answered ${audit.status} on the preview build, which no production site ships`);
 }
 
 /** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */

@@ -228,6 +228,25 @@ test("ci: the workflow that runs the lint warns when its branch filter leaves ou
   assert.deepEqual(await warned(release, fakeGit({ refs: ["origin/HEAD"], defaultBranch: "main" })), [[], []], "no develop branch here: main is where pull requests go");
 });
 
+test("ci: the preview job — the template's passes; pr-preview without the permission to comment or the history warns, and so does a preview uploaded by hand without the flag", async () => {
+  const template = fs.readFileSync(path.join(KIT, "templates/site/verify.yml"), "utf8");
+  assert.deepEqual((await site({ ...CLEAN, ".github/workflows/verify.yml": template })).warnings, [], "the template's preview job");
+  const history = template.lastIndexOf("          fetch-depth: 0\n");
+  const without = `${template.slice(0, history)}${template.slice(history + "          fetch-depth: 0\n".length)}`.replace("      pull-requests: write\n", "");
+  const lacking = await site({ ...CLEAN, ".github/workflows/verify.yml": without });
+  assert.deepEqual(lacking.findings, [], "warnings: they fail nothing");
+  assert.deepEqual(lacking.warnings.map(({ problem }) => problem), [
+    "its preview job runs agentic-cms pr-preview without permissions: pull-requests: write, so the preview's comment cannot be posted",
+    "its preview job checks out without the history, so pr-preview cannot list the pages the change touches",
+  ]);
+  const hand = "on: pull_request\njobs:\n  preview:\n    runs-on: ubuntu-latest\n    steps:\n      - run: pnpm exec opennextjs-cloudflare build\n      - run: pnpm exec opennextjs-cloudflare upload --preview-alias pr-${{ github.event.number }}\n";
+  const byHand = await site({ ...CLEAN, ".github/workflows/preview.yml": hand });
+  assert.deepEqual(checks(byHand.warnings), ["ci .github/workflows/preview.yml"]);
+  assert.match(byHand.warnings[0].problem, /uploads a preview version without AGENTIC_CMS_PREVIEW=1: that preview is indexable, and its forms deliver to the site's destination/);
+  assert.deepEqual((await site({ ...CLEAN, ".github/workflows/preview.yml": hand.replace("    runs-on:", "    env:\n      AGENTIC_CMS_PREVIEW: 1\n    runs-on:") })).warnings, [], "the flag set: the site's own way");
+  assert.deepEqual((await site({ ...CLEAN, ".github/workflows/deploy.yml": hand.replace(" --preview-alias pr-${{ github.event.number }}", "") })).warnings, [], "a production upload is no preview");
+});
+
 test("tools: the site's own Playwright, sharp over public/ and next dev scripts and a machine's address in next.config warn, naming the kit's command; an allow entry with its reason quiets each", async () => {
   const tools = {
     "scripts/shots.mjs": 'import { chromium } from "playwright";\nawait chromium.launch();\n',

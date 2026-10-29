@@ -43,6 +43,25 @@ pnpm upload        # build and upload a version without deploying it
 - **The form endpoint's destination** is a Worker secret
   (`wrangler secret put FORM_WEBHOOK_URL`, the same for the secret;
   [forms.md](forms.md)).
+- **Redirects** are `content/redirects.yaml`, served by `next.config.ts`'s
+  `redirects()` from the build's routes manifest, which the Worker answers
+  before any page ([redirects.md](redirects.md)); no `_redirects` file.
+- **A preview of every pull request** is the CI workflow's opt-in
+  `preview` job: `agentic-cms pr-preview` uploads a version under the alias
+  `pr-<n>`, not deployed, never indexed, its forms delivered to a log
+  ([preview.md](preview.md)).
+
+## Previews on other hosts
+
+Vercel and Netlify build a preview of every pull request themselves. What
+the kit needs there is the flag a preview carries: `AGENTIC_CMS_PREVIEW=1`
+in the host's preview environment (Vercel: an environment variable for
+"Preview"; Netlify: the `deploy-preview` context), for the build and the
+functions alike. The pages then carry `noindex` and `robots.txt` disallows
+everything; the form endpoint delivers to the server's log, never to the
+`FORM_WEBHOOK_URL` production has; no analytics tag ships. Set no
+`FORM_WEBHOOK_URL` and no `GOOGLE_TAG_ID` for previews either. A Node host
+gets no preview from the kit.
 
 ## The build
 

@@ -44,7 +44,7 @@ export const FAMILIES = [
   { group: "demo", layer: "design tools" },
   { group: "site", layer: "the site's commands" },
   { group: "default gates", layer: "the site's commands", about: "what every change passes: `pnpm lint` runs ESLint, then `check-site` (the `check-components` pass first); `pnpm build` runs `pnpm lint`, `lint --production` and `docs --check` (content, above), `next build`, then `seo`, and `guard-email` last on a site whose `src/config/site.ts` turns `guardEmail` on (what `init` writes for a new site); CI runs them on every pull request" },
-  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds to its build when it needs them: `critical-css` for the first paint, `assemble` last for a Node host" },
+  { group: "opt-in steps", layer: "the site's commands", about: "what a site adds when it needs them: to its build, `critical-css` for the first paint and `assemble` last for a Node host; to its CI, `pr-preview` for a preview link on every pull request" },
 ];
 
 export const SPECS = {
@@ -406,6 +406,21 @@ export const SPECS = {
     examples: ["agentic-cms assemble                      # after next build: the last step of a standalone site's build", "agentic-cms assemble --check --json"],
     exit: { 0: "the package holds every file of public/ and .next/static", 1: "a placeholder left from the starter under content/ or src/config/ (each named by line; nothing packaged unless AGENTIC_CMS_PLACEHOLDERS=warn, for a CI run that deploys nothing), a file missing or different, or a copy nested inside the folder it should fill (each named)", 2: "usage, or no standalone build (output: \"standalone\", then next build)" },
     json: "{ package, copied, removed, parts: [{ from, files, bytes }], missing, differ, nested, extra }",
+  },
+  "pr-preview": {
+    command: "pr-preview", script: "pr-preview", group: "opt-in steps", site: true, summary: "a pull request's preview on Cloudflare Workers, the CI step of a site that opts in (templates/site/verify.yml's preview job): the site built as production with AGENTIC_CMS_PREVIEW=1 (every page noindex, forms delivered to a log, no analytics tag), uploaded as a version that is not deployed under the alias pr-<n> — the same link on every push — and one comment on the pull request, updated on each push, with the link and the pages the change touches; a fork's pull request, or a run without the Cloudflare secrets, makes none and says so",
+    usage: "agentic-cms pr-preview [--pr <n>] [--base <ref>] [--no-build] [--no-comment] [--dry-run] [--json]",
+    flags: {
+      pr: { type: "number", default: 0, value: "<n>", help: "the pull request's number (0: from GitHub's event, GITHUB_EVENT_PATH)" },
+      base: { type: "string", value: "<ref>", help: "what the change is diffed against for the pages it touches (default: the pull request's base branch on origin, GITHUB_BASE_REF; else origin/HEAD)" },
+      "no-build": { type: "boolean", help: "upload the OpenNext build there is (.open-next/, built with AGENTIC_CMS_PREVIEW=1) instead of building" },
+      "no-comment": { type: "boolean", help: "post nothing: the link and the comment are printed (by default the comment is posted, or the one there updated, with GITHUB_TOKEN)" },
+      "dry-run": { type: "boolean", help: "print the pages the change touches and the comment: nothing built, uploaded or posted, no secrets asked" },
+      json: { type: "boolean", help: "print the result as one JSON document (the progress and the build's output go to stderr)" },
+    },
+    examples: ["agentic-cms pr-preview                    # the site's verify.yml preview job: build, upload pr-<n>, comment", "agentic-cms pr-preview --pr 12 --dry-run  # the pages a change touches and the comment, nothing uploaded"],
+    exit: { 0: "previewed, or no preview made and why said (a fork's pull request, no secrets)", 1: "the build, the upload or the comment failed", 2: "no pull request, or a site without @opennextjs/cloudflare or a Wrangler config" },
+    json: "{ status: \"previewed\" | \"skipped\" | \"dry-run\", pr, alias, url, reason?, touched: { every, pages: [{ route, file, state }] } | null, body, comment: \"created\" | \"updated\" | null }",
   },
   "check-components": {
     command: "check-components", script: "check-components", group: "default gates", summary: "the component library's placement guard, the first pass of check-site (which pnpm lint runs after ESLint), alone: the layers there and every file under src/components in one, every component the library exports in its catalogue, every section file in the registry, route files only in src/app's known route folders, no component elsewhere, CSS modules and @keyframes only where the library keeps them, every owner and every allow entry with its reason; and the engines held: the required agentic-cms/* rules as ESLint resolves them for a sample file per layer, set as componentRules() makes them of the config, and every inline disable of one with its reason, listed; what the preferred tier guides warns and fails nothing — a transition declared in CSS outside the motion layer, an inline disable of another rule with no reason, a preferred rule set otherwise than the config makes it; the config is src/config/components.json",

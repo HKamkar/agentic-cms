@@ -68,6 +68,13 @@ prints the rest.
   return `[...redirectsFor(), ...the site's own]`. Redirects the host held
   (a `_redirects` file, a dashboard's list) move into the file by hand
   ([redirects.md](redirects.md)).
+- **A preview link, if the site wants one.** It is opt-in, so `upgrade`
+  leaves it alone. A site on Cloudflare Workers copies the `preview` job
+  from `node_modules/agentic-cms/templates/site/verify.yml` into its
+  `.github/workflows/verify.yml`, then sets the repository variable
+  `AGENTIC_CMS_PREVIEW` to `cloudflare` and the secrets
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+  ([preview.md](preview.md)).
 - **By hand, `AGENTS.md` and `CLAUDE.md`.** They are the site's own, so
   the move leaves them. Replace what the 0.8 template copied into
   `AGENTS.md` — its sections on styling, gotchas and the parity harness,

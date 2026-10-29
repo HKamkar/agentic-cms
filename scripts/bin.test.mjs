@@ -22,6 +22,7 @@ test("the help is the map by family, one line per command, and names the exit co
   assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs · schema\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
   assert.match(r.stdout, /\n {2}site\s+init · upgrade · setup · urls · serve\n/);
+  assert.match(r.stdout, /\n {2}opt-in steps\s+critical-css · assemble · pr-preview\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
@@ -69,6 +70,21 @@ test("schema: the example's files are current (the build's docs --check says so 
     assert.equal(outside.status, 2);
     assert.match(outside.stderr, /^agentic-cms schema: no src\/kit\.ts here/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("pr-preview: no pull request is a usage error naming --pr; --dry-run prints the comment and builds nothing; outside a site's root it is refused", () => {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(?:GITHUB_|CLOUDFLARE_)/.test(key)));
+  const bare = spawnSync(process.execPath, [BIN, "pr-preview"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(bare.status, 2);
+  assert.match(bare.stderr, /^pr-preview: no pull request: run it in a pull_request workflow, or name one with --pr <n>\n$/);
+  const dry = spawnSync(process.execPath, [BIN, "pr-preview", "--pr", "7", "--dry-run", "--base", "HEAD", "--json"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(dry.status, 0, dry.stderr);
+  const result = JSON.parse(dry.stdout);
+  assert.deepEqual([result.status, result.alias, result.url], ["dry-run", "pr-7", null]);
+  assert.match(result.body, /^<!-- agentic-cms:pr-preview -->\n### Preview\n/);
+  assert.match(result.body, /No page: the change touches nothing a page is built from\./, "HEAD against itself changes nothing");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try { assert.match(run(["pr-preview", "--pr", "7"], dir).stderr, /^agentic-cms pr-preview: no src\/kit\.ts here/); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("assemble runs in any folder and, without a standalone build, says how to make one", () => {

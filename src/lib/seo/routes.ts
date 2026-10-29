@@ -7,6 +7,7 @@ import type { MetadataRoute } from "next";
 import type { ZodType } from "zod";
 import type { Blog } from "../blog/posts.ts";
 import type { Content, SectionLike } from "../content/index.ts";
+import { isPreview } from "../preview.ts";
 import type { SiteConfig, Urls } from "../site.ts";
 
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -67,10 +68,10 @@ ${items}
     return new Response(xml, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });
   }
 
-  /** Everything allowed, the sitemap named. */
+  /** Everything allowed, the sitemap named; in a preview build (AGENTIC_CMS_PREVIEW=1), everything disallowed. */
   function robots(): MetadataRoute.Robots {
     return {
-      rules: { userAgent: "*", allow: "/" },
+      rules: isPreview() ? { userAgent: "*", disallow: "/" } : { userAgent: "*", allow: "/" },
       sitemap: absoluteUrl("/sitemap.xml"),
     };
   }

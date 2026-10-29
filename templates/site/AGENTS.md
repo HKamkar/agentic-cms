@@ -80,7 +80,9 @@ then a bumped pin here; never a patch under `node_modules`.
   (`.github/workflows/verify.yml`) runs the same, and `agentic-cms init .
   --agent-files --check` (which fails a rule that lost a line marked
   `<!-- required -->`, or a file of the kit's behind the kit), on every pull
-  request. Never drop a gate from `lint` or `build`.
+  request; opted in, its `preview` job puts each pull request at a link of
+  its own, never indexed (`node_modules/agentic-cms/docs/preview.md`).
+  Never drop a gate from `lint` or `build`.
 
 <!-- rules-table:start -->
 ## Scoped rules for Claude Code and Codex

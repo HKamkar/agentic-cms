@@ -1,8 +1,10 @@
 // The route's work: a site's src/app/api/forms/[id]/route.ts hands each POST
 // to the handler this builds. It answers every request with JSON and
 // `Cache-Control: no-store`; the endpoint backend reads `ok` and `error`.
+import { isPreview } from "../../preview.ts";
 import type { EndpointPayload, FormDefinition } from "../types.ts";
 import { clientIp, memoryRateLimiter, type RateLimiter } from "./rate-limit.ts";
+import { LogSink } from "./sinks/log.ts";
 import type { FormSink } from "./sink.ts";
 import { buildSubmission, type FormSubmission } from "./submission.ts";
 import { isRecord, validateSubmission } from "./validate.ts";
@@ -10,7 +12,7 @@ import { isRecord, validateSubmission } from "./validate.ts";
 export type FormHandlerOptions = {
   /** Every form of the site (src/config/forms.ts); only `endpoint` forms are served. */
   forms: Record<string, FormDefinition>;
-  /** Where submissions go. A function is called per request, so a Worker's env is read when it exists; undefined answers 503. */
+  /** Where submissions go. A function is called per request, so a Worker's env is read when it exists; undefined answers 503. A preview (AGENTIC_CMS_PREVIEW=1 in the request's environment) never reads it: its submissions go to the server's log. */
   sink: FormSink | (() => FormSink | undefined) | undefined;
   rateLimiter?: RateLimiter;
   clientIp?: (request: Request) => string;
@@ -39,7 +41,8 @@ export function createFormHandler(options: FormHandlerOptions): FormHandler {
     if (!checked.ok) return reply(400, "invalid", { fields: checked.fields });
     // A bot is told it succeeded, so it has nothing to learn from.
     if (isSpam(payload, minElapsedMs)) return reply(200);
-    const sink = typeof options.sink === "function" ? options.sink() : options.sink;
+    // A preview is not the site: what someone types into it reaches no destination of the site's (docs/preview.md).
+    const sink = isPreview() ? new LogSink() : typeof options.sink === "function" ? options.sink() : options.sink;
     return deliver(sink, buildSubmission(form, checked.values, payload));
   };
 }

@@ -11,6 +11,8 @@
 // .parity/seo-report.txt. Reads .next/server/app/**/*.html, the built
 // sitemap.xml and robots.txt bodies, the image files under public/, and the
 // redirects of content/redirects.yaml (a sitemap lists no redirected path).
+// A preview build (AGENTIC_CMS_PREVIEW=1, docs/preview.md) is never indexed:
+// there every page must carry noindex and robots.txt disallow everything.
 // The contract it checks is src/lib/seo/README.md; the site's origin is
 // its config, read from src/kit.ts through scripts/lib/load-ts.mjs (the
 // hook must be registered before the TypeScript is imported, hence the
@@ -27,6 +29,7 @@ import { SPECS } from "./lib/specs.mjs";
 const { strict, report, json } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
 
 const { kit } = await import("@/kit");
+const preview = (await import("agentic-cms")).isPreview();
 const { site } = kit;
 const ROOT = process.cwd();
 const APP = path.join(ROOT, ".next/server/app");
@@ -78,13 +81,14 @@ async function checkPage({ route, html }, ctx) {
   checkDescription(route, html, notFound, ctx);
   const noindex = metas(html, "name", "robots").some((r) => /noindex/.test(r));
   if (notFound && !noindex) fail(route, "robots", "the 404 page must carry noindex");
-  if (!notFound && noindex) fail(route, "robots", "carries noindex; drop it or leave the page out of the sitemap on purpose (see src/lib/seo/README.md)");
+  if (preview && !noindex) fail(route, "robots", "a preview build (AGENTIC_CMS_PREVIEW=1) carries noindex on every page, and this one is indexable: its head comes from kit.seo.rootMetadata(), which adds it");
+  if (!preview && !notFound && noindex) fail(route, "robots", "carries noindex; drop it or leave the page out of the sitemap on purpose (see src/lib/seo/README.md)");
   if (notFound) return; // the 404 has no canonical, social tags or sitemap entry
   await checkSocial(route, html);
   checkContent(route, html);
   checkJsonLd(route, html, route.startsWith("/blog-post/"));
   checkLinks(route, html, ctx);
-  ctx.indexable.push(route);
+  if (!preview) ctx.indexable.push(route);
 }
 
 function checkTitle(route, html, notFound, ctx) {
@@ -200,6 +204,7 @@ function checkSitemap(ctx) {
   for (const [route, n] of seen) if (n > 1) fail("/sitemap.xml", "sitemap", `${route} listed ${n} times`);
   for (const route of ctx.indexable) if (!seen.has(route)) fail(route, "sitemap", "indexable page missing from the sitemap: a page is content/pages/<slug>.yaml (its seo block is the sitemap entry); a post is listed once published");
   if (!/Sitemap:\s*https?:\/\//.test(readBuilt("robots.txt.body"))) fail("/robots.txt", "robots", "robots.txt does not name the sitemap");
+  if (preview && !/^Disallow:\s*\/\s*$/m.test(readBuilt("robots.txt.body"))) fail("/robots.txt", "robots", "a preview build (AGENTIC_CMS_PREVIEW=1) disallows everything, and this robots.txt does not: it comes from kit.seo.robots()");
 }
 
 function checkUniqueness(ctx) {

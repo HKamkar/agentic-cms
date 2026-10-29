@@ -106,6 +106,10 @@ The build, its gates and the setup.
 - [upgrade.md](upgrade.md) — `agentic-cms upgrade`: a site moved to a
   release by that release's own code — the pin, each migration in between,
   the agent files, the steps left by hand, the verify.
+- [preview.md](preview.md) — a preview link on every pull request: the
+  opt-in CI job (`agentic-cms pr-preview`), the variable and the secrets,
+  the pages a change touches, what keeps a preview from being the site
+  (noindex, forms to a log, no analytics), the other hosts.
 - [upgrading.md](upgrading.md) — upgrading a site from one release to the
   next: the tag, the agent files, and each release's own steps, by hand.
 - [migrating-to-0.8.0.md](migrating-to-0.8.0.md) — a site from 0.7.6 to
