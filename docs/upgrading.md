@@ -37,7 +37,10 @@ writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
 ## 0.8.4 → 0.9.0
 
-Unreleased: on `develop` until 0.9.0. `upgrade` runs the 0.9.0 migration
+Unreleased: on `develop` until 0.9.0.
+[migrating-to-0.9.0.md](migrating-to-0.9.0.md) is the guide: the upgrade
+in one command, what it leaves by hand, what a site may adopt, and the
+check. `upgrade` runs the 0.9.0 migration
 (`scripts/migrations/0.9.0.mjs`), which takes each item below it can and
 prints the rest.
 

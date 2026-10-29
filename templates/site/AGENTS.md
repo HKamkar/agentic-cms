@@ -28,10 +28,13 @@ then a bumped pin here; never a patch under `node_modules`.
   and nothing merges without `design-proof`.
 - Content is files under `content/`, validated at build time: posts in
   `content/blog/` (the filename is the slug), the registries, `reviews.yaml`,
-  `faqs/<key>.yaml`, `use-cases.yaml`, and a page per file in
-  `content/pages/<slug>.yaml` (its `seo` block, its structured data, its
-  sections in order). The door for editing is `content/README.md`; the
-  templates are `content/_templates/`; the voice and claim rules are
+  `faqs/<key>.yaml`, `use-cases.yaml`, `redirects.yaml`, and a page per file
+  in `content/pages/<slug>.yaml` (its `seo` block, its structured data, its
+  sections in order). Each YAML file names its JSON Schema
+  (`content/_schemas/`, written by `pnpm content:docs`) on its first line:
+  read it before writing the file. The door for editing is
+  `content/README.md`; the templates are `content/_templates/`; the voice
+  and claim rules are
   `content/VOICE.md`, enforced by `agentic-cms lint` in `pnpm build`.
   A string marked `(placeholder)` is the starter's: the site's own copy
   replaces it (`/editorial:new-page`) before any design, and a production
@@ -116,7 +119,8 @@ at the version this site pins.
 | Before | Read |
 |---|---|
 | writing your own of anything | `docs/parts.md`, the map of every part; `docs/stability.md`, what each promises |
-| a content file, a page, a post, the head | `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md` |
+| a content file, a page, a post, the head | `src/lib/content/README.md`, `src/lib/blog/README.md`, `src/lib/seo/README.md`; `docs/schema.md` |
+| a URL that moves, a page or a post that goes | `docs/redirects.md` |
 | a form, an address, a tag | `src/lib/forms/README.md`, `docs/forms.md`; `docs/email.md`; `docs/consent.md` |
 | another language, a translation | `docs/locales.md` |
 | a command | `docs/commands.md` |
@@ -127,7 +131,7 @@ at the version this site pins.
 | a fresh clone or a new machine | `docs/setup.md` (`bash scripts/setup.sh`; the `setup` skill) |
 | a dev server, a URL for the owner | `docs/dev-server.md`, `docs/browsers.md` |
 | a primitive | `docs/primitives.md` |
-| a host, a deploy | `docs/deploy.md` |
+| a host, a deploy, a preview of a pull request | `docs/deploy.md`, `docs/preview.md` |
 | an upgrade of the kit | `docs/upgrade.md` (`pnpm dlx agentic-cms@<version> upgrade`), `docs/upgrading.md` |
 | an area with traps | `docs/gotchas.md`, by topic |
 

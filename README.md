@@ -10,7 +10,7 @@
 
 ![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers or Node](https://img.shields.io/badge/serves_from-Cloudflare_Workers_%C2%B7_Node-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000) ![Claude Code and Codex](https://img.shields.io/badge/plugin-Claude_Code_%C2%B7_Codex-000)
 
-[The loop](#the-loop) · [The parts](#the-parts) · [Files, not a database](#files-not-a-database) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
+[The loop](#the-loop) · [The parts](#the-parts) · [Files, not a database](#files-not-a-database) · [Next to Payload](#next-to-payload) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
 
 </div>
 
@@ -40,7 +40,8 @@ WARN content/blog/pages-are-files.md seo-title: seoTitle is 67 characters; Googl
 FAIL content/pages/home.yaml schema: sections[0].eyebrow is required
 FAIL content/pages/home.yaml schema: sections[0] unknown key(s) eyebrows
 FAIL content/pages/home.yaml schema: sections[2].cards must have exactly 5 cards
-content-lint: 7 collections, 11 entries, 5 failures, 1 warning
+FAIL content/redirects.yaml redirect-to: [0].to "/sections/home" is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL
+content-lint: 8 collections, 12 entries, 6 failures, 1 warning
 ```
 
 `pnpm content:lint` gives the same answer in about a second, without the build.
@@ -69,10 +70,10 @@ four layers.
 
 | Layer | Ships | Parts |
 |---|---|---|
-| The content engine | the pages | the collections (`agentic-cms/content`), composed once with `createKit()`; on it pages (`content/pages/`, the section registry), the post pipeline (`agentic-cms/blog`) and SEO (`agentic-cms/seo`); beside it forms (`agentic-cms/forms`) |
+| The content engine | the pages | the collections (`agentic-cms/content`), composed once with `createKit()`, a JSON Schema for each (`agentic-cms schema`), the redirects among them; on it pages (`content/pages/`, the section registry), the post pipeline (`agentic-cms/blog`), SEO (`agentic-cms/seo`) and a site's other languages (`agentic-cms/locales`, experimental); beside it forms (`agentic-cms/forms`) |
 | Browser libraries | to the reader | motion (`agentic-cms/ix`), the components (`agentic-cms/components`), consent (`agentic-cms/consent`), e-mail (`agentic-cms/email`), `agentic-cms/cx` |
 | Design tools | never | the lab, design rounds (`demo`), the screenshot harness (`visual-parity`, `parity`, `shot`, `probe`, `sheet`), icons, images, the design skills |
-| The site's commands | the build and the setup | `init`, `setup`, `urls`, `serve`; the gates every change passes (`pnpm lint` with `check-site`, `pnpm build` with `seo` and `guard-email`) and the steps a site adds (`critical-css`, `assemble`); `agentic-cms/eslint`, `agentic-cms/loader` |
+| The site's commands | the build and the setup | `init`, `upgrade`, `setup`, `urls`, `serve`; the gates every change passes (`pnpm lint` with `check-site`, `pnpm build` with `seo` and `guard-email`) and the steps a site adds (`critical-css`, `assemble`, `pr-preview`); `agentic-cms/eslint`, `agentic-cms/loader` |
 
 Two tiers:
 
@@ -93,12 +94,41 @@ Two tiers:
 
 | | agentic-cms | A CMS with a database |
 |---|---|---|
-| Where the copy lives | `content/`: seven collections, one folder, one pull request per change | rows behind an admin screen |
+| Where the copy lives | `content/`: eight collections, one folder, one pull request per change | rows behind an admin screen |
 | Who edits it | an AI agent, with a person approving each gate; or anyone with an editor | people in the admin screen |
 | What stops a mistake | the build, with a line that names the file, the field and the problem | a preview, if someone looks |
 | What runs at request time | nothing: prerendered, static, cached at the edge | a query per page |
 | The design | yours: what ships is a wireframe a fork replaces, with the machinery kept | the theme's |
 | When it is the wrong tool | copy that must change without a deploy, a search over thousands of entries, or authors who will never open a pull request | — |
+
+## Next to Payload
+
+Payload's homepage headline reads
+["The Agentic Content Framework"](https://payloadcms.com/), and the two are
+different tools.
+[Payload](https://payloadcms.com/docs/getting-started/what-is-payload) is a
+Next.js full-stack framework: from a TypeScript config it gives an admin
+panel, a database with migrations, REST and GraphQL APIs, authentication
+and access control. An agent reaches its content through the official
+[MCP plugin](https://payloadcms.com/docs/plugins/mcp), which finds,
+creates, updates and deletes documents behind an API key and the
+collections' access control. agentic-cms has none of those. Its content is
+files in git, its editor is an agent working in pull requests, and its
+build refuses what breaks the site's rules: the schema, the voice and the
+claims, the SEO, the engines in code. A pixel proof shows what a change
+moved before it merges, and what ships is static.
+
+| | Payload | agentic-cms |
+|---|---|---|
+| Content lives in | a [database](https://payloadcms.com/docs/database/overview): MongoDB, Postgres or SQLite | files under `content/`, in git |
+| Who edits | people in the [admin panel](https://payloadcms.com/docs/admin/overview), with [drafts](https://payloadcms.com/docs/versions/drafts), [versions](https://payloadcms.com/docs/versions/overview), [live preview](https://payloadcms.com/docs/live-preview/overview) and [localization](https://payloadcms.com/docs/configuration/localization); an agent through the MCP plugin | an agent, in a pull request a person merges |
+| An agent's mistake meets | [field validation](https://payloadcms.com/docs/fields/overview) and [access control](https://payloadcms.com/docs/access-control/overview) on the write, then the database | the build (schema, voice, SEO, engines), then the review |
+| Design | the site's own code | the component library's rules, and a pixel proof before a merge |
+| At request time | the admin, the APIs and the database, as a server; the site's own pages may be [prerendered at build time](https://payloadcms.com/docs/production/building-without-a-db-connection) | nothing: prerendered and static |
+| Pick it when | editors don't use git, the site has logins, content changes without a deploy | an agent runs a marketing site or a blog, and its voice, SEO and design must hold |
+
+Payload's side is as its own site and the docs of its current release,
+3.x, read on 2026-10-29: each fact links the page it comes from.
 
 ## A page is a file
 
@@ -190,7 +220,7 @@ needs from the repo it stands in and carries nothing of any brand.
 | `/editorial:new-post` | a post from a draft file, with its images and frontmatter, as `draft: true` |
 | `/editorial:update-post` | an edit to a post, the two dates and the URL intact |
 | `/editorial:new-page` | a page from the template, made of existing section types |
-| `/editorial:retire-content` | a post hidden (its URL kept) or a page removed once a redirect exists |
+| `/editorial:retire-content` | a post hidden (its URL kept), or a page or a post removed with its redirect, written into `content/redirects.yaml` |
 | `/editorial:translate` | a page's, a post's or a collection's translation drafted beside its original, for a native speaker to check; a legal text translated, never rewritten |
 | `/editorial:review-voice` | a file read against `VOICE.md` for what the lint cannot judge |
 | `/editorial:critic` | a post read hard by an editor who did not watch it being written, every external claim checked against primary sources |
@@ -200,8 +230,10 @@ The two review skills, `review-voice` and `critic` (the critic fact-checks
 against primary sources), also run as Claude Code agents
 `editorial:voice-reviewer` and `editorial:critic`, in isolation from the
 conversation that wrote the draft. The same directory installs in Claude Code
-and in Codex; the repo is its own marketplace for both, and in a checkout
-Claude Code has the plugin on through `.claude/settings.json`. Elsewhere:
+and in Codex. The repo is its own marketplace for both, and so is the
+installed package: `.claude/settings.json` turns the plugin on for Claude
+Code in a checkout, and in a site laid out by `init`, which reads it from
+the package at the version it pins. Elsewhere:
 
 ```bash
 claude plugin marketplace add git@github.com:HKamkar/agentic-cms.git && claude plugin install editorial@agentic-cms --scope user
@@ -220,7 +252,8 @@ the repo.
 A site's look is designed the same way its copy is edited: by an agent,
 one element at a time, with the owner picking at every gate. The design
 skills ship in the repo (`.claude/skills/`, `.agents/skills/`, found by
-Claude Code and Codex with nothing installed), and every one of them works
+Claude Code and Codex with nothing installed) and in the package, as its
+`design` plugin, and every one of them works
 through the command line, so what a round leaves behind is files and a
 proof, never a tool in the reader's browser.
 
@@ -364,16 +397,22 @@ site whose address is public on purpose says so with
 `init` merges the gates into the site's own `lint` and `build`, or refuses
 and names what to add. The CI workflow, `.github/workflows/verify.yml`,
 runs the lint, the tests, the build and the agent-file check on every pull
-request, and `.github/dependabot.yml` keeps its actions current: GitHub
-Actions alone, monthly, in one grouped pull request.
+request, and, opted in on Cloudflare Workers, a preview of each at a link
+of its own, never indexed ([docs/preview.md](docs/preview.md));
+`.github/dependabot.yml` keeps its actions current: GitHub Actions alone,
+monthly, in one grouped pull request.
 
-Either way the site carries, from the first session and with nothing
-installed, what an agent needs to design it: the rules (`AGENTS.md`, and
-`.claude/rules/`, which Claude Code loads by path and Codex finds through
-`AGENTS.md`'s scoped-rules table), the design skills (`.claude/skills/`, `.agents/skills/`
-— `design`, `design-options`, `design-measure`, `design-icons`,
-`design-graphics`, `design-proof`) and the commands they call. [docs/init.md](docs/init.md) is what `init` writes and
-what comes next; [docs/design.md](docs/design.md) is the loop.
+Either way the site carries, from its first session, what an agent needs
+to design it: the rules (`AGENTS.md`, and `.claude/rules/`, which Claude
+Code loads by path and Codex finds through `AGENTS.md`'s scoped-rules
+table), the design skills (`design`, `design-options`, `design-measure`,
+`design-icons`, `design-graphics`, `design-proof`) and the commands they
+call. A fork has the skills in `.claude/skills/` and `.agents/skills/`. A
+site laid out by `init` reads them from the installed package, at its pin:
+the `design` plugin, which `.claude/settings.json` names, and a stub per
+skill in `.agents/skills/` for Codex; each rule there is thin, pointing at
+the kit's whole rule. [docs/init.md](docs/init.md) is what `init` writes
+and what comes next; [docs/design.md](docs/design.md) is the loop.
 
 <details>
 <summary><b>Then: the six steps</b></summary>
@@ -444,16 +483,24 @@ then; the banner is the site's own design, and the example's is off until
 
 ## Upgrading
 
-A site pins the package by tag. An upgrade is the new tag, `pnpm install`,
-`pnpm exec agentic-cms init . --agent-files` (the new rules and skills in,
-the site's own edits kept; `--agent-files --check`, in the site's CI, fails
-an edit that dropped a line the kit marks required), the steps of that release in
-[docs/upgrading.md](docs/upgrading.md), then `pnpm build` and a new
-baseline for the screenshot harness. `CHANGELOG.md` says what changed and
-marks every change to what a capture writes.
+A site pins the package by tag, and moves to a release with that
+release's own code: `pnpm dlx agentic-cms@<version> upgrade` (`--dry-run`
+first) moves the pin, runs each migration in between, rewrites the kit's
+lines of the agent files and keeps the site's own, prints each step left
+by hand with its section of [docs/upgrading.md](docs/upgrading.md), then
+runs the lint and the tests ([docs/upgrade.md](docs/upgrade.md)). Nothing
+of the kit's is merged by hand: the skills and the guides are read from
+the package, and `--agent-files --check`, in the site's CI, fails a rule
+that dropped a line the kit marks required. What a site can rely on
+between versions is [docs/stability.md](docs/stability.md);
+`CHANGELOG.md` says what changed and marks every change to what a capture
+writes.
 
-From 0.8.1, [docs/migrating-to-0.8.2.md](docs/migrating-to-0.8.2.md) is
-the guide: the upgrade in one pull request, with a baseline
+From 0.8.x, [docs/migrating-to-0.9.0.md](docs/migrating-to-0.9.0.md) is
+the guide: the upgrade, the site's `AGENTS.md`, the host's redirects into
+`content/redirects.yaml`, and what a site may adopt. A site on 0.8.1
+takes [docs/migrating-to-0.8.2.md](docs/migrating-to-0.8.2.md) first:
+the upgrade in one pull request, with a baseline
 (`check-site --baseline`) that holds what the site has now, so CI stays
 green and nothing a reader sees changes, its engine bypasses, its
 sections' composition findings and the example's leftovers held while new
@@ -549,9 +596,11 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
    sink of the site's for a provider's API) delivers it
    ([docs/forms.md](docs/forms.md)), and the privacy notice then names the
    provider.
-2. If the site replaces an existing one, recreate its redirects before the
-   DNS change (on the Worker, or in `next.config`'s `redirects()` on a Node
-   server). A public URL never changes without one.
+2. If the site replaces an existing one, write its old URLs into
+   `content/redirects.yaml` before the DNS change: `next.config.ts` serves
+   them on any host, and the build checks each
+   ([docs/redirects.md](docs/redirects.md)). A public URL never changes
+   without one.
 3. `pnpm build`, `pnpm preview`, click through every page in each scheme
    the site has.
 4. On the example's Cloudflare Worker: `pnpm run deploy`. On a Node server:
@@ -568,6 +617,8 @@ commands theirs, [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md);
 content/pages/<slug>.yaml    every page: seo, jsonld, sections
 content/blog/<slug>.md       posts (slug = filename); _template.md is the annotated template
 content/authors.json         content/categories.json   content/reviews.yaml   content/faqs/<key>.yaml   content/use-cases.yaml
+content/redirects.yaml       every old URL and where it goes now, which next.config.ts serves
+content/_schemas/            the JSON Schema of every collection (agentic-cms schema), named on each YAML file's first line
 content/VOICE.md             the voice and claim rules; _templates/VOICE.md is the blank
 content/editorial/           calendar.md, backlog.md, and workshop.yaml when marketing lives elsewhere
 src/kit.ts                   the example composing the package for itself; the file every site has
@@ -576,27 +627,28 @@ src/config/site.ts           the brand, URLs, nav, footer, calls to action, and 
 src/config/forms.ts          every form, as data; form-delivery.ts, where endpoint forms deliver (server only)
 src/app/api/forms/[id]/      the one dynamic route: endpoint forms post here
 plugin/                      the editorial plugin: skills/, agents/, README.md (its contract)
+.claude-plugin/              the marketplace: the editorial plugin and the design plugin, which a site reads from the package
 
 # Browser libraries, and the site's components around them
 src/components/ui/           Section, Placeholder, Button, Navbar, Footer, Faq, ThemeToggle, ConsentBanner, the form primitives
 src/config/analytics.ts      the Google tag id (GOOGLE_TAG_ID) and the consent policy
 
 # Design tools
-.claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed
+.claude/skills/, .agents/skills/   the design skills, for Claude Code and Codex, found from a checkout with nothing installed; a site reads them from the package
 src/config/harness.ts        the screenshot harness's profile (widths, schemes) and its seed
 templates/lab-demo/          the lab's throwaway route
 
 # The site's commands
-bin/, scripts/               the command line, by layer: lint, check, status, docs; placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo; init, setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
+bin/, scripts/               the command line, by layer: lint, check, status, docs, schema; placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo; init, upgrade (its migrations in scripts/migrations/), setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble, pr-preview); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
 src/config/components.json   the site check's config: the layers, the owners, the allow list, the route exceptions, the baseline; eslint.config.mjs passes the same to the preset
-templates/site/              what init writes into a site: AGENTS.md, the rules, the config, the CI workflow and Dependabot, scripts/setup.sh
+templates/site/              what init writes into a site: AGENTS.md, the rules a site's thin ones point at, the config, the CI workflow and Dependabot, scripts/setup.sh
 templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
 
 # Across the layers
-src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, email, cx, createKit
+src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, locales, email, cx, createKit
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides, indexed by layer in docs/README.md: parts.md (the map of every part and its tier), commands.md, init.md, upgrading.md, migrating-to-0.8.2.md, …
+docs/                        the guides, indexed by layer in docs/README.md: parts.md (the map of every part, its tier and its stability), stability.md, commands.md, init.md, upgrade.md, upgrading.md, migrating-to-0.9.0.md, …
 ```
 
 MIT licensed.

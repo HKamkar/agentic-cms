@@ -54,8 +54,10 @@ These change in any release, patches included, and none is a break:
   the contract, never the text.
 - **The kit's example:** its content, its pages, its pictures.
 - **The text of the kit's rules, skills and guides.** It changes with each
-  release and reaches a site through `init --agent-files`; what a site's
-  copy must keep is the lines the kit marks required
+  release and reaches a site with the pin: the skills and the guides are
+  read from the installed package, and `init --agent-files` rewrites the
+  kit's block of each thin rule. What a site's rule must keep is the lines
+  the kit marks required
   ([init.md § What an edit keeps](init.md#what-an-edit-keeps)).
 - **What a capture writes** under `.parity/`: a release may ask for new
   baselines, and its changelog says **recapture baselines**.
