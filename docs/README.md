@@ -6,7 +6,12 @@ rules for an agent working on the code.
 - [parts.md](parts.md) — the map: every need a site has, the part of the
   kit that meets it and how to use it, its tier (required for the engines,
   preferred for the rest), the check that holds it and its exception key,
-  in four layers. The guides below follow the same layers.
+  in four layers, and whether it is stable or experimental. The guides
+  below follow the same layers.
+- [stability.md](stability.md) — what a site can rely on between versions:
+  what a stable part keeps, what may change in any release, how a change
+  is announced, the policy before and after 1.0.0, and every export,
+  command and file format marked.
 
 ## The content engine
 

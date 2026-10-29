@@ -1,5 +1,8 @@
 # Upgrading a site
 
+What a site can rely on from one version to the next, and what may change
+in any release, is [stability.md](stability.md).
+
 A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). Every
 upgrade starts the same way:
 

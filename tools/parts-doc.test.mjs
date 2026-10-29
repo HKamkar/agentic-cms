@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { test } from "node:test";
-import { contentLintRules, exportNames, FILE, guardPasses, missingNames, presetRules, requiredNames } from "./parts-doc.mjs";
+import { contentLintRules, exportNames, FILE, guardPasses, missingNames, presetRules, requiredNames, STABILITY, stabilityFindings } from "./parts-doc.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 
@@ -30,4 +30,26 @@ test("a page that lacks a name is told which; a rule counts only in The checks, 
   assert.deepEqual(missingNames(page, required).map((r) => r.name), ["kit check", "routes"]);
   const complete = "# Parts\n\n`kit/cx`, `kit check --json`.\n\n## The checks\n\n| `routes` | … |\n";
   assert.deepEqual(missingNames(complete, required), []);
+});
+
+test("docs/stability.md marks every export and command, and the map's Stability column agrees with it", () => {
+  const read = (file) => fs.readFileSync(new URL(file, ROOT), "utf8");
+  assert.deepEqual(stabilityFindings(read(STABILITY), read(FILE), requiredNames()), [], "mark each on docs/stability.md and in its map row");
+});
+
+test("an unmarked part, a map row without its Stability, and a row marked against the page are each named", () => {
+  const required = [
+    { kind: "export", name: "kit/lab", needle: /`kit\/lab`/ },
+    { kind: "export", name: "kit/cx", needle: /`kit\/cx`/ },
+    { kind: "command", name: "kit lab", needle: /`kit lab[` ]/ },
+    { kind: "command", name: "kit init", needle: /`kit init[` ]/ },
+  ];
+  const page = "Today that is `kit init`.\n\n| Export | Mark |\n|---|---|\n| `kit/lab` | experimental |\n| `kit/cx` | stable |\n| `kit lab` | experimental |\n";
+  const map = "| Need | Part | Tier | Stability | Held by |\n|---|---|---|---|---|\n| A graphic | `kit lab new` | preferred | stable | — |\n| Classes | `kit/cx` | preferred | experimental | — |\n| A site | `kit init` | preferred | | — |\n\n| Rule | Where |\n|---|---|\n| `kit/lab` | unmarked tables are not the map's |\n";
+  assert.deepEqual(stabilityFindings(page, map, required), [
+    "docs/stability.md: marks no command kit init stable or experimental — add its row",
+    'docs/parts.md: "A graphic" names kit lab, experimental on docs/stability.md, and is marked stable',
+    'docs/parts.md: "Classes" is marked experimental and names no part docs/stability.md marks so',
+    'docs/parts.md: "A site" has no Stability — stable or experimental, as docs/stability.md marks its parts',
+  ]);
 });

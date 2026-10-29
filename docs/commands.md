@@ -21,6 +21,11 @@ The conventions every command keeps, because the caller is usually an agent:
   environment (a missing build, no browser, a bad flag).
 - **`--json`**, where a command offers it, prints one JSON document on stdout
   and sends its progress to stderr, so the output parses without scraping.
+- **What stays.** Each command is marked stable or experimental
+  ([stability.md § Commands](stability.md#commands)): a stable one keeps
+  its flags, defaults, exit codes and `--json` shape, as this page lists
+  them, until a release that says how they change; its printed wording may
+  change in any release.
 - **Errors name the fix.** A missing build says `pnpm build`; a missing
   browser says what to install; a missing marker says which file. A wrong
   command, subcommand or flag names the nearest one ("did you mean"); a
