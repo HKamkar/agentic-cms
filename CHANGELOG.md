@@ -4,6 +4,10 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [Unreleased]
+
+- A motion story without frame loss: `docs/motion-story.md` (the frame budget, the rules with the numbers behind them, what Safari needs, the checks) and the `design-story` skill with the code to start from. Optional and preferred tier: one page told as a live scene, every other page regular. The kit ships no story engine. The README, the design guide, the browser guide and the gotchas say where it fits. The README shows a live sample, and three more sites built with the kit.
+
 ## [0.9.0] — 2026-11-24
 
 - Docs: `docs/roadmap.md` is the plan for 0.9.0, moved from `docs/roadmap-0.9.0.md`. The 0.8.0 roadmap's principles, hygiene list, per-job verification and open Later items carry over, and the 0.8.0 text stays in history.

@@ -80,6 +80,10 @@ What a site is designed with; none of it ships.
 - [lab.md](lab.md) — the design canvas for the site's own graphics: SVG
   scenes on the site's tokens, in each of its schemes, on a phone; rendered to the
   files a page ships; removed when done.
+- [motion-story.md](motion-story.md) — one page told as a live,
+  scroll-driven scene without frame loss: optional at four levels, the
+  frame budget, the rules with the numbers behind them, what Safari needs,
+  the still version, how to check it.
 - [browsers.md](browsers.md) — Chrome and Safari, who checks what:
   headless Chromium, headless WebKit as a stand-in, the owner's Safari;
   what headless cannot show; the engines' differences.

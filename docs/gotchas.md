@@ -18,6 +18,7 @@ read, by symptom:
 | An eager `<img>` in a server component is downloaded by every page that prefetches a link to it | [an image above the fold](parts.md#browser-libraries) |
 | The dev server fails every page with `Can't resolve '@vercel/turbopack-next/internal/…'` after a build; a removed route still fails the type check (`validator.ts`); a utility the build has and the dev page lacks; starting and stopping it, the addresses to hand over | [a dev server and its URLs](parts.md#the-sites-commands) |
 | `text-base` / `text-sm` set a line-height; two colour utilities on one element resolve by stylesheet order; preflight's zeroed margins, paddings and list markers; `h-auto` beside a `height` attribute | [a colour, a size, a breakpoint](parts.md#browser-libraries) |
+| A live scene drops frames; it is black, sparkles or never starts in Safari; it runs at 30 a second there; it stutters the first time a part of it shows | [a page told as a live scene](parts.md#design-tools) |
 | A timeline far down a page still running while off screen | [a graphic](parts.md#design-tools) |
 | Critical CSS for a state a script sets after load | [the first paint without a blocking stylesheet](parts.md#the-sites-commands) |
 | `HOSTNAME`, the standalone package, a `cp` that nests `public/` | [a Node server host](parts.md#the-sites-commands) |
@@ -116,6 +117,13 @@ read, by symptom:
   them off screen (an `IntersectionObserver`; the kit's `InlineAnimation`
   does it for an inline SVG): desktop blocking time went from 260 to
   20 ms.
+- **A headline that drops frames by itself.** An animated `filter: blur()`
+  redraws the text every frame: 3.5–6 ms of main thread and 3–5 ms of raster
+  on a fast machine, 12–14 ms with the processor slowed 4×. `transform` and
+  `opacity` on the same headline cost 2 ms, 4 ms slowed, and no raster.
+- **Layers nobody sees.** An element with `will-change` keeps its layer at
+  `opacity: 0`: twenty faded-out labels cost 3 ms a frame, slowed 4×. Add
+  `visibility: hidden` when one has faded out.
 - **A design-tool export that weighs more than it looks.** An SVG can
   carry a full-HD bitmap inside it, or a filter on every repeated shape.
   Open the file and look before re-encoding it: removing the hidden part

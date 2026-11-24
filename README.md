@@ -10,7 +10,7 @@
 
 ![MIT](https://img.shields.io/badge/license-MIT-000) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-000) ![Cloudflare Workers or Node](https://img.shields.io/badge/serves_from-Cloudflare_Workers_%C2%B7_Node-000) ![Node 22.18+](https://img.shields.io/badge/node-22.18%2B-000) ![request-time reads: 0](https://img.shields.io/badge/request--time_reads-0-000) ![Claude Code and Codex](https://img.shields.io/badge/plugin-Claude_Code_%C2%B7_Codex-000)
 
-[The loop](#the-loop) · [The parts](#the-parts) · [Files, not a database](#files-not-a-database) · [Next to Payload](#next-to-payload) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
+[The loop](#the-loop) · [The parts](#the-parts) · [Files, not a database](#files-not-a-database) · [Next to Payload](#next-to-payload) · [A page is a file](#a-page-is-a-file) · [A post is a file](#a-post-is-a-file) · [The voice is a lint](#the-voice-is-a-lint) · [The editor is an agent](#the-editor-is-an-agent) · [So is the designer](#so-is-the-designer) · [A page that tells a story](#a-page-that-tells-a-story) · [The proof is a diff](#the-proof-is-a-diff) · [Built on it](#built-on-agentic-cms) · [Start your own site](#start-your-own-site)
 
 </div>
 
@@ -92,7 +92,8 @@ Two tiers:
   canvas, `next/image` or a script of its own: the lint warns, names the
   kit's part and passes, and one line of reason keeps the choice (an
   `allow` entry in `src/config/components.json`, or an inline disable with
-  its description).
+  its description). A page told as a live scene is such a choice, with a
+  method of its own ([below](#a-page-that-tells-a-story)).
 
 ## Files, not a database
 
@@ -267,12 +268,51 @@ proof, never a tool in the reader's browser.
 | `design-options` | a design round: three to five ideas, the picked ones built as real components on a throwaway route in the section's own frame with the page's copy (`pnpm kit demo new`), the owner picks by letter; `demo clean` then removes everything the round created that the winner does not use, and says what it keeps and why |
 | `design-graphics` | the site's own drawings as SVG in the lab (`pnpm kit lab`): scenes on the site's tokens in each of its schemes, at the sizes they ship and on a phone, a timeline to step through a loop, rendered to the file a page ships; a loop that should play when it is seen goes inline (`InlineAnimation`, `readInlineSvg`) |
 | `design-icons` | icons as families: the inventory of every icon beside its copy (`icons audit`), Lucide and Simple Icons maps (`icons add`), marks from primitives (`icons family`), and a round for a set of the site's own (`icons round new / publish / retire`) |
+| `design-story` | one page told as a live, scroll-driven scene, without dropped frames ([below](#a-page-that-tells-a-story)): the storyboard, rounds that are looked at in Chromium and WebKit and measured, a still version for every reader who needs it |
 | `design-measure` | a screenshot claim turned into numbers before an edit: an element's box, styles and stacking chain (`probe`), a crop (`shot`), candidates at their real size on their real grounds (`sheet`) |
 | `design-proof` | the change proven on the pixels (below) |
 
 [docs/design.md](docs/design.md) is the loop, [docs/lab.md](docs/lab.md)
 the lab, [docs/icons.md](docs/icons.md) the icons,
 [docs/shot-probe-sheet.md](docs/shot-probe-sheet.md) the one-shot commands.
+
+### A page that tells a story
+
+A home page can be one continuous scene the scroll drives, drawn live, while
+the blog and every other page stay regular and load none of it. It is
+optional for the site, for the page and for the reader: the words stay in the
+page's content file and in the HTML, and a reader who prefers reduced motion,
+or whose device cannot hold the frames, gets the same words as a normal page
+with still pictures.
+
+<a href="https://hkamkar.github.io/agentic-cms/motion-story/">
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/readme/motion-story-still.webp">
+  <img src="docs/readme/motion-story.webp" alt="Six scenes drawn with fine lines of light, one after the other: a night sea with small lit boats and a whale, a storm, a spiral of fibres, an iris that holds one page back, a tree that grows and turns gold, and a planet at dawn" width="720" height="405">
+</picture>
+</a>
+
+**[Scroll the motion sample live](https://hkamkar.github.io/agentic-cms/motion-story/)**:
+the life of one page, in six scenes. It is raw WebGL 2 with no rendering
+library, 51 KB compressed, words and styles included, fonts apart. The first
+scene is drawn before the others are made, and nothing moves with
+reduced motion on. The numbers in the kit's guide were measured on it.
+
+Such a page fails by dropping frames, so the kit's part is the method:
+[docs/motion-story.md](docs/motion-story.md), with the budget to set before
+drawing, the rules with the numbers behind them, what Safari needs, and how to
+check it all, and the `design-story` skill with the code to start from. The
+kit ships no story engine, and no check of its own fails a page over the
+budget: the scene is the site's, kept with one line of reason.
+
+| The budget | |
+|---|---|
+| Main thread, a frame, processor slowed 4× | 8 ms |
+| Graphics card, a frame | 10 ms |
+| Main thread blocked by the setup, slowed 4× | 200 ms |
+| Script, compressed, no rendering library | 60 KB |
+| Pixels drawn, desktop / tablet / phone | 1.9 / 1.3 / 0.9 million |
+| Stutter the first time a chapter is drawn | none to measure |
 
 ## The proof is a diff
 
@@ -359,6 +399,12 @@ standalone package `agentic-cms assemble` completes. Same page files, same
 post pipeline, same lint and audit as the wireframe above; the design is the
 part a site brings.
 
+More sites designed and built with agentic-cms:
+
+- [Geobirds](https://geobirds.io), the global logistics map
+- [OUR WHY](https://ourwhycare.com), care discovery for support that fits you
+- [Arocela](https://arocela.com), the AI receptionist for small businesses
+
 ## Start your own site
 
 Two ways. **Fork** this repo when you want the example around
@@ -410,7 +456,7 @@ Either way the site carries, from its first session, what an agent needs
 to design it: the rules (`AGENTS.md`, and `.claude/rules/`, which Claude
 Code loads by path and Codex finds through `AGENTS.md`'s scoped-rules
 table), the design skills (`design`, `design-options`, `design-measure`,
-`design-icons`, `design-graphics`, `design-proof`) and the commands they
+`design-icons`, `design-graphics`, `design-story`, `design-proof`) and the commands they
 call. A fork has the skills in `.claude/skills/` and `.agents/skills/`. A
 site laid out by `init` reads them from the installed package, at its pin:
 the `design` plugin, which `.claude/settings.json` names, and a stub per
@@ -654,7 +700,7 @@ templates/starter/           the content a new site starts from in the example's
 src/lib/                     the package (agentic-cms): content/, blog/, seo/, forms/ (and forms/server), consent/ (and consent/google), ix/, components/, lab/, locales, email, cx, createKit
 STANDARD.md                  the design system     AGENTS.md   the rules for any agent working on the code (CLAUDE.md includes it)
 PLAN.md                      how the engine was built, condensed     CHANGELOG.md   every release
-docs/                        the guides, indexed by layer in docs/README.md: parts.md (the map of every part, its tier and its stability), stability.md, commands.md, init.md, upgrade.md, upgrading.md, migrating-to-0.9.0.md, …
+docs/                        the guides, indexed by layer in docs/README.md: parts.md (the map of every part, its tier and its stability), stability.md, commands.md, design.md, motion-story.md, init.md, upgrade.md, upgrading.md, migrating-to-0.9.0.md, …
 ```
 
 MIT licensed.

@@ -240,7 +240,9 @@ lint's output, where the review sees it.
   `fabric`, `paper`, `two.js`, `ogl`, `regl`, `chart.js`, `echarts`,
   `plotly.js`, `@antv/*` (the preset's `RENDERING_LIBRARIES`) — a
   `<canvas>`, or a canvas made in code. Graphics ship pre-rendered from
-  the lab ([lab.md](lab.md)).
+  the lab ([lab.md](lab.md)); a page told as a live scene keeps its canvas
+  with its reason, within the budget of
+  [motion-story.md](motion-story.md).
 - **`agentic-cms/images`:** `next/image` (a static host has no image
   service), and an eager `<img>` in a server component — no `loading`, or
   one that can be other than `"lazy"` — which becomes a preload hint every
