@@ -112,7 +112,7 @@ const cities = []; while (cities.length < 170) { const q = norm([gauss(), gauss(
 cities.forEach((c, i) => { c.near = cities.map((d, j) => [j, dot(c.q, d.q)]).filter(([j]) => j !== i).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([j]) => j); });
 const FORM = [
 () => { const z = 20 - 86 * Math.pow(rnd(), 1.15), sp = 14 + (20 - z) * 1.1; return [(rnd() * 2 - 1 + gauss() * .25) * .8 * sp, rnd() < .1 ? Math.pow(rnd(), 2) * 8 : 0, z, rnd()]; },
-() => { const u = rnd(), a = rnd() * TAU; if (u < .2) { const r = 1.5 + Math.pow(rnd(), .7) * 20; return [Math.cos(a) * r, -7.3 + Math.abs(gauss()) * (.2 + 2.2 / (1 + r * .35)), Math.sin(a) * r, rnd()]; } if (u < .3) { const r = 8 + rnd() * 26; return [Math.cos(a) * r, gauss() * 10 + 4, Math.sin(a) * r, rnd()]; } const h = Math.pow(rnd(), .8), r = FUN(h) + gauss() * (.2 + h * 1.1); return [Math.cos(a) * r, -7 + h * 20, Math.sin(a) * r, h]; },
+() => { const u = rnd(), a = rnd() * TAU; if (u < .5) { const h = Math.pow(rnd(), .75); return [a, h, gauss() * .42 + (rnd() < .25 ? Math.abs(gauss()) * 1.3 : 0), h]; } if (u < .74) { const r = .5 + Math.pow(rnd(), 1.5) * 11; return [a, Math.abs(gauss()) * 2.3 / (1 + r * .42), r, -1]; } if (u < .9) return [a, gauss() * .7, 4 + Math.pow(rnd(), .6) * 24, -2]; const r = 10 + rnd() * 26; return [Math.cos(a) * r, gauss() * 9 + 4, Math.sin(a) * r, -3]; },
 () => { const u = rnd(), y = (rnd() - .5) * 34, a = y * .42; if (u < .5) { const s = rnd() < .5 ? 0 : Math.PI, g = .16 + (rnd() < .2 ? .7 : 0), p = HEL(y, s); return [p[0] + gauss() * g, y + gauss() * g, p[2] + gauss() * g, rnd()]; } if (u < .74) { const yr = Math.round(y / .85) * .85, ar = yr * .42, t = rnd() * 2 - 1; return [Math.cos(ar) * 3.6 * t + gauss() * .04, yr + gauss() * .04, Math.sin(ar) * 3.6 * t + gauss() * .04, .5]; } const r = 5 + Math.abs(gauss()) * 7, b = rnd() * TAU; return [Math.cos(b) * r, y, Math.sin(b) * r, rnd()]; },
 () => { const u = rnd(), a = rnd() * TAU; if (u < .4) { const [r, g] = pick([[7, .07], [7, .07], [7.55, .05], [8.6, .16], [9.6, .05], [6.3, .04]]); let b = a; if (r > 8) { const n = r > 9 ? 24 : 9; b = ((Math.floor((a / TAU) * n) + rnd() * .68) / n) * TAU; } const rr = r + gauss() * g; return [Math.cos(b) * rr, Math.sin(b) * rr, gauss() * .12, .5]; } if (u < .56) { const r = Math.sqrt(rnd()) * 6.2; return [Math.cos(a) * r, Math.sin(a) * r, gauss() * .05, .5]; } const z = -46 + rnd() * 70, r = z < 0 ? 2 + Math.abs(gauss()) * (1.5 - z * .22) : Math.sqrt(rnd()) * 4.6; return [Math.cos(a) * r, Math.sin(a) * r, z, z < 0 ? 0 : 1]; },
 () => { const u = rnd(); if (u < .24) { const i = 20 + Math.floor(rnd() * (T.N - 20)), p = T.par[i], t = rnd(), a = rnd() * TAU, rr = T.r[i] * 1.05, f = T.fr[i]; return [0, 1, 2].map((j) => lerp([T.px, T.py, T.pz][j][p], [T.px, T.py, T.pz][j][i], t) + (f[0][j] * Math.cos(a) + f[1][j] * Math.sin(a)) * rr).concat(T.g[i]); } if (u < .62) { const i = pick(twigIds), g = .5; return [T.px[i] + gauss() * g, T.py[i] + gauss() * g, T.pz[i] + gauss() * g, Math.min(.99, T.g[i] + .05)]; } if (u < .74) { const l = pick(LOBES), d = [gauss(), gauss(), gauss()]; return [l[0] + d[0] * l[3] * .9, l[1] - 1.5 + d[1] * l[4], l[2] + d[2] * l[5] * .9, 1.2 + rnd() * .5]; } if (u < .84) { const r = pick(ROOTS), q = r[Math.floor(rnd() * r.length)]; return [q.p[0] + gauss() * .07, q.p[1] + gauss() * .05 + q.r, q.p[2] + gauss() * .07, q.g]; } const a = rnd() * TAU, R = .6 + Math.pow(rnd(), .7) * 17; return [Math.cos(a) * R, GROUND - .05 + Math.abs(gauss()) * (rnd() < .3 ? 1.1 : .12), Math.sin(a) * R, u < .93 ? .02 + R * .004 : 2 + rnd() * .5]; },
@@ -121,7 +121,7 @@ const FORM = [
 const bez = (a, b, c, d, t) => [0, 1, 2].map((j) => { const u = 1 - t; return u * u * u * a[j] + 3 * u * u * t * b[j] + 3 * u * t * t * c[j] + t * t * t * d[j]; });
 const STREAM = [
 (s) => { const side = s % 2 ? 1 : -1, a = [side * (10 + rnd() * 34), 2 + rnd() * 12, 26], b = [side * (6 + rnd() * 16), 1 + rnd() * 9, 2], c = [side * (1 + rnd() * 10), 1 + rnd() * 6, -28], d = [gauss() * .6, 6.2 + gauss() * .5, -58]; return (t) => bez(a, b, c, d, t); },
-(s) => { const a0 = rnd() * TAU, turns = 1.2 + rnd() * 2, h0 = rnd() * .5, h1 = .6 + rnd() * .55, off = gauss() * .6; return (t) => { const h = lerp(h0, h1, t), r = FUN(h) + off, a = a0 + t * turns * TAU; return [Math.cos(a) * r, -7 + h * 20, Math.sin(a) * r]; }; },
+(s) => { const a0 = (s / NS) * TAU * 3, h0 = (s % 5) * .17 + rnd() * .06, span = .22 + rnd() * .2, turns = .75 + rnd() * .5, off = .04 + (s % 3) * .22; return (t) => { const h = Math.min(.98, h0 + span * t); return [a0 - t * turns * TAU, h, off * (.4 + h * 1.6)]; }; },
 (s) => { if (s < 2) return (t) => HEL((t - .5) * 34, s * Math.PI); const a0 = rnd() * TAU, r = 5 + rnd() * 9, y0 = (rnd() - .5) * 26, tw = .8 + rnd() * 1.4, rise = 6 + rnd() * 12; return (t) => [Math.cos(a0 + t * tw * 3) * lerp(r, 3.7, t), y0 + t * rise - 6, Math.sin(a0 + t * tw * 3) * lerp(r, 3.7, t)]; },
 (s) => { if (s < 4) { const R = [7, 7.55, 6.3, 9.6][s]; return (t) => [Math.cos(t * TAU) * R, Math.sin(t * TAU) * R, 0]; } const a = rnd() * TAU, r = 1 + rnd() * 3.8, w = 6 + rnd() * 16, ph = rnd() * TAU, b = [Math.cos(a) * r, Math.sin(a) * r]; return (t) => { const z = lerp(-48, 24, t), k = Math.pow(clamp(-z / 48), 1.1); return [b[0] + Math.cos(ph + z * .17) * w * k, b[1] + Math.sin(ph * 2 + z * .13) * w * k, z]; }; },
 (s) => { const r = ROOTS[(s * 4) % ROOTS.length].map((q) => [q.p[0], q.p[1] + q.r, q.p[2]]).reverse(), p = pathOf(tipIds[Math.floor(((s + .5) / NS) * tipIds.length)]), a = rnd() * TAU; const line = [...r, ...p.slice(2).map((i) => { const b = a + T.py[i] * .35; return add(add(T.at(i), T.fr[i][0], Math.cos(b) * (T.r[i] + .02)), T.fr[i][1], Math.sin(b) * (T.r[i] + .02)); })]; return (t) => along(line, t); },
@@ -130,7 +130,7 @@ const STREAM = [
 const BOATS = []; for (let i = 0; i < 40 && BOATS.length < 11; i++) { const z = 9 - rnd() * 38, x = gauss() * (4 + (12 - z) * .42); if (Math.abs(x) > 1.6 && BOATS.every((b) => Math.hypot(b[0] - x, b[1] - z) > 3.4)) BOATS.push([x, z, rnd() * TAU, .8 + rnd() * .5]); }
 const PANEL = [
 (i) => { if (i < BOATS.length) { const [x, z, a, s] = BOATS[i]; return [x, .62 * s, z, .52 * s, a, 0, 0]; } return [gauss() * 20, i % 3 ? -.1 + rnd() * .2 : 2 + Math.abs(gauss()) * 4, -4 - rnd() * 46, .35 + rnd() * .6, gauss() * .6, i % 3 ? 1.3 + gauss() * .16 : gauss() * .2, gauss() * .3]; },
-(i) => { const h = Math.pow(rnd(), .9), r = FUN(h) + .4 + gauss() * .9, a = rnd() * TAU; return [Math.cos(a) * r, -6.5 + h * 19, Math.sin(a) * r, (i % 4 ? .34 : .8) + rnd() * .5, rnd() * TAU, gauss() * .7, gauss() * .9]; },
+(i) => { const h = .12 + .85 * Math.pow(rnd(), .58), a = rnd() * TAU; return [a, h, .5 + Math.abs(gauss()) * (.5 + 1.9 * h), (i % 4 ? .24 : .6) + rnd() * .3, -a, gauss() * .35, gauss() * .5]; },
 (i) => { const y = (i / NG - .5) * 32, a = y * .42 + (i % 2 ? Math.PI : 0); const r = 5.2; return [Math.cos(a) * r, y, Math.sin(a) * r, 1.02, -a + Math.PI / 2, 0, 0]; },
 (i) => { const lane = i % 5, z = -44 + Math.floor(i / 5) * 2.85 + lane * .57, ang = (lane / 5) * TAU + .4, r = z < 0 ? 2.6 - z * .13 : 2.7; return [Math.cos(ang) * r + (z < 0 ? gauss() * -z * .09 : 0), Math.sin(ang) * r * .8 + (z < 0 ? gauss() * -z * .07 : 0), z, .95, z < 0 ? gauss() * .6 : 0, z < 0 ? gauss() * .5 : 0, z < 0 ? gauss() * .5 : 0]; },
 (i) => { const l = LANTERN[i % LANTERN.length], on = i < LANTERN.length; return [l.q[0], l.q[1] - l.s * .82, l.q[2], on ? l.s : 0, Math.atan2(l.q[0], l.q[2]) * .8 + gauss() * .25, 0, 0]; },
@@ -145,7 +145,7 @@ const sea = C3("#9fdcff"), dim = C3("#4ea0e0", .5);
 for (const [x, z, a, s] of BOATS) { const R = (p) => [x + (p[0] * Math.cos(a) + p[2] * Math.sin(a)) * s, p[1] * s, z + (p[2] * Math.cos(a) - p[0] * Math.sin(a)) * s]; const bow = R([-1.5, .62, 0]), st = R([1.5, .62, 0]), k0 = R([-.8, 0, 0]), k1 = R([.8, 0, 0]), l = R([0, .5, .5]), r = R([0, .5, -.5]), top = R([0, 1.5, 0]); for (const [p, q, c] of [[bow, l, sea], [l, st, sea], [st, r, sea], [r, bow, sea], [bow, k0, sea], [k0, k1, dim], [k1, st, sea], [l, k0, dim], [l, k1, dim], [r, k0, dim], [r, k1, dim], [R([-.62, .52, 0]), top, sea], [top, R([.62, .52, 0]), sea], [top, l, dim], [top, r, dim]]) seg(p, q, 0, 0, c, .012); }
 for (let i = -60; i <= 60; i++) { const a = i * .011, r = 66, big = i % 10 === 0; seg([Math.sin(a) * r, .6, -Math.cos(a) * r + 12], [Math.sin(a) * r, .6 + (big ? 1.1 : i % 5 ? .28 : .6), -Math.cos(a) * r + 12], Math.abs(i) * .008, Math.abs(i) * .008, C3("#5cc8ff", big ? .5 : .22), .03); }
 yield;
-cur = S[1]; const cop = [[-7, 4, 3], [6.5, 8, 1], [3.5, 1, 6], [-5, 9, -3]]; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) { const a = cop[i], b = cop[j], m = add(add(a, b), [0, 3 + rnd() * 2, 0]).map((x) => x / 2), pts = []; for (let t = 0; t <= 26; t++) { const p = bez(a, m, m, b, t / 26); pts.push(p); } sd = rnd(); for (let t = 0; t < 26; t++) if (t % 3) seg(pts[t], pts[t + 1], .25 + j * .12 + t * .006, .25 + j * .12 + t * .006, C3(i + j > 3 ? "#ff5b86" : "#8fa4ff", .8), .014); }
+cur = S[1]; const cop = [[-4.6, 2.6, 2.4], [5.4, 7.2, 1], [3.1, -.6, 4], [-4.4, 8.4, -2]]; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) { const a = cop[i], b = cop[j], m = add(add(a, b), [0, 3 + rnd() * 2, 0]).map((x) => x / 2), pts = []; for (let t = 0; t <= 26; t++) { const p = bez(a, m, m, b, t / 26); pts.push(p); } sd = rnd(); for (let t = 0; t < 26; t++) if (t % 3) seg(pts[t], pts[t + 1], .25 + j * .12 + t * .006, .25 + j * .12 + t * .006, C3(i + j > 3 ? "#ff5b86" : "#8fa4ff", .34), .008); }
 for (let i = 0; i < 40; i++) { const a = (i / 40) * TAU, r0 = 22, r1 = i % 5 ? 22.5 : 23.4; seg([Math.cos(a) * r0, -7.4, Math.sin(a) * r0], [Math.cos(a) * r1, -7.4, Math.sin(a) * r1], 0, 0, C3("#6f8cff", .6), .03); }
 cur = S[2]; const ice = C3("#9be2ff"), deep = C3("#2f86d8", .55), gold = C3("#ffc978");
 for (let i = 0; i <= 40; i++) { const y = -17 + i * .85, a = HEL(y), b = HEL(y, Math.PI), g = (y + 14) / 28; seg(a, v3(a, b, .46), g, g, i % 4 ? C3("#5bb4ee", .6) : ice, .016); seg(v3(a, b, .54), b, g, g, i % 4 ? C3("#5bb4ee", .6) : gold, .016); }
@@ -245,6 +245,9 @@ const FRAME = `uniform vec4 uFrame[14];
 float pr(int k){return uFrom==k?(uTo==k?1.:1.-uMix):uTo==k?uMix:0.;}
 float fog(float d){return 1.-ss(uFogA,uFogB,d);}
 const vec3 PC=vec3(${PC.join(",")}.);
+float fun(float h){float q=h*h;return .42+1.25*h+1.5*q+10.2*q*q*h;}
+vec2 bend(float h){return vec2(sin(h*3.4+uT*.26)*3.1+sin(h*6.1-uT*.21)*.5,cos(h*2.9+uT*.21)*2.2)*h*(1.4-.95*h)+vec2(sin(uT*.17)*1.1,cos(uT*.13)*.8)*(1.-h);}
+vec3 storm(float a,float h,float out_){float r=fun(h)+out_;vec2 b=bend(clamp(h,0.,1.));return vec3(cos(a)*r+b.x,-7.35+h*21.,sin(a)*r+b.y);}
 vec3 rY(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x+s*p.z,p.y,c*p.z-s*p.x);}
 vec3 rZ(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x-s*p.y,s*p.x+c*p.y,p.z);}
 `;
@@ -253,7 +256,13 @@ float wave(vec2 q){return sin(q.x*.21+uT*.55)*.55+sin(q.y*.27-uT*.7+q.x*.09)*.5+
 vec3 sway(vec3 p){float h=max(p.y+7.,0.);p.x+=sin(uT*.6+p.z*.2+h*.2)*.011*h;p.z+=cos(uT*.5+p.x*.2)*.011*h;return p;}
 vec3 live(int k,vec4 f,float s){vec3 p=f.xyz;
 if(k==0){if(s>=-.5)p.y+=wave(p.xz)*(p.y<1.8?1.:.3)+(s>=0.?.06:0.);}
-else if(k==1){float r=length(p.xz);p=rY(p,-uT*(s<-.5?.5:1.5/(.8+r*.2)));if(s>=0.)p.y+=sin(uT*.8+s*50.)*.3;}
+else if(k==1){ // (angle, height, distance from the wall); w says which part
+if(s<-.5)p=storm(p.x-uT*.8,p.y,p.z);
+else if(s<0.){p=storm(p.x-uT*(.42+.6*(1.-p.y)),p.y,p.z+sin(uT*.5+p.x*3.)*.12);}
+else if(f.w>=0.){float h=fract(p.y+uT*.02*(.5+s));p=storm(p.x-uT*(.55+1.5*(1.-h)*(1.-h)),h,p.z*(.35+1.1*h));}
+else if(f.w>-1.5){float r=p.z;float a=p.x-uT*2.6/(.8+r*.5);vec2 b=bend(0.);p=vec3(cos(a)*r+b.x,-7.35+p.y*(.6+.4*sin(uT*.7+s*30.)),sin(a)*r+b.y);}
+else if(f.w>-2.5){float a=p.x-uT*.15;p=vec3(cos(a)*p.z,13.9+p.y,sin(a)*p.z);}
+else p=rY(p,-uT*.05);}
 else if(k==2){p=rY(p,uT*.16);if(s>=0.)p+=vec3(sin(uT+s*40.),cos(uT*.8+s*60.),sin(uT*.7+s*80.))*.06;}
 else if(k==3){float r=length(p.xy);if(s>=-.5&&abs(p.z)<.8&&r>5.9){p=rZ(p,uT*(r>9.1?-.05:r>8.?.11:r>7.3?-.16:.06));}else if(s>=0.){if(abs(p.z)>.8)p.z=mod(p.z+46.+uT*(1.5+s*2.5),70.)-46.;else p.z+=sin(r*1.6-uT*2.4)*.16;}}
 else if(k==4){if(s>=0.&&f.w>1.1){if(f.w<2.){p+=vec3(sin(uT*.31+s*61.),sin(uT*.43+s*37.),cos(uT*.27+s*83.))*1.3;}else{p.y+=mod(uT*(.12+.2*s)+s*9.,3.);p.x+=sin(uT*.4+s*30.)*.5;}}
@@ -282,7 +291,7 @@ vec4 at(int k){return texelFetch(uForm,ivec3(int(aId)&255,int(aId)>>8,k),0);}
 vec3 tint(int k,vec4 f,vec3 p,float s,float s2){
 vec3 c=mix(uA[k],uB[k],s*s);float spark=step(.978,s2);c=mix(c,uC[k]*2.6,spark);
 if(k==0){float d=abs(p.x-uCore.x)/(1.6+max(uEye.z-p.z,0.)*.075);float gl=exp(-d*d)*ss(.15,.95,wave(p.xz*1.7)*.5+.5);float crest=ss(.2,1.1,wave(p.xz));c*=.4+1.4*crest;c+=uC[0]*gl*(.7+2.*step(.8,s2));c*=f.y>.01?.5:1.;}
-if(k==1){c=mix(c,vec3(.95,.16,.42),step(.8,s2)*step(s2,.9)*.8);c*=.6+.9*f.w;c*=1.+uFlash*2.;}
+if(k==1){c=mix(c,vec3(.95,.16,.42),step(.86,s2)*step(s2,.92)*.7);c=mix(c,min(c,vec3(1.1)),.75);c*=f.w>=0.?.2+.6*f.w:f.w>-1.5?.95:f.w>-2.5?.3:.5;c*=1.+uFlash*1.6;}
 if(k==3&&abs(p.z)>.9){c=mix(vec3(.95,.16,.14),vec3(.1,.85,.55),ss(-.5,.8,p.z))*(.35+.5*s);}
 if(k==4){vec3 q=p-uCore;float lit=1./(1.+dot(q,q)*.05);float leaf=ss(.5,.9,f.w);vec3 sum=mix(uB[4],vec3(1.,.66,.2),max(step(.75,s2),uSeason));c=mix(c,sum,leaf*.8)*(.35+2.2*lit);
 if(f.w>1.1&&f.w<2.){float b=sin(uT*(1.1+s)+s2*40.);c=vec3(1.,.78,.3)*(.12+3.2*ss(.5,1.,b))*step(.45,s);}else if(f.w>=2.)c=vec3(.2,.8,.55)*.5*(1.-ss(1.,3.2,p.y+7.));}
@@ -429,20 +438,25 @@ g=(l*.62+fine+ray*.4)*ss(uIn,uIn+.6,r)*(1.-ss(uR*.25,uR*.95,r));
 if(uHead>=0.){float q=(rr-uHead*uR)*.8;float f=exp(-q*q)*(1.-ss(.6,1.,uHead));g+=f*(.04+l*1.7+fine*1.4)*ss(1.5,6.,vD);hot=f;}
 }else if(uKind==5){
 float sp=a*6.2831853-log(r+1.)*2.6+uT*.1;vec2 q=vec2(cos(sp),sin(sp))*r;float f=ns(vec3(q*.13,uT*.02))*.65+ns(vec3(q*.29,4.))*.35,f2=ns(vec3(q*.34+f*2.,3.))*.6+ns(vec3(q*.9,8.))*.4;float den=ss(.36,.72,f*.65+f2*.45)*ss(uIn,uIn*2.4,r)*(1.-ss(uR*.55,uR,r));
-g=den*(.12+.3*f2*f2)+den*lines(f*16.,1.)*.16;hot=clamp(uFlash*(.4+.6*ss(.4,.7,f2)),0.,1.);g*=1.+uFlash*3.2*ss(.35,.75,f2);
+g=den*(.06+.5*f2*f2*f2)+den*lines(f*9.,1.)*.05;hot=clamp(uFlash*(.4+.6*ss(.4,.7,f2)),0.,1.);g*=1.+uFlash*3.2*ss(.35,.75,f2);
 }else if(uKind==6){
 float f=ns(vec3(vQ*.2+vec2(uT*.06,uT*.02),uT*.03))*ns(vec3(vQ*.47-vec2(uT*.04,0.),5.));g=ss(.16,.5,f)*ss(uIn,uIn+4.,r)*(1.-ss(uR*.4,uR,r))*.3;
 }
 if(g*uA<.0012)discard;o=vec4(mix(uCol,uHot,clamp(hot,0.,1.))*g*uA*fog(vD)*ss(.8,3.5,vD),1.);}`],
 surf: [`${H}${FRAME}${NOISE}uniform int uKind;uniform float uP;layout(location=0)in vec2 aG;out vec2 vG;out vec3 vW,vN;out float vD;
-vec3 at(vec2 g){float a=g.x*6.2831853;if(uKind==1){float h=g.y,r=.8+pw(h,1.7)*13.*(1.+.12*sin(a*3.-uT*1.3+h*7.))+sin(a*2.+h*9.-uT*1.1)*.35*h;a-=uT*.5;return vec3(cos(a)*r+sin(h*4.+uT*.5)*.7*h,-7.2+h*20.,sin(a)*r+cos(h*3.+uT*.4)*.7*h);}
+vec3 at(vec2 g){float a=g.x*6.2831853;if(uKind==1){float h=g.y;return storm(a,h,fun(h)*(uP-1.)*(1.-.75*h*h)+sin(a*2.+h*6.-uT*.8)*.05*fun(h));}
 if(uKind==2){float y=(g.x-.5)*34.,b=y*.42+uP;return rY(vec3(cos(b)*3.6,y+(g.y-.5)*.86,sin(b)*3.6),uT*.16);}
 if(uKind==3){float z=mix(-46.,-1.2,g.y),r=mix(17.,10.4,g.y);return vec3(cos(a)*r,sin(a)*r,z);}
 float r=uP;return vec3(cos(a)*r,sin(a)*r,mix(-1.1,.9,g.y));}
 void main(){vG=aG;vW=at(aG);vec3 e=at(aG+vec2(.004,0.))-vW,f=at(aG+vec2(0.,.01))-vW;vN=cross(e,f);gl_Position=uVP*vec4(vW,1.);vD=gl_Position.w;}`,
-`${H}${FRAME}${NOISE}${HAIR}uniform int uKind;uniform float uA;uniform vec3 uCol,uHot;in vec2 vG;in vec3 vW,vN;in float vD;out vec4 o;
+`${H}${FRAME}${NOISE}${HAIR}uniform int uKind;uniform float uP;uniform float uA;uniform vec3 uCol,uHot;in vec2 vG;in vec3 vW,vN;in float vD;out vec4 o;
 void main(){vec3 n=normalize(vN),v=normalize(uEye-vW);float g=1.-abs(dot(n,v));float b=0.,hot=0.;
-if(uKind==1){float u=vG.x,h=vG.y;float f=ns(vec3(u*9.,h*5.-uT*.3,1.))*.6+ns(vec3(u*27.,h*9.-uT*.5,4.))*.4;float s=u*34.+h*15.+f*2.2;b=lines(s,1.)*ss(.4,.72,f)*.5+lines(u*11.+h*21.+f*1.2,1.3)*ss(.45,.8,f)*.55;b+=g*g*(.03+.1*ss(.45,.8,f));b*=ss(0.,.05,h)*ss(1.,.75,h);hot=ss(.62,.82,f)*.22+uFlash*.3;b*=1.+uFlash*1.6;}
+if(uKind==1){
+float nv=1.-g,h=vG.y,tw=vG.x*6.2831853+h*10.5+uT*(1.25-.45*uP);vec3 q=vec3(cos(tw)*2.6,sin(tw)*2.6,h*2.1-uT*.1+uP*7.3);
+float f=ns(q)*.46+ns(vec3(q.xy*2.3,q.z*1.4)+5.)*.34+(uP>.95&&uP<1.05?ns(vec3(q.xy*5.1,q.z*1.8)+9.):.5)*.2;float den=ss(.4,.68,f);den=den*den*.8+den*.2;
+float body=ss(0.,.42,nv)*(1.1-.55*nv);b=den*body*.23+body*.014;
+float t9=tw/6.2831853*6.;b+=lines(t9,1.1)*ss(.5,.68,f)*body*.34*step(.95,uP)*step(uP,1.05);
+b*=ss(0.,.05,h)*ss(1.,.66,h)*mix(.42,1.,ss(0.,.42,h));hot=uFlash*.35+den*.12;b*=1.+uFlash*1.4;}
 else if(uKind==2){float y=(vG.x-.5)*34.,c=vG.y;float e=hair(c-.04,1.2)+hair(c-.96,1.2);float row=floor(c*5.);float x=vG.x*150.+row*3.7;float id=floor(x);float w=.3+.6*h1(id+row*17.);float dash=step(fract(x),w)*step(.24,h1(id*1.3+row*5.))*band(fract(c*5.),.36,.6)*step(.5,row)*step(row,3.5);
 float nr=exp(-sq((y-uCore.y)*.22)),past=ss(uCore.y+.4,uCore.y-.4,y);b=e*.55+dash*(.08+.5*past+1.6*nr)+.015+.05*g;hot=nr;b*=ss(0.,.04,vG.x)*ss(1.,.96,vG.x);}
 else if(uKind==3){float z=vW.z;b=lines(z/2.4,1.)*.1+lines(vG.x*36.,1.)*.06;float cell=h2(floor(vec2(vG.x*36.,z/2.4)));float run=exp(-fract(cell-z*.05+uT*.22)*9.);b+=step(.9,cell)*.04+lines(vG.x*36.,1.6)*step(.8,h1(floor(vG.x*36.+.5)+3.))*run*.8;b*=ss(0.,.25,vG.y)*ss(1.,.9,vG.y);hot=run*.6;}
@@ -575,7 +589,7 @@ function light(s) {
 gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); let u;
 if (pre[5] > .001) { u = use("shell"); gl.enable(gl.CULL_FACE); gl.cullFace(gl.FRONT); gl.bindVertexArray(vSph); u.uScale(1.07); u.uA(pre[5]); gl.drawArrays(gl.TRIANGLES, 0, nSph); gl.disable(gl.CULL_FACE); }
 gl.bindVertexArray(vQuad); u = use("core"); u.uDisc(s.disc); quad();
-if (pre[1] + pre[2] + pre[3] > .003) { surf(1, 0, pre[1] * .8, s.cStorm, s.cRose, gSurf); surf(2, 0, pre[2] * .75, s.cIce, s.cInk, gHelix); surf(2, Math.PI, pre[2] * .75, s.cIce, s.cInk, gHelix); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); surf(3, 0, pre[3] * .6, s.cSignal, s.cInk, gSurf); gl.disable(gl.CULL_FACE); surf(4, 7, pre[3] * .55, s.cSignal, s.cInk, gSurf); surf(4, 9.9, pre[3] * .35, s.cSignal, s.cInk, gSurf); }
+if (pre[1] + pre[2] + pre[3] > .003) { if (pre[1] > .003) { gl.enable(gl.CULL_FACE); gl.cullFace(gl.FRONT); surf(1, 1.5, pre[1] * 1.1, s.cDust, s.cStorm, gSurf); surf(1, .72, pre[1] * 1.5, s.cMist, s.cStorm, gSurf); gl.disable(gl.CULL_FACE); surf(1, 1, pre[1] * 1.3, s.cStorm, s.cRose, gSurf); } surf(2, 0, pre[2] * .75, s.cIce, s.cInk, gHelix); surf(2, Math.PI, pre[2] * .75, s.cIce, s.cInk, gHelix); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK); surf(3, 0, pre[3] * .6, s.cSignal, s.cInk, gSurf); gl.disable(gl.CULL_FACE); surf(4, 7, pre[3] * .55, s.cSignal, s.cInk, gSurf); surf(4, 9.9, pre[3] * .35, s.cSignal, s.cInk, gSurf); }
 u = use("seg"); line(u, 0, pre[0] * .55, -.2, 9, 0); line(u, 1, pre[1] * .8, -1, s.lit[1], 2, -1); line(u, 2, pre[2] * .9, -1, s.lit[2], 1.5); line(u, 3, pre[3] * .8, -1, s.lit[3], 0, -1); line(u, 4, pre[4], -1, s.grow - .03, 3.2); line(u, 5, pre[5] * .9, -1, s.lit[5], 1.5); line(u, 6, pre[1] * s.flash, -1, 9, 0, -1, s.bolt);
 bind(0, tLine, gl.TEXTURE_2D_ARRAY); gl.bindVertexArray(vStrip); use("streams"); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, NP * 2, NS);
 bind(0, tForm, gl.TEXTURE_2D_ARRAY); gl.bindVertexArray(vPts); u = use("points"); u.uSize(s.size); u.uFocus(s.focus); u.uBlur(s.blur); gl.drawArrays(gl.POINTS, 0, Math.floor(N * s.share));
@@ -640,13 +654,13 @@ else if (++good > (gpu ? 2 : 8) && (!gpu || gpu < budget * .72)) { if (now - cap
 
 const CAM = [
 { k: [[[0, 12, 46], [0, 12.5, -40], 50], [[-5, 6.5, 30], [0, 7, -40], 46], [[3, 2.6, 15], [0, 5.4, -40], 41]], push: .12, pull: .06 },
-{ k: [[[-25, 1.5, 27], [0, 4, 0], 52], [[-9, -4.6, 25], [0, 3.6, 0], 54], [[17, 8, 19], [0, 2.6, 0], 50]], push: .35 },
+{ k: [[[-25, 1.5, 27], [0, 4, 0], 52], [[-9, -4.6, 25], [0, 3.6, 0], 54], [[17, 8, 19], [0, 2.6, 0], 50]], push: .35, pull: .28 },
 { k: [[[1, 19, 21], [0, 0, 0], 46], [[-9, 8, 15], [0, .5, 0], 43], [[10.5, .5, 12], [0, .8, 0], 40]], push: .3 },
 { k: [[[-23, 6, 25], [0, 0, -1], 46], [[-6, 4.5, 26], [0, 0, -1], 43], [[10.5, 2.4, 22.5], [-.8, .1, 0], 43]], push: 1.1 },
 { k: [[[-1.7, -6.35, 4.6], [0, -6.5, 0], 50], [[-5.4, -5, 8], [0, -3.6, 0], 50], [[-7.5, 1.2, 13.5], [0, 1.2, 0], 48], [[3, 3.6, 18.5], [0, 1.6, 0], 45], [[10.5, 1, 20.5], [0, .7, 0], 43]], push: .22 },
 { k: [[[-6, 8, 18], [0, 3.2, 0], 46], [[-3, 5.4, 17], [0, 2.8, 0], 43], [[0, 4.2, 16], [0, 2.7, 0], 40]], push: 0 },
 ];
-const CORE = [{ p: [0, 5.4, -58], r: 3.1, pow: .55, disc: 1, ring: 8.4, col: C.sea }, { p: [0, 1.2, 0], r: .5, pow: 1.4, disc: 0, ring: 2.5, col: C.storm }, { p: [0, 0, 0], r: .42, pow: 1.5, disc: 0, ring: 2.1, col: C.ice }, { p: [0, 0, 0], r: .5, pow: 1.2, disc: 0, ring: 3.3, col: C.signal }, { p: [0, -6.9, 0], r: .34, pow: 1.15, disc: 0, ring: 1.25, col: C.gold }, { p: [0, 0, -46], r: 2.3, pow: 1.45, disc: 1, ring: 5.4, col: C.dawn }];
+const CORE = [{ p: [0, 5.4, -58], r: 3.1, pow: .55, disc: 1, ring: 8.4, col: C.sea }, { p: [0, 1.2, 0], r: .4, pow: 1.1, disc: 0, ring: 2.5, col: C.storm }, { p: [0, 0, 0], r: .42, pow: 1.5, disc: 0, ring: 2.1, col: C.ice }, { p: [0, 0, 0], r: .5, pow: 1.2, disc: 0, ring: 3.3, col: C.signal }, { p: [0, -6.9, 0], r: .34, pow: 1.15, disc: 0, ring: 1.25, col: C.gold }, { p: [0, 0, -46], r: 2.3, pow: 1.45, disc: 1, ring: 5.4, col: C.dawn }];
 const LOOK = [
 { n1: "#0a2452", n2: "#0b5a74", haze: 1, fog: [16, 86], focus: 26, blur: .003, size: .03, glow: .9, expo: 1.0, grade: [.95, 1, 1.06] },
 { n1: "#16246a", n2: "#4a1c46", haze: .15, fog: [24, 66], focus: 22, blur: .005, size: .028, glow: .85, expo: 1.0, grade: [1.02, .98, 1.05] },
@@ -660,7 +674,7 @@ a: ["#1b49b8", "#2a49d6", "#2f86d8", "#3a6fd8", "#1f8f6c", "#3a66c9"].map(hex), 
 sc: ["#2f8fe6", "#3f63ff", "#3fb2f2", "#3f7cff", "#2fb487", "#ff9a4d"].map(hex), sh: ["#bfeaff", "#ff9ac0", "#e2f8ff", "#cfe2ff", "#ffe2a0", "#fff0d8"].map(hex), sp: [.8, .42, .5, .55, .75, .5], rest: [.1, .12, .09, .08, .05, .07],
 gc: ["#8fd0ff", "#7f9cff", "#a6e4ff", "#7fb0ff", "#ffcf8f", "#ffd2a0"].map(hex), gp: [.34, .6, .5, .55, .62, .3],
 };
-const HC = Object.fromEntries(Object.entries(C).map(([k, v]) => [k, hex(v)])), CORECOL = CORE.map((c) => hex(c.col));
+const MIST = hex("#b9b4ff"), HC = Object.fromEntries(Object.entries(C).map(([k, v]) => [k, hex(v)])), CORECOL = CORE.map((c) => hex(c.col));
 const V = (a, b, f) => [a[0] + b[0] * f, a[1] + b[1] * f, a[2] + b[2] * f];
 const hel = (y, t, r = 3.6, s = 0) => { const a = y * .42 + s, c = Math.cos(t * .16), d = Math.sin(t * .16), x = Math.cos(a) * r, z = Math.sin(a) * r; return [c * x + d * z, y, c * z - d * x]; };
 let TRUNK = [[0, -7, 0, .06], [0, 3, 0, .6]], LAN = Array(5).fill([0, 0, 0]), CITY = [[0, 1, 0], [0, 1, 0], [0, 1, 0]], BOAT = [];
@@ -671,7 +685,7 @@ const f = norm([10.5, 0, 20.5]), side = [f[2], 0, -f[0]], list = G.lanterns.filt
 }
 const EV = [
 [["Voice memo", "Tuesday, 07:40", .3, () => [-9, 3.4, -6], C.sea], ["Half a post", "Never sent", .42, () => [8.5, 4.2, -10], C.sea], ["Old slide", "Page 14 of 60", .54, () => [-5, 2.2, 1.5], C.ink], ["A good reply", "Lost in a thread", .66, () => [6, 2, 2], C.sea]],
-[["Price list", "March", .22, () => [-7, 4, 3], C.storm], ["Price list (final)", "June", .36, () => [6.5, 8, 1], C.storm], ["Price list (final 2)", "Also June", .5, () => [3.5, 1, 6], C.rose], ["Old page", "Still ranking", .64, () => [-5, 9, -3], C.rose]],
+[["Price list", "March", .22, () => [-4.6, 2.6, 2.4], C.storm], ["Price list (final)", "June", .36, () => [5.4, 7.2, 1], C.storm], ["Price list (final 2)", "Also June", .5, () => [3.1, -.6, 4], C.rose], ["Old page", "Still ranking", .64, () => [-4.4, 8.4, -2], C.rose]],
 [["Title", "One line", .3, (t) => hel(-6, t, 5.1), C.ice], ["Words", "The whole text", .44, (t) => hel(-1.5, t, 5.1, Math.PI), C.ice], ["Picture", "With its description", .58, (t) => hel(3, t, 5.1), C.ice], ["History", "Every change", .72, (t) => hel(7, t, 5.1, Math.PI), C.gold]],
 [["Links", "All of them open", .2, () => [-6.9, 6.9, 0], C.pass], ["Voice", "Sounds like you", .3, () => [6.9, 6.9, 0], C.pass], ["Search", "Title and description", .4, () => [6.9, -6.9, 0], C.pass], ["Held at the gate", "Picture too heavy: 412 KB", .56, () => [-2.35, 3.6, .05], C.alert, 1]],
 [["Home", "", .7, () => LAN[2], C.gold], ["Guides", "", .75, () => LAN[0], C.gold], ["Stories", "", .8, () => LAN[1], C.gold], ["Answers", "", .85, () => LAN[3], C.gold], ["News", "", .9, () => LAN[4], C.gold]],
@@ -687,6 +701,7 @@ const mul = (a, b) => { const o = new Array(16); for (let c = 0; c < 4; c++) for
 function camera(eye, target, fov, asp) { const f = norm(sub(target, eye)), r = norm(cross(f, [0, 1, 0])), u = cross(r, f); const view = [r[0], u[0], -f[0], 0, r[1], u[1], -f[1], 0, r[2], u[2], -f[2], 0, -dot(r, eye), -dot(u, eye), dot(f, eye), 1]; return { eye, f, r, u, tan: Math.tan((fov * Math.PI) / 360), vp: mul(perspective(fov, asp), view) }; }
 const project = (m, p, w, h) => { const x = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12], y = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13], z = m[3] * p[0] + m[7] * p[1] + m[11] * p[2] + m[15]; return [(x / z * .5 + .5) * w, (.5 - y / z * .5) * h, z]; };
 const wave = (x, z, t) => Math.sin(x * .21 + t * .55) * .55 + Math.sin(z * .27 - t * .7 + x * .09) * .5 + Math.sin((x + z) * .55 + t * 1.1) * .17 + Math.sin(x * 1.1 - z * .8 + t * 1.7) * .07;
+const bend = (h, t) => { const k = h * (1.4 - .95 * h); return [(Math.sin(h * 3.4 + t * .26) * 3.1 + Math.sin(h * 6.1 - t * .21) * .5) * k + Math.sin(t * .17) * 1.1 * (1 - h), Math.cos(h * 2.9 + t * .21) * 2.2 * k + Math.cos(t * .13) * .8 * (1 - h)]; };
 const FLAT = { x: [1, 0, 0], y: [0, 0, 1] }, WALL = { x: [1, 0, 0], y: [0, 1, 0] }, GYRO = (a, b) => ({ x: [Math.cos(a), Math.sin(a) * Math.sin(b), Math.sin(a) * Math.cos(b)], y: [0, Math.cos(b), -Math.sin(b)] });
 const growth = (l) => lerp(.0, .5, smooth(.05, .52, l)) + .64 * smooth(.46, .84, l), onTrunk = (g) => { let i = 0; while (i < TRUNK.length - 2 && TRUNK[i + 1][3] < g) i++; return v3(TRUNK[i], TRUNK[i + 1], clamp((g - TRUNK[i][3]) / (TRUNK[i + 1][3] - TRUNK[i][3] || 1))); };
 /** Everything the renderer needs at story position u (screens) and time t (seconds). */
@@ -702,7 +717,7 @@ if (k === 0 || (k === 5 && mix > 0)) eye[1] = Math.max(eye[1], 1.9); if (k === 4
 const cam = camera(eye, tar, fov, asp);
 const A = LOOK[k], B = LOOK[n], L = (key) => (Array.isArray(A[key]) ? A[key].map((x, i) => lerp(x, B[key][i], mix)) : lerp(A[key], B[key], mix));
 const rise = c.final ? smooth(c.s1 - .1, c.t1 - .2, u) : 0;
-const coreAt = (i, l) => { if (i === 2) return [0, lerp(-11, 9.5, l), 0]; if (i === 5) return [2.2 * (1 - rise), lerp(-10.5, 3.2, smooth(0, 1, l)) + rise * 8.5, -46]; if (i === 1) return [0, 1.2 + Math.sin(t * .7) * .3, 0]; if (i === 4) { const g = growth(l); return g < .06 ? v3([0, -6.95, 0], TRUNK[0], g / .06) : v3(onTrunk(g), [.2, 3.3, .2], smooth(TRUNK.at(-1)[3] - .05, .85, g)); } return CORE[i].p; };
+const coreAt = (i, l) => { if (i === 2) return [0, lerp(-11, 9.5, l), 0]; if (i === 5) return [2.2 * (1 - rise), lerp(-10.5, 3.2, smooth(0, 1, l)) + rise * 8.5, -46]; if (i === 1) { const h = .36, b = bend(h, t); return [b[0], -7.35 + h * 21, b[1]]; } if (i === 4) { const g = growth(l); return g < .06 ? v3([0, -6.95, 0], TRUNK[0], g / .06) : v3(onTrunk(g), [.2, 3.3, .2], smooth(TRUNK.at(-1)[3] - .05, .85, g)); } return CORE[i].p; };
 const ca = CORE[k], cb = CORE[n]; const core = v3(coreAt(k, local), coreAt(n, 0), mix), coreR = lerp(ca.r, cb.r, mix), ring = lerp(ca.ring, cb.ring, mix), disc = lerp(ca.disc, cb.disc, mix), coreCol = v3(CORECOL[k], CORECOL[n], mix);
 const pr = (i) => (i === k ? 1 - mix : i === n && n !== k ? mix : 0);
 const planet = Math.max(pr(5), 0), head = k === 5 ? smooth(.05, .9, local) : k === 4 ? growth(local) : smooth(.04, .8, local);
@@ -711,14 +726,14 @@ const discs = [], face = { x: cam.r, y: cam.u };
 const rc = coreCol.map((x) => x * .9), big = disc > .5, quiet = k === 4 ? 1 - .7 * smooth(.05, .2, local) : 1;
 discs.push({ p: core, ...face, r: ring, inner: ring * .74, kind: 0, spin: t * .01, a: (big ? .3 : .34) * quiet, col: rc }, { p: core, ...(big ? face : GYRO(t * .22, .9)), r: ring * (big ? 1.5 : .72), inner: ring * (big ? 1.36 : .6), kind: 0, spin: -t * .014, a: .2 * quiet, col: rc });
 if (pr(0)) { for (const [x, z] of BOAT) discs.push({ p: [x, wave(x, z, t) + .14, z], ...FLAT, r: 2.6, inner: .5, kind: 2, seed: x, a: .3 * pr(0), col: HC.sea }); discs.push({ p: [0, 1.5, -16], ...FLAT, r: 46, inner: 8, kind: 6, a: .13 * pr(0), col: HC.sea }); }
-if (pr(1)) { const ev = k === 1 ? local : 0; discs.push({ p: [0, -7.5, 0], ...FLAT, r: 34, inner: 2, kind: 3, a: .34 * pr(1), col: HC.storm, hot: HC.rose, head: ev > .25 ? smooth(.3, .85, ev) : -1 }, { p: [0, 14.2, 0], ...FLAT, r: 42, inner: 5, kind: 5, a: .5 * pr(1), col: HC.storm, hot: HC.ink }, { p: [0, -7.1, 0], ...FLAT, r: 20, inner: .8, kind: 6, a: .3 * pr(1), col: HC.storm }, { p: [0, -7.45, 0], ...FLAT, r: 23.4, inner: 21.6, kind: 0, spin: t * .01, a: .3 * pr(1), col: HC.storm }); }
+if (pr(1)) { const ev = k === 1 ? local : 0; discs.push({ p: [0, -7.5, 0], ...FLAT, r: 34, inner: 2, kind: 3, a: .34 * pr(1), col: HC.storm, hot: HC.rose, head: ev > .25 ? smooth(.3, .85, ev) : -1 }, { p: [bend(1, t)[0], 13.5, bend(1, t)[1]], ...FLAT, r: 42, inner: 2.2, kind: 5, a: .6 * pr(1), col: HC.storm, hot: HC.ink }, { p: [bend(0, t)[0], -6.9, bend(0, t)[1]], ...FLAT, r: 13, inner: .5, kind: 5, a: .5 * pr(1), col: HC.storm, hot: HC.ink }, { p: [bend(0, t)[0], -6.4, bend(0, t)[1]], ...FLAT, r: 9, inner: .4, kind: 6, a: .5 * pr(1), col: MIST }, { p: [0, -7.45, 0], ...FLAT, r: 23.4, inner: 21.6, kind: 0, spin: t * .01, a: .3 * pr(1), col: HC.storm }); }
 if (pr(2)) { for (let i = 0; i < 5; i++) { const y = -8 + i * 4.2, near = Math.exp(-Math.pow((core[1] - y) / 2.6, 2)); discs.push({ p: [0, y, 0], ...FLAT, r: 6.6, inner: 5.8, kind: 0, spin: t * .012 * (i % 2 ? 1 : -1), a: (.12 + .5 * near) * pr(2), col: HC.ice }); } discs.push({ p: [0, -15.5, 0], ...FLAT, r: 30, inner: 1.5, kind: 3, a: .28 * pr(2), col: HC.deep }, { p: core, ...FLAT, r: 5.2, inner: .4, kind: 2, seed: .2, a: .32 * pr(2), col: HC.ice }); }
 if (pr(3)) { const held = k === 3 ? smooth(.54, .6, local) : 0, in3 = k === 3 ? smooth(0, .12, local) * .85 + .15 : 1; discs.push({ p: [0, 0, 0], ...WALL, r: 9.9, kind: 1, spin: t * .008, head: t * .06, a: .62 * pr(3) * in3, col: v3(HC.signal, HC.ice, .25), hot: HC.ink }, { p: [0, 0, 0], ...WALL, r: 13.6, inner: 12.7, kind: 0, spin: -t * .006, a: .22 * pr(3), col: HC.signal }, { p: [0, 0, .02], ...WALL, r: 7.1, inner: .3, kind: 2, a: .28 * pr(3), col: HC.signal }, { p: [0, 0, -14], ...WALL, r: 13, inner: 11.6, kind: 0, spin: t * .01, a: .16 * pr(3), col: HC.signal }); if (held > 0) discs.push({ p: [-3.7, 2, 0], ...face, r: 3.4, inner: .9, kind: 2, seed: .3, a: .7 * held * pr(3), col: HC.alert, head: local < .95 ? smooth(.56, .85, local) : -1 }, { p: [-3.7, 2, .02], ...WALL, r: 2.9, inner: 2.5, kind: 0, spin: t * .05, a: .5 * held * pr(3), col: HC.alert }); }
 if (pr(4)) { const g = k === 4 ? growth(local) : 0; discs.push({ p: [0, -7.16, 0], ...FLAT, r: 26, inner: .7, kind: 4, a: .3 * pr(4), col: HC.leaf, hot: HC.gold, head: k === 4 && g < .99 ? clamp(g) : -1 }, { p: [0, -7.12, 0], ...FLAT, r: 5, inner: 4.1, kind: 0, spin: t * .01, a: .22 * pr(4) * (k === 4 ? 1 - smooth(.6, 1, local) : 1), col: HC.gold }, { p: [0, -6.5, 0], ...FLAT, r: 26, inner: 2, kind: 6, a: .1 * pr(4), col: HC.leaf }); }
 const ev = EV[k], nodeA = (c.final ? 1 - inSlide : 1 - smooth(c.s1, c.t0 + .1, u)) * smooth(c.s0 - .3, c.s0 + .1, u);
 const nodes = ev.map((e, i) => ({ p: e[3](t), at: e[2], col: EVCOL[k][i], r: (e[5] ? .8 : .95) * (k === 5 ? .8 : 1) * (k === 0 ? 1.1 : 1) * (k === 4 ? 1.15 : 1) }));
 const past = (i) => (i === k ? local * 1.15 : i < k ? 1.2 : 0); const lit = [1, past(1), k === 2 ? (core[1] + 14.4) / 28 + 1.2 * smooth(c.s1, c.t0, u) : past(2), past(3), 1, past(5) * 1.2];
-return { k, n, local, u, from: k, to: n, mix: n === k ? 0 : mix, grow: k === 4 ? growth(local) : n === 4 && k === 3 ? 0 : 1.14, season: k === 4 ? smooth(.8, 1, local) : k > 4 ? 1 : 0, flash, bolt: Math.floor(r01(beat + 9) * 4), t, cam, dim, inSlide, core, coreR: coreR * (k === 4 ? 1 + .5 * smooth(.3, .9, local) : 1), corePow: lerp(ca.pow, cb.pow, mix) * (1 - (disc > .5 && !c.final ? .6 : 0) * inSlide), disc, coreCol, planet, planetY: lerp(-26, 0, smoother(planet)), n1: L("n1"), n2: L("n2"), haze: L("haze"), fog: L("fog"), focus: L("focus"), blur: L("blur"), size: L("size"), glow: L("glow"), expo: L("expo"), grade: L("grade"), head: mix > 0 ? Math.max(head, 1.2 * mix) : head, discs, nodes, nodeA, lit, share: 1, cStorm: HC.storm, cRose: HC.rose, cIce: HC.ice, cInk: HC.ink, cSignal: HC.signal };
+return { k, n, local, u, from: k, to: n, mix: n === k ? 0 : mix, grow: k === 4 ? growth(local) : n === 4 && k === 3 ? 0 : 1.14, season: k === 4 ? smooth(.8, 1, local) : k > 4 ? 1 : 0, flash, bolt: Math.floor(r01(beat + 9) * 4), t, cam, dim, inSlide, core, coreR: coreR * (k === 4 ? 1 + .5 * smooth(.3, .9, local) : 1), corePow: lerp(ca.pow, cb.pow, mix) * (1 - (disc > .5 && !c.final ? .6 : 0) * inSlide), disc, coreCol, planet, planetY: lerp(-26, 0, smoother(planet)), n1: L("n1"), n2: L("n2"), haze: L("haze"), fog: L("fog").map((x) => x * (1 + (back - 1) * pull * .9)), focus: L("focus"), blur: L("blur"), size: L("size"), glow: L("glow"), expo: L("expo"), grade: L("grade"), head: mix > 0 ? Math.max(head, 1.2 * mix) : head, discs, nodes, nodeA, lit, share: 1, cStorm: HC.storm, cDust: HC.deep, cMist: MIST, cRose: HC.rose, cIce: HC.ice, cInk: HC.ink, cSignal: HC.signal };
 }
 function geometry(small, count) {
 return new Promise((done, fail) => {
@@ -784,6 +799,5 @@ if (!window.__test) requestAnimationFrame(frame);
 requestAnimationFrame(() => setTimeout(start));
 
 })();
-</script>
-</body>
+</script></body>
 </html>
