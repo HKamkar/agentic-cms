@@ -78,7 +78,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   hand-write head tags.
 - Verify before calling a change done: the verify bullet under Gotchas
   (`pnpm lint`, `pnpm test`, `pnpm content:lint`, `pnpm build`, and
-  `pnpm preview`, the real Worker).
+  `pnpm test:worker`, the real Worker).
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
@@ -246,7 +246,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `package.json` and CI) + `pnpm build` (`pnpm lint` first, then the
   content lint and the docs check; after `next build` the SEO audit, and
   `guard-email` last, which `guardEmail: true` in `site.ts` asks for) +
-  `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
+  `pnpm test:worker` (the real Worker), with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
   schema-only loop), and `pnpm test:pack` and `pnpm lint:pkg` when

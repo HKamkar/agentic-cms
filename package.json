@@ -143,6 +143,7 @@
     "test": "node --import ./scripts/lib/load-ts.mjs --test \"src/**/*.test.ts\" \"scripts/*.test.mjs\" \"scripts/lib/*.test.mjs\" \"tools/**/*.test.mjs\"",
     "test:browser": "node --test \"scripts/browser/*.test.mjs\"",
     "plugin:validate": "claude plugin validate ./plugin --strict && claude plugin validate . --strict",
+    "test:worker": "node tools/worker-smoke.mjs",
     "test:pack": "node tools/pack-smoke.mjs",
     "lint:pkg": "node tools/lint-pkg.mjs",
     "hygiene": "node tools/hygiene.mjs",
