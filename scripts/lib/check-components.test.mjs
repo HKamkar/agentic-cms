@@ -136,6 +136,19 @@ test("routes: src/app holds route files in the content engine's folders and the 
   assert.deepEqual(planted({ "src/app/hero-demo/page.tsx": "x", "src/app/hero-demo/HeroA.tsx": "x", "src/app/lab-demo/page.tsx": "x", "src/app/not-found.tsx": "x", "src/app/sitemap.ts": "x", "src/app/icon.svg": "x" }), []);
 });
 
+test("routes in several languages: the default language's tree in a route group and each declared language's copy of a route are held as the route is; global-not-found is a route file", () => {
+  const site = 'export const site = {\n  postPrefix: "/blog-post",\n  locales: [\n    {\n      locale: "de",\n      prefix: "de",\n    },\n  ],\n};\n';
+  const tree = { ...CLEAN, "src/config/site.ts": site, "src/app/global-not-found.tsx": "x" };
+  for (const file of ["src/app/layout.tsx", "src/app/[[...slug]]/page.tsx", "src/app/[[...slug]]/opengraph-image.png"]) delete tree[file];
+  const languages = { "src/app/(default)/layout.tsx": "x", "src/app/(default)/[[...slug]]/page.tsx": "x", "src/app/(default)/blog-post/[slug]/page.tsx": "x", "src/app/(default)/hero-demo/page.tsx": "x", "src/app/de/layout.tsx": "x", "src/app/de/[[...slug]]/page.tsx": "x", "src/app/de/blog-post/[slug]/page.tsx": "x", "src/app/de/feed.xml/route.ts": "x" };
+  const named = { routes: ROUTES, exceptions: EXCEPTIONS };
+  assert.deepEqual(guard({ ...tree, ...languages }, named).findings, []);
+  const fr = guard({ ...tree, ...languages, "src/app/fr/[[...slug]]/page.tsx": "x" }, named).findings;
+  assert.deepEqual(fr.map((finding) => [finding.file, finding.problem]), [["src/app/fr/[[...slug]]/page.tsx", "in src/app/fr/[[...slug]]/, which is neither the content engine's route nor a named exception"]], "a language site.locales does not declare is no language");
+  const helper = guard({ ...tree, ...languages, "src/app/de/[[...slug]]/Promo.tsx": "x" }, named).findings;
+  assert.match(helper[0].problem, /not a route file/, "a language's copy of a route holds route files only");
+});
+
 test("exceptions: a route outside the content engine passes with its reason; a bare one, in routes or with an empty reason, is a finding naming the fix", () => {
   const feed = { "src/app/feed.xml/route.ts": "export function GET() {}\n" };
   const named = { routes: ROUTES, exceptions: { "src/app/feed.xml": "the RSS feed, written from the posts" } };

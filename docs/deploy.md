@@ -34,6 +34,16 @@ pnpm upload        # build and upload a version without deploying it
 - **500s straight after `next build`.** `next start` and `wrangler dev`
   on a plain Next build answer 500: only `pnpm preview`, `pnpm run deploy`
   and `pnpm upload` fill the asset cache the Worker reads.
+- **The adapter moves with Next.** Each `@opennextjs/cloudflare` knows the
+  Next versions before it. With 1.20.8 and Next 16.4.6 the lint, the tests
+  and the build all passed, and every page of the Worker answered 500
+  (`Unexpected loadManifest(…preview-props.json) call!`). Next 16.4.5 and
+  later take `@opennextjs/cloudflare` 1.20.16 or later (its peer range; the
+  example runs 1.20.18), with the `wrangler` it asks for. Move them in one
+  step, then open the pages with `pnpm preview`: the lint, the tests and the
+  build do not run the Worker. The kit's own CI does, for the example
+  (`pnpm test:worker`: every prerendered page, byte for byte); a site's does
+  not.
 - **About 40 "Failed to copy node_modules/…" lines** during the OpenNext
   build are an OpenNext bug and harmless.
 - **No native modules under `src/`.** Everything there is bundled for the
@@ -43,6 +53,25 @@ pnpm upload        # build and upload a version without deploying it
 - **The form endpoint's destination** is a Worker secret
   (`wrangler secret put FORM_WEBHOOK_URL`, the same for the secret;
   [forms.md](forms.md)).
+- **Redirects** are `content/redirects.yaml`, served by `next.config.ts`'s
+  `redirects()` from the build's routes manifest, which the Worker answers
+  before any page ([redirects.md](redirects.md)); no `_redirects` file.
+- **A preview of every pull request** is the CI workflow's opt-in
+  `preview` job: `agentic-cms pr-preview` uploads a version under the alias
+  `pr-<n>`, not deployed, never indexed, its forms delivered to a log
+  ([preview.md](preview.md)).
+
+## Previews on other hosts
+
+Vercel and Netlify build a preview of every pull request themselves. What
+the kit needs there is the flag a preview carries: `AGENTIC_CMS_PREVIEW=1`
+in the host's preview environment (Vercel: an environment variable for
+"Preview"; Netlify: the `deploy-preview` context), for the build and the
+functions alike. The pages then carry `noindex` and `robots.txt` disallows
+everything; the form endpoint delivers to the server's log, never to the
+`FORM_WEBHOOK_URL` production has; no analytics tag ships. Set no
+`FORM_WEBHOOK_URL` and no `GOOGLE_TAG_ID` for previews either. A Node host
+gets no preview from the kit.
 
 ## The build
 

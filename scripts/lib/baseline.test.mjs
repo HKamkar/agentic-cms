@@ -207,9 +207,7 @@ test("the findings --baseline counts are read from the site's ESLint with the ba
   assert.deepEqual(options.overrideConfig, [{ settings: { "agentic-cms": { ignoreBaseline: true } } }]);
   await lintFindings({ root: "/site", ESLint, baseline: [entry(ROUTE, "agentic-cms/copy", 1), entry(SECTION, "react/forbid-elements", 2)] });
   assert.deepEqual(options.overrideConfig[1].files, [SECTION], "a file held by a processor is linted without it");
-  const [unheld] = [options.overrideConfig[1].processor];
-  assert.deepEqual(unheld.postprocess([[{ ruleId: "react/forbid-elements", severity: 2, line: 5, column: 1, message: "Links" }]]).length, 1);
-  assert.equal(composition(HERO, asEntries(COUNTS)).length, 0);
+  assert.deepEqual(options.overrideConfig[1].processor.postprocess([[{ ruleId: "react/forbid-elements", severity: 2, line: 5, column: 1, message: "Links" }]]).length, 1);
   const configs = [{ ...BASE, plugins: { react }, settings: { react: { version: "19" } } }, ...componentRules({ motion: null, patterns: null, sections: ["home"], baseline: asEntries(COUNTS) }), ...options.overrideConfig];
   assert.equal(new Linter({ cwd: "/site" }).verify(HERO, configs, { filename: `/site/${SECTION}` }).filter((m) => m.severity === 2 && !m.ruleId?.startsWith("agentic-cms/")).length, 5, "with its override, every finding again");
 });

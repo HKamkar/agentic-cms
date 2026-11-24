@@ -312,7 +312,8 @@ editorial@agentic-cms` resolved the marketplace and installed the plugin at
 
 ## Phase 10 — 0.4.0, the kit as an agent's design toolbox (implemented 2026-09-20)
 
-`docs/roadmap.md` is the plan and the record; six pull requests into
+The 0.4.0 roadmap (`git show v0.4.0:docs/roadmap.md`) is the plan and the
+record; six pull requests into
 `develop` (#13–#18), one release. The command line's contract became one
 spec per command (`scripts/lib/specs.mjs`: strict flags, `--help`,
 `docs/commands.md` generated and checked), the harness's browser code a
@@ -333,7 +334,8 @@ the release commit.
 
 ## Phase 11 — 0.8.0, a new site in minutes (released 2026-10-17)
 
-`docs/roadmap.md` was the plan and is now the record. Its twelve jobs, 0 to
+The 0.8.0 roadmap (`git show v0.8.0:docs/roadmap.md`) was the plan and is
+now the record. Its twelve jobs, 0 to
 11, ran in two lanes as fourteen pull requests into `develop` (jobs 9 and 10
 took two each). Each ran in its own session and merged once CI was green.
 
@@ -379,7 +381,7 @@ code. Four were fixed. The fifth, on the terminal text of a 5xx page, was
 dismissed because that text never reaches HTML.
 
 `package.json` stayed at 0.7.6 on `develop` until the release commit. The
-next plan, 0.9.0 (the package on npm), is `docs/roadmap-0.9.0.md`.
+next plan, 0.9.0 (the package on npm), is `docs/roadmap.md`.
 
 ## Phase 12 — 0.8.1, the fixes from running the guide on two sites (released 2026-10-17)
 
@@ -479,6 +481,55 @@ fixed in one pull request (#142), which the owner gated at its head
   its paths to a green lint and build.
 
 **The release.** #143; `v0.8.3` is on main's merge commit, 1af1a18.
+
+## Phase 15 — 0.8.4, a baseline re-run keeps its reasons (released 2026-10-24)
+
+0.8.3's guide has a site run `check-site --baseline` on the pull request
+that takes the rules. A second run on that pull request refused every new
+entry, because the list was already there, though the merge base had
+none. The only way round it was to write the list again from empty and
+put the reasons back by hand. The fix was one pull request (#144).
+
+**What changed:**
+- **A run is first while the merge base has no list.** The writer and the
+  check ask the same question, so each run on the pull request that adds
+  the list writes it again from what the site holds, and each entry keeps
+  its reason by file and rule.
+- **A re-run's report** names what was added, raised, shrunk and removed,
+  and how many entries still have no reason for the owner to fill.
+- **With no base to compare,** nothing new goes in, and the note names
+  `--base <ref>`.
+- **After the merge** the list only shrinks, as before.
+- **The guide** pins `#v0.8.4` (`docs/upgrading.md` § 0.8.3 → 0.8.4).
+
+**The release.** #145; `v0.8.4` is on main's merge commit, d305b5b.
+
+## Phase 16 — 0.9.0, a standard npm package (2026-11-24)
+
+`docs/roadmap.md` is the plan. Its jobs landed as one pull request a lane
+(#146–#150), then two from running it: the security floors (#152) and the
+check that runs the Worker (#153).
+
+**What changed:**
+- **What a site gets:** a JSON Schema for every content file, redirects as
+  content, a preview link on every pull request, other languages
+  (experimental), and every head keeping the site's Open Graph name, locale
+  and feed link.
+- **What it can rely on:** `docs/stability.md` marks every export, command
+  and file format, and `agentic-cms upgrade` runs each release's migration.
+- **Fewer copies:** the kit's skills are its plugins, read from the installed
+  package; a rule is thin and nothing is merged on an upgrade.
+- **The package:** the tarball is a contract (`tools/pack-files.txt`), each
+  peer is bounded to one major and tested at both ends, and a pushed tag is
+  checked, published to npm from CI on the owner's approval, and tested from
+  the registry.
+- **Security:** `next` starts at 16.4.5 and `sharp` at 0.35.5. The Next bump
+  broke every page of the Worker with the lint, the tests and the build
+  green, so CI now runs the Worker and compares it with the build.
+
+**What was left out, on the owner's word:** a second candidate, the gate on
+two sites before the release, and jobs 3 and 4 (install from npm, `pnpm
+create agentic-cms`), which follow 0.9.0.
 
 ## Verification recipe
 

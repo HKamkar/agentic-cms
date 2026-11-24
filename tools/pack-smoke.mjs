@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Proves the package as a site sees it, which the checkout never does (the
-// example resolves the package's name to the source): packs the package,
-// and in a scratch folder that holds what the old install docs left there
+// example resolves the package's name to the source): packs the package
+// (prepack empties dist/, prepare builds it) and refuses a tarball that holds
+// a path no package may (tools/pack-files.mjs), and in a scratch folder that holds what the old install docs left there
 // (`pnpm init`'s package.json and the workspace snippet without
 // unrs-resolver), runs the install line of docs/init.md as it is written,
 // the tarball standing in for the git spec. The site is the starter: none of
@@ -25,7 +26,9 @@
 // shrinking the list, and the fresh site put back; then the site as one
 // that never took 0.8.0's § 3.7 left it, on each of the guide's two paths,
 // upgraded by § 1 with § 3.7 inside it to a green lint and build, its
-// sections' composition held by the baseline; its tests through the
+// sections' composition held by the baseline; then a second language laid
+// over it as docs/locales.md says (tools/locale-fixture.mjs), built, its
+// pages' lang and alternates read, and taken back; its tests through the
 // installed command line;
 // then checks the agent files are as shipped, the
 // installed entries a build does not run (the inline loop, the play-once
@@ -35,14 +38,28 @@
 // builds, lints and tests too, with no theme script in its pages. Exit 1 on
 // the first failure.
 //
-//   pnpm test:pack           (a few minutes: two installs and a build)
-//   pnpm test:pack --keep    leaves the scratch site behind and prints where
+//
+// With --peers, the site alone, against the package's peer ranges at one end
+// (the `peers` workflow runs both): `floor` installs each peer at the lowest
+// version its range allows, `newest` the newest version within it (an
+// install that resolves the range online), and no unmet peer of the package
+// in `pnpm peers check`; then the site's CI build, its
+// lint with no warning, its tests and the installed entries, each peer's
+// installed version printed.
+//
+//   pnpm test:pack                   (a few minutes: two installs and a build)
+//   pnpm test:pack --keep <dir>      keeps the tarball it proved in <dir> (the release's check job publishes that file)
+//   pnpm test:pack --keep-site       leaves the scratch site behind and prints where
+//   pnpm test:pack --peers floor     (or newest: one install and one build)
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BYPASSES, CATALOGUED, eslintEntries, unanswered } from "./bypass-fixture.mjs";
+import { pack as packTarball, refusedPaths, tarballFiles } from "./pack-files.mjs";
+import { GERMAN, layLocale, POST } from "./locale-fixture.mjs";
+import { content084, site084 } from "./migration-fixture.mjs";
 import { heldOtherwise, LEGACY, PATHS, unexpected, UNGUARDED, UPGRADE } from "./upgrade-fixture.mjs";
 
 const ROOT = process.cwd();
@@ -67,7 +84,7 @@ export async function installWithRetry(args, run, log = console.error) {
 
 /** The documented install line (`pnpm dlx … agentic-cms@github:…#v<version> init my-site --name "My Site"`) as pnpm's arguments, a quoted one unquoted, with the package spec and the folder swapped; null when the doc has no such line. */
 export function documentedInstall(doc, { spec, dir }) {
-  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v[\d.]+ init my-site --name "[^"\n]+"$/m)?.[0];
+  const line = doc.match(/^pnpm dlx [^\n]*agentic-cms@github:HKamkar\/agentic-cms#v\d+\.\d+\.\d+(?:-rc\.\d+)? init my-site --name "[^"\n]+"$/m)?.[0];
   if (!line) return null;
   return [...line.matchAll(/"([^"]*)"|(\S+)/g)].slice(1).map(([, quoted, arg]) => quoted ?? (arg.startsWith("agentic-cms@github:") ? `agentic-cms@${spec}` : arg === "my-site" ? dir : arg));
 }
@@ -98,10 +115,11 @@ async function install(args, cwd) {
   if (result.status !== 0) fail(`pnpm install ${args.join(" ")} failed in ${cwd}`);
 }
 
-/** 1. The tarball: what a consumer installs, dist/ included (prepare runs first). */
+/** 1. The tarball: what a consumer installs, dist/ built fresh from this tree, no path a package refuses, under its size budget. */
 function pack(scratch) {
-  const packed = execFileSync("pnpm", ["pack", "--pack-destination", scratch, "--json"], { cwd: ROOT, encoding: "utf8" });
-  const tarball = path.join(scratch, path.basename(JSON.parse(packed.slice(packed.indexOf("{"))).filename));
+  const tarball = packTarball(ROOT, scratch);
+  const refused = refusedPaths(tarballFiles(tarball));
+  if (refused.length) fail(`the tarball holds what no package may:\n  ${refused.join("\n  ")}`);
   const size = fs.statSync(tarball).size;
   if (size > MAX_TARBALL) fail(`the tarball is ${(size / 1024).toFixed(0)} KB, over the ${MAX_TARBALL / 1024} KB the files list is meant to stay under`);
   return { tarball, size };
@@ -134,7 +152,9 @@ async function build(site) {
     if (fs.existsSync(path.join(kit, example))) fail(`the tarball ships the example's ${example}, which stays in the kit's repository`);
   }
   noExample(site);
+  schemasShipped(site);
   starterBuilds(site);
+  redirectsServed(site);
   emailGuarded(site);
   lintsClean(site);
   guardFails(site);
@@ -142,8 +162,52 @@ async function build(site) {
   bypasses(site);
   upgrade(site);
   for (const way of PATHS) upgradeUnguarded(site, way);
+  upgradeFrom084(site);
+  locales(site);
+  previewBuild(site);
   run("pnpm", ["test"], site);
   run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  agentFilesResolve(site);
+}
+
+/**
+ * What the site's agent files name is in the installed package: the
+ * marketplace its .claude/settings.json gives by path, each plugin it enables
+ * listed there with a skill in its folder, the file each Codex stub and each
+ * thin rule points at.
+ */
+function agentFilesResolve(site) {
+  const settings = JSON.parse(fs.readFileSync(path.join(site, ".claude/settings.json"), "utf8"));
+  for (const [name, { source }] of Object.entries(settings.extraKnownMarketplaces ?? {})) {
+    if (source.source !== "directory") fail(`.claude/settings.json: the marketplace ${name} is ${source.source}, not the installed package's folder`);
+    const root = path.resolve(site, source.path);
+    const market = JSON.parse(fs.readFileSync(path.join(root, ".claude-plugin/marketplace.json"), "utf8"));
+    for (const plugin of Object.keys(settings.enabledPlugins).filter((id) => id.endsWith(`@${name}`)).map((id) => id.split("@")[0])) {
+      const entry = market.plugins.find((p) => p.name === plugin);
+      if (!entry) fail(`the package's marketplace lists no ${plugin}, which .claude/settings.json enables`);
+      const skills = path.join(root, entry.source, "skills");
+      if (!fs.existsSync(skills) || !fs.readdirSync(skills).some((skill) => fs.existsSync(path.join(skills, skill, "SKILL.md")))) fail(`the ${plugin} plugin has no skill at ${path.relative(site, skills)}`);
+    }
+  }
+  const pointers = [".agents/skills", ".claude/rules"].flatMap((dir) => fs.readdirSync(path.join(site, dir), { recursive: true }).filter((file) => file.endsWith(".md")).map((file) => path.join(site, dir, file)));
+  for (const file of pointers) {
+    for (const [, named] of fs.readFileSync(file, "utf8").matchAll(/`(node_modules\/agentic-cms\/[^`]+\.md)`/g)) if (!fs.existsSync(path.join(site, named))) fail(`${path.relative(site, file)} points at ${named}, which the package lacks`);
+  }
+  console.log(`pack-smoke: the site's marketplace, plugins, stubs and thin rules resolve in the installed package (${pointers.length} files)`);
+}
+
+/**
+ * The preview build (docs/preview.md): the site built as production with
+ * AGENTIC_CMS_PREVIEW=1, its own audit passing what a preview must be —
+ * every page noindex, robots.txt disallowing everything — and the audit
+ * without the flag refusing that build.
+ */
+function previewBuild(site) {
+  run("pnpm", ["build"], site, { AGENTIC_CMS_PREVIEW: "1" });
+  const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
+  if (!/^Disallow: \/$/m.test(built("robots.txt.body")) || !built("index.html").includes('<meta name="robots" content="noindex, nofollow"/>')) fail("the preview build left robots.txt open or the home page indexable");
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  if (audit.status !== 1 || !/FAIL \/ robots: carries noindex/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit without the flag answered ${audit.status} on the preview build, which no production site ships`);
 }
 
 /** A fresh site holds nothing of the example's brand: no Acme, acme.example or acme-editorial in any file init wrote. */
@@ -151,6 +215,14 @@ function noExample(site) {
   const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (["node_modules", ".next", ".git"].includes(e.name) ? [] : e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
   const left = files(site).filter((file) => /acme/i.test(path.basename(file)) || (!/\.(?:jpe?g|png|webp|ico)$/.test(file) && /acme/i.test(fs.readFileSync(file, "utf8"))));
   if (left.length) fail(`the fresh site holds the example's brand: ${left.map((file) => path.relative(site, file)).join(", ")}`);
+}
+
+/** The content files checked as they are typed (docs/schema.md): the tarball ships the JSON Schemas, init laid them out current, and the starter's YAML files open with the line an editor reads them by. */
+function schemasShipped(site) {
+  if (!fs.existsSync(path.join(site, "node_modules/agentic-cms/content/_schemas/pages.json"))) fail("the tarball lacks content/_schemas/ (package.json files)");
+  const check = spawnSync("pnpm", ["exec", "agentic-cms", "schema", "--check"], { cwd: site, encoding: "utf8", env: ENV });
+  if (check.status !== 0) fail(`agentic-cms schema --check answered ${check.status} in the fresh site: ${`${check.stdout}${check.stderr}`.trim().slice(-600)}`);
+  if (!fs.readFileSync(path.join(site, "content/pages/home.yaml"), "utf8").startsWith("# yaml-language-server: $schema=../_schemas/pages.json\n")) fail("the starter's home page does not open with its schema's line");
 }
 
 /**
@@ -172,6 +244,27 @@ function starterBuilds(site) {
     fs.writeFileSync(full, fs.readFileSync(full, "utf8").replaceAll("(placeholder) ", "").replace(/([\w.-]+)\.example\b/g, "$1.dev"));
   }
   run("pnpm", ["build"], site);
+}
+
+/**
+ * The site's redirects reach Next through the config init wrote
+ * (docs/redirects.md): one written into content/redirects.yaml in place of
+ * the starter's [] is in the next build's routes manifest as a 308, and a
+ * path the sitemap lists, redirected, fails the SEO audit (run alone on
+ * that build: the content lint would refuse it first). The redirect stays,
+ * as a site's own would.
+ */
+function redirectsServed(site) {
+  edit(site, "content/redirects.yaml", (text) => text.replace(/^\[\]\n/m, "- from: /news\n  to: /blog\n"));
+  run("pnpm", ["exec", "next", "build"], site);
+  const manifest = JSON.parse(fs.readFileSync(path.join(site, ".next/routes-manifest.json"), "utf8"));
+  if (!manifest.redirects?.some((r) => r.source === "/news" && r.destination === "/blog" && r.statusCode === 308)) fail(`next.config's redirects() did not serve content/redirects.yaml: ${JSON.stringify(manifest.redirects)}`);
+  const file = path.join(site, "content/redirects.yaml");
+  const kept = fs.readFileSync(file, "utf8");
+  fs.writeFileSync(file, `${kept}- from: /blog\n  to: /\n`);
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  fs.writeFileSync(file, kept);
+  if (audit.status !== 1 || !/FAIL \/sitemap\.xml sitemap: \S+\/blog is redirected \(content\/redirects\.yaml\)/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit with a redirected sitemap path answered ${audit.status}: ${`${audit.stdout}${audit.stderr}`.trim().slice(-600)}`);
 }
 
 /**
@@ -228,6 +321,11 @@ function dependabot(site) {
   if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== fs.readFileSync(path.join(ROOT, "templates/site/dependabot.yml"), "utf8")) fail("init did not write .github/dependabot.yml from the kit's template");
 }
 
+/** A file of the site written, its folder made first. */
+const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
+/** A JSON file's text as the kit writes one: two-space indents, a newline at the end. */
+const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+
 /** git in the site, as a person who commits nothing anywhere else: no signing, the identity the commit needs and no more. */
 const git = (site, ...args) => run("git", ["-c", "user.name=pack-smoke", "-c", "user.email=pack-smoke@localhost", "-c", "commit.gpgsign=false", ...args], site);
 
@@ -236,14 +334,13 @@ function layBypasses(site) {
   const added = [];
   const before = new Map();
   const current = (file) => { const text = fs.readFileSync(path.join(site, file), "utf8"); if (!before.has(file)) before.set(file, text); return text; };
-  const write = (file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
   for (const bypass of BYPASSES) {
-    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(file, text); }
-    for (const [file, text] of Object.entries(bypass.append ?? {})) write(file, `${current(file)}${text}`);
-    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(file, change(current(file)));
-    for (const [file, change] of Object.entries(bypass.json ?? {})) write(file, `${JSON.stringify(change(JSON.parse(current(file))), null, 2)}\n`);
+    for (const [file, text] of Object.entries(bypass.files ?? {})) { added.push(file); write(site, file, text); }
+    for (const [file, text] of Object.entries(bypass.append ?? {})) write(site, file, `${current(file)}${text}`);
+    for (const [file, change] of Object.entries(bypass.edit ?? {})) write(site, file, change(current(file)));
+    for (const [file, change] of Object.entries(bypass.json ?? {})) write(site, file, json(change(JSON.parse(current(file)))));
   }
-  write("src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
+  write(site, "src/components/README.md", `${current("src/components/README.md")}\n${CATALOGUED.map((name) => `\`${name}\``).join(", ")}: the bypass fixture's.\n`);
   return { added, before };
 }
 
@@ -281,12 +378,23 @@ const ownBase = () => Object.fromEntries(Object.entries(ENV).filter(([key]) => k
 /** A command in the site, its exit and its output kept, run as its own CI runs it. */
 const answer = (site, args, env = {}) => { const r = spawnSync("pnpm", args, { cwd: site, encoding: "utf8", env: { ...ownBase(), ...env } }); return { status: r.status, output: `${r.stdout}${r.stderr}` }; };
 const edit = (site, file, change) => { const full = path.join(site, file); fs.writeFileSync(full, change(fs.readFileSync(full, "utf8"))); };
-const setScripts = (site, scripts) => edit(site, "package.json", (text) => `${JSON.stringify({ ...JSON.parse(text), scripts: { ...JSON.parse(text).scripts, ...scripts } }, null, 2)}\n`);
+const editJson = (site, file, change) => edit(site, file, (text) => json(change(JSON.parse(text))));
+const setScripts = (site, scripts) => editJson(site, "package.json", (pkg) => ({ ...pkg, scripts: { ...pkg.scripts, ...scripts } }));
+/** The baseline `check-site --baseline` wrote into the site's guard config. */
+const writtenBaseline = (site) => JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+const headOf = (site) => spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+/** The fresh site put back at its commit, which git confirms. */
+function putBack(site, fresh, label) {
+  git(site, "reset", "-q", "--hard", fresh);
+  git(site, "clean", "-fdq");
+  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  if (left) fail(`${label}the fresh site was not put back after the upgrade: ${left}`);
+}
 
 /** The fresh site made the site 0.8.1 left (tools/upgrade-fixture.mjs), the example's files copied from the kit's checkout. */
 function layLegacy(site) {
   setScripts(site, LEGACY.scripts);
-  for (const [file, text] of Object.entries(LEGACY.files)) { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); }
+  for (const [file, text] of Object.entries(LEGACY.files)) write(site, file, text);
   for (const [file, change] of Object.entries(LEGACY.edit)) edit(site, file, change);
   for (const file of LEGACY.example) fs.cpSync(path.join(ROOT, file), path.join(site, file), { recursive: true });
   edit(site, "src/components/README.md", (text) => `${text}\n${LEGACY.catalogued.map((name) => `\`${name}\``).join(", ")}: the site's own, from before 0.8.2.\n`);
@@ -296,7 +404,7 @@ function layLegacy(site) {
 function layUpgrade(site) {
   setScripts(site, UPGRADE.scripts);
   for (const [file, change] of Object.entries(UPGRADE.edit)) edit(site, file, change);
-  for (const [file, change] of Object.entries(UPGRADE.json)) edit(site, file, (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`);
+  for (const [file, change] of Object.entries(UPGRADE.json)) editJson(site, file, change);
 }
 
 /**
@@ -310,7 +418,7 @@ function layUpgrade(site) {
  * confirms.
  */
 function upgrade(site) {
-  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const fresh = headOf(site);
   const layout = fs.readFileSync(path.join(site, "src/app/layout.tsx"), "utf8");
   layLegacy(site);
   git(site, "add", "-A");
@@ -319,7 +427,7 @@ function upgrade(site) {
   if (old.status !== 1 || !/agentic-cms\/head/.test(old.output) || !/agentic-cms\/email/.test(old.output)) fail(`the site as 0.8.1 left it answered ${old.status} to its own lint, which should fail on 0.8.2's engines: ${old.output.trim().slice(-1200)}`);
   layUpgrade(site);
   const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
-  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const baseline = writtenBaseline(site);
   const missing = unexpected(baseline);
   if (taken.status !== 0 || missing.length) fail(`check-site --baseline answered ${taken.status}${missing.length ? `, and wrote ${missing.join(", ")}` : ""}: ${taken.output.trim().slice(-2000)}`);
   const build = answer(site, ["build"], CI_BUILD);
@@ -336,16 +444,95 @@ function upgrade(site) {
   if (shrunk.status !== 0 || !/− src\/app\/layout\.tsx {2}agentic-cms\/head: none left, the entry is gone/.test(shrunk.output)) fail(`check-site --baseline answered ${shrunk.status}, and should take the head's entry out: ${shrunk.output.trim().slice(-1500)}`);
   const clean = answer(site, ["lint"]);
   if (clean.status !== 0) fail(`the lint after the baseline shrank answered ${clean.status}: ${clean.output.trim().slice(-1500)}`);
-  git(site, "reset", "-q", "--hard", fresh);
-  git(site, "clean", "-fdq");
-  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
-  if (left) fail(`the fresh site was not put back after the upgrade: ${left}`);
+  putBack(site, fresh, "");
   console.log(`pack-smoke: the site as 0.8.1 left it upgraded by the guide's § 1 — ${baseline.length} baseline entries, its CI build green, a new bypass refused and a fixed one shrinking the list`);
+}
+
+/**
+ * 3d. The site as 0.8.4 left its agent files (tools/migration-fixture.mjs:
+ * 0.8.4's own texts from the installed package's record, a rule and a skill
+ * the site edited, AGENTS.md and CLAUDE.md as the 0.8 templates wrote them)
+ * and its content (no JSON Schemas, no schema lines, no redirects),
+ * upgraded by the installed `agentic-cms upgrade` with the tarball as its
+ * spec: the 0.9.0 migration moves the copies, the steps left by hand come
+ * back with their section (exit 1), the lint and the tests pass, the docs
+ * check and the content lint pass on what it wrote, and the agent files'
+ * check is clean after it; then the fresh site is put back.
+ */
+function upgradeFrom084(site) {
+  const fresh = headOf(site);
+  site084(site, { kitRoot: path.join(site, "node_modules/agentic-cms") });
+  content084(site);
+  git(site, "add", "-A");
+  git(site, "commit", "-q", "-m", "the site as 0.8.4 left its agent files");
+  const spec = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).dependencies["agentic-cms"];
+  const r = spawnSync("pnpm", ["exec", "agentic-cms", "upgrade", "--kit", spec, "--json"], { cwd: site, encoding: "utf8", env: ownBase() });
+  let report;
+  try { report = JSON.parse(r.stdout); } catch { fail(`upgrade answered ${r.status} with no report: ${r.stderr.trim().slice(-2000)}`); }
+  const moved = (report.migrations.find((m) => m.version === "0.9.0")?.changed ?? []).map((c) => c.status);
+  const wrong = [
+    r.status !== 1 && `it answered ${r.status}, and should leave AGENTS.md and CLAUDE.md by hand (exit 1)`,
+    !["removed", "moved", "thin", "schema line", "written", "created", "redirects()"].every((status) => moved.includes(status)) && `the 0.9.0 migration changed ${moved.join(", ") || "nothing"}`,
+    report.manual.length !== 3 && `it left ${report.manual.length} step(s) by hand, not AGENTS.md, CLAUDE.md and the site's own skill`,
+    report.verify.some((v) => v.status !== 0) && `${report.verify.filter((v) => v.status !== 0).map((v) => `pnpm ${v.script}`).join(" and ")} failed after it`,
+  ].filter(Boolean);
+  if (wrong.length) fail(`upgrade from 0.8.4: ${wrong.join("; ")}: ${r.stderr.trim().slice(-2000)}`);
+  run("pnpm", ["exec", "agentic-cms", "init", ".", "--agent-files", "--check"], site);
+  run("pnpm", ["exec", "agentic-cms", "docs", "--check"], site);
+  run("pnpm", ["content:lint"], site);
+  if (!fs.existsSync(path.join(site, ".claude/skills/design-proof-site/SKILL.md")) || fs.existsSync(path.join(site, ".claude/skills/design"))) fail("upgrade did not make the site's edited skill its own, or kept a copy it never touched");
+  putBack(site, fresh, "upgrade from 0.8.4: ");
+  console.log(`pack-smoke: the site as 0.8.4 left its agent files upgraded by the installed upgrade — ${moved.length} moved, ${report.manual.length} steps left by hand with their section, the lint and the tests green`);
+}
+
+/**
+ * A second language over the fresh site (tools/locale-fixture.mjs, as
+ * docs/locales.md § Adding a language says): its production build passes
+ * the lint, the content lint and the SEO audit; the German home page is
+ * prerendered under its root layout with lang="de", its og:locale and the
+ * chrome's German words; it and the default home page name each other and
+ * x-default in their heads and in the sitemap; the German post is
+ * prerendered in German with its FAQ (the language's heading) and named by
+ * the English one, in the German feed and in the sitemap, and German pages
+ * link to the German feed; a path no page answers gets the guide's
+ * global-not-found, in the default language, noindex. The SEO audit, run on
+ * that build with one alternate taken out, fails the page that lost it.
+ * Then the fresh site is put back.
+ */
+function locales(site) {
+  const fresh = headOf(site);
+  layLocale(site, ROOT);
+  const build = answer(site, ["build"]);
+  if (build.status !== 0) fail(`the site in two languages did not build: ${build.output.trim().slice(-3000)}`);
+  const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
+  const [german, home, sitemap, missing, germanPost, englishPost, germanFeed] = ["de.html", "index.html", "sitemap.xml.body", "_not-found.html", `de/blog-post/${POST}.html`, `blog-post/${POST}.html`, "de/feed.xml.body"].map(built);
+  const names = (html, tag, href) => new RegExp(`<link rel="alternate" hrefLang="${tag}" href="${href.replace(/[.?]/g, "\\$&")}"`).test(html);
+  const origin = home.match(/<link rel="canonical" href="(https:\/\/[^"/]+)/)?.[1] ?? "";
+  const wrong = [
+    !/<html lang="de"/.test(german) && "de.html is not lang=\"de\"",
+    !german.includes(`<meta property="og:locale" content="${GERMAN.ogLocale}"/>`) && `de.html has no og:locale ${GERMAN.ogLocale}`,
+    !german.includes("Zum Inhalt springen") && "de.html does not carry the chrome's German words",
+    !(names(german, "en", origin) && names(german, "de", `${origin}/de`) && names(german, "x-default", origin)) && "de.html does not name both versions and x-default",
+    !(names(home, "de", `${origin}/de`) && /<html lang="en"/.test(home)) && "the default home page does not name its German version, or is not lang=\"en\"",
+    !sitemap.includes(`<xhtml:link rel="alternate" hreflang="de" href="${origin}/de" />`) && "the sitemap names no German alternate",
+    !(/<html lang="en"/.test(missing) && /<meta name="robots" content="noindex"/.test(missing)) && "the 404 is not the default language's, noindex",
+    !(/<html lang="de"/.test(germanPost) && germanPost.includes('"@type":"FAQPage"') && germanPost.includes("Warum Dateien?")) && "the German post is not lang=\"de\" with its FAQ under the language's heading",
+    !(names(englishPost, "de", `${origin}/de/blog-post/${POST}`) && names(germanPost, "en", `${origin}/blog-post/${POST}`)) && "the post's versions do not name each other",
+    !(germanFeed.includes("<language>de</language>") && germanFeed.includes(`<link>${origin}/de/blog-post/${POST}</link>`)) && "the German feed does not list the German post in German",
+    !german.includes(`<link rel="alternate" type="application/rss+xml" href="${origin}/de/feed.xml"/>`) && "a German page does not link to the German feed",
+    !sitemap.includes(`<loc>${origin}/de/blog-post/${POST}</loc>`) && "the sitemap does not list the German post",
+  ].filter(Boolean);
+  if (wrong.length) fail(`the site in two languages: ${wrong.join("; ")}`);
+  const file = path.join(site, ".next/server/app/index.html");
+  fs.writeFileSync(file, home.replace(/<link rel="alternate" hrefLang="de"[^>]*>/, ""));
+  const audit = spawnSync("pnpm", ["exec", "agentic-cms", "seo"], { cwd: site, encoding: "utf8", env: ENV });
+  if (audit.status !== 1 || !/FAIL \/ hreflang: no hreflang de: its version \/de is built/.test(`${audit.stdout}${audit.stderr}`)) fail(`the SEO audit with an alternate taken out answered ${audit.status}: ${`${audit.stdout}${audit.stderr}`.trim().slice(-800)}`);
+  putBack(site, fresh, "the locale fixture: ");
+  console.log("pack-smoke: a second language laid over the site as docs/locales.md says builds, its pages and its post under their own root layout with their lang, their alternates and their feed, the 404 the default language's; the audit fails a page that loses an alternate");
 }
 
 /** The text of each of a site's files, to put back. */
 const texts = (site, files) => Object.fromEntries(files.map((file) => [file, fs.readFileSync(path.join(site, file), "utf8")]));
-const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, file)), { recursive: true }); fs.writeFileSync(path.join(site, file), text); };
 
 /**
  * 3c. The site as one that never took 0.8.0's § 3.7 left it, on one of the
@@ -361,7 +548,7 @@ const write = (site, file, text) => { fs.mkdirSync(path.dirname(path.join(site, 
  * Then the fresh site is put back, which git confirms.
  */
 function upgradeUnguarded(site, way) {
-  const fresh = spawnSync("git", ["rev-parse", "HEAD"], { cwd: site, encoding: "utf8" }).stdout.trim();
+  const fresh = headOf(site);
   const given = texts(site, ["src/config/components.json", "eslint.config.mjs"]);
   const gates = JSON.parse(fs.readFileSync(path.join(site, "package.json"), "utf8")).scripts;
   setScripts(site, UNGUARDED.scripts);
@@ -373,25 +560,21 @@ function upgradeUnguarded(site, way) {
   git(site, "commit", "-q", "-m", "the site before the rules");
   for (const [file, text] of Object.entries(UNGUARDED.worktree)) write(site, file, text);
   for (const [file, text] of Object.entries(given)) write(site, file, text);
-  edit(site, "src/config/components.json", (text) => `${JSON.stringify({ ...JSON.parse(text), exceptions: { ...JSON.parse(text).exceptions, ...way.exceptions } }, null, 2)}\n`);
+  editJson(site, "src/config/components.json", (config) => ({ ...config, exceptions: { ...config.exceptions, ...way.exceptions } }));
   setScripts(site, { lint: gates.lint, build: gates.build });
   const taken = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
-  const baseline = JSON.parse(fs.readFileSync(path.join(site, "src/config/components.json"), "utf8")).baseline ?? [];
+  const baseline = writtenBaseline(site);
   const wrong = heldOtherwise(baseline, way.expected);
-  const extra = baseline.filter(({ file, rule }) => way.expected[file]?.[rule] === undefined).map(({ file, rule, count }) => `${file} ${rule}: ${count}, expected no entry`);
-  if (taken.status !== 0 || wrong.length || extra.length) fail(`${way.name}: check-site --baseline answered ${taken.status}${[...wrong, ...extra].length ? `, and wrote ${[...wrong, ...extra].join("; ")}` : ""}: ${taken.output.trim().slice(-2500)}`);
+  if (taken.status !== 0 || wrong.length) fail(`${way.name}: check-site --baseline answered ${taken.status}${wrong.length ? `, and wrote ${wrong.join("; ")}` : ""}: ${taken.output.trim().slice(-2500)}`);
   const build = answer(site, ["build"], CI_BUILD);
   if (build.status !== 0) fail(`${way.name}: the upgraded site's CI build failed on its baseline: ${build.output.trim().slice(-3000)}`);
   const again = answer(site, ["exec", "agentic-cms", "check-site", "--baseline"]);
   if (again.status !== 0 || !/src\/config\/components\.json unchanged/.test(again.output)) fail(`${way.name}: a second check-site --baseline answered ${again.status}, and should change nothing: ${again.output.trim().slice(-1500)}`);
-  edit(site, "src/components/home/Service.tsx", (text) => text.replace("            {cta}\n          </a>", "            {cta}\n          </a>\n          <a href={site.links.contact}>{cta}</a>"));
+  for (const [file, change] of Object.entries(UNGUARDED.grow)) edit(site, file, change);
   const grown = answer(site, ["lint"]);
   if (grown.status !== 1 || !/4 of this rule here, and the baseline \(src\/config\/components\.json\) holds 3: the baseline only shrinks/.test(grown.output)) fail(`${way.name}: one more raw link in the baselined section answered ${grown.status}, and should fail the lint naming the count: ${grown.output.trim().slice(-1500)}`);
   fs.rmSync(path.join(site, ".claude/worktrees/stale-copy"), { recursive: true, force: true });
-  git(site, "reset", "-q", "--hard", fresh);
-  git(site, "clean", "-fdq");
-  const left = spawnSync("git", ["status", "--porcelain"], { cwd: site, encoding: "utf8" }).stdout.trim();
-  if (left) fail(`${way.name}: the fresh site was not put back after the upgrade: ${left}`);
+  putBack(site, fresh, `${way.name}: `);
   console.log(`pack-smoke: ${way.name}, upgraded by the guide's § 1 with § 3.7 inside it — ${baseline.length} baseline entries, its sections' composition among them, its lint and CI build green, a second --baseline unchanged, a new finding refused`);
 }
 
@@ -414,6 +597,8 @@ async function lightOnly(site, tarball) {
 
 /** 4. The installed entries a build does not run. */
 function entries(site) {
+  const version = spawnSync("pnpm", ["exec", "agentic-cms", "--version"], { cwd: site, encoding: "utf8" });
+  if (version.status !== 0 || version.stdout.trim() !== JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version) fail(`agentic-cms --version from the tarball answered ${version.status}: ${(version.stderr || version.stdout).trim()}`);
   // The standalone packaging step ships and dispatches: the example is not standalone, so it says how to make one (exit 2).
   const assemble = spawnSync("pnpm", ["exec", "agentic-cms", "assemble"], { cwd: site, encoding: "utf8" });
   if (assemble.status !== 2 || !/output: "standalone"/.test(assemble.stderr)) fail(`agentic-cms assemble answered ${assemble.status}: ${assemble.stderr.trim()}`);
@@ -479,15 +664,102 @@ const policy = { storageKey: "consent", version: 1, maxAgeDays: 365 };
 const choice = consent.readChoice({ getItem: () => JSON.stringify({ analytics: "granted", at: new Date(Date.now() - 1000).toISOString(), version: 1 }) }, policy); // a second old: a choice stamped after readChoice reads its clock is from the future and refused
 console.log(choice?.analytics, google.consentDefaultScript(policy).includes('"consent","default"'), typeof consent.useConsent, typeof google.GoogleTag);`;
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
+/** The ends of the peer ranges a `--peers` run takes. */
+export const PEER_ENDS = ["floor", "newest"];
+
+/** A bounded range's floor: the version of `^X.Y.Z`; throws on any other form, which no peer may have. */
+export function floorOf(range) {
+  const m = /^\^(\d+\.\d+\.\d+)$/.exec(range);
+  if (!m) throw new Error(`the peer range ${range} is not ^X.Y.Z: a peer is bounded to the major CI runs (docs/stability.md § Peers)`);
+  return m[1];
+}
+
+/** What a `--peers` run writes into the site for each peer: its floor, or its range, which an install with no lockfile resolves to the newest version within it; eslint-config-next follows next. */
+export function peerSpecs(peers, end) {
+  const specs = Object.fromEntries(Object.entries(peers).map(([name, range]) => [name, end === "floor" ? floorOf(range) : range]));
+  return { ...specs, "eslint-config-next": specs.next };
+}
+
+/** Whether an installed version is the floor (`floor`) or within the range (`newest`): the same major, at the floor or above it. */
+export function installedAtEnd(version, range, end) {
+  const floor = floorOf(range).split(".").map(Number);
+  const got = version.split("-")[0].split(".").map(Number);
+  if (end === "floor") return got.join(".") === floor.join(".") && !version.includes("-");
+  return got[0] === floor[0] && (got[1] > floor[1] || (got[1] === floor[1] && got[2] >= floor[2]));
+}
+
+/** The peers `pnpm peers check` reports unmet that the package wants: each block of its report (`✕ unmet peer <name>`, what is installed, who wants what) that names agentic-cms. */
+export function kitUnmetPeers(report) {
+  return report.split(/^✕ /m).slice(1).filter((block) => /^\s+agentic-cms@/m.test(block)).map((block) => block.split("\n")[0].replace(/^unmet peer /, "").trim());
+}
+
+/** The site's own dependency on each peer, set to the end's spec, where the site lists it (dependencies or devDependencies). */
+function setPeers(site, specs) {
+  editJson(site, "package.json", (pkg) => {
+    for (const [name, spec] of Object.entries(specs)) {
+      const field = ["dependencies", "devDependencies"].find((key) => pkg[key]?.[name]);
+      if (!field) fail(`the site init laid out does not depend on ${name}, a peer of the package`);
+      pkg[field][name] = spec;
+    }
+    return pkg;
+  });
+}
+
+/** The site against the peer ranges at one end: installed, each peer's version checked, then its CI build, its lint, its tests and the installed entries. */
+async function peersAt(end) {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-peers-"));
   const site = path.join(scratch, "site");
-  const { tarball, size } = pack(scratch);
+  const { tarball } = pack(scratch);
   layOut(scratch, site, tarball);
-  await build(site);
+  const { peerDependencies } = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+  setPeers(site, peerSpecs(peerDependencies, end));
+  // The floor names exact versions; the newest asks the registry, never pnpm's cached metadata, which may predate a release.
+  await install(end === "floor" ? ["--prefer-offline", "--no-frozen-lockfile"] : ["--no-frozen-lockfile"], site);
+  const installed = Object.entries(peerDependencies).map(([name, range]) => [name, range, JSON.parse(fs.readFileSync(path.join(site, "node_modules", name, "package.json"), "utf8")).version]);
+  const wrong = installed.filter(([, range, version]) => !installedAtEnd(version, range, end));
+  if (wrong.length) fail(`--peers ${end} installed ${wrong.map(([name, range, version]) => `${name} ${version} for ${range}`).join(", ")}`);
+  const check = spawnSync("pnpm", ["peers", "check"], { cwd: site, encoding: "utf8", env: ENV });
+  const unmet = kitUnmetPeers(`${check.stdout}${check.stderr}`);
+  if (unmet.length) fail(`--peers ${end}: pnpm reports an unmet peer of the package (${unmet.join(", ")}):\n${check.stdout}${check.stderr}`);
+  run("pnpm", ["build"], site, CI_BUILD);
+  lintsClean(site);
+  run("pnpm", ["test"], site);
   entries(site);
-  await lightOnly(site, tarball);
-  console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
-  if (process.argv.includes("--keep")) console.log(`pack-smoke: scratch site kept at ${site}`);
-  else fs.rmSync(scratch, { recursive: true, force: true });
+  fs.rmSync(scratch, { recursive: true, force: true });
+  console.log(`pack-smoke --peers ${end}: the starter builds, lints and tests on Node ${process.versions.node} with ${installed.map(([name, , version]) => `${name} ${version}`).join(", ")}`);
+}
+
+/** The folder `--keep <dir>` names, or null; exits 2 when the flag has no folder after it. */
+function keepDir(argv) {
+  const at = argv.indexOf("--keep");
+  if (at === -1) return null;
+  const dir = argv[at + 1];
+  if (!dir || dir.startsWith("--")) { console.error("pack-smoke: --keep takes the folder to keep the proven tarball in (--keep-site leaves the scratch site)"); process.exit(2); }
+  return path.resolve(dir);
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
+  const at = process.argv.indexOf("--peers");
+  const keep = keepDir(process.argv);
+  if (at !== -1) {
+    const end = process.argv[at + 1];
+    if (!PEER_ENDS.includes(end)) { console.error(`pack-smoke: --peers takes ${PEER_ENDS.join(" or ")}`); process.exit(2); }
+    await peersAt(end);
+  } else {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "agentic-cms-smoke-"));
+    const site = path.join(scratch, "site");
+    const { tarball, size } = pack(scratch);
+    layOut(scratch, site, tarball);
+    await build(site);
+    entries(site);
+    await lightOnly(site, tarball);
+    console.log(`pack-smoke: the package builds a site from the starter — its production build refused until its placeholders are replaced — and a light-only one, from the tarball (${path.basename(tarball)}, ${(size / 1024).toFixed(0)} KB)`);
+    if (keep) {
+      fs.mkdirSync(keep, { recursive: true });
+      fs.copyFileSync(tarball, path.join(keep, path.basename(tarball)));
+      console.log(`pack-smoke: the proven tarball kept at ${path.join(keep, path.basename(tarball))}`);
+    }
+    if (process.argv.includes("--keep-site")) console.log(`pack-smoke: scratch site kept at ${site}`);
+    else fs.rmSync(scratch, { recursive: true, force: true });
+  }
 }

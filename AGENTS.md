@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -32,15 +32,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Content is files under `content/`, validated at build time by the content
   engine: posts in `content/blog/` (the filename is the slug), the author and
   category registries, `reviews.yaml`, `faqs/<key>.yaml`, `use-cases.yaml`,
-  the pages in `content/pages/`; the door for editing is `content/README.md`,
-  the templates are `content/_templates/`. The voice and claim rules are
+  the pages in `content/pages/`, each translation beside its original in a
+  site with `site.locales` (`docs/locales.md`), and `content/redirects.yaml`;
+  the door for editing is `content/README.md`, the templates are
+  `content/_templates/`, the JSON Schemas `content/_schemas/` (`agentic-cms
+  schema`, named on each YAML file's first line). The voice and claim rules are
   `content/VOICE.md`; `agentic-cms lint` enforces its fenced block in
   `pnpm build`, right after `pnpm lint` (a FAIL stops the build, a WARN is
   read, `--strict` promotes them). Never read `content/` at request time: pages are
   prerendered, the Worker has no filesystem.
 - The procedures for content jobs are the `editorial` plugin in `plugin/`
   (`/editorial:write-post`, `new-post`, `update-post`, `new-page`,
-  `review-voice`, `critic`, `content-status`, `retire-content`, and on
+  `review-voice`, `critic`, `content-status`, `retire-content`, `translate`, and on
   Claude Code the `voice-reviewer` and `critic` agents that run the two
   review skills in isolation), brand-neutral by rule: it reads the
   brand from the repo, and a grep for this repo's brand over `plugin/` stays
@@ -50,7 +53,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   has one, is named by `content/editorial/workshop.yaml`.
 - Public URLs are `/`, `/sections/home`, `/sections/about`,
   `/sections/use-cases`, `/sections/contact`, `/blog`, `/blog-post/<slug>`.
-  On a live site an indexed URL never changes without a redirect; in this
+  On a live site an indexed URL never changes without a redirect (an entry
+  of `content/redirects.yaml`, which `next.config.ts` serves); in this
   example site the `/sections/*` pages are a catalogue a fork may delete.
 - Brand names, links and the chrome's text come from `src/config/site.ts`;
   every page is served by this app, so links stay relative.
@@ -72,10 +76,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   its `jsonld` block `pageJsonLd()`; `pnpm build` audits every prerendered page
   (`agentic-cms seo`) and fails on a missing or wrong field. Never
   hand-write head tags.
-- Verify with `pnpm test` (the content engine, the post pipeline and the
-  lint), `pnpm content:lint` (the content rules, in a second), `pnpm build`
-  (the lint first, then prerenders everything) and `pnpm preview` (the real
-  Worker) before calling a change done.
+- Verify before calling a change done: the verify bullet under Gotchas
+  (`pnpm lint`, `pnpm test`, `pnpm content:lint`, `pnpm build`, and
+  `pnpm test:worker`, the real Worker).
 - Machine-specific notes (this VM, its ports and its IP) live in
   `CLAUDE.local.md`, which is gitignored and which Claude Code alone reads.
 
@@ -131,7 +134,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `lg` ≥ 992, `xl` / `2xl` / `3xl` ≥ 1280 / 1440 / 1920.
 - The theme is `color-scheme: light dark` on `:root`, overridden by
   `data-theme` on `<html>` (the `ui/ThemeToggle` button, `localStorage.theme`,
-  and the inline script in `src/app/layout.tsx` that applies it before the
+  and the inline script in `ui/SiteLayout` that applies it before the
   first paint). A component never reads the theme; it uses the semantic
   colours and both modes follow.
 - Every section renders inside `ui/Section`: its `type` is its YAML section
@@ -178,7 +181,7 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - Node 22.18+ (26 used, see `.nvmrc`) and pnpm. Run `pnpm install` first:
   `node_modules/next/dist/docs/` (which AGENTS.md says to read) is absent
   until then. `pnpm build` fetches nothing — there is no webfont. Next is
-  16.3.8: `params` is a Promise; `await params` in both `generateMetadata`
+  16.4.6: `params` is a Promise; `await params` in both `generateMetadata`
   and the page. `deploy` collides with a pnpm built-in — always
   `pnpm run deploy`.
 - The palette is CSS `light-dark()`: the pages need a current browser
@@ -191,7 +194,10 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   one route that runs at request time is the form endpoint,
   `POST /api/forms/[id]` (`src/lib/forms/README.md`), which reads neither
   the cache nor a file; its destination comes from the environment
-  (`src/config/form-delivery.ts`), never from `forms.ts`.
+  (`src/config/form-delivery.ts`), never from `forms.ts`. A build or a
+  Worker with `AGENTIC_CMS_PREVIEW=1` is a pull request's preview
+  (`isPreview()`, `docs/preview.md`): the engine marks every page
+  noindex, delivers forms to the log and ships no tag.
 - `next start` and `wrangler dev` straight after `next build` return 500s —
   the asset cache is empty. Only `pnpm preview`, `pnpm run deploy` and
   `pnpm upload` populate it. ~40 "Failed to copy node_modules/…" lines during
@@ -201,8 +207,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   JSON-LD, the feed and the sitemap, so an imported post keeps the timestamps
   search engines already have. Keep both.
 - Post body conventions are load-bearing: the FAQ accordion and FAQPage JSON-LD
-  key off a `## Frequently asked questions` heading (rename it and the
-  accordion silently disappears); a `> blockquote` becomes the pull-quote card;
+  key off a `## Frequently asked questions` heading, or the one `faqHeading`
+  names (rename it and the accordion silently disappears); a `> blockquote` becomes the pull-quote card;
   an image on its own line becomes the inline image block. `draft: true` only
   hides in production builds; `_`-prefixed files are skipped. The post schema
   is `postSchema` in `src/lib/content/collections.ts`, documented in
@@ -240,24 +246,24 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `package.json` and CI) + `pnpm build` (`pnpm lint` first, then the
   content lint and the docs check; after `next build` the SEO audit, and
   `guard-email` last, which `guardEmail: true` in `site.ts` asks for) +
-  `pnpm preview`, with `pnpm test` (the `node:test` suites, about a second)
+  `pnpm test:worker` (the real Worker), with `pnpm test` (the `node:test` suites, about a second)
   and `pnpm content:lint` when `content/`
   or `src/lib/content/` changed (`pnpm content:check` is the sub-second
-  schema-only loop), and `pnpm test:pack` when `package.json`, `src/lib/`
-  or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
+  schema-only loop), and `pnpm test:pack` and `pnpm lint:pkg` when
+  `package.json`, `src/lib/` or the scripts changed; `pnpm test:browser` (the Chromium-backed suite
   under `scripts/browser/`, against the fixture site in `scripts/fixtures/`;
   it skips, naming the fix, without a Chromium) when `scripts/lib/browser.mjs`
   or a command that opens a page changed; `pnpm hygiene` before every pull
   request (`tools/hygiene.mjs`: no one site's name outside the README's
-  showcase, no machine paths or addresses, no captures, pictures or scratch
-  files committed, the two skills trees identical, the changelog,
-  `docs/commands.md`, `docs/parts.md` naming every part, the scoped-rules
-  tables and both AGENTS.md within their budgets, and the agent files' record
-  of every release, which `init` reads (`pnpm agent-files:releases`, from
-  the tags; a release commit rewrites it), current). `pnpm lint`
+  showcase, no machine path or address, no capture, picture or scratch
+  file committed, the skills trees identical, the changelog, the generated
+  docs and tables current, both AGENTS.md within budget, and the agent
+  files' record of each release, which `init` reads, current:
+  `pnpm agent-files:releases`, which a release commit runs). `pnpm lint`
   ignores `.claude/worktrees/`, where agent worktrees are checked out. CI
   (`.github/workflows/verify.yml`) runs the same on every pull request and
-  push to `develop` and `main`, plus the pack smoke on `main`. No Prettier;
+  push to `develop` and `main`, plus the pack smoke on `main`; `peers.yml`
+  builds a site at both ends of the peer ranges. No Prettier;
   match the existing style (double quotes, semicolons, trailing commas).
 - The command line's contract is `scripts/lib/specs.mjs`: one spec per
   command (its flags, defaults, positionals, exit codes, the JSON it
@@ -268,21 +274,27 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   a script that calls `parseOrExit(SPECS.<name>, process.argv.slice(2))`, a
   test, its `docs/` page and a changelog line, in one pull request. Exit
   codes: 0 clean, 1 findings or differences, 2 usage or environment.
-- `docs/` holds the guides (`docs/README.md` is the index): the map of
-  every part (`parts.md`, which `pnpm hygiene` holds complete), the command
-  line, the screenshot harness, the one-shot page commands, designing, the
-  skills, starting a site, setting up a clone (`setup.md`), serving
-  previews to the owner's devices (`dev-server.md`), Chrome and Safari
-  (`browsers.md`), a new site's primitives (`primitives.md`), the traps by
-  topic (`gotchas.md`), the hosts (`deploy.md`), the roadmap. A
+- `docs/` holds the guides, indexed by layer in `docs/README.md`: the map
+  of every part (`parts.md`, which `pnpm hygiene` holds complete), what a
+  site can rely on (`stability.md`), the traps by topic (`gotchas.md`). A
   change to a command or the harness updates its guide in the same pull
   request; `CHANGELOG.md` gets a line under Unreleased.
+- Every export, command and file format is marked stable or experimental
+  in `docs/stability.md` (the tests fail an export or a command it does
+  not mark). A change
+  to a stable part ships with its piece of the release's migration
+  (`scripts/migrations/<version>.mjs`: `detect()` and `apply()`, both
+  idempotent, a case in `tools/migrations.test.mjs`) or a step in
+  `docs/upgrading.md`; a deprecated one warns through `deprecated()` for
+  one minor.
 - The design skills are `.claude/skills/<name>/SKILL.md`, copied to
   `.agents/skills/` by `pnpm skills:sync` (the tests and the hygiene check
   assert the trees identical); design work on the example starts with the
-  `design` skill like on any site. `templates/site/` is what `agentic-cms
-  init` writes into a site (a site's `AGENTS.md`, its path-scoped rules,
-  the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
+  `design` skill like on any site; a site reads them as the `design`
+  plugin of the package's marketplace (`.claude-plugin/`, beside
+  `editorial`). `templates/site/` is what `agentic-cms
+  init` writes into a site (a site's `AGENTS.md`, its rules, thin from
+  `templates/site/rules/`, the config, its CI workflow `verify.yml`, its `scripts/setup.sh`), and
   `templates/starter/` the content it starts from in the example's place
   (a home page and the blog index marked `(placeholder)`, empty
   collections, neutral pictures; `scripts/lib/starter.mjs`): nothing of
@@ -290,10 +302,9 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   kit's own `AGENTS.md` and
   `.claude/rules/` describe this repo and are not what a site gets. A
   change to a rule of the kit that a site shares goes to both. What a
-  site's edited copy must keep ends with `<!-- required -->` in the site's
-  rules and the skills (each rule's tier line, the engines, each skill's
-  closing `pnpm lint`), and `init --agent-files --check` holds it there,
-  with `.claude/settings.json`'s editorial plugin.
+  site's rule must keep ends with `<!-- required -->` (each rule's tier
+  line, the engines), which its kit block carries; `init --agent-files
+  --check` holds it, with `.claude/settings.json`'s marketplace and plugins.
 - Scripts and `node --test` load TypeScript under `src/` through
   `scripts/lib/load-ts.mjs` (Node strips the types; the hook resolves the
   aliases of the site's `tsconfig.json` — `@/`, and here the package's own
@@ -305,21 +316,23 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
   `import type`, no `enum`, no parameter properties, no `.tsx` and nothing
   from React; `src/lib/index.ts` imports `blog/posts.ts`, not the blog
   barrel, for that reason.
-- The package is `src/lib/` (`content/`, `blog/`, `seo/`, `forms/`, `ix/`,
-  `components/`, `cx.ts`, `site.ts`, `index.ts` with `createKit`), compiled
+- The package is `src/lib/` (a folder or a file per subpath of `exports`
+  but `./loader` and `./eslint`, `scripts/lib/` modules with a `.d.mts`
+  beside each; `index.ts` has `createKit`), compiled
   by `tsc -p tsconfig.build.json` to the gitignored `dist/` (ESM, `.d.ts`,
-  ES2022; `prepare` runs it on install, so a git dependency builds itself
-  where `pnpm-workspace.yaml` allows it). Its relative imports name their
+  ES2022; `prepare` runs it on a git install and on a pack, after `prepack`
+  empties `dist/`). Its relative imports name their
   `.ts`/`.tsx` files (`rewriteRelativeImportExtensions` emits `.js`), it
   imports nothing from the site (the site's config, section union, block
   classes and element overrides come in through `createKit()` and
   `renderPostBody()`), and `next`, `react`, `react-dom`, `zod` and `motion`
-  are peers so a site has one copy of each. The example imports it by name
+  are peers, one copy in a site, each in one major (`docs/stability.md` § Peers). The example imports it by name
   (`agentic-cms/content`, …) through the `paths` self-alias in
   `tsconfig.json`, so nothing in this checkout needs `dist/`; the scripts
   do the same. `pnpm test:pack` packs it and builds a scratch site from the
-  tarball, which is the only build here that exercises `dist/` and
-  `exports`: run it before a release. `dist/` is ignored by git and ESLint.
+  tarball, the only build here that exercises `dist/` and `exports`;
+  `pnpm lint:pkg` lints the tarball (its files are `tools/pack-files.txt`,
+  which `pnpm docs:pack` rewrites). `dist/` is ignored by git and ESLint.
 
 ## Parity harness
 
@@ -427,16 +440,16 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   what goes inside it is each section's own design, from its own copy
   fields; do not build a generic Card.
 - One content engine, and its layers, carry their full contract next to the
-  code: `src/lib/content/README.md` (collections — posts, authors,
-  categories, reviews, faqs, use cases, pages — schemas, validation, the
-  generated field tables); on it the post pipeline, `src/lib/blog/README.md`
-  (posts, frontmatter, body conventions), and SEO, `src/lib/seo/README.md`
-  (page blocks, head and structured data, the build-time audit); beside it
+  code: `src/lib/content/README.md` (the collections, their schemas and
+  validation, the generated field tables and JSON Schemas); on it the post
+  pipeline, `src/lib/blog/README.md` (posts, frontmatter, body
+  conventions), and SEO, `src/lib/seo/README.md` (page blocks, head and
+  structured data, the build-time audit); beside it
   the form engine, `src/lib/forms/README.md` (forms as config, field
   primitives, backend factory). `docs/parts.md` maps every part of the kit
   in four layers (the content engine, the browser libraries, the design
-  tools, the site's commands): the need it meets, its tier, the check that
-  holds it; the design
+  tools, the site's commands): the need it meets, its tier, its
+  stability, the check that holds it; the design
   system is `STANDARD.md`, the voice `content/VOICE.md`. `.claude/rules/`
   loads their invariants in Claude Code when those paths are edited, and the
   scoped-rules table above routes Codex to them (`pnpm docs:rules` writes it
@@ -469,8 +482,10 @@ is `docs/visual-parity.md`; the flags are `docs/commands.md`. The rules:
   stable and only receives PRs from `develop` (or a feature branch).
 - Rulesets hold it: neither branch can be deleted or force-pushed, `main`
   changes only through a pull request merged as a merge commit with CI's
-  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted
-  (sites pin them). Never `--delete-branch` a release PR: its head is `develop`.
+  `test` and `browser` green, and a `v*` tag can be neither moved nor deleted:
+  npm publishes what it names, on the owner's approval (`docs/releasing.md`;
+  a candidate's tag on `develop`, a release's on `main`). Never
+  `--delete-branch` a release PR: its head is `develop`.
 - Branch off `develop` as `feat/<slug>`, `bugfix/<slug>` or `refactor/<slug>`;
   open PRs against `develop` unless it is a release.
 - Commit messages carry no AI attribution: no `Co-Authored-By: Claude …`, no

@@ -81,7 +81,7 @@ export function eslintCounts(baseline) {
 }
 
 /** The composition rules' share of a file's counts. */
-export const compositionCounts = (rules) => Object.fromEntries(Object.entries(rules).filter(([rule]) => COMPOSITION_RULES.includes(rule)));
+const compositionCounts = (rules) => Object.fromEntries(Object.entries(rules).filter(([rule]) => COMPOSITION_RULES.includes(rule)));
 
 /**
  * The flat configs that tell each baselined file its counts: every rule's in
@@ -131,17 +131,14 @@ const startOf = (descriptor) => descriptor.loc?.start ?? (descriptor.loc?.line ?
 const shrinkMessage = (held, left) => `The baseline (${CONFIG_FILE}) holds ${held} of this rule here and ${fewer(left)}: ${SHRINK}, in this pull request — an entry that holds more than its file has would let a new one in unseen.`;
 /** The line it ends with when more are there, after every finding. */
 const pastMessage = (found, held) => `${found} of this rule here, and the baseline (${CONFIG_FILE}) holds ${held}: the baseline only shrinks, so the file takes no new one. Each of these is fixed as its message says; at the count or under it, the file passes again.`;
+/** What a held rule's count says of the `found` findings a file has: nothing at the count, a line asking to shrink under it, a line on the count past it (where every finding stays too). */
+const countMessage = (held, found) => (found === held ? null : found < held ? shrinkMessage(held, found) : pastMessage(found, held));
 
 /** What a baselined file's rule says at the end: nothing when the count holds, a line asking to shrink when fewer are left, every finding and a line on the count when more. */
 function settle(context, held, pending) {
-  const top = { line: 1, column: 0 };
-  if (pending.length === held) return;
-  if (pending.length < held) {
-    context.report({ loc: top, message: shrinkMessage(held, pending.length) });
-    return;
-  }
-  for (const descriptor of pending) context.report(descriptor);
-  context.report({ loc: top, message: pastMessage(pending.length, held) });
+  const message = countMessage(held, pending.length);
+  if (pending.length > held) for (const descriptor of pending) context.report(descriptor);
+  if (message) context.report({ loc: { line: 1, column: 0 }, message });
 }
 
 /**
@@ -185,9 +182,9 @@ export function holdMessages(messages, counts) {
   const lines = [];
   for (const [rule, held] of Object.entries(counts)) {
     const live = messages.filter((message) => message.ruleId === rule && message.severity === 2 && !message.suppressions?.length);
-    if (live.length > held) { lines.push({ ruleId: rule, severity: 2, message: pastMessage(live.length, held), ...top }); continue; }
-    for (const message of live) dropped.add(message);
-    if (live.length < held) lines.push({ ruleId: rule, severity: 2, message: shrinkMessage(held, live.length), ...top });
+    const message = countMessage(held, live.length);
+    if (live.length <= held) for (const each of live) dropped.add(each);
+    if (message) lines.push({ ruleId: rule, severity: 2, message, ...top });
   }
   return [...lines, ...messages.filter((message) => !dropped.has(message))].sort((a, b) => a.line - b.line || a.column - b.column);
 }
@@ -207,9 +204,6 @@ export function baselineProcessor(counts) {
     postprocess: (lists) => holdMessages(lists.flat(), counts),
   };
 }
-
-/** What `--baseline` lints a held file with in its processor's place: the messages as ESLint made them. */
-const UNHELD = { meta: { name: `${PLUGIN}/unheld`, version: "1" }, supportsAutofix: true, preprocess: (text) => [text], postprocess: (lists) => lists.flat() };
 
 /** The file a finding names, its `:line` left off: what an entry is keyed by. */
 export const findingFile = (file) => String(file).replace(/:\d+$/, "");
@@ -406,13 +400,13 @@ export function baselineCounts(root, rule, fs = nodeFs) {
  * problem }], `file` with its `:line`, errors alone. ESLint is the site's own
  * (its eslint.config.mjs), told through its settings to report what the
  * engines' rules would hold, and the files the current `baseline` holds a
- * composition count for linted without the processor that holds them.
+ * composition count for linted with one that holds no rule in its place.
  * Async; `ESLint` comes in for the tests.
  */
 export async function lintFindings({ root, ESLint, baseline = [] }) {
   ESLint ??= (await import("eslint")).ESLint;
-  const held = [...eslintCounts(baseline)].filter(([, rules]) => Object.keys(compositionCounts(rules)).length).map(([file]) => literalGlob(file));
-  const eslint = new ESLint({ cwd: root, overrideConfig: [{ settings: { [PLUGIN]: { ignoreBaseline: true } } }, ...(held.length ? [{ files: held, processor: UNHELD }] : [])] });
+  const held = baselineConfigs(baseline).filter((config) => config.processor).flatMap((config) => config.files);
+  const eslint = new ESLint({ cwd: root, overrideConfig: [{ settings: { [PLUGIN]: { ignoreBaseline: true } } }, ...(held.length ? [{ files: held, processor: baselineProcessor({}) }] : [])] });
   const results = await eslint.lintFiles(["."]);
   return results.flatMap((result) => result.messages.filter((message) => ESLINT_RULES.includes(message.ruleId) && message.severity === 2).map((message) => ({ check: message.ruleId, rule: message.ruleId, file: `${path.relative(root, result.filePath).split(path.sep).join("/")}:${message.line}`, problem: message.message })));
 }

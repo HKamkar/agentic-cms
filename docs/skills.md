@@ -5,10 +5,11 @@ A skill is a procedure an agent follows for a recurring job, as a
 design skills ship in the repo itself — `.claude/skills/<name>/SKILL.md`
 for Claude Code, `.agents/skills/<name>/SKILL.md` for Codex, byte-identical
 (`pnpm skills:sync` copies the first over the second; the tests and the
-hygiene check assert they agree) — so they are there in any checkout, and in
-any site `agentic-cms init` laid out, with nothing installed. The content
-jobs are the `editorial` plugin (`plugin/README.md`), which a site enables
-from the kit's marketplace.
+hygiene check assert they agree) — so they are there in any checkout of
+the kit with nothing installed. The content jobs are the `editorial` plugin
+(`plugin/README.md`). Both reach a site from the installed package, at the
+version it pins ([§ On a site that installs the
+package](#on-a-site-that-installs-the-package)).
 
 The rules travel beside them, and the two tools find them differently.
 Claude Code loads `.claude/rules/*.md` itself when an edited path matches a
@@ -35,27 +36,39 @@ it stops for the owner. Every procedure ends with `pnpm lint`, 0 failures,
 after the last edit — the engines and the library's placement, fixed at
 the source and never by loosening a rule — and the design skills start a
 round from the page's content file, never writing copy into a candidate:
-both are lines the kit marks required (`<!-- required -->`), which a
-site's edited copy keeps ([init.md § What an edit
-keeps](init.md#what-an-edit-keeps)). The editorial plugin's skills that
+both are lines the kit marks required (`<!-- required -->`). The editorial plugin's skills that
 change a file end with the same lint, in their verify line (`pnpm lint &&
 pnpm test && pnpm content:lint && pnpm build`); `content-status` changes
 nothing and runs nothing but its reports. A skill may link reference files in its own
 directory (`design-graphics/references/`), loaded when the step needs
-them; `pnpm skills:sync` copies the whole tree, so both agents and every
-site `init` lays out get them too. They are brand-neutral by rule: every fact about the
+them; `pnpm skills:sync` copies the whole tree, so both agents get them,
+and a site reads them in the package. They are brand-neutral by rule: every fact about the
 site is read from the repo (`STANDARD.md`, `src/config/site.ts`, the
 catalogue), and the hygiene check keeps any showcased site's name out of
 them.
 
 ## On a site that installs the package
 
-`agentic-cms init` copies the skills and the rules and records their hashes
-in `.agentic-cms.json`; after a kit upgrade, `agentic-cms init --agent-files`
-brings the new ones in and keeps any file the site edited, and
-`--agent-files --check` reports what drifted (`ok`; `modified` — the site's
-edit, kept; `modified, required gone` — an edit that dropped a line the kit
-marks required, or `.claude/settings.json` without the editorial plugin;
-`modified, kit changed`; `stale` — the kit has a newer one; `missing`) and
-exits 1 on all but `ok` and `modified`, so CI can run it
-([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+The package is a Claude Code marketplace: `.claude-plugin/marketplace.json`
+at `node_modules/agentic-cms` lists two plugins, `editorial` (`plugin/`)
+and `design` (the seven skills above, from the package's
+`.claude/skills/`). A site's `.claude/settings.json`, which `init` writes,
+names that folder (`"source": "directory", "path":
+"./node_modules/agentic-cms"`) and enables both, so Claude Code reads the
+kit's skills where the package is installed, at the version the site pins:
+`design:design-options`, `editorial:new-page`. `.claude/skills/` holds the
+site's own skills alone. Codex lists a skill by its description, so `init`
+writes a stub per design skill in `.agents/skills/<name>/SKILL.md`: the
+skill's name and description, and the package's file to read,
+`node_modules/agentic-cms/.agents/skills/<name>/SKILL.md`. A stub is never
+edited, and the refresh rewrites it.
+
+`agentic-cms init --agent-files` after a kit upgrade rewrites the stubs and
+the kit's block of each thin rule and keeps the site's own lines, so
+nothing is merged by hand, and `--agent-files --check` reports what drifted
+(`ok`; `modified` — the site's own lines or paths beside the kit's;
+`modified, required gone`; `stale`; `missing`; `legacy` — a copy 0.8 made,
+which the refresh moves) and exits 1 on all but `ok` and `modified`, so CI
+can run it ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+Claude Code needs the folder trusted, and registers the marketplace once
+per machine ([gotchas.md § Claude Code](gotchas.md#claude-code)).

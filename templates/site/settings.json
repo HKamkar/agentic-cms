@@ -1,9 +1,10 @@
 {
   "extraKnownMarketplaces": {
-    "agentic-cms": { "source": { "source": "github", "repo": "HKamkar/agentic-cms" } }
+    "agentic-cms": { "source": { "source": "directory", "path": "./node_modules/agentic-cms" } }
   },
   "enabledPlugins": {
-    "editorial@agentic-cms": true
+    "editorial@agentic-cms": true,
+    "design@agentic-cms": true
   },
   "permissions": {
     "allow": ["Bash(pnpm content:*)"]

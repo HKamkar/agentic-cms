@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // The design round's throwaway route: `new` scaffolds src/app/<name>-demo
+// (in a site in several languages, under the default language's route group)
 // with a candidate per letter (copies of the section's — or the chrome
 // piece's — component to edit into ideas), the page's real copy read from
 // its file (a section) or no props at all (the chrome), and the current
@@ -17,7 +18,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { parseOrExit } from "./lib/args.mjs";
-import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, roundCopy, writeDemo } from "./lib/demo.mjs";
+import { demoDir, demoManifest, isKitDemo, listDemos, removeDemo, resolvesData, roundCopy, writeDemo } from "./lib/demo.mjs";
 import { formatHandover, handover } from "./lib/handover.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
@@ -46,14 +47,14 @@ if (subcommand === "new") {
     console.log(`${edit}; demo clean ${positionals[0]} removes it all`);
   }
   if (told.err.length) console.error(told.err.join("\n"));
-  if (report.data) console.error(`note: "${report.section}" is a withData section — the page reads a collection for it; pass that in the route too (the comment there says where)`);
+  if (report.data && !resolvesData(root)) console.error(`note: "${report.section}" is a withData section — the page reads a collection for it; pass that in the route too (the comment there says where)`);
   process.exit(told.exit);
 } else if (subcommand === "clean") {
   // Without a name, only the routes `demo new` wrote: a site's own gallery in a *-demo folder (the lab's route too) is kept and named.
   const found = positionals[0] ? [positionals[0]] : listDemos(root);
   const names = positionals[0] ? found : found.filter((name) => isKitDemo(root, name));
   const dryRun = flags["dry-run"];
-  const removed = [], kept = found.filter((name) => !names.includes(name)).map((name) => `${demoDir(name)} (not a route demo new wrote: demo clean ${name} removes it)`);
+  const removed = [], kept = found.filter((name) => !names.includes(name)).map((name) => `${demoDir(name, root)} (not a route demo new wrote: demo clean ${name} removes it)`);
   for (const name of names) {
     // what the round added since it began: committed since its base, or not tracked yet
     const base = demoManifest(root, name)?.base;
@@ -62,7 +63,7 @@ if (subcommand === "new") {
     removed.push(...r.removed); kept.push(...r.kept);
   }
   if (flags.json) console.log(JSON.stringify({ removed, kept, ...(dryRun ? { dryRun } : {}) }, null, 1));
-  else console.log(`${removed.length ? `${dryRun ? "would remove" : "removed"}: ${removed.join(", ")}` : `nothing to remove${positionals[0] ? `: no src/app/${positionals[0]}-demo` : ""}`}${kept.length ? `\nkept: ${kept.join("; ")}` : ""}`);
+  else console.log(`${removed.length ? `${dryRun ? "would remove" : "removed"}: ${removed.join(", ")}` : `nothing to remove${positionals[0] ? `: no ${demoDir(positionals[0], root)}` : ""}`}${kept.length ? `\nkept: ${kept.join("; ")}` : ""}`);
 }
 
 /** What the round would design around that is not the site's copy, said before the round is written; nothing for a page of real copy. */

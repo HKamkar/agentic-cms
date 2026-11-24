@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import { redirectsFor } from "agentic-cms/content";
 
 // Lets `next dev` see Cloudflare bindings (none are used yet; harmless to keep).
 initOpenNextCloudflareForDev();
@@ -12,10 +13,17 @@ const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",")
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // content/redirects.yaml, read when Next loads this file at build time:
+  // an indexed URL that moved answers 308 to where it went (docs/redirects.md).
+  redirects: async () => redirectsFor(),
   // Images are pre-sized files shipped with the repo; skip the optimizer so
   // the Worker needs no Cloudflare Images binding. Flip this off (and enable the
   // "images" binding in wrangler.jsonc) if you want on-the-fly resizing.
   images: { unoptimized: true },
+  // Next 16.4 can ask the npm registry about advisories during a build, and an
+  // agent's first build that finds one fails with instructions for the agent.
+  // A build fetches nothing here; the alerts are GitHub's (docs/gotchas.md).
+  experimental: { agentUpgrade: false },
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
 };
 

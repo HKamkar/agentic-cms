@@ -41,7 +41,7 @@ test("a component that renders the toggle loses its import and its element, wher
 });
 
 test("an edit that finds nothing fails loudly, naming the file and the edit; so does a theme name left behind", () => {
-  fails(() => lightOnlyFile("src/app/layout.tsx", 'export const viewport = { colorScheme: "light dark" };\n'), /src\/app\/layout\.tsx: the theme script and the comment above it not found/);
+  fails(() => lightOnlyFile("src/components/ui/SiteLayout.tsx", "export function SiteLayout() { return null; }\n"), /src\/components\/ui\/SiteLayout\.tsx: the theme script and the comment above it not found/);
   fails(() => lightOnlyFile("src/styles/base.css", ":root { color-scheme: light; }\n"), /src\/styles\/base\.css: color-scheme on :root/);
   fails(() => lightOnlyFile("src/config/harness.ts", "export const harness = { storage: {} };\n"), /src\/config\/harness\.ts: the profile's schemes not found/);
   fails(() => lightOnlyFile("src/components/ui/Card.module.css", ".card { color: light-dark(#000, #fff); }\n"), /Card\.module\.css: light-dark\( is still there/);

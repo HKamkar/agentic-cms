@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "from": {
+        "type": "string",
+        "description": "The old path, as it was indexed: /words, without a trailing slash; never a live page's or post's path"
+      },
+      "to": {
+        "type": "string",
+        "description": "Where it goes now: a page's path, a post's URL or the blog index, or an https:// URL; never another redirect's from"
+      },
+      "permanent": {
+        "description": "true, or left out: a permanent redirect (308), which search engines follow and index the target of; false: a temporary one (307)",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "from",
+      "to"
+    ],
+    "additionalProperties": false,
+    "description": "A redirect from a URL the site no longer answers, in content/redirects.yaml; next.config.ts serves them (redirectsFor())"
+  },
+  "description": "content/redirects.yaml: A redirect from a URL the site no longer answers, in content/redirects.yaml; next.config.ts serves them (redirectsFor()) (one file holding a list, one entry per item)."
+}

@@ -4,7 +4,8 @@
 // sections through the registry. Only the paths the page files declare are
 // built (dynamicParams = false); anything else is the 404 page. A static
 // route file (src/app/<route>/page.tsx, such as the blog posts') wins over
-// this one.
+// this one. A language of site.locales has its own copy of this file in
+// src/app/<prefix>/[[...slug]]/, with LOCALE its tag (docs/locales.md).
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -14,13 +15,17 @@ import { kit } from "@/kit";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 
+const LOCALE = kit.locales.default.locale;
+const pages = () => kit.content.in(LOCALE).getPages();
+
 export const dynamicParams = false;
 
+// A page's slug is its path without the language's prefix: /de/about is ["about"] under src/app/de/.
 export function generateStaticParams() {
-  return kit.content.getPages().map((entry) => ({ slug: entry.data.seo.path === "/" ? [] : entry.data.seo.path.slice(1).split("/") }));
+  return pages().map((entry) => ({ slug: kit.locales.unprefixed(entry.data.seo.path).split("/").filter(Boolean) }));
 }
 
-const pageAt = (slug: string[] | undefined) => kit.content.getPages().find((entry) => entry.data.seo.path === `/${(slug ?? []).join("/")}`)?.data;
+const pageAt = (slug: string[] | undefined) => pages().find((entry) => entry.data.seo.path === kit.locales.path(LOCALE, `/${(slug ?? []).join("/")}`))?.data;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const page = pageAt((await params).slug);
@@ -34,7 +39,7 @@ export default async function ContentPage({ params }: Props) {
     <>
       <JsonLd data={kit.seo.pageJsonLd(page)} />
       {page.seo.path !== "/" && <JsonLd data={kit.seo.pageBreadcrumb(page.seo)} />}
-      {renderSections(page.sections)}
+      {renderSections(page.sections, LOCALE)}
     </>
   );
 }

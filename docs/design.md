@@ -10,15 +10,18 @@ to install.
 ## What works by default
 
 A checkout of this repo, or a site laid out by `agentic-cms init`, carries
-the design tools with nothing to install: the skills, in `.claude/skills/`
-(Claude Code) and `.agents/skills/` (Codex), identical and auto-discovered
-from the checkout, and the commands they call.
+the design tools with nothing more to install: the skills — in this repo
+`.claude/skills/` (Claude Code) and `.agents/skills/` (Codex), identical; in
+a site the kit's `design` plugin, read from the installed package, and a
+stub per skill for Codex ([skills.md](skills.md#on-a-site-that-installs-the-package))
+— and the commands they call.
 [parts.md § Design tools](parts.md#design-tools) maps each to the need it
 meets, how to use it and its doc; [skills.md](skills.md) says what each
 skill does.
 
 It carries the rules too: path-scoped (`.claude/rules/`: Claude Code loads
-them by path, Codex through `AGENTS.md`'s scoped-rules table), and
+them by path, Codex through `AGENTS.md`'s scoped-rules table; a site's are
+thin, each pointing at the kit's whole rule in the package), and
 `AGENTS.md`, which every agent reads; `STANDARD.md`, where the design lives
 and where §8 keeps the decisions that look like bugs on purpose.
 

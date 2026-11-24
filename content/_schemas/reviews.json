@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The reviewer, shown under the quote"
+      },
+      "role": {
+        "type": "string",
+        "description": "Their role, shown in brackets after the name"
+      },
+      "quote": {
+        "type": "string",
+        "description": "The quote as it reads on the slide, with its own quotation marks"
+      },
+      "photo": {
+        "type": "string",
+        "description": "Portrait under public/images/home/ (about 80×80)"
+      },
+      "photoAlt": {
+        "description": "What the portrait shows; leave it out while the portrait is decorative",
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "name",
+      "role",
+      "quote",
+      "photo"
+    ],
+    "additionalProperties": false,
+    "description": "A client review on the home page slider, in slide order"
+  },
+  "description": "content/reviews.yaml: A client review on the home page slider, in slide order (one file holding a list, one entry per item)."
+}

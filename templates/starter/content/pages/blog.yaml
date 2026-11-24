@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # The blog index (/blog): its SEO block, its structured data (a Blog
 # listing every published post) and its one section, as `agentic-cms init`
 # wrote it for a new site. It builds with no post at all; the posts are

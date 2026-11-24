@@ -44,12 +44,12 @@ before changing anything in `src/lib/blog/`, `content/`,
 | `content/authors.json`, `content/categories.json` | Registries (the `authors` / `categories` collections). Frontmatter `author` / `category` must be keys here. |
 | `public/images/blog/<slug>/` | A post's images, self-hosted. |
 | `src/lib/content/collections.ts` | `postSchema`, `authorSchema`, `categorySchema` and the three collection definitions — the contract and its validation (the engine: `src/lib/content/README.md`). |
-| `src/lib/blog/posts.ts` | The post pipeline: `createBlog(collections)` reads the site's registry through `readCollection` / `readEntry`, derives fields, sorts, and returns `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate` — what a site reads as `kit.blog`; the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
-| `src/lib/blog/markdown.tsx` | `renderPostBody(post, { components, blocks })`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the site's block classes) and `rehypePostImages`; the site passes its `mdxComponents` and `postBlocks`. |
+| `src/lib/blog/posts.ts` | The post pipeline: `createBlog(collections, { locale? })` reads the site's registry through `readCollection` / `readEntry`, derives fields, sorts, and returns `getAllPosts`, `getPostBySlug`, `getPostsByCategory`, `getRelatedPosts`, `getAuthor`, `getCategory`, `getAllCategories`, `formatDate` — what a site reads as `kit.blog`, and a language's, over its translated posts, authors and categories, as `kit.blog.in(tag)` (its posts carry `locale`, its `formatDate` writes the language's dates; `docs/locales.md`); the `Post` / `PostMeta` / `Author` / `Category` types. `posts.test.ts` covers it. |
+| `src/lib/blog/markdown.tsx` | `renderPostBody(post, { components, blocks, faqHeading? })`: markdown/MDX → React through `next-mdx-remote/rsc` with `remark-gfm`, `rehype-raw` (`.md` only), `rehype-slug`, `rehypePostBlocks` (with the site's block classes) and `rehypePostImages`; the site passes its `mdxComponents` and `postBlocks`. |
 | `src/lib/blog/index.ts` | The public surface, `agentic-cms/blog`: the above plus `extractFaq` and the two rehype plugins. |
 | `src/lib/blog/rehype-post-blocks.ts` | Reshapes the rendered body into the post template's blocks (see "Body pipeline"); the class names come in as options. |
 | `src/lib/blog/rehype-post-images.ts` | Every `<img>` in a body loads lazily, raw HTML ones included (they all sit below the hero; eager, they would also be preloaded by pages that merely prefetch the post), and gets its `width`/`height` from the file under `public/`, so the page reserves the space. |
-| `src/lib/blog/faq.ts` | `extractFaq(markdown)`: the Q/A pairs for FAQPage JSON-LD, using the same heading convention. |
+| `src/lib/blog/faq.ts` | `extractFaq(markdown, heading?)`: the Q/A pairs for FAQPage JSON-LD, using the same heading convention; `faqHeading(text?)`, the heading's test. |
 | `src/components/blog/mdx.tsx` | Element overrides for post bodies: internal links via `next/link`, and the `fx` wrapper `rehype-post-blocks` emits, which renders as the element it names (a fork that adds reveals maps it to `ix/Fx` instead). |
 | `src/components/blog/PostBody.tsx`, `PostBody.module.css` | `postBlocks`: the classes of the four block kinds; the module holds a body's element rules (paragraph, heading and list margins, the bullet, the full-width figure) and the FAQ accordion's styles. `<PostBody>` wraps a rendered body. |
 | `src/components/blog/BlogCard.tsx` | The post card; index (with excerpt) and "Read next". |
@@ -90,7 +90,7 @@ Sort order: `date` desc, then `publishedAt` desc, then title.
 
 ## Body pipeline
 
-`renderPostBody(post, { components, blocks })` → `compileMDX` → rehype tree →
+`renderPostBody(post, { components, blocks, faqHeading })` → `compileMDX` → rehype tree →
 `rehypePostBlocks` groups the top-level nodes into the blocks of the post
 template, with the classes `postBlocks` (in `PostBody.tsx`, passed in as
 `blocks`) gives each:
@@ -101,6 +101,12 @@ template, with the classes `postBlocks` (in `PostBody.tsx`, passed in as
 | `> blockquote` | `quote` + `quoteInner`: the pull-quote card (quote icon + text) |
 | paragraph containing only an image | `image` + `imageWrap`: the framed inline image |
 | `## Frequently asked questions` … until the next `##` | `faqHeading` on the h2 + `faq` on a `div[data-faq]` (the accordion) |
+
+The FAQ starts at an H2 whose text says "frequently asked" or "faq" — or
+contains the site's `faqHeading` (`src/config/site.ts`), a language's own
+in `site.locales` (`Häufige Fragen`): the post template passes the
+language's to `renderPostBody`, `kit.seo.postFaqJsonLd()` reads it, and so
+does the lint's `faq-structure`.
 
 Every block is emitted inside an `<fx>` element carrying the template's
 staggered delays; `mdxComponents` renders it as the element it names, so the

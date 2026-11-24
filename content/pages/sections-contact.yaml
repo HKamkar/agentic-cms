@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/pages.json
 # A demo page (/sections/contact): the contact section types, with copy that
 # names each slot. The form is src/config/forms.ts, not this file. Every
 # field is checked at build time (pageSchema in

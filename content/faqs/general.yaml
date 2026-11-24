@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../_schemas/faqs.json
 # The FAQ set shown on the landing page and on the demo pages, in order.
 # Each item is a question and its answer; the answer is one paragraph (a
 # long one wraps over several lines, and the line breaks read as spaces).

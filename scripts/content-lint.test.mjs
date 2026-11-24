@@ -12,6 +12,7 @@ import { describe, test } from "node:test";
 import { pathToFileURL } from "node:url";
 import { postTree, withContent } from "../src/lib/content/test-helpers.ts";
 import { kit } from "../src/kit.ts";
+import { createLocales } from "../src/lib/locales.ts";
 import { format, lint as lintTree, readVoice } from "./lib/content-lint.mjs";
 import { scaffold } from "./lib/init.mjs";
 
@@ -86,6 +87,7 @@ const CLEAN = {
   "use-cases.yaml": "- sector: Healthcare\n  title: Hospitals\n  text: Private AI inside the perimeter.\n  icon: /images/use-cases/health.svg\n",
   "pages/blog.yaml": ["seo:", "  path: /blog", "  title: Insights on private AI | nimbus®", "  description: Notes on running private AI under your own control, for founders selling into regulated industries.", "  ogImage: /images/blog-og.jpg", '  updated: "2026-09-01"', "  breadcrumb: Blog", "jsonld:", "  type: Blog", "sections:", "  - type: blog-index", "    label: From the team", "    heading: Insights", "    listEyebrow: Latest", "    listHeading: Every post", "    cta: Run private AI"].join("\n") + "\n",
   "blog/x.md": `---\n${FRONTMATTER}\n---\n${BODY}`,
+  "redirects.yaml": "[]\n",
 };
 /** Body line numbers: the frontmatter block ends at line OFFSET; a paragraph appended after BODY lands on APPENDED. */
 const OFFSET = 1 + FRONTMATTER.split("\n").length + 1;
@@ -119,7 +121,7 @@ describe("the clean tree", () => {
   test("yields nothing", () => assert.deepEqual(run(), []));
   test("the real content tree never fails the build", () => {
     const { findings, collections } = lint({ root: REPO, now: NOW });
-    assert.equal(collections.length, 7);
+    assert.equal(collections.length, 8);
     assert.deepEqual(findings.filter((f) => f.level === "FAIL").map(format), []);
   });
   test("format prints LEVEL file rule: path problem, with no double space for a file-level finding", () => {
@@ -134,7 +136,7 @@ describe("the engine comes first", () => {
       for (const rel of IMAGES) publicFile(root, rel);
       const { findings, collections } = lint({ root, voice: VOICE, now: NOW });
       has(findings.map(format), "FAIL content/blog/x.md schema: title is required");
-      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:1", "categories:2", "posts:0", "reviews:1", "faqs:1", "useCases:1", "pages:1"]);
+      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:1", "categories:2", "posts:0", "reviews:1", "faqs:1", "useCases:1", "pages:1", "redirects:0"]);
     });
   });
   test("a missing collection file is a FAIL on the file", () => {
@@ -293,6 +295,56 @@ describe("body rules", () => {
   });
 });
 
+describe("redirect rules", () => {
+  const redirects = (...entries) => ({ "redirects.yaml": entries.map(([from, to, more = ""]) => `- from: ${from}\n  to: ${to}\n${more}`).join("") });
+  test("a redirect to a page, a published post, a fragment of one or an https:// URL, from a path nothing answers, passes", () => {
+    assert.deepEqual(run(redirects(["/old-blog", "/blog"], ["/2019/x", "/blog-post/x"], ["/news", "/blog#latest"], ["/away", "https://nimbus.dev/x", "  permanent: false\n"])), []);
+  });
+  test("redirect-from: a path listed twice, or a live page's or published post's path, which the redirect would hide", () => {
+    const lines = run(redirects(["/old", "/blog"], ["/old", "/blog"], ["/blog", "/blog-post/x"], ["/blog-post/x", "/blog"]));
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [1].from "/old" is listed already at [0]: one entry per path');
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [2].from "/blog" is a live page\'s or post\'s (content/pages/blog.yaml): the redirect would hide it');
+    has(lines, 'FAIL content/redirects.yaml redirect-from: [3].from "/blog-post/x" is a live page\'s or post\'s (content/blog/x.md)');
+  });
+  test("a draft's URL answers nothing in production: a redirect may take it, and none may land on it", () => {
+    const draft = { "blog/x.md": post(`${FRONTMATTER}\ndraft: true`) };
+    const lines = run({ ...draft, ...redirects(["/blog-post/x", "/blog"], ["/old", "/blog-post/x"]) });
+    lacks(lines.filter((line) => line.includes("[0].")), "redirect-from");
+    has(lines, 'FAIL content/redirects.yaml redirect-chain: [1].to "/blog-post/x" is itself redirected ([0]): a chain — point it at "/blog" directly');
+    has(run({ ...draft, ...redirects(["/old", "/blog-post/x"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/blog-post/x" is no page, no published post and not the blog index: the redirect would land on a 404');
+  });
+  test("redirect-chain: a to that is another entry's from, and a loop, its own or through others", () => {
+    has(run(redirects(["/a", "/b"], ["/b", "/blog"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/b" is itself redirected ([1]): a chain — point it at "/blog" directly');
+    has(run(redirects(["/a", "/b"], ["/b", "/a"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/b" leads back to "/a" ([0] → [1] → [0]): a loop');
+    has(run(redirects(["/a", "/a?x=1"])), 'FAIL content/redirects.yaml redirect-chain: [0].to "/a?x=1" leads back to "/a" ([0]): a loop');
+  });
+  test("redirect-to: a path no page and no post answers", () => {
+    has(run(redirects(["/old", "/nowhere"])), 'FAIL content/redirects.yaml redirect-to: [0].to "/nowhere" is no page, no published post and not the blog index: the redirect would land on a 404 — point it at a page that exists, or at an https:// URL');
+  });
+  test("a page or a post that fails its schema is still there: a redirect to it adds no redirect-to to the file's own FAIL", () => {
+    const fails = (lines) => lines.filter((line) => line.startsWith("FAIL"));
+    const page = { "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("    cta: Run private AI\n", "") };
+    assert.deepEqual(fails(run({ ...page, ...redirects(["/old", "/blog"]) })), fails(run(page)));
+    assert.equal(fails(run(page)).length, 1);
+    const postFile = { "blog/x.md": post(swap("category: fintech", "category: nowhere")) };
+    assert.deepEqual(fails(run({ ...postFile, ...redirects(["/old", "/blog-post/x"]) })), fails(run(postFile)));
+  });
+  test("with a folder the engine refused, a target no file names still fails redirect-to, and so does a draft", () => {
+    const page = { "pages/blog.yaml": CLEAN["pages/blog.yaml"].replace("    cta: Run private AI\n", "") };
+    has(run({ ...page, ...redirects(["/old", "/nowhere"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/nowhere" is no page');
+    const draft = { "blog/x.md": post(`${swap("category: fintech", "category: nowhere")}\ndraft: true`) };
+    has(run({ ...draft, ...redirects(["/old", "/blog-post/x"]) }), 'FAIL content/redirects.yaml redirect-to: [0].to "/blog-post/x" is no page');
+  });
+  test("the schema: a from with a trailing slash or a pattern, a to that is neither a path nor an https:// URL, a permanent that is no boolean", () => {
+    const lines = run(redirects(["/old/", "http://nimbus.dev"]));
+    has(lines, "FAIL content/redirects.yaml schema: [0].from must be a path the site no longer answers: /words or /words/more, without a trailing slash, a query or a pattern");
+    has(lines, "FAIL content/redirects.yaml schema: [0].to must be a path of the site");
+    const more = run(redirects(["/old/:slug", "/blog", "  permanent: yes\n"]));
+    has(more, "FAIL content/redirects.yaml schema: [0].from must be a path");
+    has(more, "FAIL content/redirects.yaml schema: [0].permanent must be true or false");
+  });
+});
+
 describe("filesystem rules", () => {
   test("a referenced image that does not exist fails, for every collection that carries one", () => {
     const lines = run({}, { images: [] });
@@ -314,6 +366,70 @@ describe("filesystem rules", () => {
     has(lines, "WARN content/blog/notes.txt stray-file: is not a .md/.mdx file; the loader ignores it");
     has(lines, "WARN content/blog/drafts stray-file: is a folder; the loader reads only files");
     has(lines, "WARN content/extra.yaml stray-file: is not a collection file; nothing reads it");
+    assert.equal(lines.filter((line) => line.includes("stray-file")).length, 3);
+  });
+});
+
+describe("a site in several languages", () => {
+  const GERMAN_SITE = { ...site, locales: [{ locale: "de", prefix: "de", ogLocale: "de_DE", tagline: "Was es tut.", description: "Notizen.", links: { home: "/de", blog: "/de/blog", contact: "/de#contact-form" }, nav: [], signIn: site.signIn, cta: site.cta, footer: site.footer }] };
+  const locales = createLocales(GERMAN_SITE);
+  const germanPage = (route, description = "Notizen zu privater KI unter eigener Kontrolle, für Gründer, die an regulierte Branchen verkaufen.") => CLEAN["pages/blog.yaml"].replace("path: /blog", `path: ${route}`).replace("Insights on private AI", "Einblicke in private KI").replace(/description: .*/, `description: ${description}`);
+  const GERMAN = { "VOICE.md": VOICE_MD(VOICE_YAML), "VOICE.de.md": VOICE_MD(VOICE_YAML.replace("match: robust", "match: robuste")), "pages/de/blog.yaml": germanPage("/de/blog") };
+  const german = (files = {}, options = {}) => run({ ...GERMAN, ...files }, { voice: null, site: GERMAN_SITE, locales, ...options });
+
+  test("a language's translations are linted with every rule, and a clean one yields nothing", () => {
+    assert.deepEqual(german(), []);
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Kurz.") }), "FAIL content/pages/de/blog.yaml seo-description: seo.description is 5 characters");
+    withContent({ ...CLEAN, ...GERMAN }, (root) => {
+      for (const rel of IMAGES) publicFile(root, rel);
+      assert.ok(lint({ root, now: NOW, site: GERMAN_SITE, locales }).collections.some((row) => row.name === "pages.de" && row.source === "content/pages/de" && row.entries === 1));
+    });
+  });
+
+  test("each language has its voice block, content/VOICE.<prefix>.md, and only its own", () => {
+    const withoutVoice = Object.fromEntries(Object.entries(GERMAN).filter(([file]) => file !== "VOICE.de.md"));
+    has(run(withoutVoice, { voice: null, site: GERMAN_SITE, locales }), "FAIL content/VOICE.de.md voice: does not exist: the voice rules of de, VOICE.md's block written for the language (docs/locales.md)");
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Eine robuste Lösung für private KI unter eigener Kontrolle, für Gründer in regulierten Branchen.") }), 'FAIL content/pages/de/blog.yaml voice-banned: seo.description "robuste" is banned');
+    lacks(german({ "pages/de/blog.yaml": germanPage("/de/blog", "Ein robust gebautes System für private KI unter eigener Kontrolle, für Gründer in regulierten Branchen.") }), "voice-banned");
+  });
+
+  test("the alt-weak heuristic, which reads English, holds the default language alone", () => {
+    const weak = JSON.stringify({ "h-kamkar": { name: "H. Kamkar", image: "/images/authors/h-kamkar.webp", imageAlt: "Image of H. Kamkar" } });
+    lacks(german({ "authors.de.json": weak }), "alt-weak");
+    has(german({ "authors.json": weak }), "FAIL content/authors.json alt-weak");
+  });
+
+  test("a post's FAQ heading is its language's: an empty FAQ under it fails, the default language's heading is just a heading there", () => {
+    const withHeading = { ...GERMAN_SITE, locales: [{ ...GERMAN_SITE.locales[0], faqHeading: "Häufige Fragen" }] };
+    const registries = { "authors.de.json": CLEAN["authors.json"], "categories.de.json": CLEAN["categories.json"] };
+    const german = (body) => run({ ...GERMAN, ...registries, "blog/de/x.md": post(FRONTMATTER, body) }, { voice: null, site: withHeading, locales: createLocales(withHeading) });
+    has(german(`${BODY}\n## Häufige Fragen\n`), 'FAIL content/blog/de/x.md faq-structure: line');
+    has(german(`${BODY}\n## Häufige Fragen\n`), '"## Häufige Fragen" has no ### question under it');
+    lacks(german(BODY.replace("## Frequently asked questions\n\n### Is this a question?\n\nYes, and this is its answer.\n", "## Frequently asked questions\n")), "faq-structure");
+  });
+
+  test("a page file out of place fails, as the engine would", () => {
+    has(german({ "pages/de/blog.yaml": germanPage("/blog") }), 'FAIL content/pages/de/blog.yaml schema: seo.path "/blog" must be "/de/blog", the path of content/pages/blog.yaml under /de');
+    has(german({ "pages/de/team.yaml": germanPage("/de/team") }), "FAIL content/pages/de/team.yaml schema: translates no page: content/pages/team.yaml does not exist");
+  });
+
+  test("a translation older than its original warns, naming the original's date and the fix; one as new passes", () => {
+    has(german({ "pages/de/blog.yaml": germanPage("/de/blog").replace('updated: "2026-09-01"', 'updated: "2026-08-01"') }), 'WARN content/pages/de/blog.yaml translation-stale: content/pages/blog.yaml changed since (2026-09-01, this de version 2026-08-01): bring it up to date (/editorial:translate) and set its updated');
+    lacks(german({ "pages/de/blog.yaml": germanPage("/de/blog").replace('updated: "2026-09-01"', 'updated: "2026-09-02"') }), "translation-stale");
+    const registries = { "authors.de.json": CLEAN["authors.json"], "categories.de.json": CLEAN["categories.json"] };
+    has(german({ ...registries, "blog/de/x.md": post(FRONTMATTER.replace('publishedAt: "2026-05-02T09:00:00.000Z"', 'publishedAt: "2026-05-01T09:00:00.000Z"'), BODY) }), "WARN content/blog/de/x.md translation-stale: content/blog/x.md changed since (2026-05-02T09:00:00.000Z, this de version 2026-05-01T09:00:00.000Z)");
+  });
+
+  test("the redirects see every language's routes", () => {
+    has(german({ "redirects.yaml": "- from: /de/blog\n  to: /blog\n" }), 'FAIL content/redirects.yaml redirect-from: [0].from "/de/blog" is a live page\'s or post\'s (content/pages/de/blog.yaml)');
+    assert.deepEqual(german({ "redirects.yaml": "- from: /de/insights\n  to: /de/blog\n" }), []);
+  });
+
+  test("stray files: a language site.locales does not declare is named so; a declared one's folder and files are the loader's", () => {
+    const lines = german({ "pages/fr/blog.yaml": germanPage("/fr/blog"), "authors.fr.json": "{}", "VOICE.fr.md": "x", "authors.de.json": CLEAN["authors.json"] });
+    has(lines, "WARN content/pages/fr stray-file: is a folder; the loader reads only files, and a language's translations, in a folder named its prefix, are site.locales' (de)");
+    has(lines, "WARN content/authors.fr.json stray-file: is a translation into a language site.locales does not declare; nothing reads it (docs/locales.md)");
+    has(lines, "WARN content/VOICE.fr.md stray-file: is a translation into a language site.locales does not declare");
     assert.equal(lines.filter((line) => line.includes("stray-file")).length, 3);
   });
 });
@@ -370,7 +486,7 @@ describe("the starter's placeholders and the kit example's brand", () => {
       scaffold(target, { kitRoot: REPO, version: "0.8.2", name: "Nimbus Notes", now: NOW, log: () => {} });
       const { site: own } = await import(pathToFileURL(path.join(target, "src/config/site.ts")).href);
       const { findings, collections } = lint({ root: target, site: own, now: NOW });
-      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2"]);
+      assert.deepEqual(collections.map((c) => `${c.name}:${c.entries}`), ["authors:0", "categories:0", "posts:0", "reviews:0", "faqs:0", "useCases:0", "pages:2", "redirects:0"]);
       assert.deepEqual(findings.filter((f) => f.rule !== "placeholder").map(format), [], "nothing but the placeholders");
       assert.ok(findings.length > 40 && findings.every((f) => f.level === "WARN"), "each placeholder by field, a warning while the site is written");
       for (const file of ["content/pages/home.yaml", "content/pages/blog.yaml", "src/config/site.ts"]) assert.ok(findings.some((f) => f.file === file), `${file} has placeholders`);

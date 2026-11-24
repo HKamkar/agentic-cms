@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "object",
+  "propertyNames": {
+    "type": "string"
+  },
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The label shown as the post's eyebrow and articleSection"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": false,
+    "description": "A post category; the key of content/categories.json is the slug a post's `category` names"
+  },
+  "description": "content/categories.json: A post category; the key of content/categories.json is the slug a post's `category` names (one file holding a map, the key is the slug)."
+}

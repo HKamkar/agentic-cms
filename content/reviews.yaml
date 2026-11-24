@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./_schemas/reviews.json
 # The client reviews on the home page slider ("Our clients review"), in
 # slide order. This entry is an obvious slot: replace the name, the role,
 # the quote and the portrait with a real one before the site goes live, or

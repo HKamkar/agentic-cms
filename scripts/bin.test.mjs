@@ -12,18 +12,28 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 
 const BIN = path.resolve(import.meta.dirname, "../bin/agentic-cms.mjs");
+const REPO = path.resolve(import.meta.dirname, "..");
 const run = (args, cwd = process.cwd()) => spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: "utf8" });
 
 test("the help is the map by family, one line per command, and names the exit codes", () => {
   const r = run(["--help"]);
   assert.equal(r.status, 0);
   assert.match(r.stdout, /^usage: agentic-cms <command> \[options\]/);
-  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs\n/);
+  assert.match(r.stdout, /\n {2}content\s+lint · check · status · docs · schema\n/);
   assert.match(r.stdout, /\n {2}lab\s+lab <new\|serve\|route\|render\|clean>\n/);
-  assert.match(r.stdout, /\n {2}site\s+init · setup · urls · serve\n/);
+  assert.match(r.stdout, /\n {2}site\s+init · upgrade · setup · urls · serve\n/);
+  assert.match(r.stdout, /\n {2}opt-in steps\s+critical-css · assemble · pr-preview\n/);
   assert.match(r.stdout, /\n\s+shot\s+one screenshot of a page/);
   assert.match(r.stdout, /0 clean · 1 findings · 2 usage or environment/);
   assert.equal(run([]).status, 2, "no command: the map, exit 2");
+});
+
+test("--version prints the version of the package the bin belongs to, and a near miss names it", () => {
+  const r = run(["--version"]);
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, `${JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8")).version}\n`);
+  assert.match(run(["--versio"]).stderr, /^agentic-cms: no command --versio — did you mean --version\?\n/);
+  assert.match(run(["--help"]).stdout, /\nagentic-cms --version: print the installed package's version/);
 });
 
 test("a wrong command names the nearest one and prints the map; a wrong subcommand and a wrong flag likewise", () => {
@@ -52,6 +62,37 @@ test("a command that reads the site refuses to run outside a site's root, with t
     assert.equal(run(["optimize-webp", "nope.webp"], dir).status, 2);
     assert.match(run(["optimize-webp", "nope.webp"], dir).stderr, /nope\.webp: no such file or folder/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("schema: the example's files are current (the build's docs --check says so too); its help names --check and --lines; outside a site's root it is refused", () => {
+  const r = run(["schema", "--check"], REPO);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^schema: content\/_schemas\/ is up to date \(8 collections\)\n$/);
+  assert.match(run(["docs", "--check"], REPO).stdout, /content\/README\.md and content\/_schemas\/ are up to date/);
+  const help = run(["schema", "--help"]);
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--check[\s\S]*--lines/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try {
+    const outside = run(["schema"], dir);
+    assert.equal(outside.status, 2);
+    assert.match(outside.stderr, /^agentic-cms schema: no src\/kit\.ts here/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("pr-preview: no pull request is a usage error naming --pr; --dry-run prints the comment and builds nothing; outside a site's root it is refused", () => {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(?:GITHUB_|CLOUDFLARE_)/.test(key)));
+  const bare = spawnSync(process.execPath, [BIN, "pr-preview"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(bare.status, 2);
+  assert.match(bare.stderr, /^pr-preview: no pull request: run it in a pull_request workflow, or name one with --pr <n>\n$/);
+  const dry = spawnSync(process.execPath, [BIN, "pr-preview", "--pr", "7", "--dry-run", "--base", "HEAD", "--json"], { cwd: REPO, encoding: "utf8", env });
+  assert.equal(dry.status, 0, dry.stderr);
+  const result = JSON.parse(dry.stdout);
+  assert.deepEqual([result.status, result.alias, result.url], ["dry-run", "pr-7", null]);
+  assert.match(result.body, /^<!-- agentic-cms:pr-preview -->\n### Preview\n/);
+  assert.match(result.body, /No page: the change touches nothing a page is built from\./, "HEAD against itself changes nothing");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "not-a-site-"));
+  try { assert.match(run(["pr-preview", "--pr", "7"], dir).stderr, /^agentic-cms pr-preview: no src\/kit\.ts here/); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test("assemble runs in any folder and, without a standalone build, says how to make one", () => {
@@ -210,63 +251,73 @@ test("init --agent-files --check: a new site is clean; an AGENTS.md past 32 KiB 
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("init --agent-files --check: a site's edit that dropped a required block, or settings without the editorial plugin, fails, naming each and where the kit has it", () => {
+test("init --agent-files --check: a rule whose kit block the site took apart without a required block, and settings without the kit's plugins, fail, naming each and where the kit has it", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
     assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
     const rule = path.join(site, ".claude/rules/seo.md");
-    fs.writeFileSync(rule, fs.readFileSync(rule, "utf8").split("\n").filter((line) => !line.startsWith("- **Tier:**")).join("\n"));
+    fs.writeFileSync(rule, fs.readFileSync(rule, "utf8").split("\n").filter((line) => !line.startsWith("- **Tier:**") && !line.startsWith("<!-- agentic-cms:")).join("\n"));
     const settings = path.join(site, ".claude/settings.json");
     fs.writeFileSync(settings, JSON.stringify({ ...JSON.parse(fs.readFileSync(settings, "utf8")), enabledPlugins: {} }));
     const check = run(["init", site, "--agent-files", "--check"]);
     assert.equal(check.status, 1);
-    assert.match(check.stderr, /^modified, required gone {2}\.claude\/rules\/seo\.md — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/rules\/seo\.md has it:\n {2}line \d+: - \*\*Tier:\*\* SEO, .{40,}…$/m);
-    assert.match(check.stderr, /^modified, required gone {2}\.claude\/settings\.json — gone from the site's copy, as node_modules\/agentic-cms\/templates\/site\/settings\.json has it:\n {2}enabledPlugins\["editorial@agentic-cms"\]: true$/m);
-    assert.match(check.stdout, /modified, required gone: the site's edit dropped what the kit marks required/);
+    assert.match(check.stderr, /^modified, required gone {2}\.claude\/rules\/seo\.md — the marks around the kit's block are gone, so a refresh cannot bring its lines in — gone from the site's file, as node_modules\/agentic-cms\/templates\/site\/rules\/seo\.md has it:\n {2}line \d+: - \*\*Tier:\*\* SEO, .{40,}…$/m);
+    assert.match(check.stderr, /^stale +\.claude\/settings\.json — the kit's enabledPlugins\["editorial@agentic-cms"\], enabledPlugins\["design@agentic-cms"\]$/m);
+    assert.match(check.stdout, /modified, required gone: a rule whose kit block the site took apart lost what the kit marks required/);
     const refresh = run(["init", site, "--agent-files"]);
     assert.equal(refresh.status, 0, refresh.stderr);
-    assert.match(refresh.stdout, /\(2 without a block the kit requires\)/);
+    assert.match(refresh.stdout, /\(1 without a block the kit requires\)/);
     assert.match(refresh.stderr, /^init: \.claude\/rules\/seo\.md is kept as the site edited it, without what the kit marks required/m);
+    assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(settings, "utf8")).enabledPlugins), ["editorial@agentic-cms", "design@agentic-cms"], "the kit's keys set again");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("init --agent-files: --check fails a site's edit with no base, --diff prints the kit's text against it (exit 1), --accept makes it the site's edit of the kit's text and --check passes; the modes go with --agent-files, one at a time", () => {
+test("init --agent-files: --diff and --accept, 0.8's hand merge, are deprecated and do nothing; the modes go with --agent-files, one at a time", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-cli-"));
   try {
     const site = path.join(dir, "site");
     assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
-    const nothing = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
-    assert.equal(nothing.status, 0, nothing.stderr);
-    assert.equal(nothing.stdout, "");
-    assert.match(nothing.stderr, /^init: \.claude\/rules\/seo\.md — nothing to merge: it is the kit's text$/m);
-    // the site's own seo rule, from before the manifest: no base
-    const manifest = JSON.parse(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"));
-    delete manifest.files[".claude/rules/seo.md"];
-    fs.writeFileSync(path.join(site, ".agentic-cms.json"), JSON.stringify(manifest));
     fs.appendFileSync(path.join(site, ".claude/rules/seo.md"), "\n- The site's own line.\n");
-    const gap = run(["init", site, "--agent-files", "--check"]);
-    assert.equal(gap.status, 1);
-    assert.match(gap.stderr, /^modified, kit changed {2}\.claude\/rules\/seo\.md — no base, and no release of the kit found as its source: --diff is the site's whole file$/m, "a refresh with this version wrote the manifest, and no git history names another");
-    assert.match(gap.stdout, /modified, kit changed: the site edited it and the kit's text changed since the site took it \(agentic-cms init --agent-files --diff <file>, merge the change by hand, then --accept <file>\)/);
-    const diff = run(["init", site, "--agent-files", "--diff", ".claude/rules/seo.md"]);
-    assert.equal(diff.status, 1);
-    assert.match(diff.stdout, /^--- a\/\.claude\/rules\/seo\.md\n\+\+\+ b\/\.claude\/rules\/seo\.md\n@@ /);
-    assert.match(diff.stdout, /^-- The site's own line\.$/m);
-    assert.match(diff.stderr, /^init: \.claude\/rules\/seo\.md has no base, and no release of the kit is known as its source: what follows is the site's whole file against the kit's current text, not the kit's change — never apply it whole;/m);
-    const accepted = run(["init", site, "--agent-files", "--accept", ".claude/rules/seo.md"]);
-    assert.equal(accepted.status, 0, accepted.stderr);
-    assert.match(accepted.stdout, /^accepted \.claude\/rules\/seo\.md — its base is the kit's current text; --check: modified$/m);
+    const before = fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8");
+    for (const mode of ["--diff", "--accept"]) {
+      const deprecated = run(["init", site, "--agent-files", mode, ".claude/rules/seo.md"]);
+      assert.equal(deprecated.status, 0, deprecated.stderr);
+      assert.equal(deprecated.stdout, "");
+      assert.match(deprecated.stderr, new RegExp(`^init: ${mode} is deprecated since 0\\.9\\.0 and goes in the next breaking release: nothing is merged by hand now`, "m"));
+    }
+    assert.equal(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"), before, "nothing written");
     const clean = run(["init", site, "--agent-files", "--check"]);
     assert.equal(clean.status, 0, clean.stderr);
-    assert.match(clean.stdout, /^init: \d+ agent files in line with the kit — \d+ as it ships them, 1 the site's own edits of its current text \(modified\)$/m);
-    const wrong = run(["init", site, "--agent-files", "--diff", "STANDARD.md"]);
-    assert.equal(wrong.status, 2);
-    assert.match(wrong.stderr, /^init: STANDARD\.md is not one of this site's agent files/);
+    assert.match(clean.stdout, /^init: \d+ agent files in line with the kit — \d+ as it ships them, 1 with the site's own lines or paths beside the kit's \(modified\)$/m);
     assert.match(run(["init", site, "--accept", ".claude/rules/seo.md"]).stderr, /^init: --accept goes with --agent-files$/m);
     const both = run(["init", site, "--agent-files", "--check", "--accept", ".claude/rules/seo.md"]);
     assert.equal(both.status, 2);
     assert.match(both.stderr, /^init: --check and --accept are separate runs: one at a time$/m);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("upgrade: outside a site exits 2 naming what is missing; --dry-run on a site lists what it would change, writes nothing and exits 0", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "upgrade-cli-"));
+  try {
+    const none = run(["upgrade"], dir);
+    assert.equal(none.status, 2);
+    assert.match(none.stderr, /^upgrade: no package\.json here: run it in the site's root$/m);
+    const site = path.join(dir, "site");
+    assert.equal(run(["init", site, "--name", "Site", "--json"]).status, 0);
+    const before = fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8");
+    const dry = run(["upgrade", "--dry-run", "--json"], site);
+    assert.equal(dry.status, 0, dry.stderr);
+    const report = JSON.parse(dry.stdout);
+    assert.equal(report.dryRun, true);
+    assert.match(report.spec, /^github:HKamkar\/agentic-cms#v\d+\.\d+\.\d+/);
+    assert.deepEqual(report.verify, []);
+    assert.equal(fs.readFileSync(path.join(site, ".agentic-cms.json"), "utf8"), before, "nothing written");
+    const text = run(["upgrade", "--dry-run", "--from", "0.8.4"], site);
+    assert.equal(text.status, 0, text.stderr);
+    assert.match(text.stdout, /^upgrade: agentic-cms 0\.8\.4 → \S+ \(--dry-run: nothing is changed\), pnpm add agentic-cms@github:/m);
+    assert.match(text.stdout, /^ {2}0\.9\.0: nothing to do$/m, "a site laid out by this kit has nothing to move");
+    assert.equal(run(["upgrade", "--from", "latest"], site).status, 2);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

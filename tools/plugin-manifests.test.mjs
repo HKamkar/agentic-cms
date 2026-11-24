@@ -49,6 +49,17 @@ describe("the manifests agree", () => {
     assert.equal(codexEntry.source.source, "local");
     assert.equal(path.resolve(REPO, codexEntry.source.path), PLUGIN);
   });
+  test("the design plugin is the kit's own .claude/skills, listed in the marketplace a site reads from the installed package, with no manifest of its own", () => {
+    const design = claudeMarket.plugins.find((p) => p.name === "design");
+    assert.ok(design, "Claude Code marketplace entry");
+    assert.equal(path.resolve(REPO, design.source), path.join(REPO, ".claude"));
+    assert.equal(design.strict, false, "the entry is its manifest");
+    assert.match(design.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(fs.readdirSync(path.join(REPO, ".claude/skills")).every((skill) => fs.existsSync(path.join(REPO, ".claude/skills", skill, "SKILL.md"))));
+    const settings = read("templates/site/settings.json");
+    assert.deepEqual(settings.extraKnownMarketplaces[claudeMarket.name].source, { source: "directory", path: "./node_modules/agentic-cms" });
+    for (const plugin of claudeMarket.plugins) assert.equal(settings.enabledPlugins[`${plugin.name}@${claudeMarket.name}`], true, `a site enables ${plugin.name}`);
+  });
   test("the versions match, Codex's with a build suffix (the release checklist)", () => {
     assert.match(generic.version, /^\d+\.\d+\.\d+$/);
     assert.equal(claude.version, generic.version);

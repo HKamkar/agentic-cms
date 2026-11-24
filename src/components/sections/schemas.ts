@@ -260,3 +260,5 @@ export type SectionType = Section["type"];
 export type SectionOf<T extends SectionType> = Extract<Section, { type: T }>;
 /** What a section component receives: the section's fields without `type`. */
 export type SectionProps<T extends SectionType> = Omit<SectionOf<T>, "type">;
+/** What a section with a call to action takes beside its fields: where it goes, in the page's language (the registry's resolve). */
+export type CtaHref = { ctaHref: string };

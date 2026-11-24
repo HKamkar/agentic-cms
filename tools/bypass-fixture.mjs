@@ -72,7 +72,7 @@ export const BYPASSES = [
   },
   {
     part: "Agent files", tier: "required",
-    edit: { ".claude/rules/components.md": (text) => text.split("\n").filter((line) => !line.startsWith("- **Tier:**")).join("\n") },
+    edit: { ".claude/rules/components.md": (text) => text.split("\n").filter((line) => !line.startsWith("- **Tier:**") && !line.startsWith("<!-- agentic-cms:")).join("\n") },
     agentFiles: [/^modified, required gone +\.claude\/rules\/components\.md/m],
   },
   {

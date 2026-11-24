@@ -18,11 +18,13 @@ import { relative } from "./lib/page-command.mjs";
 import { profileOrExit, schemeOrExit } from "./lib/profile.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
-const { LAB_DIR, ROUNDS_DIR, ROUTE_DIR, ROUTE_FILE, isSceneName, parseSizes, removeStaleTypes, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
+const { LAB_DIR, ROUNDS_DIR, isSceneName, parseSizes, removeStaleTypes, routeDir, routeFile, routeTemplate, sceneTemplate } = await import("./lib/lab.mjs");
 const { startLabServer } = await import("./lib/lab-server.mjs");
 
 const { subcommand, positionals, flags } = parseOrExit(SPECS.lab, process.argv.slice(2));
 const root = process.cwd();
+const ROUTE_DIR = routeDir(root);
+const ROUTE_FILE = routeFile(root);
 const fail = (message, code = 2) => { console.error(`lab ${subcommand}: ${message}`); process.exit(code); };
 
 if (subcommand === "new") {

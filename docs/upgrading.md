@@ -1,28 +1,116 @@
 # Upgrading a site
 
-A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). Every
-upgrade starts the same way:
+What a site can rely on from one version to the next, and what may change
+in any release, is [stability.md](stability.md).
+
+A site pins the package by tag (`github:HKamkar/agentic-cms#v<x.y.z>`). From
+0.9.0 on, one command in the site's root moves it to a release, with that
+release's own code ([upgrade.md](upgrade.md)):
+
+```bash
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade --dry-run   # what it would change
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v<next> upgrade
+```
+
+It moves the pin, runs each migration of the releases in between, the
+agent files' refresh, prints what is left by hand with its section below,
+then runs `pnpm lint` and `pnpm test`. By hand, the same steps start:
 
 ```bash
 pnpm add agentic-cms@github:HKamkar/agentic-cms#v<next>
 pnpm install
-pnpm exec agentic-cms init . --agent-files --check  # what differs from the kit's rules and skills
-pnpm exec agentic-cms init . --agent-files          # the kit's new rules and skills in; the site's own edits kept
-pnpm exec agentic-cms init . --agent-files --diff <file>    # each file kept with a kit change: that change alone
-pnpm exec agentic-cms init . --agent-files --accept <file>  # once it is merged by hand
+pnpm exec agentic-cms init . --agent-files --check  # what differs from the kit's agent files
+pnpm exec agentic-cms init . --agent-files          # the kit's lines in; the site's own kept; nothing to merge
 ```
 
-`--agent-files` rewrites a rule or a skill the site never edited and keeps
-one it did: `kept` when the release left the kit's text of it alone,
-`kept, kit changed` when it changed it. Such a file takes the release's
-change by hand: `--diff` prints it without the site's edits, the list
-below says why it was made, and `--accept` records the merge, so `--check`
-passes again ([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
+Since 0.9.0 nothing of the kit's agent files is merged by hand: the kit's
+skills are its plugins, read from the installed package; a rule is thin,
+its kit block rewritten and the site's own lines after it kept; a Codex
+stub is rewritten whatever it holds; the kit's keys in
+`.claude/settings.json` are set and the site's others kept
+([init.md § After a kit upgrade](init.md#after-a-kit-upgrade)).
 `AGENTS.md` is the site's own from the day `init`
 wrote it and is never rewritten: a release's new lines for it are listed
 too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
+
+## 0.8.4 → 0.9.0
+
+[migrating-to-0.9.0.md](migrating-to-0.9.0.md) is the guide: the upgrade
+in one command, what it leaves by hand, what a site may adopt, and the
+check. `upgrade` runs the 0.9.0 migration
+(`scripts/migrations/0.9.0.mjs`), which takes each item below it can and
+prints the rest.
+
+- **The agent files move.** The first `init . --agent-files` on 0.9.0
+  moves what 0.8 copied (`--check` calls each `legacy` until then): a
+  design skill copy the site never touched goes, in both trees, since
+  Claude Code reads the kit's from its `design` plugin and Codex from a
+  stub; one the site edited becomes its own, `.claude/skills/<name>-site/`
+  (or `.agents/skills/<name>-site/`), and the refresh lists each to keep or
+  delete; each rule becomes thin, its own lines kept after the kit's block;
+  `.agentic-cms/base/` goes; `.claude/settings.json` names the package's
+  marketplace, `./node_modules/agentic-cms`, with `design@agentic-cms`
+  enabled beside `editorial@agentic-cms`. Commit what it changed with the
+  manifest.
+- **The content schemas.** `upgrade` opens each YAML content file of the
+  standard collections with its schema's line
+  (`# yaml-language-server: $schema=…`), then runs the site's installed
+  `agentic-cms schema --lines` and `agentic-cms docs`. Together they write
+  `content/_schemas/`, the line of each collection of the site's own and
+  the field tables. The build's `docs --check` fails until they are there;
+  commit them. Where the installed command cannot run, `upgrade` prints the
+  two commands as a step by hand ([schema.md](schema.md)).
+- **The redirects.** `upgrade` writes the starter's empty
+  `content/redirects.yaml`, which the engine now reads like every
+  collection, and has the site's Next config return `redirectsFor()` from
+  `redirects()`, placed as the template has it. A config with a
+  `redirects()` of its own, or none the edit can find, is a step by hand:
+  return `[...redirectsFor(), ...the site's own]`. Redirects the host held
+  (a `_redirects` file, a dashboard's list) move into the file by hand
+  ([redirects.md](redirects.md)).
+- **Every head keeps the site's parts.** `kit.seo.pageMetadata()` and
+  `postMetadata()` now carry `og:site_name`, `og:locale` and the link to
+  the feed, which a page and a post lost until now: Next replaces the
+  layout's `openGraph` and `alternates` with a route's. The SEO audit warns
+  on a page without them. A route on `kit.seo` has nothing to do, and a
+  parity capture across the upgrade shows those tags added to every page
+  but the 404; a route whose `generateMetadata` returns `pageMetadata`
+  from `agentic-cms/seo`, which needs no site and adds none of them,
+  returns `kit.seo.pageMetadata()` instead.
+- **The peers are bounded,** each to the major the kit's CI runs:
+  `next ^16.4.5`, `react` and `react-dom ^19.2.0`, `zod ^4.6.2`,
+  `motion ^13.2.0`, and the optional `eslint ^9.22.0` and
+  `playwright-core ^1.63.0`. A site within them has nothing to do; one on
+  a newer major, `next` before 16.4.5 or `eslint` before 9.22 gets pnpm's
+  unmet-peer warning ([migrating-to-0.9.0.md § The peers'
+  ranges](migrating-to-0.9.0.md#the-peers-ranges)).
+- **By hand, `next` 16.4.5 or later (security).** Eight advisories, two of
+  them critical, end at 16.4.5. Move `next` with its `eslint-config-next`,
+  and a site on Cloudflare Workers its adapter and `wrangler` in the same
+  step: with an older adapter every page answers 500, which only
+  `pnpm preview` shows ([migrating-to-0.9.0.md § The peers'
+  ranges](migrating-to-0.9.0.md#the-peers-ranges)).
+- **A preview link, if the site wants one.** It is opt-in, so `upgrade`
+  leaves it alone. A site on Cloudflare Workers copies the `preview` job
+  from `node_modules/agentic-cms/templates/site/verify.yml` into its
+  `.github/workflows/verify.yml`, then sets the repository variable
+  `AGENTIC_CMS_PREVIEW` to `cloudflare` and the secrets
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+  ([preview.md](preview.md)).
+- **By hand, `AGENTS.md` and `CLAUDE.md`.** They are the site's own, so
+  the move leaves them. Replace what the 0.8 template copied into
+  `AGENTS.md` — its sections on styling, gotchas and the parity harness,
+  and the bullets that list the kit's docs — with the current template's
+  table, "The kit's guides"
+  (`node_modules/agentic-cms/templates/site/AGENTS.md`), and in both files
+  say that the design skills come from the kit's plugin, not
+  `.claude/skills/`.
+- **The first session after the move** may start without the kit's
+  skills: Claude Code points its registration of the marketplace at the
+  package's folder as that session starts, and the next session has them
+  ([gotchas.md § Claude Code](gotchas.md#claude-code)).
 
 ## 0.8.3 → 0.8.4
 

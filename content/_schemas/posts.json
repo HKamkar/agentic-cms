@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Written by agentic-cms schema from the collection's zod schema; do not edit by hand.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The H1 and card title, the <title> unless seoTitle is set, and the JSON-LD headline"
+    },
+    "excerpt": {
+      "description": "Card text, meta description fallback, RSS and JSON-LD description; 30–40 reader-focused words; required unless seoDescription is set",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "date": {
+      "type": "string",
+      "description": "The editorial date readers see, YYYY-MM-DD (quote it); the primary sort key, newest first\nA date, YYYY-MM-DD, quoted in YAML.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "category": {
+      "type": "string",
+      "description": "The eyebrow label and articleSection, also the related-post fallback\nA slug of content/categories.json; agentic-cms check checks it."
+    },
+    "author": {
+      "type": "string",
+      "description": "The byline, the author card and the JSON-LD author\nA slug of content/authors.json; agentic-cms check checks it."
+    },
+    "image": {
+      "description": "Hero image on the post page and the JSON-LD image, under public/images/blog/<slug>/",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "imageAlt": {
+      "description": "What the hero image shows, in a sentence",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thumbnail": {
+      "description": "Card image (820×696); defaults to image",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "thumbnailAlt": {
+      "description": "What the card image shows",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ogImage": {
+      "description": "Open Graph / Twitter image, about 1.91:1 and at least 1200 px wide; defaults to image, then thumbnail",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seoTitle": {
+      "description": "The exact <title> and og:title, 60 characters or fewer; defaults to the title followed by \" | \" and the site's name",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seoDescription": {
+      "description": "Meta description, 70–160 characters; defaults to excerpt",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "keywords": {
+      "description": "<meta keywords> and the JSON-LD keywords",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "related": {
+      "description": "Slugs shown first under \"Read next\", topped up by same category, then newest; every slug must exist, drafts included",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "A slug of content/blog/ (a file's name without its extension); agentic-cms check checks it."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "description": "Provenance note, e.g. the URL an imported post came from",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "publishedAt": {
+      "description": "ISO timestamp for JSON-LD datePublished, the RSS pubDate and the sitemap; set once when the post first goes live",
+      "anyOf": [
+        {
+          "type": "string",
+          "description": "An ISO timestamp, such as 2026-09-15T09:00:00Z."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updatedAt": {
+      "description": "ISO timestamp for JSON-LD dateModified; add it only after editing a published post (a value before publishedAt is clamped by posts.ts)",
+      "anyOf": [
+        {
+          "type": "string",
+          "description": "An ISO timestamp, such as 2026-09-15T09:00:00Z."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "draft": {
+      "description": "true keeps the post out of production builds; pnpm dev still renders it",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "title",
+    "date",
+    "category",
+    "author"
+  ],
+  "additionalProperties": false,
+  "description": "content/blog: A post's frontmatter: content/blog/<slug>.md, where the filename is the URL /blog-post/<slug> (a post's frontmatter, one file per entry, the file name is the slug)."
+}

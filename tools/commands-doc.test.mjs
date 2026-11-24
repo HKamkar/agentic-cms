@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { test } from "node:test";
 import { commandsMarkdown, END, START } from "./commands-doc.mjs";
 import { flagValue } from "../scripts/lib/args.mjs";
-import { FAMILIES, SPECS } from "../scripts/lib/specs.mjs";
+import { FAMILIES, SPECS, TOP } from "../scripts/lib/specs.mjs";
 
 
 /** The commands that run: a spec without subcommands, else its subcommands' leaves, however deep. */
@@ -22,7 +22,8 @@ test("the generated block documents every command, subcommand, flag and exit cod
   }
   assert.ok(md.startsWith(START) && md.endsWith(END));
   const headings = [...md.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
-  assert.deepEqual(headings, FAMILIES.map((f) => f.group), "one section per family, in the layers' order");
+  assert.deepEqual(headings, ["`agentic-cms`", ...FAMILIES.map((f) => f.group)], "the command line itself first, then one section per family, in the layers' order");
+  for (const name of Object.keys(TOP.flags)) assert.ok(md.includes(`| \`--${name}\` |`), `agentic-cms --${name}`);
 });
 
 test("docs/commands.md carries the current block", () => {

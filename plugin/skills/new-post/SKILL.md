@@ -15,7 +15,9 @@ permanent once pushed. It ships as `draft: true`; the user flips it.
 `content/README.md` (the door), `content/VOICE.md` (the voice and claims:
 how the brand is spelled, what is never said, the calls to action),
 `content/blog/_template.md` (every field annotated, the image names and
-sizes, the closing paragraph), `src/lib/blog/README.md` § Body pipeline
+sizes, the closing paragraph), the frontmatter's JSON Schema
+`content/_schemas/posts.json` (every key a post may hold, which are
+required, what each says), `src/lib/blog/README.md` § Body pipeline
 (the conventions the renderer keys off), the keys of
 `content/categories.json` and `content/authors.json`, the draft or brief
 the user named, and `content/editorial/workshop.yaml` if it exists (its
@@ -53,14 +55,27 @@ the user named, and `content/editorial/workshop.yaml` if it exists (its
    links site-relative (`<postPrefix>/other-slug`); the brand as
    `VOICE.md` spells it; the closing paragraph with the site's call to
    action as the template shows it.
-5. **Lint until clean.** `pnpm content:lint`: fix every `FAIL`; read every
-   `WARN` on the new file and fix it or say why it stays.
+5. **Lint until clean.** `pnpm content:check` first (what no schema
+   checks: the refs, the excerpt-or-description rule), then
+   `pnpm content:lint`: fix every `FAIL`; read every `WARN` on the new file
+   and fix it or say why it stays.
 6. **Verify** (below). Drafts render in `pnpm dev` only; to see the post in
    the built site (`pnpm preview`, or `pnpm start`), flip `draft` in the
    working tree, build, look, flip back.
 7. **Commit** `Post: <title>` on the repo's working branch. Publishing is
    the user's: they set `draft: false` and `publishedAt` (now, ISO), then
    push.
+
+## In another language
+
+In a site in several languages (`site.locales`), a post in another
+language is `content/blog/<prefix>/<slug>.md`: the original's slug when
+it translates one, its `author` and `category` keys in the language's
+registries (`authors.<prefix>.json`, `categories.<prefix>.json`), its FAQ
+under the language's `faqHeading`, its pictures the original's. Drafting
+the translation of a default post is `translate`; a language with no
+posts yet also needs its blog page and its post template and feed routes
+(`docs/locales.md` § Posts), which are the user's call.
 
 ## Verify
 

@@ -39,14 +39,21 @@ export type PostMeta = {
   format: "md" | "mdx";
   /** `draft: true` keeps a post out of production builds (still visible in `next dev`) */
   draft: boolean;
+  /** The post's language when it is not the site's default one (content/blog/<prefix>/, kit.blog.in(tag)); left out, the default's. */
+  locale?: string;
 };
 
 export type Post = PostMeta & { body: string };
 
 const WORDS_PER_MINUTE = 225;
 
-/** The post pipeline over a site's registry: the posts, their registries, the sort and the related-post logic. */
-export function createBlog(collections: Pick<Collections, "authors" | "categories" | "posts">) {
+/**
+ * The post pipeline over a site's registry: the posts, their registries,
+ * the sort and the related-post logic. `locale`: the language the
+ * collections are in, when it is not the site's default one — each post
+ * carries it, and formatDate() writes dates in it.
+ */
+export function createBlog(collections: Pick<Collections, "authors" | "categories" | "posts">, { locale }: { locale?: string } = {}) {
   const getAuthor = (slug: string): Author => ({ slug, ...readEntry(collections.authors, slug).data });
 
   const getCategory = (slug: string): Category => ({ slug, ...readEntry(collections.categories, slug).data });
@@ -83,6 +90,7 @@ export function createBlog(collections: Pick<Collections, "authors" | "categorie
       readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
       format: entry.format,
       draft: fm.draft ?? false,
+      ...(locale ? { locale } : {}),
       body: entry.body,
     };
   }
@@ -124,7 +132,10 @@ export function createBlog(collections: Pick<Collections, "authors" | "categorie
     return picked;
   }
 
-  return { getAuthor, getCategory, getAllCategories, getAllPosts, getPostBySlug, getPostsByCategory, getRelatedPosts, formatDate };
+  // A language's dates in it; the default's as they were.
+  const formatIn = locale ? (iso: string) => formatDate(iso, locale) : formatDate;
+
+  return { getAuthor, getCategory, getAllCategories, getAllPosts, getPostBySlug, getPostsByCategory, getRelatedPosts, formatDate: formatIn };
 }
 
 export type Blog = ReturnType<typeof createBlog>;

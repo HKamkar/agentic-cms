@@ -15,7 +15,9 @@ the commit. One stage per turn; a gate is a stop, not a summary.
 
 `content/VOICE.md` in full (who reads the site is the reader every stage
 writes for; the non-negotiables and claims are the rules), `content/blog/_template.md`
-(the frontmatter, the body conventions, the closing call to action),
+(the frontmatter, the body conventions, the closing call to action), the
+frontmatter's JSON Schema `content/_schemas/posts.json` (every key, which
+are required),
 `src/lib/blog/README.md` § Body pipeline, the keys of
 `content/categories.json` and `content/authors.json`, the titles and
 slugs in `content/blog/` (the internal-link candidates), the row for
@@ -86,6 +88,14 @@ site's name last), `seoDescription` (70–160, the keyword in it),
 `keywords` (3–8), `related` (the internal-link targets), the `excerpt`
 re-read against the body (30–40 words, not the title again). `pnpm
 content:lint`: fix every `FAIL` on the file, read every `WARN`. Stop.
+
+## In another language
+
+A post written in a language of `site.locales` (`src/config/site.ts`) is
+`content/blog/<prefix>/<slug>.md`, held to that language's voice block,
+`content/VOICE.<prefix>.md`, its FAQ under the language's `faqHeading`
+(`docs/locales.md` § Posts). A post that exists in the default language
+and is wanted in another is a translation: `translate`, not a rewrite.
 
 ## Hand-off
 

@@ -31,7 +31,8 @@
 // package gives a site (the fresh site's own, put back: `"baseline": []`
 // and the worktrees' ignore among them), the gates, the path's route
 // exceptions; `expected` is what its baseline must hold, file → rule →
-// count.
+// count. `UNGUARDED.grow` is one more raw link in its section, past the
+// count the baseline holds for it.
 
 /** package.json's scripts as init wrote them at 0.8.1. */
 const LEGACY_SCRIPTS = { lint: "eslint; s=$?; agentic-cms check-components || s=1; exit $s", build: "agentic-cms lint && agentic-cms docs --check && next build && agentic-cms seo" };
@@ -116,7 +117,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   alternates: { types: { "application/rss+xml": \`\${site.url}/feed.xml\` } },
 };`;
-export const KIT_HEAD = "export const metadata = kit.seo.rootMetadata();";
+export const KIT_HEAD = "export const metadata = kit.seo.rootMetadata(LOCALE);";
 
 /** Replaces `from` in a text that must hold it once, or throws naming the file: the fixture follows the starter's files. */
 const swap = (file, from, to) => (text) => {
@@ -133,7 +134,11 @@ export const LEGACY = {
     "src/components/ui/Notice.tsx": 'export function Notice() {\n  return (\n    <p className="font-label">\n      Free shipping on every order this month.\n    </p>\n  );\n}\n',
   },
   edit: {
-    "src/app/layout.tsx": (text) => swap("src/app/layout.tsx", KIT_HEAD, HAND_HEAD)(swap("src/app/layout.tsx", 'import type { Viewport } from "next";', 'import type { Metadata, Viewport } from "next";')(text)),
+    "src/app/layout.tsx": (text) => [
+      swap("src/app/layout.tsx", 'import type { Viewport } from "next";', 'import type { Metadata, Viewport } from "next";'),
+      swap("src/app/layout.tsx", 'import { copyFor } from "@/config/site";', 'import { copyFor, site } from "@/config/site";'),
+      swap("src/app/layout.tsx", KIT_HEAD, HAND_HEAD),
+    ].reduce((out, edit) => edit(out), text),
     "src/config/site.ts": swap("src/config/site.ts", "  guardEmail: true,\n", ""),
   },
   example: [
@@ -275,6 +280,7 @@ export const UNGUARDED = {
   remove: ["src/config/components.json"],
   // An agent's worktree inside the repo, gitignored: a copy of the site, one file of it mid-edit.
   worktree: { ".claude/worktrees/stale-copy/src/components/home/Draft.tsx": "export function Draft( {\n" },
+  grow: { [SECTION_FILE]: swap(SECTION_FILE, "            {cta}\n          </a>", "            {cta}\n          </a>\n          <a href={site.links.contact}>{cta}</a>") },
 };
 
 /** The composition findings SECTION_BEFORE holds, as --baseline must write them. */
@@ -293,8 +299,10 @@ export const PATHS = [
   },
 ];
 
-/** What a written baseline lacks of a path's `expected`, or holds otherwise: one line per file and rule whose count differs. */
+/** What a written baseline holds otherwise than a path's `expected`: one line per file and rule whose count differs, an entry it lacks or one it should not have. */
 export function heldOtherwise(baseline, expected) {
   const held = new Map(baseline.map(({ file, rule, count }) => [`${file} ${rule}`, count]));
-  return Object.entries(expected).flatMap(([file, rules]) => Object.entries(rules).filter(([rule, count]) => held.get(`${file} ${rule}`) !== count).map(([rule, count]) => `${file} ${rule}: ${held.get(`${file} ${rule}`) ?? "no entry"}, expected ${count}`));
+  const differ = Object.entries(expected).flatMap(([file, rules]) => Object.entries(rules).filter(([rule, count]) => held.get(`${file} ${rule}`) !== count).map(([rule, count]) => `${file} ${rule}: ${held.get(`${file} ${rule}`) ?? "no entry"}, expected ${count}`));
+  const extra = baseline.filter(({ file, rule }) => expected[file]?.[rule] === undefined).map(({ file, rule, count }) => `${file} ${rule}: ${count}, expected no entry`);
+  return [...differ, ...extra];
 }

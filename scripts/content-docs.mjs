@@ -14,6 +14,7 @@
 import "./lib/load-ts.mjs";
 import fs from "node:fs";
 import { parseOrExit } from "./lib/args.mjs";
+import { schemaFiles, staleSchemas, writeSchemas } from "./lib/content-schema.mjs";
 import { SPECS } from "./lib/specs.mjs";
 
 const { check } = parseOrExit(SPECS.docs, process.argv.slice(2)).flags;
@@ -22,7 +23,8 @@ const README = "content/README.md";
 const START = "<!-- content-docs:start -->";
 const END = "<!-- content-docs:end -->";
 
-const { lookup, sourceOf } = await import("agentic-cms/content");
+const content = await import("agentic-cms/content");
+const { lookup, sourceOf } = content;
 const { kit } = await import("@/kit");
 const { collections } = kit;
 
@@ -153,13 +155,16 @@ if (from === -1 || to === -1) {
   process.exit(2);
 }
 const next = current.slice(0, from) + generated + current.slice(to + END.length);
+const schemas = schemaFiles(collections, { z: (await import("zod")).z, ...content });
 if (check) {
-  if (next !== current) {
-    console.error(`content-docs: ${README} is out of date — run agentic-cms docs (pnpm content:docs) and commit the result`);
-    process.exit(1);
-  }
-  console.log(`content-docs: ${README} is up to date`);
+  const stale = staleSchemas(".", schemas, { fs });
+  for (const { file, status } of stale) console.error(`content-docs: ${file} is ${status}`);
+  if (next !== current) console.error(`content-docs: ${README} is out of date — run agentic-cms docs (pnpm content:docs) and commit the result`);
+  if (stale.length) console.error("content-docs: content/_schemas/ is out of date — run agentic-cms docs (pnpm content:docs) or agentic-cms schema, and commit the result");
+  if (next !== current || stale.length) process.exit(1);
+  console.log(`content-docs: ${README} and content/_schemas/ are up to date`);
 } else {
   fs.writeFileSync(README, next);
-  console.log(`content-docs: wrote ${Object.keys(collections).length} collections to ${README}`);
+  const changed = writeSchemas(".", schemas, { fs });
+  console.log(`content-docs: wrote ${Object.keys(collections).length} collections to ${README}; ${changed.length} schema file(s) changed under content/_schemas/`);
 }

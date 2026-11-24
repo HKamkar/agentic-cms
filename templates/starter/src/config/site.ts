@@ -69,6 +69,19 @@ export const site = {
   },
 } as const satisfies SiteConfig;
 
+/** What the chrome says, in any language: the shape of `chrome` and of each language's block in `copy`. */
+type ChromeWords = {
+  skipLink: string;
+  navbar: { label: string; menu: string };
+  themeToggle: { system: string; light: string; dark: string };
+  footer: { quickLinks: string; social: string };
+  notFound: { label: string; title: string; text: readonly (string | { label: string; href: string })[] };
+  post: { eyebrow: string; readingTime: (minutes: number) => string; related: string };
+};
+
+/** What the consent banner says, in any language. */
+type ConsentWords = { title: string; text: string; decline: string; allow: string; settings: string };
+
 /**
  * The chrome's own words: what the layout, the header, the footer, the 404
  * and the post template say around a page's copy (the page's is its file in
@@ -99,7 +112,7 @@ export const chrome = {
     readingTime: (minutes: number) => `${minutes} min read`,
     related: "Read next",
   },
-} as const;
+} as const satisfies ChromeWords;
 
 /**
  * The consent banner's copy (ui/ConsentBanner; the mechanics are
@@ -115,4 +128,21 @@ export const consentBanner = {
   decline: "Decline",
   allow: "Allow",
   settings: "Cookie settings",
-} as const;
+} as const satisfies ConsentWords;
+
+/**
+ * The chrome's and the consent banner's words in each of the site's
+ * languages, keyed by its tag: the default language's are the two above. A
+ * language of site.locales adds its block, its 404's links under its own
+ * prefix (docs/locales.md).
+ */
+const copy: Record<string, { chrome: ChromeWords; consentBanner: ConsentWords }> = {
+  [site.locale]: { chrome, consentBanner },
+};
+
+/** The chrome's and the banner's words in the language with the tag: what the layout, the footer, the 404 and the post template read. */
+export function copyFor(locale: string) {
+  const words = copy[locale];
+  if (!words) throw new Error(`src/config/site.ts: no words for the chrome in "${locale}" — a language of site.locales adds its block to copy`);
+  return words;
+}

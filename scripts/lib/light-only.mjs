@@ -40,11 +40,14 @@ const EDITS = {
   ],
   "src/config/site.ts": [
     edit("the theme toggle's labels in the chrome's words and the comment above them", new RegExp(`${COMMENT_ABOVE}^[ \\t]*themeToggle: \\{[^}]*\\},\\n`, "m"), ""),
+    edit("the theme toggle's labels in the type of the chrome's words", /^[ \t]*themeToggle: \{[^}]*\};\n/m, ""),
   ],
-  "src/app/layout.tsx": [
+  "src/components/ui/SiteLayout.tsx": [
     edit("the theme script and the comment above it", new RegExp(`${COMMENT_ABOVE}^const THEME_SCRIPT\\b[^\\n]*\\n\\n?`, "m"), ""),
     edit("the theme script's tag", /^[^\n]*\bTHEME_SCRIPT\b[^\n]*\n/gm, ""),
     edit("suppressHydrationWarning on <html>", / suppressHydrationWarning\b/g, ""),
+  ],
+  "src/app/layout.tsx": [
     edit("the viewport's colorScheme", /colorScheme: "light dark"/, 'colorScheme: "light"'),
   ],
   "src/styles/base.css": [
