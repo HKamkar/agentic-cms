@@ -68,6 +68,18 @@ read, by symptom:
   once; the lasting fix is self-hosting with `next/font/local`, which
   fetches nothing.
 
+- **A build that fails once, with instructions for the agent.** Since 16.4
+  `next dev` and `next build` can ask the npm registry whether an advisory
+  affects the installed Next, and an agent's first run that finds one exits 1
+  with `SecurityFatalError`; the same command run again passes. Reproduced
+  with 16.4.4. Inside a command that builds (a proof, a preview) it reads as
+  a broken build. `experimental: { agentUpgrade: false }` in the Next config
+  turns it off, as the example and `init`'s template have it; the alerts
+  themselves are GitHub's and `pnpm audit`'s.
+- **A heading of `AGENTS.md` that changes by itself.** `next dev` writes the
+  block between its `BEGIN:nextjs-agent-rules` marks, in the words of the
+  installed version. Commit what it wrote with the upgrade.
+
 ## Tailwind v4
 
 - **Grid items that span into implicit columns collapse.** An item placed

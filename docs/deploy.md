@@ -34,6 +34,14 @@ pnpm upload        # build and upload a version without deploying it
 - **500s straight after `next build`.** `next start` and `wrangler dev`
   on a plain Next build answer 500: only `pnpm preview`, `pnpm run deploy`
   and `pnpm upload` fill the asset cache the Worker reads.
+- **The adapter moves with Next.** Each `@opennextjs/cloudflare` knows the
+  Next versions before it. With 1.20.8 and Next 16.4.6 the lint, the tests
+  and the build all passed, and every page of the Worker answered 500
+  (`Unexpected loadManifest(…preview-props.json) call!`). Next 16.4.5 and
+  later take `@opennextjs/cloudflare` 1.20.16 or later (its peer range; the
+  example runs 1.20.18), with the `wrangler` it asks for. Move them in one
+  step, then open the pages with `pnpm preview`: no other check runs the
+  Worker.
 - **About 40 "Failed to copy node_modules/…" lines** during the OpenNext
   build are an OpenNext bug and harmless.
 - **No native modules under `src/`.** Everything there is bundled for the

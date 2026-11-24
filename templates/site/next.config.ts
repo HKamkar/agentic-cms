@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   // Images are pre-sized files shipped with the repo; the optimizer is off
   // so no image service is needed wherever the site runs.
   images: { unoptimized: true },
+  // Next 16.4 can ask the npm registry about advisories during a build, and an
+  // agent's first build that finds one fails with instructions for the agent.
+  // A build fetches nothing here; the alerts are GitHub's
+  // (node_modules/agentic-cms/docs/gotchas.md).
+  experimental: { agentUpgrade: false },
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
 };
 
