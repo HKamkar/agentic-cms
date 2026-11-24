@@ -17,7 +17,10 @@ const TEMPLATE_0_8 = "import type { NextConfig } from \"next\";\n\n// Extra host
 
 test("0.8's template takes redirects() as this one has it, and once only", () => {
   const { text } = withRedirects(TEMPLATE_0_8);
-  assert.equal(text, fs.readFileSync(path.join(KIT, "templates/site/next.config.ts"), "utf8"));
+  // The template's other line since 0.8 is agentUpgrade, with its comment, which a site adds by hand (docs/migrating-to-0.9.0.md).
+  const [own, ...more] = fs.readFileSync(path.join(KIT, "templates/site/next.config.ts"), "utf8").split(/(?:  \/\/ [^\n]*\n)+  experimental: \{ agentUpgrade: false \},\n/);
+  assert.equal(more.length, 1, "the template sets agentUpgrade once");
+  assert.equal(text, own + more[0]);
   assert.deepEqual(withRedirects(text), { text }, "a config that calls redirectsFor() is left as it is");
 });
 

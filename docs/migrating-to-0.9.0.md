@@ -9,7 +9,8 @@ This is for a site on agentic-cms 0.8.x. In 0.9.0:
   the build checks and `next.config.ts` serves;
 - every page's head keeps the site's Open Graph name, its locale and the
   link to its feed;
-- each peer of the package is bounded to the major the kit's CI runs
+- each peer of the package is bounded to the major the kit's CI runs, and
+  `next` starts at 16.4.5, which fixes eight advisories
   ([§ The peers' ranges](#the-peers-ranges)).
 
 And, opt-in: a preview link on every pull request, and other languages
@@ -276,7 +277,7 @@ translation.
 0.8 left `next`, `eslint` and `playwright-core` open above their floors
 (`>=16.3.6`, `>=9`, `>=1.63.0`). 0.9.0 bounds every peer to the major its
 CI runs, and tests each range at both ends
-([stability.md § Peers](stability.md#peers)): `next ^16.3.6`, `react` and
+([stability.md § Peers](stability.md#peers)): `next ^16.4.5`, `react` and
 `react-dom ^19.2.0`, `zod ^4.6.2`, `motion ^13.2.0`, and the optional
 `eslint ^9.22.0` and `playwright-core ^1.63.0`.
 
@@ -289,9 +290,37 @@ CI runs, and tests each range at both ends
   what breaks there is the site's to find. Move the peer back within the
   range (`pnpm add -D eslint@^9.22.0`), or keep the newer major knowing
   that, until a release of the kit supports it and its changelog says so.
-- **A site below a floor:** `eslint` before 9.22, whose `eslint.config.mjs`
-  (as `init` writes it) imports `eslint/config`, which 9.22 added. Move it
-  up: `pnpm add -D eslint@^9.22.0`.
+- **A site below a floor:**
+  - `eslint` before 9.22, whose `eslint.config.mjs` (as `init` writes it)
+    imports `eslint/config`, which 9.22 added. Move it up:
+    `pnpm add -D eslint@^9.22.0`.
+  - `next` before 16.4.5. Two critical advisories (remote code execution:
+    in `use cache` functions that return typed arrays, and in image
+    optimisation through `sharp` before 0.35.5) and six medium ones end
+    there. The kit, its example and `init`'s template reach none of them:
+    no `use cache`, no Edge route, no cookie, the optimiser off, and a form
+    endpoint that never passes on a fetched response. A site's own code may.
+    Move it with its ESLint config:
+
+    ```bash
+    pnpm add next@16.4.6 && pnpm add -D eslint-config-next@16.4.6
+    ```
+
+    On Cloudflare Workers, the adapter and `wrangler` in the same step, then
+    `pnpm preview` and the pages opened one by one, because the lint, the
+    tests and the build pass on a Worker that answers 500
+    ([deploy.md § Cloudflare Workers](deploy.md#cloudflare-workers)):
+
+    ```bash
+    pnpm add -D @opennextjs/cloudflare@^1.20.18 wrangler@^4.167.0
+    ```
+
+    Then `pnpm build`, and a proof of the site's pages
+    ([visual-parity.md](visual-parity.md)). `next dev` rewrites a heading in
+    its block of `AGENTS.md`: commit it. Next 16.4 also stops an agent's
+    first build when it knows an advisory;
+    `experimental: { agentUpgrade: false }` in the site's Next config turns
+    that off, as `init`'s template has it ([gotchas.md](gotchas.md#nextjs)).
 
 ## When something fails
 

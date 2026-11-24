@@ -81,11 +81,17 @@ prints the rest.
   from `agentic-cms/seo`, which needs no site and adds none of them,
   returns `kit.seo.pageMetadata()` instead.
 - **The peers are bounded,** each to the major the kit's CI runs:
-  `next ^16.3.6`, `react` and `react-dom ^19.2.0`, `zod ^4.6.2`,
+  `next ^16.4.5`, `react` and `react-dom ^19.2.0`, `zod ^4.6.2`,
   `motion ^13.2.0`, and the optional `eslint ^9.22.0` and
   `playwright-core ^1.63.0`. A site within them has nothing to do; one on
-  a newer major, or `eslint` before 9.22, gets pnpm's unmet-peer warning
-  ([migrating-to-0.9.0.md § The peers'
+  a newer major, `next` before 16.4.5 or `eslint` before 9.22 gets pnpm's
+  unmet-peer warning ([migrating-to-0.9.0.md § The peers'
+  ranges](migrating-to-0.9.0.md#the-peers-ranges)).
+- **By hand, `next` 16.4.5 or later (security).** Eight advisories, two of
+  them critical, end at 16.4.5. Move `next` with its `eslint-config-next`,
+  and a site on Cloudflare Workers its adapter and `wrangler` in the same
+  step: with an older adapter every page answers 500, which only
+  `pnpm preview` shows ([migrating-to-0.9.0.md § The peers'
   ranges](migrating-to-0.9.0.md#the-peers-ranges)).
 - **A preview link, if the site wants one.** It is opt-in, so `upgrade`
   leaves it alone. A site on Cloudflare Workers copies the `preview` job

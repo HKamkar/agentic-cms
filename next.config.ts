@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   // the Worker needs no Cloudflare Images binding. Flip this off (and enable the
   // "images" binding in wrangler.jsonc) if you want on-the-fly resizing.
   images: { unoptimized: true },
+  // Next 16.4 can ask the npm registry about advisories during a build, and an
+  // agent's first build that finds one fails with instructions for the agent.
+  // A build fetches nothing here; the alerts are GitHub's (docs/gotchas.md).
+  experimental: { agentUpgrade: false },
   ...(allowedDevOrigins?.length ? { allowedDevOrigins } : {}),
 };
 

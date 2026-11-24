@@ -123,7 +123,7 @@ export function layLocale(site, kitRoot) {
   for (const entry of ["layout.tsx", "[[...slug]]", "blog-post", "not-found.tsx"]) move(site, `src/app/${entry}`, `src/app/(default)/${entry}`);
   write(site, "src/app/(default)/layout.tsx", swap("layout.tsx", read(site, "src/app/(default)/layout.tsx"), 'import "./globals.css";', 'import "../globals.css";'));
   write(site, "src/app/global-not-found.tsx", guideFile(kitRoot, "src/app/global-not-found.tsx"));
-  write(site, "next.config.ts", swap("next.config.ts", read(site, "next.config.ts"), "  images: { unoptimized: true },\n", "  images: { unoptimized: true },\n  // A root layout per language: a path no page answers gets src/app/global-not-found.tsx (docs/locales.md).\n  experimental: { globalNotFound: true },\n"));
+  write(site, "next.config.ts", swap("next.config.ts", read(site, "next.config.ts"), "  experimental: { agentUpgrade: false },\n", "  // A root layout per language: a path no page answers gets src/app/global-not-found.tsx (docs/locales.md).\n  experimental: { agentUpgrade: false, globalNotFound: true },\n"));
   const inGerman = (file) => swap(file, read(site, file), "const LOCALE = kit.locales.default.locale;", 'const LOCALE = "de";');
   write(site, "src/app/de/layout.tsx", inGerman("src/app/(default)/layout.tsx"));
   write(site, "src/app/de/[[...slug]]/page.tsx", inGerman("src/app/(default)/[[...slug]]/page.tsx"));

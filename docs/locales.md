@@ -139,7 +139,8 @@ route itself, and a route group as the app folder; a language
 
 With no root layout at `src/app`, a path no page answers needs a document
 of its own: `src/app/global-not-found.tsx`, in the default language, which
-`next.config.ts` turns on with `experimental: { globalNotFound: true }`.
+`next.config.ts` turns on with `globalNotFound: true` in its `experimental`
+settings, beside `agentUpgrade` (a second `experimental` does not compile).
 A page that calls `notFound()` still renders its tree's `not-found.tsx`.
 
 <!-- locales: src/app/global-not-found.tsx -->
@@ -147,7 +148,7 @@ A page that calls `notFound()` still renders its tree's `not-found.tsx`.
 // The 404 of a site in several languages (docs/locales.md): with a root
 // layout per language, none at src/app wraps a not-found page, so a path no
 // page answers gets this whole document, in the default language.
-// next.config.ts turns it on: experimental: { globalNotFound: true }.
+// next.config.ts turns it on: globalNotFound: true, in its experimental settings.
 import type { Viewport } from "next";
 import { SiteLayout } from "@/components/ui/SiteLayout";
 import { copyFor, site } from "@/config/site";
@@ -186,7 +187,7 @@ at the same URL.
 4. The first language added moves the default language's routes into
    `src/app/(default)/` (its layout's stylesheet import becomes
    `../globals.css`), adds `src/app/global-not-found.tsx` and
-   `experimental: { globalNotFound: true }` in `next.config.ts`; each
+   `globalNotFound: true` to `experimental` in `next.config.ts`; each
    language then copies the layout and the catch-all into
    `src/app/<prefix>/` with `LOCALE` its tag, and a language with posts
    the post template and the feed too.

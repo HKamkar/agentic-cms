@@ -159,7 +159,7 @@ ranges](migrating-to-0.9.0.md#the-peers-ranges)).
 
 | Peer | Range | What needs it |
 |---|---|---|
-| `next` | `^16.3.6` | the pages, the post pipeline, the head |
+| `next` | `^16.4.5` | the pages, the post pipeline, the head |
 | `react` | `^19.2.0` | the components, the post body |
 | `react-dom` | `^19.2.0` | the components |
 | `zod` | `^4.6.2` | the content schemas: the collections, a page's blocks, a site's own collection |
