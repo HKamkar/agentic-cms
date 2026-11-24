@@ -531,7 +531,7 @@
    ".claude/skills/design/SKILL.md": "sha256:06832559059f56e42cbd7d7b7096064bffce8359b05d9b6dd08efe82bea4db49",
    ".claude/skills/setup/SKILL.md": "sha256:b2097bd46eed3c32ff10168fd6fd61233d689883a9290a1f7e81ecc6511d8449"
   },
-  "0.9.0-rc.0": {
+  "0.9.0": {
    ".agents/skills/design-graphics/SKILL.md": "sha256:e0ab0459a2b8f40b8db29b73c77af5fe9a84701d86543e66003f4e8be5ec2a29",
    ".agents/skills/design-graphics/references/svg-motion.md": "sha256:6221f0aeb83de41ee26f5e3896b561616f9e325de1a8555475a16215e3659d4b",
    ".agents/skills/design-icons/SKILL.md": "sha256:4fa1e1e50ffd49b2210bbd1820565112d695775e36ec4e36a513cd3b3b357f26",

@@ -504,6 +504,33 @@ put the reasons back by hand. The fix was one pull request (#144).
 
 **The release.** #145; `v0.8.4` is on main's merge commit, d305b5b.
 
+## Phase 16 — 0.9.0, a standard npm package (2026-11-24)
+
+`docs/roadmap.md` is the plan. Its jobs landed as one pull request a lane
+(#146–#150), then two from running it: the security floors (#152) and the
+check that runs the Worker (#153).
+
+**What changed:**
+- **What a site gets:** a JSON Schema for every content file, redirects as
+  content, a preview link on every pull request, other languages
+  (experimental), and every head keeping the site's Open Graph name, locale
+  and feed link.
+- **What it can rely on:** `docs/stability.md` marks every export, command
+  and file format, and `agentic-cms upgrade` runs each release's migration.
+- **Fewer copies:** the kit's skills are its plugins, read from the installed
+  package; a rule is thin and nothing is merged on an upgrade.
+- **The package:** the tarball is a contract (`tools/pack-files.txt`), each
+  peer is bounded to one major and tested at both ends, and a pushed tag is
+  checked, published to npm from CI on the owner's approval, and tested from
+  the registry.
+- **Security:** `next` starts at 16.4.5 and `sharp` at 0.35.5. The Next bump
+  broke every page of the Worker with the lint, the tests and the build
+  green, so CI now runs the Worker and compares it with the build.
+
+**What was left out, on the owner's word:** a second candidate, the gate on
+two sites before the release, and jobs 3 and 4 (install from npm, `pnpm
+create agentic-cms`), which follow 0.9.0.
+
 ## Verification recipe
 
 ```bash

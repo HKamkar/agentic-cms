@@ -10,6 +10,13 @@
 > (`git show v0.8.0:docs/roadmap.md`), its principles, hygiene list,
 > per-job verification and open Later items carried into this one, and
 > 0.8.2's is `docs/roadmap-0.8.2.md`.
+>
+> **2026-11-24, the owner:** 0.9.0 goes out straight after `rc.0`, with no
+> second candidate. The first publish from CI is 0.9.0 itself, after a dry
+> run on `main`. The gate on two sites is not run before it: each site's
+> upgrade is S. Jobs 3 and 4 (install from npm, `pnpm create agentic-cms`)
+> and O5 move after 0.9.0, so a new site still installs the kit from GitHub
+> by tag. Below, "the next candidate" and "the gate" read with that.
 
 A site installs agentic-cms from GitHub by tag
 (`github:HKamkar/agentic-cms#v0.8.0`). That works, but it is not how a
@@ -35,7 +42,7 @@ The names are free. On 2026-10-16 the registry answered 404 for
 name-similarity check would refuse a new package over. On 2026-10-29 it
 still answered 404 for `agentic-cms`: nothing is published yet.
 
-**The target.** After 0.9.0, an empty folder becomes a site with:
+**The target.** After jobs 3 and 4, an empty folder becomes a site with:
 
 ```
 pnpm create agentic-cms my-site
@@ -142,7 +149,7 @@ or approval. (O2, a hand publish of `v0.8.4`, went with D2's change: no
     disallow tokens".
 
   A new trusted publisher expires unless its first publish succeeds within
-  two days, so the first publish from CI, `v0.9.0-rc.1`, follows O3 within
+  two days, so the first publish from CI, `v0.9.0`, follows O3 within
   two days.
 - **O4:** create the GitHub environment `npm`, with the owner as its
   required reviewer and deployments allowed from `v*` tags only. The
@@ -227,8 +234,8 @@ Order has it.
 | 0 | This plan into the repo | `docs/roadmap.md` becomes this file |
 | 1 | The tarball is the product | the metadata, a fresh `dist/`, types on every subpath, the file list as a contract |
 | 2 | Release from CI | `release.yml`: checks, OIDC publish, GitHub Release, a smoke test from the registry |
-| 3 | Install from npm everywhere | `init`'s dependency spec, `allowBuilds`, every install line |
-| 4 | `pnpm create agentic-cms` | `packages/create-agentic-cms/`, a thin wrapper around `init` |
+| 3 | Install from npm everywhere (after 0.9.0) | `init`'s dependency spec, `allowBuilds`, every install line |
+| 4 | `pnpm create agentic-cms` (after 0.9.0) | `packages/create-agentic-cms/`, a thin wrapper around `init` |
 | 5 | `agentic-cms upgrade` | the upgrade guide made executable, with migrations per version |
 | 6 | What a site can rely on | one page, `docs/stability.md`, a stable/experimental column on `docs/parts.md`, and the deprecation policy |
 | 7 | Peers and engines | bounded ranges, tested at the floor and at the newest version |
@@ -238,7 +245,7 @@ Order has it.
 | 11 | A preview link on every pull request | a CI job that uploads a preview version and comments its link and the pages it touches |
 | 12 | The docs, the README, the way from 0.8 | the sweep, how the kit differs from a database CMS, `docs/migrating-to-0.9.0.md` |
 | 13 | A site in several languages | `site.locales`, a translation beside its original, a root layout per language, hreflang held by the audit, posts per language, the `translate` skill (experimental) |
-| R | Release 0.9.0 | `rc.1` on `next`, the gate, `0.9.0` on `latest` |
+| R | Release 0.9.0 | `0.9.0` on `latest`, from CI, straight after `rc.0` |
 | S | The sites follow | `upgrade` in each site's own session |
 
 ### 0 — This plan into the repo
@@ -702,8 +709,9 @@ page, and nothing pairs a page with its translation.
    owner publishes it by hand, under `next`, from the tarball the tag's
    `check` job proved (D2): it holds the names, and its npm page is where
    the README is checked (job 1).
-2. O3 right after it, then `v0.9.0-rc.1` from CI within two days: the
-   first publish through the workflow, with the owner's approval. It proves
+2. O3, then the first publish from CI within two days, with the owner's
+   approval. It was to be `v0.9.0-rc.1`; it is `v0.9.0` (the owner,
+   2026-11-24), after a dry run of the workflow on `main`. It proves
    the pipeline end to end (OIDC, provenance, the registry smoke test,
    `npm audit signatures`) before anything depends on it.
 3. Jobs 3 and 4 land (O5 with job 4), and the next `-rc.N`, once every job
@@ -742,9 +750,8 @@ Phase 1        Lane A  [8 schema] → [9 redirects] → [11 preview] (+ O6)
                Lane C  [13 languages], after lane A
 Phase 2        [12 docs, README, migrating-to-0.9.0]   (its README section may land first)
 Phase 3        [1 tarball] → [7 peers] → [2 release CI]   (one pull request)
-               → rc.0 (owner, by hand) → O3 → rc.1 (CI, within two days)
-               → [3 npm installs] → [4 create] (+ O5)    (a later pull request)
-then           rc.N → gate → R → S
+               → rc.0 (owner, by hand) → dry run → O3 → 0.9.0 (CI, within two days)
+after 0.9.0    S, and [3 npm installs] → [4 create] (+ O5)    (a later pull request)
 ```
 
 - Job 6 comes first in its lane: its test then makes every later job add
@@ -768,9 +775,9 @@ rebases:
 
 - **The first publish has no provenance.**
   - *Hold:* D2's hand publish covers `rc.0` alone; O3 follows it, and
-    `rc.1`, from CI, carries provenance like every publish after it.
+    0.9.0, from CI, carries provenance like every publish after it.
 - **A trusted publisher expires before its first publish.**
-  - *Hold:* `rc.1` goes out within two days of O3.
+  - *Hold:* 0.9.0 goes out within two days of O3.
 - **A trusted publisher that doesn't match the run fails with E404.** The
   owner, repository, workflow file name and environment must match the run
   exactly.

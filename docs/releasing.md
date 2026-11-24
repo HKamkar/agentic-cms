@@ -95,10 +95,13 @@ proved as the run's artifact.
    files' record (`pnpm agent-files:releases`). Then the release pull
    request from `develop` into `main`, merged as a merge commit, never
    with `--delete-branch`: its head is `develop`.
-2. The owner tags the merge on `main`, an annotated tag, and pushes it, as
+2. The dry run on `main` (above), which can start there only because the
+   merge brought the workflow: a manual run needs it on the default branch.
+3. The owner tags the merge on `main`, an annotated tag, and pushes it, as
    for a candidate.
-3. The owner approves `publish`; `after` follows. `latest` now names the
-   release.
+4. The owner approves `publish`; `after` follows. `latest` now names the
+   release. Where `next` still names an older candidate, the owner points it
+   at the release: `pnpm dist-tag add agentic-cms@X.Y.Z next`.
 
 ## The first publish of a package, by hand
 
@@ -161,7 +164,7 @@ one packed by hand:
      disallow tokens", then Update Package Settings. The trusted publisher
      goes on working: "The "disallow tokens" setting only affects
      traditional token authentication."
-7. **`rc.1` from CI within two days of O3.** "A newly created trusted
+7. **The first publish from CI within two days of O3** (0.9.0's own). "A newly created trusted
    publisher configuration must complete its first successful publish
    within 2 days", or "it expires and can no longer be used or edited"
    ([npm Docs](https://docs.npmjs.com/trusted-publishers)). That first

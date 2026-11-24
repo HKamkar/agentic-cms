@@ -4,7 +4,7 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.9.0] — 2026-11-24
 
 - Docs: `docs/roadmap.md` is the plan for 0.9.0, moved from `docs/roadmap-0.9.0.md`. The 0.8.0 roadmap's principles, hygiene list, per-job verification and open Later items carry over, and the 0.8.0 text stays in history.
 - `docs/stability.md`: what a site can rely on between versions. It says what a stable part keeps, what may change in any release, how a change is announced, the policy before and after 1.0.0 and the support line, and marks every export, command and file format stable or experimental (the lab alone is experimental). `docs/parts.md` gains a Stability column, and `tools/parts-doc.mjs` fails an unmarked export or command and a map row that disagrees with the page. `deprecated()` (`src/lib/deprecated.ts`) is the warning a deprecated part gives, once per process.

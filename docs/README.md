@@ -149,7 +149,8 @@ The build, its gates and the setup.
   can rely on, the kit's skills read from the package, a preview link per
   pull request, `upgrade`, other languages), then the docs, then
   agentic-cms as a standard npm package, published from CI with
-  provenance, with `pnpm create agentic-cms`. The 0.8.0 plan it replaced is in history
+  provenance; installing from npm and `pnpm create agentic-cms` follow
+  0.9.0. The 0.8.0 plan it replaced is in history
   (`git show v0.8.0:docs/roadmap.md`).
 - [roadmap-0.8.2.md](roadmap-0.8.2.md) — what 0.8.2 adds: every part of
   the kit on one map in four layers, the engines required and the rest

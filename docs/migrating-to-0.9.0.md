@@ -61,8 +61,8 @@ pnpm dlx agentic-cms@0.9.0 upgrade --dry-run   # what it would change; changes, 
 pnpm dlx agentic-cms@0.9.0 upgrade
 ```
 
-A release candidate is `agentic-cms@next`. The command runs 0.9.0's own
-code in the site's root ([upgrade.md](upgrade.md)), in this order:
+The command runs 0.9.0's own code in the site's root
+([upgrade.md](upgrade.md)), in this order:
 
 1. **The version the site is on:** `node_modules/agentic-cms`'s, or the
    one `.agentic-cms.json` records when that is older. `--from 0.8.4`
