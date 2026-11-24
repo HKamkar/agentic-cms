@@ -40,8 +40,10 @@ pnpm upload        # build and upload a version without deploying it
   (`Unexpected loadManifest(…preview-props.json) call!`). Next 16.4.5 and
   later take `@opennextjs/cloudflare` 1.20.16 or later (its peer range; the
   example runs 1.20.18), with the `wrangler` it asks for. Move them in one
-  step, then open the pages with `pnpm preview`: no other check runs the
-  Worker.
+  step, then open the pages with `pnpm preview`: the lint, the tests and the
+  build do not run the Worker. The kit's own CI does, for the example
+  (`pnpm test:worker`: every prerendered page, byte for byte); a site's does
+  not.
 - **About 40 "Failed to copy node_modules/…" lines** during the OpenNext
   build are an OpenNext bug and harmless.
 - **No native modules under `src/`.** Everything there is bundled for the

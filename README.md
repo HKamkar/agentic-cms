@@ -567,6 +567,7 @@ pnpm kit --help      # every command; <command> --help prints its flags and exit
 ```bash
 pnpm test            # the content engine's, the post pipeline's, the lint's and the command line's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
+pnpm test:worker     # the real Worker, built and served, compared with the pages the build prerendered
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
 pnpm lint:pkg        # the tarball as npm will hold it: its files as tools/pack-files.txt lists them (pnpm docs:pack), publint, Are the Types Wrong
 pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
