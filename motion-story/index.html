@@ -266,7 +266,7 @@ else if(f.w>=0.){float h=fract(p.y+uT*.02*(.5+s));p=storm(p.x-uT*(.55+1.5*(1.-h)
 else if(f.w>-1.5){float r=p.z;float a=p.x-uT*2.6/(.8+r*.5);vec2 b=bend(0.);p=vec3(cos(a)*r+b.x,-7.35+p.y*(.6+.4*sin(uT*.7+s*30.)),sin(a)*r+b.y);}
 else if(f.w>-2.5){float a=p.x-uT*.15;p=vec3(cos(a)*p.z,13.9+p.y,sin(a)*p.z);}
 else p=rY(p,-uT*.05);}
-else if(k==2){p=rY(p,uT*.16);if(s>=0.)p+=vec3(sin(uT+s*40.),cos(uT*.8+s*60.),sin(uT*.7+s*80.))*.06;}
+else if(k==2){p=rY(p,uT*.05);if(s>=0.)p+=vec3(sin(uT+s*40.),cos(uT*.8+s*60.),sin(uT*.7+s*80.))*.06;}
 else if(k==3){float r=length(p.xy);if(s<-1.5||(s>=0.&&abs(p.z)<.8&&r>4.2)){float t=clamp((r-4.35)/6.05,0.,1.),hold=uFrom==3?ss(.5,.6,uLocal)*(1.-.35*ss(.62,.8,uLocal)):0.;float d=(1.-t)*(1.-t)*(.2*sin(uT*.7)+.1*sin(uT*1.9+1.)-1.*hold);float a=.02*sin(r*1.4-uT*.6+atan(p.y,p.x+1e-6)*5.)*(1.-t)+uT*.012;p.xy*=(r+d)/max(r,.01);p=rZ(p,a);}else if(s>=0.){if(abs(p.z)>.8)p.z=mod(p.z+46.+uT*(1.5+s*2.5),70.)-46.;else p.z+=sin(r*1.6-uT*2.4)*.16;}}
 else if(k==4){if(s>=0.&&f.w>1.1){if(f.w<2.){p+=vec3(sin(uT*.31+s*61.),sin(uT*.43+s*37.),cos(uT*.27+s*83.))*1.3;}else{p.y+=mod(uT*(.12+.2*s)+s*9.,3.);p.x+=sin(uT*.4+s*30.)*.5;}}
 else if(s>=0.&&f.w>.5&&fract(s*47.3)<.2*uSeason){float q=fract(uT*.04+s*13.);p.y=mix(p.y,-7.2,q);p.x+=sin(q*9.+s*40.)*1.2+q*1.6;p.z+=cos(q*7.+s*20.)*.8;}else p=sway(p);}
@@ -343,7 +343,7 @@ mat3 turn(vec3 e){float a=cos(e.x),b=sin(e.x),c=cos(e.y),d=sin(e.y),f=cos(e.z),g
 void main(){float id=float(gl_InstanceID),s=hs(id+.7);bool held=gl_InstanceID==${HELD};vec4 A=texelFetch(uPane,ivec3(gl_InstanceID,0,uFrom),0),B=texelFetch(uPane,ivec3(gl_InstanceID,0,uTo),0);vec3 ea=texelFetch(uPane,ivec3(gl_InstanceID,1,uFrom),0).xyz,eb=texelFetch(uPane,ivec3(gl_InstanceID,1,uTo),0).xyz;
 vec3 a=A.xyz,b=B.xyz;if(uFrom==3&&!held)a.z=mod(a.z+44.+uT*1.3,68.4)-44.;if(uTo==3&&!held)b.z=mod(b.z+44.+uT*1.3,68.4)-44.;if(held){if(uFrom==3)a=vec3(-3.,1.7,.35);if(uTo==3)b=vec3(-3.,1.7,.35);}
 a=live(uFrom,vec4(a,0.),uFrom<2?-.2:-1.);b=live(uTo,vec4(b,0.),uTo<2?-.2:-1.);
-if(uFrom==1)ea+=vec3(uT*.6*(s-.3),uT*.4*(s-.5),uT*.3*(s-.6));if(uTo==1)eb+=vec3(uT*.6*(s-.3),uT*.4*(s-.5),uT*.3*(s-.6));if(uFrom==2)ea.x+=uT*.16;if(uTo==2)eb.x+=uT*.16;if(uFrom==5)ea.x+=uT*.006;
+if(uFrom==1)ea+=vec3(uT*.6*(s-.3),uT*.4*(s-.5),uT*.3*(s-.6));if(uTo==1)eb+=vec3(uT*.6*(s-.3),uT*.4*(s-.5),uT*.3*(s-.6));if(uFrom==2)ea.x+=uT*.05;if(uTo==2)eb.x+=uT*.05;if(uFrom==5)ea.x+=uT*.006;
 if(uFrom==4)ea.x+=sin(uT*.5+s*20.)*.28;if(uTo==4)eb.x+=sin(uT*.5+s*20.)*.28;
 if(uFrom==3)ea*=ss(1.,-6.,a.z)*float(!held);if(uTo==3)eb*=ss(1.,-6.,b.z)*float(!held);
 float m=clamp(uMix*1.5-s*.5,0.,1.);m=m*m*(3.-2.*m);vec3 p=mix(a,b,m)+vec3(sin(s*50.),cos(s*70.),sin(s*90.))*sin(3.14159*m)*3.;float gk=uFrom==3?(uTo==3?1.:1.-m):uTo==3?m:0.,tk=uFrom==4?(uTo==4?1.:1.-m):uTo==4?m:0.;
@@ -693,8 +693,8 @@ else if (++good > (gpu ? 2 : 8) && (!gpu || gpu < budget * .72)) { if (now - cap
 const CAM = [
 { k: [[[0, 12, 46], [0, 12.5, -40], 50], [[-5, 6.5, 30], [0, 7, -40], 46], [[3, 2.6, 15], [0, 5.4, -40], 41]], push: .12, pull: .06 },
 { k: [[[-25, 1.5, 27], [0, 4, 0], 52], [[-9, -4.6, 25], [0, 3.6, 0], 54], [[17, 8, 19], [0, 2.6, 0], 50]], push: .35, pull: .28 },
-{ k: [[[1, 19, 21], [0, 0, 0], 46], [[-9, 8, 15], [0, .5, 0], 43], [[10.5, .5, 12], [0, .8, 0], 40]], push: .3 },
-{ k: [[[-23, 6, 25], [0, 0, -1], 46], [[-6, 4.5, 26], [0, 0, -1], 43], [[10.5, 2.4, 22.5], [-.8, .1, 0], 43]], push: 1.1 },
+{ k: [[[1, 18, 21], [0, 0, 0], 46], [[-5.5, 7.5, 17.5], [0, .3, 0], 43], [[-1.5, 3.4, 17], [0, .5, 0], 42], [[2.5, 1.2, 16], [0, .6, 0], 41]], push: .3 },
+{ k: [[[-19, 5.6, 25.5], [0, 0, -1], 46], [[-4.4, 3.4, 27], [0, 0, -.6], 43], [[-1.6, 2.9, 26.6], [0, 0, -.4], 43], [[.6, 2.5, 26], [0, 0, -.2], 43]], push: 1.1 },
 { k: [[[-1.7, -6.35, 4.6], [0, -6.5, 0], 50], [[-5.4, -5, 8], [0, -3.6, 0], 50], [[-7.5, 1.2, 13.5], [0, 1.2, 0], 48], [[3, 3.6, 18.5], [0, 1.6, 0], 45], [[10.5, 1, 20.5], [0, .7, 0], 43]], push: .22 },
 { k: [[[-6, 8, 18], [0, 3.2, 0], 46], [[-3, 5.4, 17], [0, 2.8, 0], 43], [[0, 4.2, 16], [0, 2.7, 0], 40]], push: 0 },
 ];
@@ -715,7 +715,6 @@ gc: ["#8fd0ff", "#7f9cff", "#a6e4ff", "#7fb0ff", "#ffcf8f", "#ffd2a0"].map(hex),
 };
 const MIST = hex("#b9b4ff"), HC = Object.fromEntries(Object.entries(C).map(([k, v]) => [k, hex(v)])), CORECOL = CORE.map((c) => hex(c.col));
 const V = (a, b, f) => [a[0] + b[0] * f, a[1] + b[1] * f, a[2] + b[2] * f];
-const hel = (y, t, r = 3.6, s = 0) => { const a = y * .42 + s, c = Math.cos(t * .16), d = Math.sin(t * .16), x = Math.cos(a) * r, z = Math.sin(a) * r; return [c * x + d * z, y, c * z - d * x]; };
 let TRUNK = [[0, -7, 0, .06], [0, 3, 0, .6]], LAN = Array(5).fill([0, 0, 0]), CITY = [[0, 1, 0], [0, 1, 0], [0, 1, 0]], BOAT = [];
 const cityAt = (c, t) => { const a = t * .006, [x, y, z] = c, r = PR * 1.01; return [PC[0] + (Math.cos(a) * x + Math.sin(a) * z) * r, PC[1] + y * r, PC[2] + (Math.cos(a) * z - Math.sin(a) * x) * r]; };
 function place(G) {
@@ -725,8 +724,8 @@ const f = norm([10.5, 0, 20.5]), side = [f[2], 0, -f[0]], list = G.lanterns.filt
 const EV = [
 [["Voice memo", "Tuesday, 07:40", .3, () => [-9, 3.4, -6], C.sea], ["Half a post", "Never sent", .42, () => [8.5, 4.2, -10], C.sea], ["Old slide", "Page 14 of 60", .54, () => [-5, 2.2, 1.5], C.ink], ["A good reply", "Lost in a thread", .66, () => [6, 2, 2], C.sea]],
 [["Price list", "In the brochure", .22, () => [-4.6, 2.6, 2.4], C.storm], ["Price list (final)", "On the site", .36, () => [5.4, 7.2, 1], C.storm], ["Price list (final 2)", "In the code", .5, () => [3.1, -.6, 4], C.rose], ["Old page", "Still ranking", .64, () => [-4.4, 8.4, -2], C.rose]],
-[["SEO", "Path, title, description", .3, (t) => hel(-6, t, 5.1), C.ice], ["Sections", "The copy, in order", .44, (t) => hel(-1.5, t, 5.1, Math.PI), C.ice], ["JSON-LD", "Structured data", .58, (t) => hel(3, t, 5.1), C.ice], ["Git", "Every change", .72, (t) => hel(7, t, 5.1, Math.PI), C.gold]],
-[["Schema", "Every field", .2, () => [-6.9, 6.9, 0], C.pass], ["Voice", "Every line of copy", .3, () => [6.9, 6.9, 0], C.pass], ["SEO", "Every built page", .4, () => [6.9, -6.9, 0], C.pass], ["Held at the gate", "hero.webp: 412 KB, over 250 KB", .56, () => [-1.7, 3.3, .6], C.alert, 1]],
+[["SEO", "Path, title, description", .3, () => [4.5, -3.6, 1.8], C.ice, 0, true], ["Sections", "The copy, in order", .44, () => [-4.5, -.4, 1.8], C.ice, 0, false], ["JSON-LD", "Structured data", .58, () => [4.5, 2.2, 1.8], C.ice, 0, true], ["Git", "Every change", .72, () => [-4.5, 4.6, 1.8], C.gold, 0, false]],
+[["Schema", "Every field", .2, () => [-6.9, 6.9, 0], C.pass, 0, true], ["Voice", "Every line of copy", .3, () => [6.9, 6.9, 0], C.pass, 0, false], ["SEO", "Every built page", .4, () => [6.9, -6.9, 0], C.pass, 0, false], ["Held at the gate", "hero.webp: 412 KB, over 250 KB", .56, () => [-1.7, 3.3, .6], C.alert, 1]],
 [["Pages", "", .7, () => LAN[2], C.gold], ["Posts", "", .75, () => LAN[0], C.gold], ["Feed", "", .8, () => LAN[1], C.gold], ["Sitemap", "", .85, () => LAN[3], C.gold], ["Redirects", "", .9, () => LAN[4], C.gold]],
 [["Lisbon", "Ready", .34, (t) => cityAt(CITY[0], t), C.dawn], ["Nairobi", "Ready", .46, (t) => cityAt(CITY[1], t), C.dawn], ["Osaka", "Ready", .58, (t) => cityAt(CITY[2], t), C.dawn]],
 ];
@@ -770,7 +769,7 @@ if (pr(1)) { discs.push({ p: [bend(1, t)[0], 13.5, bend(1, t)[1]], ...FLAT, r: 4
 if (pr(2)) discs.push({ p: core, ...FLAT, r: 5.2, inner: .4, kind: 2, seed: .2, a: .16 * pr(2), col: HC.ice });
 if (pr(3)) { const held = k === 3 ? smooth(.54, .6, local) : 0; discs.push({ p: [0, 0, -.4], ...WALL, r: 10.4, inner: 4.4, kind: 2, seed: .4, a: .2 * pr(3), col: HC.signal }); if (held > 0) discs.push({ p: [-3, 1.7, .5], ...face, r: 2.6, inner: .9, kind: 2, seed: .3, a: .2 * held * pr(3), col: HC.alert, head: local < .95 ? smooth(.56, .85, local) : -1 }); }
 if (pr(4)) { const g = k === 4 ? growth(local) : 0; discs.push({ p: [0, -7.16, 0], ...FLAT, r: 26, inner: .7, kind: 4, a: .3 * pr(4), col: HC.leaf, hot: HC.gold, head: k === 4 && g < .99 ? clamp(g) : -1 }, { p: [0, -7.12, 0], ...FLAT, r: 5, inner: 4.1, kind: 0, spin: t * .01, a: .22 * pr(4) * (k === 4 ? 1 - smooth(.6, 1, local) : 1), col: HC.gold }, { p: [0, -6.5, 0], ...FLAT, r: 26, inner: 2, kind: 6, a: .1 * pr(4), col: HC.leaf }); }
-const ev = EV[k], nodeA = (c.final ? 1 - inSlide : 1 - smooth(c.s1, c.t0 + .1, u)) * smooth(c.s0 - .3, c.s0 + .1, u);
+const ev = EV[k], nodeA = (c.final ? 1 - inSlide : 1 - smooth(c.s1 - (k === 3 ? .12 : 0), k === 3 ? c.s1 + .14 : c.t0 + .1, u)) * smooth(c.s0 - .3, c.s0 + .1, u);
 const nodes = ev.map((e, i) => ({ p: e[3](t), at: e[2], col: EVCOL[k][i], r: (e[5] ? .8 : .95) * (k === 5 ? .8 : 1) * (k === 0 ? 1.1 : 1) * (k === 4 ? 1.15 : 1) }));
 const past = (i) => (i === k ? local * 1.15 : i < k ? 1.2 : 0); const lit = [1, past(1), k === 2 ? (core[1] + 14.4) / 28 + 1.2 * smooth(c.s1, c.t0, u) : past(2), k === 3 ? Math.max(past(3), .04 + 1.1 * smooth(-.05, .26, local)) : k === 2 ? 1.2 * mix : past(3), 1, past(5) * 1.2];
 return { k, n, local, u, from: k, to: n, mix: n === k ? 0 : mix, grow: k === 4 ? growth(local) : n === 4 && k === 3 ? 0 : 1.14, season: k === 4 ? smooth(.8, 1, local) : k > 4 ? 1 : 0, flash, bolt: Math.floor(r01(beat + 9) * 4), t, cam, dim, inSlide, core, coreR: coreR * (k === 4 ? 1 + .5 * smooth(.3, .9, local) : 1), corePow: lerp(ca.pow, cb.pow, mix) * (1 - (disc > .5 && !c.final ? .6 : 0) * inSlide), disc, coreCol, planet, planetY: lerp(-26, 0, smoother(planet)), n1: L("n1"), n2: L("n2"), haze: L("haze"), fog: L("fog").map((x) => x * (1 + (back - 1) * pull * .9)), focus: L("focus"), blur: L("blur"), size: L("size"), glow: L("glow"), expo: L("expo"), grade: L("grade"), head: mix > 0 ? Math.max(head, 1.2 * mix) : head, discs, nodes, nodeA, lit, share: 1, phi, boatLight: BOAT.flatMap(([x, z], i) => [x, wave(x, z, t) + .75, z, .85 + .15 * Math.sin(t * (5 + i * .4) + i * 9)]), aurora: k === 5 ? 1 - .55 * smooth(.55, 1, local) : 1, cStorm: HC.storm, cDust: HC.deep, cMist: MIST, cRose: HC.rose, cIce: HC.ice, cInk: HC.ink, cSignal: HC.signal };
@@ -824,8 +823,10 @@ const d = CH[i], a = (u - (d.s1 + .18)) / ((d.final ? .5 : T_OUT) + T_SLIDE * .4
 s.words.forEach((w2, j) => { const e = outExpo((a - j * .055) / .5); set(w2, e, (1 - e) * 30); }); s.rest.forEach((r, j) => { const e = outExpo((a - .42 - j * .1) / .5); set(r, e, (1 - e) * 18); }); set(s.el.firstElementChild, 1 - off, -off * 40);
 });
 caps.forEach((el, i) => { const d = CH[i]; if (Math.abs(i - k) > 1 && el._a === 0) return; const a = i === 0 ? smooth(.55, .85, u) : smooth(d.s0 + .02, d.s0 + .3, u), b = 1 - smooth(d.s1 - .05, d.s1 + .22, u); set(el, a * b, (1 - a) * 16 - (1 - b) * 10); });
-if (chapter !== k) { if (chapter >= 0) labels[chapter].forEach((el) => { el._a = 0; el.classList.remove("on"); }); chapter = k; dots.forEach((d, i) => d.classList.toggle("on", i === k)); now.innerHTML = `<b>${String(k + 1).padStart(2, "0")}</b> / ${String(CH.length).padStart(2, "0")}<br>${CH[k].name}`; $("#side").style.setProperty("--accent", CH[k].accent); }
-EV[k].forEach((e, j) => { const el = labels[k][j], nx = EV[k][j + 1]; const o = smooth(e[2], e[2] + .07, S.local) * S.nodeA * (w < 760 && nx ? 1 - smooth(nx[2] - .03, nx[2] + .02, S.local) : 1); if (o < .004) { if (el._a) { el._a = 0; el.classList.remove("on"); } return; } const p = project(S.cam.vp, e[3](S.t), w, h), clear = 1 - smooth(.7, .78, p[1] / h) * (1 - smooth(.36, .44, p[0] / w)) * (w < 760 ? 0 : 1), a = p[2] > 1 ? Math.round(o * clear * 100) : 0; if (el._a !== a) { if (!el._a && a) el.classList.add("on"); el._a = a; el.style.opacity = a / 100; } const flip = (w < 760 ? p[0] > w * .55 : p[0] > w * .66) || (!!e[5] && w >= 760); if (el._f !== flip) { el._f = flip; el.classList.toggle("flip", flip); } el.style.transform = `translate3d(${clamp(p[0], 16, w - 16).toFixed(1)}px,${p[1].toFixed(1)}px,0)`; });
+if (chapter !== k) { if (chapter >= 0) labels[chapter].forEach((el) => { el._a = 0; el._shown = false; el.classList.remove("on"); }); chapter = k; dots.forEach((d, i) => d.classList.toggle("on", i === k)); now.innerHTML = `<b>${String(k + 1).padStart(2, "0")}</b> / ${String(CH.length).padStart(2, "0")}<br>${CH[k].name}`; $("#side").style.setProperty("--accent", CH[k].accent); }
+EV[k].forEach((e, j) => { const el = labels[k][j], nx = EV[k][j + 1]; const o = smooth(e[2], e[2] + .07, S.local) * S.nodeA * (w < 760 && nx ? 1 - smooth(nx[2] - .03, nx[2] + .02, S.local) : 1); if (o < .004) { el._shown = false; if (el._a) { el._a = 0; el.classList.remove("on"); } return; } const p = project(S.cam.vp, e[3](S.t), w, h), small = w < 760; if (!el._shown) el._w = el.lastElementChild.offsetWidth + (small ? 46 : 70);
+let flip = el._shown ? el._f : e[6] ?? ((small ? p[0] > w * .55 : p[0] > w * .66) || (!!e[5] && !small)); if (flip && p[0] < el._w + 8 && w - p[0] > el._w) flip = false; else if (!flip && w - p[0] < el._w + (small ? 8 : 150) && p[0] > el._w) flip = true; el._shown = true;
+const left = flip ? p[0] - el._w : p[0], capR = Math.min(432, w * .78) + 48, clear = small ? 1 : 1 - smooth(.72, .79, p[1] / h) * smooth(capR + 24, capR - 24, left), a = p[2] > 1 ? Math.round(o * clear * 100) : 0; if (el._a !== a) { if (!el._a && a) el.classList.add("on"); el._a = a; el.style.opacity = a / 100; } if (el._f !== flip) { el._f = flip; el.classList.toggle("flip", flip); } el.style.transform = `translate3d(${clamp(p[0], 16, w - 16).toFixed(1)}px,${p[1].toFixed(1)}px,0)`; });
 const r = Math.round(100 - clamp(u / UNITS) * 100); if (ringEl._v !== r) { ringEl._v = r; ringEl.style.strokeDashoffset = r; } set(hint, 1 - smooth(.05, .3, u));
 }
 function frame(ms) {
