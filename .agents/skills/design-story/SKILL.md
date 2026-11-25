@@ -13,7 +13,8 @@ nothing of it. The guide, with the number behind every rule, is
 `docs/motion-story.md` (`node_modules/agentic-cms/docs/motion-story.md` on
 a site that installs the kit); the code to start from is
 [references/steady-frames.md](references/steady-frames.md). The kit ships
-no story engine: the site owns the scene.
+no story engine: the site owns the scene, and `agentic-cms story` holds it
+to the rules a machine can judge (the guide's § The check).
 
 ## Read first
 
@@ -49,13 +50,15 @@ drops frames: step 5 first, before any change.
    to seven chapters; two to four screens each; a headline after each scene.
    The owner edits it in words before anything is drawn.
 4. **Build in rounds, and look.** On a throwaway route (`pnpm kit demo
-   new`) with the engine in one folder and a test hook, `render(position,
-   time, quality)`. Start from the structure in the reference file: worker
+   new`) with the engine in one folder, the marks and the hook the check
+   draws with (the guide's § The check: `data-story`, `window.__story`).
+   Start from the structure in the reference file: worker
    geometry, fixed targets, shared frame values, a warm-up, the governor.
    After every change photograph the same positions, every chapter and
-   every transition, at 1440 and 390, in Chromium and in WebKit, on one
-   sheet, and look: too bright, too glowy, too flat, out of the language,
-   words on a bright patch, a label over a label, a card out of the window,
+   every transition, in Chromium and in WebKit (`pnpm kit story <page> --only
+   blank,engines --out .parity/story` writes the two sheets), and at 390 too
+   (`pnpm kit shot`), and look: too bright, too glowy, too flat, out of the
+   language, words on a bright patch, a label over a label, a card out of the window,
    an empty frame, a hand-over that cuts, two engines that differ (the
    guide's § Safari). A scene the owner approves is **frozen**: its random
    numbers get a stream of their own, its frames are kept, and every later
@@ -66,8 +69,9 @@ drops frames: step 5 first, before any change.
    pass; what the words cost with the drawing off; script a frame on a
    slowed processor; the first frame of each chapter against its third; the
    setup's long tasks; the first picture, with only the first scene made
-   before it; the path of every card while it can be read. The budget is the guide's table. A round that breaks
-   it is not done: take the cost out of what nobody sees (full-screen
+   before it; the path of every card while it can be read. The budget is
+   the guide's table, and `pnpm kit story <page>` holds what a machine can
+   judge of it. A round that breaks it is not done: take the cost out of what nobody sees (full-screen
    passes, samples, pixels) before taking out detail.
 6. **The governor and the ways down.** The picture's size follows the frame
    time; a fast screen gets an even half rate before a poor picture; then
@@ -98,8 +102,13 @@ drops frames: step 5 first, before any change.
 
 ```bash
 pnpm lint && pnpm test && pnpm content:lint && pnpm build
+pnpm kit story <the page> --out .parity/story   # every rule, both engines; look at the sheets
 pnpm kit visual-parity proof     # the stills, and that no other page moved
 ```
+
+A broken rule is fixed in the story, never by leaving it out with `--only`
+or `--engines chromium`. The site's CI runs the same command on every pull
+request. <!-- required -->
 
 The budget's table filled in with measured numbers, what was measured on
 which machine, and what was not checked.

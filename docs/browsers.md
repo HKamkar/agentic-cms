@@ -84,7 +84,10 @@ running this way:
   branch's build;
 - a live scene (WebGL 2 runs in headless WebKit, in software): that every
   shader compiles, that it starts, and that its frames match Chromium's at
-  the same positions ([motion-story.md § Safari](motion-story.md#safari)).
+  the same positions: `agentic-cms story` does it
+  ([motion-story.md § The check](motion-story.md#the-check)). A frame is drawn
+  inside an animation frame there and photographed two frames later, or the
+  picture is the one before.
 
 ## What headless cannot show
 

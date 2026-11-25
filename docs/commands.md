@@ -256,7 +256,7 @@ agentic-cms optimize-svg-rasters --lossy public/images/home/diagram.svg
 
 ## proof
 
-Layer: [design tools](parts.md#design-tools). `parity` · `visual-parity`
+Layer: [design tools](parts.md#design-tools). `parity` · `visual-parity` · `story`
 
 ### `parity`
 
@@ -420,6 +420,36 @@ Exit: `0` cleaned, or listed with --dry-run; `2` usage.
 ```bash
 agentic-cms visual-parity clean --dry-run
 agentic-cms visual-parity clean --keep 4 --cache
+```
+
+### `story`
+
+The page of a motion story held to its budget: the built page opened in Chromium and WebKit through the hook it carries, its words, its first picture, its frames' calls, its cards and its ways down.
+
+```bash
+agentic-cms story <route|url|file.html> [--url <base>] [--engines both|chromium] [--only <rules>] [--wait <s>] [--out <dir>] [--json]
+```
+
+- `<target>` — the story's page: a route of the build (/), a URL, or an .html file that stands on its own
+
+| flag | what |
+|---|---|
+| `--url <base>` | a served site instead of the build under .next |
+| `--engines both|chromium` | both: Chromium and WebKit, their frames compared; chromium: that one alone, where WebKit cannot be installed (one of `both`, `chromium`) (default `both`) |
+| `--only <a,b>` | some of the rules, for a round: errors, words, still, first-picture, setup, mid-scroll, pixels, blank, engines, cards, shift, stops, lost (a change is done when all of them hold) |
+| `--wait <s>` | how long the story may take to come up, in seconds, on a machine that draws in software (default `60`) |
+| `--out <dir>` | also write the photographed frames, one sheet per engine, to look at (.parity/story, say) |
+| `--json` | print one JSON document on stdout (progress goes to stderr) |
+
+Exit: `0` every rule held; `1` a rule broken, or a page without the hook; `2` usage, no build, or no browser.
+
+`--json` prints `{ url, engines, scenes: [{ id, from, to }], rules: [{ rule, ok, problem }], measured: { firstPicture?, midScroll?, setup?, pixels?, shift?, stops?, lost?, frames?: [{ engine, at, spread }], engines?: [{ at, mean, blown }] | null, cards?: [{ name, width, longer, readable, inside, path, jump }] } (of the rules asked for), sheets }`.
+
+```bash
+agentic-cms story /
+agentic-cms story / --out .parity/story
+agentic-cms story / --only cards,first-picture
+agentic-cms story /launch --url http://localhost:3000 --engines chromium --json
 ```
 
 ## look & measure
