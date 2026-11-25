@@ -25,6 +25,8 @@ then a bumped pin here; never a patch under `node_modules`.
   through `design-options`, a screenshot claim through `design-measure`,
   icons through `design-icons`, the site's own graphics (drawn as SVG in
   the lab, `pnpm kit lab`, shipped pre-rendered) through `design-graphics`,
+  a page told as a live scene through `design-story` (its frame budget is
+  the kit's `docs/motion-story.md`),
   and nothing merges without `design-proof`.
 - Content is files under `content/`, validated at build time: posts in
   `content/blog/` (the filename is the slug), the registries, `reviews.yaml`,
@@ -126,6 +128,7 @@ at the version this site pins.
 | a command | `docs/commands.md` |
 | markup, CSS or motion | the scoped rules above, each pointing at the kit's whole rule; `STANDARD.md` here |
 | a design round, a candidate, an icon, a graphic | `docs/design.md`, `docs/icons.md`, `docs/lab.md`; the design plugin's skills |
+| a page told as a live, scroll-driven scene, or one that drops frames | `docs/motion-story.md`; the `design-story` skill |
 | a screenshot claim | `docs/shot-probe-sheet.md` |
 | a capture or a proof | `docs/visual-parity.md`: the profile, the baselines, the cache, the seed, what a verdict means |
 | a fresh clone or a new machine | `docs/setup.md` (`bash scripts/setup.sh`; the `setup` skill) |
