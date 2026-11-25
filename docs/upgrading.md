@@ -35,6 +35,25 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.9.0 → 0.10.0
+
+`upgrade` moves the pin and writes one file. No migration runs and nothing
+is left by hand: no export, command or file format a site uses changed.
+
+- **The `design-story` skill.** Claude Code reads it from the kit's `design`
+  plugin, now 0.2.0; for Codex the agent files' refresh writes a stub,
+  `.agents/skills/design-story/SKILL.md`. Commit it: `--agent-files --check`
+  calls it missing until then.
+- **A page that tells a story,** if the site has one, is held to its budget
+  by two checks: `agentic-cms seo`, in the build, on every page with
+  `data-story` (`story-words`, `story-canvas`, `story-weight`) and on the
+  others (`story-scripts`); and `agentic-cms story <page>`, which the site
+  runs in its CI ([motion-story.md § The check](motion-story.md#the-check)).
+  A site with no `data-story` in its pages is told nothing.
+- **If the site wants it,** two lines of the template's `AGENTS.md` about a
+  page told as a scene (`node_modules/agentic-cms/templates/site/AGENTS.md`):
+  the design bullet's, and the row of "The kit's guides".
+
 ## 0.8.4 → 0.9.0
 
 [migrating-to-0.9.0.md](migrating-to-0.9.0.md) is the guide: the upgrade

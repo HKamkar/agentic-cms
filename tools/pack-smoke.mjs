@@ -506,7 +506,7 @@ function locales(site) {
   if (build.status !== 0) fail(`the site in two languages did not build: ${build.output.trim().slice(-3000)}`);
   const built = (file) => fs.readFileSync(path.join(site, ".next/server/app", file), "utf8");
   const [german, home, sitemap, missing, germanPost, englishPost, germanFeed] = ["de.html", "index.html", "sitemap.xml.body", "_not-found.html", `de/blog-post/${POST}.html`, `blog-post/${POST}.html`, "de/feed.xml.body"].map(built);
-  const names = (html, tag, href) => new RegExp(`<link rel="alternate" hrefLang="${tag}" href="${href.replace(/[.?]/g, "\\$&")}"`).test(html);
+  const names = (html, tag, href) => html.includes(`<link rel="alternate" hrefLang="${tag}" href="${href}"`);
   const origin = home.match(/<link rel="canonical" href="(https:\/\/[^"/]+)/)?.[1] ?? "";
   const wrong = [
     !/<html lang="de"/.test(german) && "de.html is not lang=\"de\"",

@@ -531,6 +531,35 @@ check that runs the Worker (#153).
 two sites before the release, and jobs 3 and 4 (install from npm, `pnpm
 create agentic-cms`), which follow 0.9.0.
 
+## Phase 17 — 0.10.0, a page that tells a story (2026-11-25)
+
+A study of a story home page drawn live (the six scenes of "First Light")
+became the kit's third kind of page. It landed as two pull requests (#151,
+#155) and the README's redesign.
+
+**What changed:**
+- **The method:** `docs/motion-story.md`, 38 rules with the numbers behind
+  them, and the `design-story` skill with the code to start from. Optional
+  for the site, the page and the reader; the kit ships no story engine.
+- **The check:** `agentic-cms story` opens the built page in Chromium and
+  WebKit and fails on 13 rules. It counts calls and compares pictures rather
+  than timing frames, so a machine without a graphics card gives the same
+  answer. The build holds four more without a browser, and `check-site`
+  warns when a site tells a story and its CI never runs the check.
+- **The proof:** one small story that keeps every rule and 25 broken ones,
+  each failing its own; the motion sample itself, in
+  `examples/motion-story`, held to all of it in CI.
+- **The README:** a landing page on the technical docs, with the four sites
+  built on the kit.
+
+**What the check found in the sample:** three cards of its last scene that
+nobody could read, below the window, and one that changed sides at 1024.
+**What CI found in the check:** a program counted by the clock, which moves
+in 0.1 ms steps; it is counted as the first picture is marked.
+
+**Not checked by it:** whether a scene is beautiful, and frame rates on real
+devices.
+
 ## Verification recipe
 
 ```bash

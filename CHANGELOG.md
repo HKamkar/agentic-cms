@@ -4,13 +4,16 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
-## [Unreleased]
+## [0.10.0] — 2026-11-25
 
-- A motion story without frame loss: `docs/motion-story.md` (the frame budget, the rules with the numbers behind them, what Safari needs, the checks) and the `design-story` skill with the code to start from. Optional and preferred tier: one page told as a live scene, every other page regular. The kit ships no story engine. The README, the design guide, the browser guide and the gotchas say where it fits. The README shows a live sample, and three more sites built with the kit.
+- A motion story without frame loss: `docs/motion-story.md` (the frame budget, the rules with the numbers behind them, what Safari needs, the checks) and the `design-story` skill with the code to start from. Optional and preferred tier: one page told as a live scene, every other page regular. The kit ships no story engine. The README, the design guide, the browser guide and the gotchas say where it fits; the README links a live sample.
 - `agentic-cms story <page>` (experimental): the page of a motion story held to its budget in Chromium and WebKit, through the marks (`data-story`, `data-story-stage`, `data-story-card`) and the hook (`window.__story`) it carries: errors, words without JavaScript and with reduced motion, the first picture, the blocked main thread, anything made or asked in mid-scroll, the pixels, blank frames, two engines that differ, cards that travel, jump or cannot be read, layout shift, a loop nobody sees, a lost context. It counts and compares, so a machine without a graphics card gives the same answer; `--out` writes the frames to look at, `--only` takes some of the rules.
 - `agentic-cms seo` holds a built page with `data-story` to `story-words`, `story-canvas` and `story-weight` (60 KB of WebGL script, compressed) and every other page to `story-scripts` (it loads none of it); `check-site` warns when a site tells a story and no workflow on pull requests runs the check. A site without a story is told nothing.
 - The kit's own: `examples/motion-story`, the motion sample's source, and `pnpm test:story`, CI's `story` job: the sample built and held to every rule.
-- Docs: the README, redesigned. A hero from the motion sample, the four sites built with the kit, the quick start right after them, figures in place of the example's screenshots, and the reference kept, its long parts folded.
+- Docs: the README, redesigned. A hero from the motion sample, the four sites built with the kit, the quick start right after them, figures in place of the example's screenshots, and the reference kept, its long parts folded. Its `<source>` pictures are absolute, so npm's page finds them.
+- The `design` plugin is 0.2.0: the `design-story` skill, and `design` and `design-graphics` saying when a page needs it.
+- The package leaves out the kit's own plans and release procedure (`docs/roadmap.md`, `docs/roadmap-0.8.2.md`, `docs/releasing.md`), which stay in the repository; `docs/README.md` links them there.
+- Upgrading from 0.9.0: `agentic-cms upgrade` moves the pin and writes one file, Codex's stub of `design-story`. Nothing is left by hand, and a site without a story sees no new rule.
 
 ## [0.9.0] — 2026-11-24
 
