@@ -341,6 +341,10 @@ scripts/lib/specs.mjs
 scripts/lib/starter.mjs
 scripts/lib/states.mjs
 scripts/lib/storage-seed.mjs
+scripts/lib/story-built.mjs
+scripts/lib/story-page.mjs
+scripts/lib/story-rules.mjs
+scripts/lib/story-run.mjs
 scripts/lib/translations.mjs
 scripts/lib/unified-diff.mjs
 scripts/lib/upgrade.mjs
@@ -355,6 +359,7 @@ scripts/serve.mjs
 scripts/setup.mjs
 scripts/sheet.mjs
 scripts/shot.mjs
+scripts/story.mjs
 scripts/svgo.config.mjs
 scripts/upgrade.mjs
 scripts/urls.mjs

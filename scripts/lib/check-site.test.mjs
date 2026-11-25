@@ -231,6 +231,19 @@ test("ci: the workflow that runs the lint warns when its branch filter leaves ou
   assert.deepEqual(await warned(release, fakeGit({ refs: ["origin/HEAD"], defaultBranch: "main" })), [[], []], "no develop branch here: main is where pull requests go");
 });
 
+test("ci: a site that tells a motion story warns until a workflow on pull requests runs agentic-cms story, by itself or through a package script", async () => {
+  const told = { ...CLEAN, "src/components/sections/home/Story.tsx": "export const Story = () => <div data-story><div data-story-stage /></div>;\n" };
+  const warned = (files) => site({ ...told, ...files }).then((r) => [checks(r.findings), checks(r.warnings)]);
+  const also = (run) => ({ ".github/workflows/story.yml": `on: pull_request\njobs:\n  story:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ${run}\n` });
+  assert.deepEqual(await warned({}), [[], ["ci src/components/sections/home/Story.tsx"]], "a warning: it fails nothing");
+  assert.deepEqual(await warned(also("pnpm exec agentic-cms story /")), [[], []]);
+  assert.deepEqual(await warned(also("pnpm kit story / --only cards")), [[], []]);
+  const pkg = JSON.parse(CLEAN["package.json"]);
+  assert.deepEqual(await warned({ ...also("pnpm test:story"), "package.json": JSON.stringify({ ...pkg, scripts: { ...pkg.scripts, "test:story": "pnpm kit story /" } }) }), [[], []]);
+  assert.deepEqual((await warned({ ...also("pnpm test:storybook"), "package.json": JSON.stringify({ ...pkg, scripts: { ...pkg.scripts, "test:story": "pnpm kit story /" } }) }))[1].length, 1, "another script");
+  assert.deepEqual((await site({ ...CLEAN, "src/components/sections/home/Stage.tsx": "export const Stage = () => <div data-story-stage />;\n" })).warnings, [], "a stage alone is no story");
+});
+
 test("ci: the preview job — the template's passes; pr-preview without the permission to comment or the history warns, and so does a preview uploaded by hand without the flag", async () => {
   const template = fs.readFileSync(path.join(KIT, "templates/site/verify.yml"), "utf8");
   assert.deepEqual((await site({ ...CLEAN, ".github/workflows/verify.yml": template })).warnings, [], "the template's preview job");

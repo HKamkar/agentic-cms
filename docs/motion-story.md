@@ -6,11 +6,16 @@ the page's words on top. It is drawn live in the reader's browser, because
 CSS cannot draw one: a CSS version of the story this guide was measured on
 took 12.3 ms a frame and still looked flat.
 
-The kit ships no story engine. This page is the method: what keeps a live
-scene at the screen's own rate, with the number behind each rule, and how
-to check it. The procedure is the `design-story` skill, the code to start
-from its
-[references/steady-frames.md](../.claude/skills/design-story/references/steady-frames.md).
+The kit ships no story engine. It ships the method and the check: this page
+(what keeps a live scene at the screen's own rate, with the number behind
+each rule), the `design-story` skill (the procedure, and the code to start
+from in its
+[references/steady-frames.md](../.claude/skills/design-story/references/steady-frames.md)),
+and `agentic-cms story`, which holds a page that tells one to the rules a
+machine can judge ([§ The check](#the-check)). The story the numbers were
+measured on is
+[in the kit's repository](https://github.com/HKamkar/agentic-cms/tree/main/examples/motion-story)
+and [live](https://hkamkar.github.io/agentic-cms/motion-story/).
 
 ## Optional, at four levels
 
@@ -47,7 +52,7 @@ round.
 | Main thread blocked by the setup, processor slowed 4× | 200 ms in all |
 | First headline on screen | before the scene starts, under 1 s on a slow connection |
 | First paint of the stage | the first scene's ground, painted in CSS, before any script |
-| Made before the first picture | the first scene's data and programs, nothing else |
+| Made before the first picture | the first scene's data and programs, nothing else (at most 16 programs) |
 | A card's path on screen while it can be read | a tenth of the screen's longer side, and no change of side |
 | Layout shift | 0.02 |
 | Script of the story, compressed | 60 KB, no rendering library |
@@ -271,7 +276,7 @@ read it, and two changed sides while they were up. No frame time shows it.
 
 35. **The camera turns first.** It makes its large move before a chapter's
     first card and settles while cards are read. After the fix the longest
-    path is 142 px on a 1440 px screen.
+    path is 114 px on a 1440 px screen, of the 144 allowed.
 36. **One side, chosen once.** A card measures itself when it appears, picks
     the side that has room, and keeps it until it goes.
 37. **On screen, in the clear.** A card in the window's lower edge, under
@@ -293,6 +298,8 @@ read it, and two changed sides while they were up. No frame time shows it.
   keep its CSS in a `<style href precedence>` the section renders.
 - **The exception, named**: `allow` for `agentic-cms/graphics` and
   `agentic-cms/motion` on its files, with the reason.
+- **The marks and the hook** [the check](#the-check) reads: `data-story`,
+  `data-story-stage`, `data-story-card`, `window.__story`.
 - **The stills** are the reduced-motion version, so the screenshot harness
   photographs them: its static captures run with reduced motion
   ([visual-parity.md](visual-parity.md)).
@@ -333,30 +340,90 @@ against it:
   and look: too bright, too flat, unreadable words, a label over a label,
   an empty frame in a transition. The measured story took fourteen rounds.
 
-## Checking it
+## The check
 
-Give the page a test hook, `render(position, time, quality)`, so a script
-can draw any frame. Then, with Playwright:
+```bash
+agentic-cms story /                          # the built page, in Chromium and WebKit
+agentic-cms story / --out .parity/story      # and its frames, a sheet per engine, to look at
+agentic-cms story / --only cards,setup       # some of the rules, for a round
+```
 
-| Check | How |
+Exit 1 names each broken rule and the number that breaks it. It counts and
+compares instead of timing wherever it can, so a machine without a graphics
+card gives the same answer: the demo's 13 rules take under two minutes in
+software. The command is experimental ([stability.md](stability.md)).
+
+| Rule | Fails on |
 |---|---|
-| Every chapter and every transition, at 1440 and 390 | `render()` at a list of positions, a screenshot each, one contact sheet |
-| The cards | `render()` every 12 px of scroll: each readable card's path on screen, its side, and whether it was in the window and clear of the caption, at 390, 1024, 1440 and 1920 |
+| `errors` | an error or a shader warning in either engine |
+| `words` | a heading or a paragraph nobody reads without JavaScript |
+| `still` | the same with reduced motion, or anything drawn once the still version stands |
+| `first-picture` | more than 16 programs before it; a stage of one flat colour until then |
+| `setup` | more than 200 ms of main thread blocked, the processor slowed 4× |
+| `mid-scroll` | a buffer, a texture, a program or a target made while the story is drawn; a question to the graphics process in a frame |
+| `pixels` | a canvas over the budget on a desktop, a tablet or a phone |
+| `blank` | a frame with nothing to see, in a scene or in a hand-over |
+| `engines` | Chromium and WebKit drawing different pictures at the same position |
+| `cards` | a card that travels over a tenth of the screen's longer side while it can be read, jumps, is cut by the window, or that nobody reads on a desktop; at 390, 1024, 1440 and 1920 |
+| `shift` | a layout shift over 0.02 |
+| `stops` | a loop that draws with the tab hidden or the story scrolled away |
+| `lost` | a scene that does not come back, or comes back another picture, after the graphics memory was taken away |
+
+Four more need no browser: `pnpm build`'s audit (`agentic-cms seo`) fails a
+page with `data-story` whose HTML lacks the words (`story-words`), whose
+canvas a screen reader would read out (`story-canvas`), whose WebGL scripts
+are over 60 KB compressed (`story-weight`), and a page without one that
+loads them (`story-scripts`). A site with no story is told nothing. And
+`pnpm lint` warns while a site tells a story and no workflow on its pull
+requests runs the check: a job that builds, installs the browsers
+(`pnpm exec playwright-core install --with-deps chromium webkit`) and runs
+`pnpm exec agentic-cms story <the page>`.
+
+**The marks** in the page: `data-story` on the story's element,
+`data-story-stage` on the pinned stage, `data-story-card` on each card's
+box, `aria-hidden="true"` on the canvas and on what is only for the scene
+(the cards, the scroll hint).
+
+**The hook.** The check sets `window.__storyTest = { loop }` before the
+page's scripts run. While it is set the engine draws live on any renderer,
+never gives up to the stills (except with reduced motion), runs its own
+loop only if `loop` is true, and offers:
+
+```js
+if (window.__storyTest) window.__story = {
+  length,                                  // the story, in screens of scroll
+  scenes: [{ id, from, to }],              // each scene, in the same screens
+  ready,                                   // a promise: everything made and warmed
+  render: (position, seconds, quality) => {}, // that frame, its words and its cards
+};
+performance.mark("story:first-picture");   // always, when the first picture is on the screen
+```
+
+The same frame comes out every time: the position, the time and nothing
+else decide it.
+
+## What the check cannot say
+
+**How it looks.** The sheets are for looking at, after every round: too
+glowy, out of the language, a label over a label. The owner looks too.
+
+**How fast it runs.** A machine without a graphics card gives proportions,
+never a frame rate, and none of the measured story's frame rates come from
+one. The real numbers come from the owner's devices: put a frame readout
+behind a small button (frames a second, late frames, the worst frame, the
+picture size), open the page on a phone and a laptop, and in Safari and
+Firefox, and read it while scrolling through every chapter
+([browsers.md](browsers.md)).
+
+What to measure by hand, with the hook and Playwright, when a rule or a
+device says something is slow:
+
+| Question | How |
+|---|---|
 | The frozen scenes | the same positions before and after the round, pixel by pixel: identical |
-| The first picture | from navigation to the first lit frame; the stage with the canvas hidden (the painted ground); the programs compiled before it |
 | What each pass costs | wrap the draw calls with a one-pixel `readPixels` and time them; take the fastest of several; compare two versions at equal pixels |
 | What the words cost | the draw calls off, a trace of 90 frames: script, style, paint, commit, raster |
 | Script a frame | the draw calls off, the processor slowed 4× |
 | First-time stutters | for each chapter, the first frame against the third, both ending in `readPixels` |
-| The setup | long tasks over 50 ms, the largest paint, the layout shift, slowed 4× |
 | The governor | run it on a software renderer: it must go down step by step and end on the stills; and as a simulation without a browser: strong and weak devices, 60 and 120 Hz, a limit of 30 from the start, at 10 s and lifted again |
-| WebKit | the same positions as Chromium, side by side: they must match; play, wheel, links, an iPhone and an iPad profile; the graphics calls and the questions in a frame |
-| The scene taken away | `WEBGL_lose_context`: lose, restore, the same picture |
-| Fallbacks | reduced motion, no WebGL, no JavaScript: all the words, no errors |
-
-A machine without a graphics card gives proportions, never a frame rate, and
-none of the measured story's frame rates come from one. The real numbers come from the owner's devices: put a frame readout behind a
-small button (frames a second, late frames, the worst frame, the picture
-size), open the page on a phone and a laptop, and in Safari and Firefox, and
-read it while scrolling through every chapter
-([browsers.md](browsers.md)).
+| The rest of WebKit | play, wheel, links, an iPhone and an iPad profile |

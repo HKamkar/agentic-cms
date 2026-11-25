@@ -26,7 +26,8 @@ then a bumped pin here; never a patch under `node_modules`.
   icons through `design-icons`, the site's own graphics (drawn as SVG in
   the lab, `pnpm kit lab`, shipped pre-rendered) through `design-graphics`,
   a page told as a live scene through `design-story` (its frame budget is
-  the kit's `docs/motion-story.md`),
+  the kit's `docs/motion-story.md`; `pnpm kit story <page>` holds it, here
+  and in CI),
   and nothing merges without `design-proof`.
 - Content is files under `content/`, validated at build time: posts in
   `content/blog/` (the filename is the slug), the registries, `reviews.yaml`,

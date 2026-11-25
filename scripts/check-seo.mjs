@@ -14,6 +14,9 @@
 // A site in several languages (site.locales, docs/locales.md) has each
 // page's lang, og:locale and hreflang alternates held against its built
 // versions by scripts/lib/hreflang.mjs.
+// A page that tells a motion story (an element with data-story,
+// docs/motion-story.md § The check) is held to what its built files say of it
+// by scripts/lib/story-built.mjs.
 // A preview build (AGENTIC_CMS_PREVIEW=1, docs/preview.md) is never indexed:
 // there every page must carry noindex and robots.txt disallow everything.
 // The contract it checks is src/lib/seo/README.md; the site's origin is
@@ -29,6 +32,7 @@ import { parseOrExit } from "./lib/args.mjs";
 import { pageTitles } from "./lib/head.mjs";
 import { languageFindings, sitemapLanguageFindings } from "./lib/hreflang.mjs";
 import { SPECS } from "./lib/specs.mjs";
+import { storyFindings } from "./lib/story-built.mjs";
 
 const { strict, report, json } = parseOrExit(SPECS.seo, process.argv.slice(2)).flags;
 
@@ -269,6 +273,7 @@ for (const page of pages) await checkPage(page, ctx);
 checkLanguages(ctx);
 checkSitemap(ctx);
 checkUniqueness(ctx);
+for (const { route, rule, msg } of storyFindings(ROOT, pages)) fail(route, rule, msg);
 
 const lines = findings.map((f) => `${f.level} ${f.route} ${f.rule}: ${f.msg}`);
 const fails = findings.filter((f) => f.level === "FAIL").length;

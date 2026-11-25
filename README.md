@@ -76,7 +76,7 @@ four layers.
 |---|---|---|
 | The content engine | the pages | the collections (`agentic-cms/content`), composed once with `createKit()`, a JSON Schema for each (`agentic-cms schema`), the redirects among them; on it pages (`content/pages/`, the section registry), the post pipeline (`agentic-cms/blog`), SEO (`agentic-cms/seo`) and a site's other languages (`agentic-cms/locales`, experimental); beside it forms (`agentic-cms/forms`) |
 | Browser libraries | to the reader | motion (`agentic-cms/ix`), the components (`agentic-cms/components`), consent (`agentic-cms/consent`), e-mail (`agentic-cms/email`), `agentic-cms/cx` |
-| Design tools | never | the lab, design rounds (`demo`), the screenshot harness (`visual-parity`, `parity`, `shot`, `probe`, `sheet`), icons, images, the design skills |
+| Design tools | never | the lab, design rounds (`demo`), the screenshot harness (`visual-parity`, `parity`, `shot`, `probe`, `sheet`), a motion story's check (`story`), icons, images, the design skills |
 | The site's commands | the build and the setup | `init`, `upgrade`, `setup`, `urls`, `serve`; the gates every change passes (`pnpm lint` with `check-site`, `pnpm build` with `seo` and `guard-email`) and the steps a site adds (`critical-css`, `assemble`, `pr-preview`); `agentic-cms/eslint`, `agentic-cms/loader` |
 
 Two tiers:
@@ -301,9 +301,14 @@ reduced motion on. The numbers in the kit's guide were measured on it.
 Such a page fails by dropping frames, so the kit's part is the method:
 [docs/motion-story.md](docs/motion-story.md), with the budget to set before
 drawing, the rules with the numbers behind them, what Safari needs, and how to
-check it all, and the `design-story` skill with the code to start from. The
-kit ships no story engine, and no check of its own fails a page over the
-budget: the scene is the site's, kept with one line of reason.
+check it all, the `design-story` skill with the code to start from, and
+`agentic-cms story`, which opens the built page in Chromium and WebKit and
+fails on 13 rules: words nobody reads without the scene, a first picture
+that waits for the rest, a blocked main thread, anything made in mid-scroll, too many pixels,
+a blank frame, two engines that differ, cards that travel or cannot be read,
+a loop that draws for nobody. The kit ships no story engine: the scene is
+the site's, kept with one line of reason. The sample's source is
+[examples/motion-story](examples/motion-story).
 
 | The budget | |
 |---|---|
@@ -579,6 +584,7 @@ pnpm kit schema      # the JSON Schema of every collection into content/_schemas
 ```bash
 pnpm kit placeholder <out> <width> <height>   # a wireframe placeholder image; optimize-webp and optimize-svg-rasters make real ones light
 pnpm kit visual-parity <proof|capture|compare|clean>   # the screenshot harness; parity when the markup must not move either
+pnpm kit story <route>   # the page of a motion story held to its budget, in Chromium and WebKit
 pnpm kit shot|probe|sheet   # a section's picture with its box, the numbers behind a screenshot claim, a candidate sheet
 pnpm kit icons <add|remove|family|audit|round>   # a site's icon map from Lucide, Simple Icons and its own drawings, a family of marks from primitives, the inventory, a design round for its own
 pnpm kit lab <new|serve|route|render|clean>   # the design canvas: SVG scenes on the site's tokens, on a phone, and as a throwaway route on the site's theme; rendered to the files a page ships; removed after
@@ -614,6 +620,7 @@ pnpm kit --help      # every command; <command> --help prints its flags and exit
 pnpm test            # the content engine's, the post pipeline's, the lint's and the command line's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:worker     # the real Worker, built and served, compared with the pages the build prerendered
+pnpm test:story      # the motion sample, built and held to every rule of agentic-cms story
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
 pnpm lint:pkg        # the tarball as npm will hold it: its files as tools/pack-files.txt lists them (pnpm docs:pack), publint, Are the Types Wrong
 pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
@@ -691,9 +698,10 @@ src/config/harness.ts        the screenshot harness's profile (widths, schemes) 
 templates/lab-demo/          the lab's throwaway route
 
 # The site's commands
-bin/, scripts/               the command line, by layer: lint, check, status, docs, schema; placeholder, the optimisers, parity, visual-parity, shot, probe, sheet, icons, lab, demo; init, upgrade (its migrations in scripts/migrations/), setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble, pr-preview); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
+bin/, scripts/               the command line, by layer: lint, check, status, docs, schema; placeholder, the optimisers, parity, visual-parity, story, shot, probe, sheet, icons, lab, demo; init, upgrade (its migrations in scripts/migrations/), setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble, pr-preview); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
 src/config/components.json   the site check's config: the layers, the owners, the allow list, the route exceptions, the baseline; eslint.config.mjs passes the same to the preset
 templates/site/              what init writes into a site: AGENTS.md, the rules a site's thin ones point at, the config, the CI workflow and Dependabot, scripts/setup.sh
+examples/motion-story/       the motion sample's source, one page on its own (not in the package)
 templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
 
 # Across the layers
