@@ -413,6 +413,8 @@ at all): how often a page starts or restarts a loop, from an observer or a
 timer, depends on timing, and the frames show it held at its first frame.
 What the harness cannot hold still moves: a canvas drawn every frame, a
 script's own loop, a spring that has not come to rest by the settle time.
+(A page told as a live scene is photographed by the static passes, whose
+reduced motion shows its still version: [motion-story.md](motion-story.md).)
 Such a region differs between two captures of one build, settled frame
 included, and only a second take tells it from a change: `proof` retakes
 every frame that differs, the base against itself among them, and calls a

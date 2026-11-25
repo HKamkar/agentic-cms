@@ -46,7 +46,8 @@ the tokens in `ui/` and
 `styling`). Each warning names the kit's part, and a file that keeps its
 own choice says why in one line: an `allow` entry in
 `src/config/components.json` or an inline disable with its description
-(`docs/primitives.md` § Enforced). Anywhere in `src/`, it fails an import
+(`docs/primitives.md` § Enforced; a page told as a live scene,
+`docs/motion-story.md`). Anywhere in `src/`, it fails an import
 that goes the wrong way between the layers:
 
 | Layer | Holds | May import |

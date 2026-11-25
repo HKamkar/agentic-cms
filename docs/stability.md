@@ -37,7 +37,9 @@ its name. The changelog says what changed, and nothing else holds it.
 Today that is the lab, `agentic-cms/lab` and `agentic-cms lab`; the
 languages of a site, `agentic-cms/locales` with `kit.locales`,
 `kit.content.in()` and `kit.blog.in()`, `site.locales` and where a
-translation sits ([locales.md](locales.md)); and the
+translation sits ([locales.md](locales.md)); a motion story's check,
+`agentic-cms story` with the marks and the hook it reads
+([motion-story.md](motion-story.md#the-check)); and the
 preview of a pull request, `agentic-cms pr-preview`, which rests on two
 things the kit does not own: OpenNext passing `--preview-alias` through to
 `wrangler versions upload`, and the file wrangler writes the preview's URL
@@ -137,6 +139,7 @@ Each command's flags, defaults and exit codes are in
 | the content engine: `agentic-cms lint`, `agentic-cms check`, `agentic-cms status`, `agentic-cms docs`, `agentic-cms schema` | stable |
 | the images: `agentic-cms placeholder`, `agentic-cms optimize-webp`, `agentic-cms optimize-svg-rasters` | stable |
 | the proofs: `agentic-cms visual-parity`, `agentic-cms parity` | stable |
+| a motion story's check: `agentic-cms story` | experimental |
 | looks and measures: `agentic-cms shot`, `agentic-cms probe`, `agentic-cms sheet` | stable |
 | the icons: `agentic-cms icons` | stable |
 | the design round: `agentic-cms demo` | stable |

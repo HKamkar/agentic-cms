@@ -13,7 +13,8 @@ without one), on
 the owner's phone — and shipped **pre-rendered**: a file under
 `public/images/`, or inline `Icon` data. Speed and search come first, so
 nothing renders in the reader's browser that a file could carry; the lab is
-a tool opened for the drawing and gone once the files exist. The guide is
+a tool opened for the drawing and gone once the files exist. (A whole page
+told as a live scene is not a graphic: `design-story`.) The guide is
 `docs/lab.md` (`node_modules/agentic-cms/docs/lab.md` on a site that
 installs the kit); the pick goes through `design-options`, the merge
 through `design-proof`; the notes on building motion in SVG are

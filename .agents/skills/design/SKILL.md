@@ -75,7 +75,9 @@ dev server and its own commit; never all at once.
    and the layer's block of `motion.css` first, as that section says.
    Start states and keyframes live in `src/styles/motion.css`; a sequence
    longer than two seconds declares `data-settle` on its section (`settle`
-   on a `Sequence`).
+   on a `Sequence`). A page told as one live, scroll-driven scene is not
+   this step but a job of its own, when the owner asks for one: the
+   `design-story` skill.
 
 ## The loop, per element
 

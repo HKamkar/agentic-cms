@@ -147,7 +147,8 @@ The invariants; the values, tables and examples are in `STANDARD.md`.
 - No motion in the wireframe: no `Fx`, `OnView`, `Reveal` or `Sequence` in a
   section, no `data-ix` or `data-part` attributes, no transitions. The
   `agentic-cms/ix` library and `src/styles/motion.css` stay for a fork that
-  adds motion, in two layers (`STANDARD.md` §7 says which) — and then their
+  adds motion, in two layers (`STANDARD.md` §7 says which; a live scene:
+  `docs/motion-story.md`) — and then their
   rules apply: the play-once layer plays a root once, runs loops only on
   screen, hides nothing unless `motionScript()` armed the page and times
   everything with the `--ease-*` / `--motion-*` tokens; `Fx` and `OnView`

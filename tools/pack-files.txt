@@ -4,6 +4,8 @@
 .agents/skills/design-measure/SKILL.md
 .agents/skills/design-options/SKILL.md
 .agents/skills/design-proof/SKILL.md
+.agents/skills/design-story/SKILL.md
+.agents/skills/design-story/references/steady-frames.md
 .agents/skills/design/SKILL.md
 .agents/skills/setup/SKILL.md
 .claude-plugin/marketplace.json
@@ -13,6 +15,8 @@
 .claude/skills/design-measure/SKILL.md
 .claude/skills/design-options/SKILL.md
 .claude/skills/design-proof/SKILL.md
+.claude/skills/design-story/SKILL.md
+.claude/skills/design-story/references/steady-frames.md
 .claude/skills/design/SKILL.md
 .claude/skills/setup/SKILL.md
 .env.example
@@ -224,13 +228,11 @@ docs/locales.md
 docs/migrating-to-0.8.0.md
 docs/migrating-to-0.8.2.md
 docs/migrating-to-0.9.0.md
+docs/motion-story.md
 docs/parts.md
 docs/preview.md
 docs/primitives.md
 docs/redirects.md
-docs/releasing.md
-docs/roadmap-0.8.2.md
-docs/roadmap.md
 docs/schema.md
 docs/setup.md
 docs/shot-probe-sheet.md
@@ -336,6 +338,10 @@ scripts/lib/specs.mjs
 scripts/lib/starter.mjs
 scripts/lib/states.mjs
 scripts/lib/storage-seed.mjs
+scripts/lib/story-built.mjs
+scripts/lib/story-page.mjs
+scripts/lib/story-rules.mjs
+scripts/lib/story-run.mjs
 scripts/lib/translations.mjs
 scripts/lib/unified-diff.mjs
 scripts/lib/upgrade.mjs
@@ -350,6 +356,7 @@ scripts/serve.mjs
 scripts/setup.mjs
 scripts/sheet.mjs
 scripts/shot.mjs
+scripts/story.mjs
 scripts/svgo.config.mjs
 scripts/upgrade.mjs
 scripts/urls.mjs

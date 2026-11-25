@@ -267,6 +267,13 @@ by `pnpm test:browser`.
   (`docs/dev-server.md`; `lib/serve.mjs`, `lib/dev-server.mjs` — next dev
   started, watched and stopped by process group, which the browser tests
   run too — and `lib/handover.mjs`, the wait and the URLs).
+- `story` — holds the page of a motion story to its budget: `pnpm kit story
+  <route>` (`story.mjs`) opens the built page in Chromium and WebKit through
+  the hook it carries (`lib/story-page.mjs` is what runs in the page,
+  `lib/story-run.mjs` the passes, `lib/story-rules.mjs` the rules and their
+  numbers, tested without a browser); `lib/story-built.mjs` is the half
+  `check-seo.mjs` runs over the built files. The contract is
+  `docs/motion-story.md` § The check.
 - `visual-parity` — proves a change altered no pixels: `pnpm kit
   visual-parity capture <label>` (`visual-parity.mjs`) renders every
   prerendered page of the current build at the site's widths (its profile,

@@ -23,8 +23,9 @@
 //   - ci: a workflow that runs on pull requests (init's
 //     .github/workflows/verify.yml) runs the lint (or a build that runs it),
 //     the tests, the build and the agent-file check; and, as warnings, its
-//     preview job (docs/preview.md) can comment and diff, and no job uploads
-//     a preview version without AGENTIC_CMS_PREVIEW=1;
+//     preview job (docs/preview.md) can comment and diff, no job uploads
+//     a preview version without AGENTIC_CMS_PREVIEW=1, and a site that tells
+//     a motion story (data-story) runs `agentic-cms story` on it;
 //   - tools, the preferred tier's, so warnings that fail nothing: a script of
 //     the site's own under scripts/ that drives Playwright (or another
 //     headless browser), runs sharp over public/ or starts next dev, and a
@@ -380,12 +381,24 @@ const CI_STEPS = [
  * get none of its checks; and the preview job's warnings (previewWarnings()).
  * { findings, warnings }.
  */
+/** `agentic-cms story`, as a workflow's step or as the package script one runs. */
+const STORY_STEP = /(?:agentic-cms|pnpm kit|bin\/agentic-cms\.mjs) story(?:\s|$)/;
+
+/** A site that tells a motion story (data-story in its markup) and whose CI never holds it to its budget: a warning. */
+function unheldStory(site, pkg, { flows }) {
+  const told = site.walk("src").find((file) => /\.[jt]sx$/.test(file) && /\bdata-story(?![\w-])/.test(site.read(file) ?? ""));
+  if (!told || !flows.length) return [];
+  const scripts = Object.entries(pkg?.scripts ?? {}).filter(([, text]) => STORY_STEP.test(text)).map(([name]) => name);
+  const held = flows.flatMap((flow) => flow.commands).some((command) => STORY_STEP.test(command) || scripts.some((name) => new RegExp(`^(?:pnpm|npm|yarn) (?:run )?${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s|$)`).test(command)));
+  return held ? [] : [finding("ci", told, "tells a motion story, and no workflow on pull requests runs agentic-cms story, so nothing holds it to its budget", "a job that builds, installs the browsers (pnpm exec playwright-core install --with-deps chromium webkit) and runs pnpm exec agentic-cms story <the page> (docs/motion-story.md § The check)")];
+}
+
 function checkCi(site, pkg, kit, targets = () => []) {
   const workflows = workflowCommands(site);
   const linting = workflows.flows.filter((flow) => flow.commands.some((command) => LINT_STEP.test.test(command) || BUILD_STEP.test.test(command)));
   const left = linting.length ? targets().filter((branch) => !linting.some((flow) => runsInto(branch, flow))) : [];
   const warnings = [...(left.length ? [finding("ci", linting[0].file, `the workflow that runs the lint on pull requests (${linting.map((flow) => flow.file).join(", ")}) runs on none into ${left.join(" or ")}, so such a pull request gets none of its checks`, `add ${left.join(" and ")} to its on.pull_request.branches, or drop the filter as node_modules/agentic-cms/templates/site/verify.yml does (its pull_request takes every branch)`)] : []), ...previewWarnings(site)];
-  return { findings: ciGates(site, pkg, kit, workflows), warnings };
+  return { findings: ciGates(site, pkg, kit, workflows), warnings: [...warnings, ...unheldStory(site, pkg, workflows)] };
 }
 
 /** A workflow on pull requests runs the gates. */

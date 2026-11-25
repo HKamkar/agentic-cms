@@ -170,6 +170,17 @@ export function serveStatic({ root = process.cwd(), requireBuild = true, thirdPa
   return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
 }
 
+/** Serves the files of one folder on 127.0.0.1, for a page that stands on its own (a prototype, an example); { url, close }. */
+export function serveFolder(folder) {
+  const server = http.createServer((req, res) => {
+    const file = path.join(folder, path.normalize(decodeURIComponent(new URL(req.url, "http://x").pathname)));
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream" });
+    res.end(fs.readFileSync(file));
+  });
+  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })));
+}
+
 /** A design round's throwaway route (src/app/<name>-demo, the lab's /lab-demo): never production, so never photographed unless asked for by name. */
 export const DEMO_ROUTE = /^\/[a-z0-9][a-z0-9-]*-demo(\/|$)/;
 

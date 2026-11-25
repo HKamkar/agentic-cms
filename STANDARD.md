@@ -276,7 +276,8 @@ pre-rendered like any other picture: a file here, or inline `Icon` data
 itself leaves nothing in the tree. `pnpm lint` warns about an `<svg>`
 outside `Icon` (`agentic-cms/icons`; `Placeholder` keeps its crossed box in
 `allow`) and about a rendering library or a `<canvas>`
-(`agentic-cms/graphics`).
+(`agentic-cms/graphics`), which a page told as a live scene keeps with its
+reason (§7).
 
 
 ## 5. Components
@@ -475,6 +476,10 @@ the motion layer warns, naming this one (`agentic-cms/motion`), and so does
 a transition declared in CSS outside it and `motion.css` (the guard's
 `transitions`); a file that keeps its own has an `allow` entry with its
 reason (`docs/primitives.md` § Enforced).
+
+A page told as a live, scroll-driven scene is neither layer: it is one page's
+own engine, optional, with a frame budget, a governor and a still version
+(`docs/motion-story.md`, the `design-story` skill). The wireframe has none.
 
 `capture --motion` sees the parts play and records them in the inventory, and
 `probe` lists an armed part whose root has not played among the pending

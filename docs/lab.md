@@ -15,7 +15,9 @@ keeps its own says why in one line, an `allow` entry in
 `src/config/components.json` or an inline disable with its description
 ([primitives.md § Enforced](primitives.md#the-rest-guided-across-src)).
 An `<svg>` written in a section fails (`react/forbid-elements`, the message
-naming the lab).
+naming the lab). A page told as a live scene is drawn in the reader's
+browser, the site's own choice with its reason, and has a budget of its own:
+[motion-story.md](motion-story.md).
 
 ## Open, draw, look
 

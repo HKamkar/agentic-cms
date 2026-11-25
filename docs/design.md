@@ -48,6 +48,11 @@ commit. Per element:
    token or family into the section it belongs to, the new shared component
    into the catalogue.
 
+A page told as one live, scroll-driven scene is none of these steps: it is a
+job of its own, on one page, with its own budget, and the last to start. It
+comes after the site's tokens and copy exist, and it stays optional
+([motion-story.md](motion-story.md), the `design-story` skill).
+
 ## The round
 
 How a section gets its design, as it runs in practice (the
@@ -232,7 +237,8 @@ nothing else moved.
 
 ## What stays out of the kit
 
-No design: the kit carries behaviour (the reveal library, the components
+No design, and no story engine: the kit carries behaviour (the reveal
+library, the components
 that carry no look — `EagerImage`, `JsonLd`, `FaqAccordion`), never a
 styled element. No site's name, palette or copy. The wireframe under
 `src/` is an example a site replaces, not a theme it extends.

@@ -81,12 +81,19 @@ running this way:
 - text widths, of the page and of an SVG's `<text>` (`getBBox()`);
 - the accessibility tree with a menu or a dialog open;
 - a state the harness does not capture, byte-compared against the base
-  branch's build.
+  branch's build;
+- a live scene (WebGL 2 runs in headless WebKit, in software): that every
+  shader compiles, that it starts, and that its frames match Chromium's at
+  the same positions: `agentic-cms story` does it
+  ([motion-story.md § The check](motion-story.md#the-check)). A frame is drawn
+  inside an animation frame there and photographed two frames later, or the
+  picture is the one before.
 
 ## What headless cannot show
 
 - **WebKit on Linux** renders in software:
   - no `backdrop-filter`, no GPU compositing, no touch momentum;
+  - WebGL 2, but not Safari's Metal: what is drawn, never how fast;
   - no Apple system fonts, so text widths differ from a real Mac or
     iPhone.
 
@@ -96,7 +103,9 @@ running this way:
   - frame times and FPS mean nothing there; measure main-thread work
     instead (long tasks, scripting time);
   - `will-change` on many layers makes the software compositor slower,
-    which says nothing about a real GPU.
+    which says nothing about a real GPU;
+  - its WebGL forgives undefined maths in a shader that another engine turns
+    into white or black pixels: look in both.
 - **Element screenshots drop children under a 3D `perspective`.** Capture
   the viewport instead (`shot` without `--select`), or a `clip` rectangle
   in your own script (`page.screenshot({ clip })`).
@@ -113,4 +122,6 @@ running this way:
 | blur or overlay glitches | Safari | no `backdrop-filter` at `opacity: 0`, no `display` toggles on filter layers, no nested backdrop filters |
 | the page scrolls sideways on an iPhone | WebKit, at 390 to 430 px | measure `scrollWidth` against `clientWidth` while the animations run; a moving decoration clips its own box ([gotchas.md § CSS, SVG and performance](gotchas.md#css-svg-and-performance)) |
 | a `<source media="(width < 768px)">` is ignored | Safari before 16.4 | write `not all and (min-width: 768px)` |
+| a live scene is black, sparkles, or never starts | Safari | undefined maths in a shader, a setting the compiler removed, `sin` as a random number ([motion-story.md § Safari](motion-story.md#safari)) |
+| a live scene runs at 30 a second | Safari | low power mode, or an embedded page nobody has touched: a limit, not a slow device ([motion-story.md § Safari](motion-story.md#safari)) |
 | copies of one SVG animation drift apart | WebKit | it advances visible and off-screen SVG timelines differently: the kit's timeline sets them going together each cycle ([lab.md § Inspecting motion](lab.md#inspecting-motion--the-timeline)); judge frames paused |

@@ -235,6 +235,22 @@ export const SPECS = {
       },
     },
   },
+  story: {
+    command: "story", script: "story", group: "proof", summary: "the page of a motion story held to its budget: the built page opened in Chromium and WebKit through the hook it carries, its words, its first picture, its frames' calls, its cards and its ways down",
+    usage: "agentic-cms story <route|url|file.html> [--url <base>] [--engines both|chromium] [--only <rules>] [--wait <s>] [--out <dir>] [--json]",
+    positionals: [{ name: "target", required: true, help: "the story's page: a route of the build (/), a URL, or an .html file that stands on its own" }],
+    flags: {
+      url: { type: "string", value: "<base>", help: "a served site instead of the build under .next" },
+      engines: { type: "string", choices: ["both", "chromium"], default: "both", help: "both: Chromium and WebKit, their frames compared; chromium: that one alone, where WebKit cannot be installed" },
+      only: { type: "string", value: "<a,b>", help: "some of the rules, for a round: errors, words, still, first-picture, setup, mid-scroll, pixels, blank, engines, cards, shift, stops, lost (a change is done when all of them hold)" },
+      wait: { type: "number", default: 60, value: "<s>", help: "how long the story may take to come up, in seconds, on a machine that draws in software" },
+      out: { type: "string", value: "<dir>", help: "also write the photographed frames, one sheet per engine, to look at (.parity/story, say)" },
+      json: { type: "boolean", help: "print one JSON document on stdout (progress goes to stderr)" },
+    },
+    examples: ["agentic-cms story /", "agentic-cms story / --out .parity/story", "agentic-cms story / --only cards,first-picture", "agentic-cms story /launch --url http://localhost:3000 --engines chromium --json"],
+    exit: { 0: "every rule held", 1: "a rule broken, or a page without the hook", 2: "usage, no build, or no browser" },
+    json: "{ url, engines, scenes: [{ id, from, to }], rules: [{ rule, ok, problem }], measured: { firstPicture?, midScroll?, setup?, pixels?, shift?, stops?, lost?, frames?: [{ engine, at, spread }], engines?: [{ at, mean, blown }] | null, cards?: [{ name, width, longer, readable, inside, path, jump }] } (of the rules asked for), sheets }",
+  },
   shot: {
     command: "shot", script: "shot", group: "look & measure", summary: "one screenshot of a page or of an element on it, prepared like the harness prepares a page, with its box as JSON",
     usage: `agentic-cms shot <route|url> [--url <base>] [--width 1440] [--height 900] [--scale 1] [--select <css> | --heading <regex>] [--transparent] [--trim] [--resize <w>] [--out <file>] ${seedUsage} [--json]`,
