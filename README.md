@@ -1,6 +1,6 @@
 <a href="https://hkamkar.github.io/agentic-cms/motion-story/">
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/HKamkar/agentic-cms/main/docs/readme/hero-still.webp">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/readme/hero-still.webp">
   <img src="docs/readme/hero.webp" alt="agentic-cms. The CMS whose editor is an AI agent. Every word is a file. An agent edits it, the build checks it, and what ships is static." width="100%">
 </picture>
 </a>
@@ -46,7 +46,7 @@ Four sites, designed and built with agentic-cms.
 Node 22.18 or later and pnpm. A site of your own, from nothing:
 
 ```bash
-pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.10.0 init my-site --name "My Site"
+pnpm dlx --allow-build=agentic-cms@git+https://github.com/HKamkar/agentic-cms.git agentic-cms@github:HKamkar/agentic-cms#v0.10.1 init my-site --name "My Site"
 cd my-site && bash scripts/setup.sh && pnpm kit serve
 ```
 
@@ -223,7 +223,7 @@ then; the banner is the site's own design, and the example's is off until
 
 <div align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/HKamkar/agentic-cms/main/docs/readme/page-dark.webp">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/page-dark.webp">
   <img src="docs/readme/page-light.webp" alt="One page file and what each of its three blocks becomes: seo, the head with its title, description, canonical, Open Graph and sitemap entry; jsonld, the structured data; sections, the page a reader sees" width="960">
 </picture>
 </div>
@@ -271,7 +271,7 @@ each slot is for. A site laid out by `init` starts without them.
 
 <div align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/HKamkar/agentic-cms/main/docs/readme/post-dark.webp">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/post-dark.webp">
   <img src="docs/readme/post-light.webp" alt="One post file beside the post it becomes: a heading, the pull quote from a blockquote, the figure from an image on its own line, and the accordion from the frequently asked questions" width="960">
 </picture>
 </div>
@@ -433,7 +433,7 @@ the design begins.
 
 <a href="https://hkamkar.github.io/agentic-cms/motion-story/">
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="https://raw.githubusercontent.com/HKamkar/agentic-cms/main/docs/readme/motion-story-still.webp">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/readme/motion-story-still.webp">
   <img src="docs/readme/motion-story.webp" alt="Six scenes drawn with fine lines of light, one after the other: a night sea with small lit boats and a whale, a storm, a spiral of fibres, an iris that holds one page back, a tree that grows and turns gold, and a planet at dawn" width="100%">
 </picture>
 </a>

@@ -4,7 +4,8 @@
 // its files are tools/pack-files.txt's (tools/pack-files.mjs), none of them
 // a path hygiene or a package refuses, none naming a site, a machine path or
 // an address (tools/hygiene.mjs's text rules, over the tarball's files as
-// they are over the tracked ones); its packed manifest runs nothing on
+// they are over the tracked ones); its README names every picture and page
+// by an address (tools/npm-readme.mjs); its packed manifest runs nothing on
 // install; every bare import of a file that runs from it is declared; the
 // hand-written declarations of ./loader and ./eslint compile
 // (tsconfig.declarations.json); then publint --strict and Are the Types
@@ -18,6 +19,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { findings, showcasedBrands } from "./hygiene.mjs";
+import { bases, named, relativeRefs } from "./npm-readme.mjs";
 import { LIST, pack, refusedPaths, tarballFiles, undeclaredImports } from "./pack-files.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -40,6 +42,12 @@ export function tarballFindings({ files, listed, root, manifest, brands }) {
   if (onInstall.length) out.push(`package.json: the packed manifest keeps ${onInstall.join(", ")}, which a registry install would run`);
   out.push(...undeclaredImports(files, read, manifest).map(({ file, specifier }) => `${file}: imports ${specifier}, which is no Node builtin and no dependency or peer of package.json`));
   return out;
+}
+
+/** What npm's page would show broken: a relative picture or link of the packed README, or one the tree has no file for; [] when none. */
+export function readmeFindings(readme, manifest, exists) {
+  const gone = named(readme, bases(manifest)).filter((file) => !exists(file));
+  return [...relativeRefs(readme).map((ref) => `README.md: ${ref} is relative, and npm's page has no such file (tools/npm-readme.mjs, in prepack)`), ...gone.map((file) => `README.md: names ${file}, which is no file of this tree`)];
 }
 
 /** The tools, each run on the tarball (or, for tsc, the declarations it ships); the label of each that failed. */
@@ -79,6 +87,7 @@ function main(args) {
       manifest: JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")),
       brands: [...showcasedBrands(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")), ...value("--brand")],
     });
+    found.push(...readmeFindings(fs.readFileSync(path.join(root, "README.md"), "utf8"), JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")), (file) => fs.existsSync(path.join(ROOT, file))));
     found.push(...toolFailures(tarball));
     for (const line of found) console.error(`lint:pkg: ${line}`);
     console.log(found.length ? `lint:pkg: ${found.length} finding(s) in ${path.basename(tarball)}` : `lint:pkg: ${path.basename(tarball)} is clean — ${files.length} files, as ${LIST} lists them`);

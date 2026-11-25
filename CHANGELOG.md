@@ -4,6 +4,11 @@ Every release of `agentic-cms`, newest first; a pull request adds its lines
 under Unreleased, and the release commit renames that heading. A line that
 changes what a capture writes says **recapture baselines**.
 
+## [0.10.1] — 2026-11-25
+
+- Fixed: the README's pictures and links on npm's page. A pack writes each as an address on the version's own tag (`tools/npm-readme.mjs`, in `prepack`, undone in `postpack`), so no later change breaks a version that is out; in the repository the README stays relative. `pnpm lint:pkg` refuses a packed README with a relative picture or link, or an address no file of the tree has.
+- Upgrading from 0.10.0: nothing to do.
+
 ## [0.10.0] — 2026-11-25
 
 - A motion story without frame loss: `docs/motion-story.md` (the frame budget, the rules with the numbers behind them, what Safari needs, the checks) and the `design-story` skill with the code to start from. Optional and preferred tier: one page told as a live scene, every other page regular. The kit ships no story engine. The README, the design guide, the browser guide and the gotchas say where it fits; the README links a live sample.
