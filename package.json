@@ -144,6 +144,7 @@
     "test:browser": "node --test \"scripts/browser/*.test.mjs\"",
     "plugin:validate": "claude plugin validate ./plugin --strict && claude plugin validate . --strict",
     "test:worker": "node tools/worker-smoke.mjs",
+    "test:story": "node examples/motion-story/build.mjs && node bin/agentic-cms.mjs story examples/motion-story/dist/index.html",
     "test:pack": "node tools/pack-smoke.mjs",
     "lint:pkg": "node tools/lint-pkg.mjs",
     "hygiene": "node tools/hygiene.mjs",

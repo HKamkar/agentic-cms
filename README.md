@@ -307,7 +307,8 @@ fails on 13 rules: words nobody reads without the scene, a first picture
 that waits for the rest, a blocked main thread, anything made in mid-scroll, too many pixels,
 a blank frame, two engines that differ, cards that travel or cannot be read,
 a loop that draws for nobody. The kit ships no story engine: the scene is
-the site's, kept with one line of reason.
+the site's, kept with one line of reason. The sample's source is
+[examples/motion-story](examples/motion-story).
 
 | The budget | |
 |---|---|
@@ -619,6 +620,7 @@ pnpm kit --help      # every command; <command> --help prints its flags and exit
 pnpm test            # the content engine's, the post pipeline's, the lint's and the command line's node:test suites, about a second
 pnpm test:browser    # the Chromium-backed suite (the harness's library; skips, naming the fix, without a browser)
 pnpm test:worker     # the real Worker, built and served, compared with the pages the build prerendered
+pnpm test:story      # the motion sample, built and held to every rule of agentic-cms story
 pnpm test:pack       # packs the package and builds a scratch site from the tarball, the way a site that installs it does
 pnpm lint:pkg        # the tarball as npm will hold it: its files as tools/pack-files.txt lists them (pnpm docs:pack), publint, Are the Types Wrong
 pnpm hygiene         # the public repo's hygiene: no one site's name, no machine paths, no captures committed, docs current
@@ -699,6 +701,7 @@ templates/lab-demo/          the lab's throwaway route
 bin/, scripts/               the command line, by layer: lint, check, status, docs, schema; placeholder, the optimisers, parity, visual-parity, story, shot, probe, sheet, icons, lab, demo; init, upgrade (its migrations in scripts/migrations/), setup, urls, serve, the gates (check-site with check-components, seo, guard-email) and the steps a site adds (critical-css, assemble, pr-preview); the loader and the ESLint preset a site imports (agentic-cms/loader, agentic-cms/eslint)
 src/config/components.json   the site check's config: the layers, the owners, the allow list, the route exceptions, the baseline; eslint.config.mjs passes the same to the preset
 templates/site/              what init writes into a site: AGENTS.md, the rules a site's thin ones point at, the config, the CI workflow and Dependabot, scripts/setup.sh
+examples/motion-story/       the motion sample's source, one page on its own (not in the package)
 templates/starter/           the content a new site starts from in the example's place: a home page and the blog index marked (placeholder), empty collections
 
 # Across the layers
