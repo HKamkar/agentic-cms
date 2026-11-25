@@ -10,6 +10,7 @@ changes what a capture writes says **recapture baselines**.
 - `agentic-cms story <page>` (experimental): the page of a motion story held to its budget in Chromium and WebKit, through the marks (`data-story`, `data-story-stage`, `data-story-card`) and the hook (`window.__story`) it carries: errors, words without JavaScript and with reduced motion, the first picture, the blocked main thread, anything made or asked in mid-scroll, the pixels, blank frames, two engines that differ, cards that travel, jump or cannot be read, layout shift, a loop nobody sees, a lost context. It counts and compares, so a machine without a graphics card gives the same answer; `--out` writes the frames to look at, `--only` takes some of the rules.
 - `agentic-cms seo` holds a built page with `data-story` to `story-words`, `story-canvas` and `story-weight` (60 KB of WebGL script, compressed) and every other page to `story-scripts` (it loads none of it); `check-site` warns when a site tells a story and no workflow on pull requests runs the check. A site without a story is told nothing.
 - The kit's own: `examples/motion-story`, the motion sample's source, and `pnpm test:story`, CI's `story` job: the sample built and held to every rule.
+- Docs: the README, redesigned. A hero from the motion sample, the four sites built with the kit, the quick start right after them, figures in place of the example's screenshots, and the reference kept, its long parts folded.
 
 ## [0.9.0] — 2026-11-24
 
