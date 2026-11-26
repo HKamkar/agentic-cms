@@ -35,6 +35,10 @@ too. Then the release's own steps, `pnpm build`, `pnpm test`, and a new
 baseline for the screenshot harness when the release changed what a capture
 writes (`CHANGELOG.md` marks each such line **recapture baselines**).
 
+## 0.10.0 → 0.10.1
+
+Nothing to do: the package is 0.10.0's, with a README npm's page can show.
+
 ## 0.9.0 → 0.10.0
 
 `upgrade` moves the pin and writes one file. No migration runs and nothing

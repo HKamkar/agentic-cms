@@ -560,6 +560,13 @@ in 0.1 ms steps; it is counted as the first picture is marked.
 **Not checked by it:** whether a scene is beautiful, and frame rates on real
 devices.
 
+## Phase 18 — 0.10.1, npm's page (2026-11-25)
+
+npm's page lost the README's pictures. A published README kept relative
+paths, and the release of 0.10.0 had just removed 0.9.0's pictures from
+`main`. The README a pack holds now names every picture and link on its
+version's own tag, which never moves; the repository's stays relative.
+
 ## Verification recipe
 
 ```bash

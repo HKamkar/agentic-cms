@@ -142,15 +142,14 @@ one packed by hand:
    GitHub Release and runs the smoke test from the registry. `npm audit
    signatures` passes on it: every version carries the registry's
    signature, and a version without an attestation is not a failure.
-5. **Look at the npm page,** `https://www.npmjs.com/package/agentic-cms`:
-   the README renders, and its pictures and links, relative paths under
-   `docs/readme/` and `docs/` that the tarball leaves out, resolve. npm's
-   docs say only that a README is "rendered as GitHub Flavored Markdown"
-   ([npm Docs](https://docs.npmjs.com/about-package-readme-files)), not
-   whether a relative path resolves through `repository`. If one does not,
-   the next candidate makes them absolute URLs on the tag
-   (`https://raw.githubusercontent.com/HKamkar/agentic-cms/<tag>/…`).
-   The page shows the README of the version `latest` names.
+5. **Look at the npm page,** `https://www.npmjs.com/package/agentic-cms`,
+   in a browser (npm refuses an automated one): the README renders with its
+   pictures. npm has the README of each version and nothing else of the
+   repository, so a pack writes every relative picture and link as an
+   address on the version's own tag (`tools/npm-readme.mjs`, in `prepack`,
+   undone in `postpack`), and `pnpm lint:pkg` refuses a packed README that
+   kept one, or that names a file the tree lacks. The page shows the README
+   of the version `latest` names.
 6. **O3, right after,** on npmjs.com, the package → Settings:
    - **Trusted publishing:** GitHub Actions; organization or user
      `HKamkar`, repository `agentic-cms`, workflow filename

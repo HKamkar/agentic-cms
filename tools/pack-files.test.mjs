@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { listDrift, tarballFindings } from "./lint-pkg.mjs";
+import { listDrift, readmeFindings, tarballFindings } from "./lint-pkg.mjs";
 import { bareImports, LIST, packageOf, refusedPaths, undeclaredImports } from "./pack-files.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -63,4 +63,12 @@ test("the tarball's files against the list: what each side lacks; a manifest tha
     assert.ok(!found.some((line) => line.includes(LIST)), "the list matches");
     assert.match(tarballFindings({ files, listed: files.slice(1), root, manifest: { name: "agentic-cms" }, brands: [] })[0], /tools\/pack-files\.txt is stale \(\+ README\.md\)/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a packed README with a relative picture, or an address no file of the tree has, is a finding", () => {
+  const manifest = { version: "1.2.3", repository: { url: "git+https://github.com/o/r.git" } }, RAW = "https://raw.githubusercontent.com/o/r/v1.2.3/";
+  const problems = (readme) => readmeFindings(readme, manifest, (file) => file === "docs/a.webp");
+  assert.deepEqual(problems(`<img src="${RAW}docs/a.webp">`), []);
+  assert.match(problems('<img src="docs/a.webp">')[0], /^README\.md: docs\/a\.webp is relative/);
+  assert.match(problems(`<img src="${RAW}docs/gone.webp">`)[0], /names docs\/gone\.webp, which is no file of this tree/);
 });
